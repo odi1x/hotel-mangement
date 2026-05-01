@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "postinstall": "prisma generate && prisma db push --accept-data-loss",
+    "postinstall": "prisma generate && prisma db push --force-reset --accept-data-loss",
     "lint": "eslint .",
     "preview": "vite preview"
   },
