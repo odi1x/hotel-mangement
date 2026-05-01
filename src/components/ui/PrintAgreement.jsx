@@ -1,8 +1,10 @@
 import { Printer } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PrintAgreement({ booking, onClose }) {
   const { apartments } = useData();
+  const { user } = useAuth();
   const apartment = apartments.find(a => a.id === booking.apartmentId);
 
   const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
@@ -30,8 +32,10 @@ export default function PrintAgreement({ booking, onClose }) {
                 <p className="text-gray-500 font-bold">المرجع: #{booking.id.toUpperCase()}</p>
             </div>
             <div className="text-left">
-                <p className="font-black text-xl text-gray-900">رنت فلو العقارية</p>
-                <p className="text-sm text-gray-500 italic font-medium">نظام إدارة الضيافة</p>
+                <p className="font-black text-xl text-gray-900">{user?.businessName || 'رنت فلو العقارية'}</p>
+                {user?.tourismLicense && (
+                  <p className="text-sm text-gray-500 italic font-medium">ترخيص رقم: {user.tourismLicense}</p>
+                )}
             </div>
         </div>
 
@@ -41,7 +45,7 @@ export default function PrintAgreement({ booking, onClose }) {
                 <div className="grid grid-cols-2 gap-8">
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المؤجر / المدير</p>
-                        <p className="font-bold text-gray-900">مجموعة رنت فلو العقارية</p>
+                        <p className="font-bold text-gray-900">{user?.businessName || 'مجموعة رنت فلو العقارية'}</p>
                     </div>
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المستأجر / النزيل</p>

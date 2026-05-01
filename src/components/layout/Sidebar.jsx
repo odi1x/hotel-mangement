@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -43,6 +43,7 @@ export default function Sidebar({ view, setView }) {
         <SidebarItem icon={Home} label="الشقق" id="apartments" />
         <SidebarItem icon={Users} label="سجل النزلاء" id="residents" />
         <SidebarItem icon={BarChart3} label="التحليلات" id="analytics" />
+        <SidebarItem icon={Settings} label="الإعدادات" id="settings" />
       </nav>
 
       <div className="mt-auto space-y-4">

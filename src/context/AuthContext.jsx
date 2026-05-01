@@ -17,10 +17,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      setUser({ token });
-    }
-    setLoading(false);
+    const fetchUser = async () => {
+      if (token) {
+        try {
+          const res = await axios.get('/api/auth/me');
+          setUser(res.data);
+        } catch (error) {
+          console.error("Failed to fetch user:", error);
+          if (error.response?.status !== 401) {
+            setUser({ token }); // fallback
+          }
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    };
+
+    fetchUser();
   }, [token]);
 
   // Intercept 401s to automatically logout
@@ -44,6 +58,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
+  const updateProfile = async (data) => {
+    const res = await axios.put('/api/auth/me', data);
+    setUser(res.data);
+  };
+
   const login = async (username, password) => {
     const res = await axios.post('/api/auth/login', { username, password });
     axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
@@ -61,7 +80,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateProfile }}>
       {!loading && children}
     </AuthContext.Provider>
   );
