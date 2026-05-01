@@ -13,6 +13,11 @@ model User {
   password       String
   businessName   String?
   tourismLicense String?
+  logoUrl        String?
+  stampUrl       String?
+  customTerms    String?
+  taxEnabled     Boolean     @default(false)
+  taxPercentage  Decimal?
   createdAt      DateTime    @default(now())
   apartments     Apartment[]
   bookings       Booking[]

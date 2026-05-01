@@ -5,6 +5,7 @@ import 'dotenv/config';
 import registerHandler from './api/auth/register.js';
 import loginHandler from './api/auth/login.js';
 import meHandler from './api/auth/me.js';
+import passwordHandler from './api/auth/password.js';
 import apartmentsHandler from './api/apartments.js';
 import bookingsHandler from './api/bookings.js';
 import analyticsHandler from './api/analytics.js';
@@ -20,6 +21,7 @@ const adaptHandler = (handler) => (req, res) => {
 app.post('/api/auth/register', adaptHandler(registerHandler));
 app.post('/api/auth/login', adaptHandler(loginHandler));
 app.all('/api/auth/me', adaptHandler(meHandler));
+app.post('/api/auth/password', adaptHandler(passwordHandler));
 app.all('/api/apartments', adaptHandler(apartmentsHandler));
 app.all('/api/bookings', adaptHandler(bookingsHandler));
 app.all('/api/analytics', adaptHandler(analyticsHandler));

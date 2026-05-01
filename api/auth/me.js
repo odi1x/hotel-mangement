@@ -15,16 +15,44 @@ export default async function handler(req, res) {
         where: { id: decoded.userId }
       });
       if (!user) return res.status(404).json({ message: 'User not found' });
-      return res.status(200).json({ id: user.id, username: user.username, businessName: user.businessName, tourismLicense: user.tourismLicense });
+      return res.status(200).json({
+        id: user.id,
+        username: user.username,
+        businessName: user.businessName,
+        tourismLicense: user.tourismLicense,
+        logoUrl: user.logoUrl,
+        stampUrl: user.stampUrl,
+        customTerms: user.customTerms,
+        taxEnabled: user.taxEnabled,
+        taxPercentage: user.taxPercentage
+      });
     }
 
     else if (req.method === 'PUT') {
-      const { businessName, tourismLicense } = req.body;
+      const { businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage } = req.body;
       const user = await prisma.user.update({
         where: { id: decoded.userId },
-        data: { businessName, tourismLicense }
+        data: {
+          businessName,
+          tourismLicense,
+          logoUrl,
+          stampUrl,
+          customTerms,
+          taxEnabled,
+          taxPercentage: taxPercentage ? parseFloat(taxPercentage) : null
+        }
       });
-      return res.status(200).json({ id: user.id, username: user.username, businessName: user.businessName, tourismLicense: user.tourismLicense });
+      return res.status(200).json({
+        id: user.id,
+        username: user.username,
+        businessName: user.businessName,
+        tourismLicense: user.tourismLicense,
+        logoUrl: user.logoUrl,
+        stampUrl: user.stampUrl,
+        customTerms: user.customTerms,
+        taxEnabled: user.taxEnabled,
+        taxPercentage: user.taxPercentage
+      });
     }
 
     else {
