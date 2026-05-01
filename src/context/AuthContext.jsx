@@ -63,6 +63,10 @@ export const AuthProvider = ({ children }) => {
     setUser(res.data);
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    await axios.post('/api/auth/password', { currentPassword, newPassword });
+  };
+
   const login = async (username, password) => {
     const res = await axios.post('/api/auth/login', { username, password });
     axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
@@ -80,7 +84,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateProfile, changePassword }}>
       {!loading && children}
     </AuthContext.Provider>
   );
