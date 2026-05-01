@@ -12,6 +12,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const bookings = await prisma.booking.findMany({
+        where: { userId: user.userId },
         orderBy: { startDate: 'desc' }
       });
       return res.status(200).json(bookings);
@@ -19,8 +20,16 @@ export default async function handler(req, res) {
 
     else if (req.method === 'POST') {
       const { apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate } = req.body;
+
+      // Verify ownership of the apartment being booked
+      const apartment = await prisma.apartment.findUnique({ where: { id: apartmentId } });
+      if (!apartment || apartment.userId !== user.userId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
       const booking = await prisma.booking.create({
         data: {
+          userId: user.userId,
           apartmentId,
           residentName,
           residentId,
@@ -37,6 +46,21 @@ export default async function handler(req, res) {
 
     else if (req.method === 'PUT') {
       const { id, apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate } = req.body;
+
+      // Verify ownership of the booking
+      const existing = await prisma.booking.findUnique({ where: { id } });
+      if (!existing || existing.userId !== user.userId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      // If apartment changed, verify ownership of new apartment
+      if (apartmentId !== existing.apartmentId) {
+        const apartment = await prisma.apartment.findUnique({ where: { id: apartmentId } });
+        if (!apartment || apartment.userId !== user.userId) {
+          return res.status(403).json({ message: 'Forbidden' });
+        }
+      }
+
       const booking = await prisma.booking.update({
         where: { id },
         data: {
@@ -56,6 +80,13 @@ export default async function handler(req, res) {
 
     else if (req.method === 'DELETE') {
       const { id } = req.query;
+
+      // Verify ownership
+      const existing = await prisma.booking.findUnique({ where: { id } });
+      if (!existing || existing.userId !== user.userId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
       await prisma.booking.delete({
         where: { id },
       });

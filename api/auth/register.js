@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       expiresIn: '7d',
     });
 
-    res.status(201).json({ token, user: { id: user.id, username: user.username } });
+    res.status(201).json({ token, user: { id: user.id, username: user.username, businessName: user.businessName, tourismLicense: user.tourismLicense } });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });

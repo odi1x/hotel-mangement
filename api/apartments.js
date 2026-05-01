@@ -12,6 +12,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const apartments = await prisma.apartment.findMany({
+        where: { userId: user.userId },
         orderBy: { createdAt: 'desc' }
       });
       return res.status(200).json(apartments);
@@ -21,6 +22,7 @@ export default async function handler(req, res) {
       const { name, type, description, basePrice } = req.body;
       const apartment = await prisma.apartment.create({
         data: {
+          userId: user.userId,
           name,
           type,
           description,
@@ -32,6 +34,13 @@ export default async function handler(req, res) {
 
     else if (req.method === 'PUT') {
       const { id, name, type, description, basePrice } = req.body;
+
+      // Verify ownership
+      const existing = await prisma.apartment.findUnique({ where: { id } });
+      if (!existing || existing.userId !== user.userId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
       const apartment = await prisma.apartment.update({
         where: { id },
         data: {
@@ -46,6 +55,13 @@ export default async function handler(req, res) {
 
     else if (req.method === 'DELETE') {
       const { id } = req.query;
+
+      // Verify ownership
+      const existing = await prisma.apartment.findUnique({ where: { id } });
+      if (!existing || existing.userId !== user.userId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
       await prisma.apartment.delete({
         where: { id },
       });

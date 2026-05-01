@@ -4,6 +4,7 @@ import AvailabilityView from '../views/AvailabilityView';
 import ApartmentsView from '../views/ApartmentsView';
 import ResidentsView from '../views/ResidentsView';
 import AnalyticsView from '../views/AnalyticsView';
+import SettingsView from '../views/SettingsView';
 import BookingForm from '../ui/BookingForm';
 import { Plus } from 'lucide-react';
 
@@ -23,6 +24,7 @@ export default function Layout() {
       case 'apartments': return 'إدارة الشقق';
       case 'residents': return 'سجل النزلاء';
       case 'analytics': return 'تحليلات الأداء';
+      case 'settings': return 'الإعدادات';
       default: return '';
     }
   };
@@ -55,6 +57,7 @@ export default function Layout() {
           {view === 'apartments' && <ApartmentsView />}
           {view === 'residents' && <ResidentsView />}
           {view === 'analytics' && <AnalyticsView />}
+          {view === 'settings' && <SettingsView />}
         </div>
       </main>
 

@@ -16,7 +16,9 @@ export default async function handler(req, res) {
   const { apartmentId } = req.query;
 
   try {
-    const filter = apartmentId && apartmentId !== 'all' ? { apartmentId } : {};
+    const filter = apartmentId && apartmentId !== 'all'
+      ? { apartmentId, userId: user.userId }
+      : { userId: user.userId };
 
     // Grouping for sources using Prisma aggregations
     const sourceGroups = await prisma.booking.groupBy({
@@ -49,7 +51,7 @@ export default async function handler(req, res) {
           COALESCE(SUM("pricePerNight" * GREATEST(CEIL(EXTRACT(EPOCH FROM ("endDate" - "startDate")) / 86400), 1)), 0) as "totalRevenue",
           COALESCE(SUM(GREATEST(CEIL(EXTRACT(EPOCH FROM ("endDate" - "startDate")) / 86400), 1)), 0) as "totalNights"
         FROM "Booking"
-        WHERE "apartmentId" = ${apartmentId}
+        WHERE "apartmentId" = ${apartmentId} AND "userId" = ${user.userId}
       `;
     } else {
        rawQuery = await prisma.$queryRaw`
@@ -57,6 +59,7 @@ export default async function handler(req, res) {
           COALESCE(SUM("pricePerNight" * GREATEST(CEIL(EXTRACT(EPOCH FROM ("endDate" - "startDate")) / 86400), 1)), 0) as "totalRevenue",
           COALESCE(SUM(GREATEST(CEIL(EXTRACT(EPOCH FROM ("endDate" - "startDate")) / 86400), 1)), 0) as "totalNights"
         FROM "Booking"
+        WHERE "userId" = ${user.userId}
       `;
     }
 

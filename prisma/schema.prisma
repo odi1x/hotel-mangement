@@ -8,14 +8,19 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String
-  createdAt DateTime @default(now())
+  id             String      @id @default(uuid())
+  username       String      @unique
+  password       String
+  businessName   String?
+  tourismLicense String?
+  createdAt      DateTime    @default(now())
+  apartments     Apartment[]
+  bookings       Booking[]
 }
 
 model Apartment {
   id          String    @id @default(uuid())
+  userId      String
   name        String
   type        String
   description String?
@@ -23,10 +28,13 @@ model Apartment {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   bookings    Booking[]
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Booking {
   id            String    @id @default(uuid())
+  userId        String
   apartmentId   String
   residentName  String
   residentId    String
@@ -40,4 +48,5 @@ model Booking {
   updatedAt     DateTime  @updatedAt
 
   apartment     Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
