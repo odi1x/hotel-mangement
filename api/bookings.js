@@ -21,10 +21,34 @@ export default async function handler(req, res) {
     else if (req.method === 'POST') {
       const { apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate } = req.body;
 
+      // Validate dates
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      start.setHours(0,0,0,0);
+      end.setHours(0,0,0,0);
+      if (end < start) {
+        return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
+      }
+
       // Verify ownership of the apartment being booked
       const apartment = await prisma.apartment.findUnique({ where: { id: apartmentId } });
       if (!apartment || apartment.userId !== user.userId) {
         return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      // Check for overlapping bookings
+      const overlappingBookings = await prisma.booking.findMany({
+        where: {
+          apartmentId,
+          AND: [
+            { startDate: { lte: end } },
+            { endDate: { gte: start } }
+          ]
+        }
+      });
+
+      if (overlappingBookings.length > 0) {
+        return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
       }
 
       const booking = await prisma.booking.create({
@@ -47,6 +71,15 @@ export default async function handler(req, res) {
     else if (req.method === 'PUT') {
       const { id, apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate } = req.body;
 
+      // Validate dates
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      start.setHours(0,0,0,0);
+      end.setHours(0,0,0,0);
+      if (end < start) {
+        return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
+      }
+
       // Verify ownership of the booking
       const existing = await prisma.booking.findUnique({ where: { id } });
       if (!existing || existing.userId !== user.userId) {
@@ -59,6 +92,22 @@ export default async function handler(req, res) {
         if (!apartment || apartment.userId !== user.userId) {
           return res.status(403).json({ message: 'Forbidden' });
         }
+      }
+
+      // Check for overlapping bookings
+      const overlappingBookings = await prisma.booking.findMany({
+        where: {
+          apartmentId,
+          id: { not: id },
+          AND: [
+            { startDate: { lte: end } },
+            { endDate: { gte: start } }
+          ]
+        }
+      });
+
+      if (overlappingBookings.length > 0) {
+        return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
       }
 
       const booking = await prisma.booking.update({
