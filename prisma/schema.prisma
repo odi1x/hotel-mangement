@@ -18,7 +18,6 @@ model User {
   customTerms    String?
   taxEnabled     Boolean     @default(false)
   taxPercentage  Decimal?
-  apartmentTypes String?
   createdAt      DateTime    @default(now())
   apartments     Apartment[]
   bookings       Booking[]
