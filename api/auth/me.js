@@ -24,12 +24,13 @@ export default async function handler(req, res) {
         stampUrl: user.stampUrl,
         customTerms: user.customTerms,
         taxEnabled: user.taxEnabled,
-        taxPercentage: user.taxPercentage
+        taxPercentage: user.taxPercentage,
+        apartmentTypes: user.apartmentTypes
       });
     }
 
     else if (req.method === 'PUT') {
-      const { businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage } = req.body;
+      const { businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes } = req.body;
       const user = await prisma.user.update({
         where: { id: decoded.userId },
         data: {
@@ -39,7 +40,8 @@ export default async function handler(req, res) {
           stampUrl,
           customTerms,
           taxEnabled,
-          taxPercentage: taxPercentage ? parseFloat(taxPercentage) : null
+          taxPercentage: taxPercentage ? parseFloat(taxPercentage) : null,
+          apartmentTypes: apartmentTypes !== undefined ? apartmentTypes : null
         }
       });
       return res.status(200).json({
@@ -51,7 +53,8 @@ export default async function handler(req, res) {
         stampUrl: user.stampUrl,
         customTerms: user.customTerms,
         taxEnabled: user.taxEnabled,
-        taxPercentage: user.taxPercentage
+        taxPercentage: user.taxPercentage,
+        apartmentTypes: user.apartmentTypes
       });
     }
 
