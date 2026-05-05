@@ -1,11 +1,22 @@
-import { useState } from 'react';
-import { Phone, Printer, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Phone, Printer, Trash2, Search } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import PrintAgreement from '../ui/PrintAgreement';
 
 export default function ResidentsView() {
   const { apartments, bookings, deleteBooking } = useData();
   const [printBooking, setPrintBooking] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredBookings = useMemo(() => {
+    if (!searchQuery.trim()) return bookings;
+
+    const query = searchQuery.toLowerCase();
+    return bookings.filter(b =>
+      b.residentName.toLowerCase().includes(query) ||
+      b.phone.includes(query)
+    );
+  }, [bookings, searchQuery]);
 
   const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
     month: 'short',
@@ -36,8 +47,18 @@ export default function ResidentsView() {
   return (
     <>
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
-        <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900">
+        <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex justify-between items-center">
           <h3 className="font-bold text-gray-800 dark:text-slate-100">سجلات الحجز الكاملة</h3>
+          <div className="relative w-64">
+            <input
+              type="text"
+              placeholder="البحث بالاسم أو رقم الجوال..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm"
+            />
+            <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-right">
@@ -52,7 +73,7 @@ export default function ResidentsView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
-              {bookings.map((booking) => {
+              {filteredBookings.map((booking) => {
                 const apt = apartments.find(a => a.id === booking.apartmentId);
                 const isCurrent = isDateBetween(new Date(), booking.startDate, booking.endDate);
                 return (
@@ -97,9 +118,9 @@ export default function ResidentsView() {
                   </tr>
                 );
               })}
-              {bookings.length === 0 && (
+              {filteredBookings.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">لا توجد حجوزات مسجلة</td>
+                  <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">لا توجد حجوزات مطابقة</td>
                 </tr>
               )}
             </tbody>
