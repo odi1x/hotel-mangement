@@ -1,19 +1,25 @@
 import { useState } from 'react';
 import { Home, Edit3, Trash2, Plus, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ApartmentsView() {
   const { apartments, addApartment, updateApartment, deleteApartment } = useData();
+  const { user } = useAuth();
+
+  const customTypes = user?.apartmentTypes ? user.apartmentTypes.split(',').map(t => t.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة', 'استوديو', 'شقة'];
+  const defaultType = customTypes.length > 0 ? customTypes[0] : 'استوديو';
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', type: 'استوديو', description: '', basePrice: '' });
+  const [formData, setFormData] = useState({ name: '', type: defaultType, description: '', basePrice: '' });
 
   const handleOpenModal = (apt = null) => {
     if (apt) {
       setFormData({ ...apt });
       setEditingId(apt.id);
     } else {
-      setFormData({ name: '', type: 'استوديو', description: '', basePrice: '' });
+      setFormData({ name: '', type: defaultType, description: '', basePrice: '' });
       setEditingId(null);
     }
     setIsModalOpen(true);
@@ -92,7 +98,9 @@ export default function ApartmentsView() {
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">النوع</label>
                     <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                        <option>استوديو</option><option>غرفة وصالة</option><option>غرفتين وصالة</option><option>جناح ملكي</option>
+                        {customTypes.map((t, idx) => (
+                          <option key={idx} value={t}>{t}</option>
+                        ))}
                     </select>
                 </div>
                 <div>
