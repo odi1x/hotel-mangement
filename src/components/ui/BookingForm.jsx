@@ -5,7 +5,7 @@ import { useData } from '../../context/DataContext';
 const REFERRAL_SOURCES = ['بوكينج (Booking.com)', 'إير بي إن بي (Airbnb)', 'وسائل التواصل الاجتماعي', 'زيارة مباشرة', 'مكالمة هاتفية', 'صديق/توصية', 'أخرى'];
 
 export default function BookingForm({ onClose, initialData }) {
-  const { apartments, addBooking } = useData();
+  const { apartments, bookings, addBooking } = useData();
   const [formData, setFormData] = useState({
     apartmentId: initialData?.apartmentId || '',
     residentName: '',
@@ -18,10 +18,40 @@ export default function BookingForm({ onClose, initialData }) {
     endDate: initialData?.endDate || ''
   });
 
-  const handleSubmit = (e) => {
+  const [error, setError] = useState('');
+
+  const isOverlapping = (start, end, aptId) => {
+    return bookings.some(b => {
+      if (b.apartmentId !== aptId) return false;
+      const bStart = new Date(b.startDate).setHours(0,0,0,0);
+      const bEnd = new Date(b.endDate).setHours(0,0,0,0);
+      return start <= bEnd && end >= bStart;
+    });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    addBooking(formData);
-    onClose();
+    setError('');
+
+    const start = new Date(formData.startDate).setHours(0,0,0,0);
+    const end = new Date(formData.endDate).setHours(0,0,0,0);
+
+    if (end < start) {
+      setError('تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول');
+      return;
+    }
+
+    if (isOverlapping(start, end, formData.apartmentId)) {
+      setError('هذه الوحدة محجوزة بالفعل في الفترة المحددة');
+      return;
+    }
+
+    try {
+      await addBooking(formData);
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'حدث خطأ أثناء الحجز');
+    }
   };
 
   return (
@@ -36,6 +66,11 @@ export default function BookingForm({ onClose, initialData }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-8">
+          {error && (
+            <div className="mb-6 bg-red-50 text-red-700 p-3 rounded-lg text-sm font-medium border border-red-200">
+              {error}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <h4 className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-800 pb-2">معلومات النزيل</h4>
