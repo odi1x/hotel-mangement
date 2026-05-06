@@ -1,11 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-
-const REFERRAL_SOURCES = ['بوكينج (Booking.com)', 'إير بي إن بي (Airbnb)', 'وسائل التواصل الاجتماعي', 'زيارة مباشرة', 'مكالمة هاتفية', 'صديق/توصية', 'أخرى'];
+import { useAuth } from '../../context/AuthContext';
+import Datepicker from "react-tailwindcss-datepicker";
 
 export default function BookingForm({ onClose, initialData }) {
   const { apartments, bookings, addBooking } = useData();
+  const { user } = useAuth();
+
+  const [bookingSources, setBookingSources] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
+
+  useEffect(() => {
+    if (user && user.bookingSources) {
+      setBookingSources(user.bookingSources.split(',').map(s => s.trim()).filter(Boolean));
+    }
+  }, [user]);
+
+  const [dateValue, setDateValue] = useState({
+    startDate: initialData?.startDate || null,
+    endDate: initialData?.endDate || null
+  });
+
   const [formData, setFormData] = useState({
     apartmentId: initialData?.apartmentId || '',
     residentName: '',
@@ -13,9 +28,7 @@ export default function BookingForm({ onClose, initialData }) {
     phone: '',
     address: '',
     pricePerNight: initialData?.pricePerNight || '',
-    source: 'زيارة مباشرة',
-    startDate: initialData?.startDate || '',
-    endDate: initialData?.endDate || ''
+    source: 'زيارة مباشرة'
   });
 
   const [error, setError] = useState('');
@@ -33,8 +46,13 @@ export default function BookingForm({ onClose, initialData }) {
     e.preventDefault();
     setError('');
 
-    const start = new Date(formData.startDate).setHours(0,0,0,0);
-    const end = new Date(formData.endDate).setHours(0,0,0,0);
+    if (!dateValue.startDate || !dateValue.endDate) {
+      setError('يرجى تحديد تواريخ الدخول والمغادرة');
+      return;
+    }
+
+    const start = new Date(dateValue.startDate).setHours(0,0,0,0);
+    const end = new Date(dateValue.endDate).setHours(0,0,0,0);
 
     if (end < start) {
       setError('تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول');
@@ -47,7 +65,11 @@ export default function BookingForm({ onClose, initialData }) {
     }
 
     try {
-      await addBooking(formData);
+      await addBooking({
+        ...formData,
+        startDate: dateValue.startDate,
+        endDate: dateValue.endDate
+      });
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء الحجز');
@@ -101,14 +123,18 @@ export default function BookingForm({ onClose, initialData }) {
                   {apartments.map(a => <option key={a.id} value={a.id}>{a.name} ({a.basePrice} ر.س)</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">تاريخ الدخول</label>
-                  <input required type="date" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.startDate} onChange={(e) => setFormData({...formData, startDate: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">تاريخ المغادرة</label>
-                  <input required type="date" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.endDate} onChange={(e) => setFormData({...formData, endDate: e.target.value})} />
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">تاريخ الحجز (الدخول والمغادرة)</label>
+                <div className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden bg-gray-50 dark:bg-slate-800">
+                  <Datepicker
+                    value={dateValue}
+                    onChange={newValue => setDateValue(newValue)}
+                    showShortcuts={true}
+                    primaryColor="blue"
+                    inputClassName="w-full px-4 py-2.5 outline-none bg-transparent text-gray-900 dark:text-slate-100"
+                    placeholder="اختر تواريخ الحجز"
+                    displayFormat="YYYY-MM-DD"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -119,7 +145,7 @@ export default function BookingForm({ onClose, initialData }) {
                 <div>
                   <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">مصدر الوصول</label>
                   <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.source} onChange={(e) => setFormData({...formData, source: e.target.value})}>
-                    {REFERRAL_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+                    {bookingSources.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
