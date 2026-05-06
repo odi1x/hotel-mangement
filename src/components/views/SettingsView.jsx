@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Save, Lock } from 'lucide-react';
+import { Save, Lock, Plus, Trash2 } from 'lucide-react';
 
 export default function SettingsView() {
   const { user, updateProfile, changePassword } = useAuth();
@@ -13,8 +13,15 @@ export default function SettingsView() {
     customTerms: '',
     taxEnabled: false,
     taxPercentage: '',
-    apartmentTypes: 'غرفة,غرفة وصالة,غرفتين وصالة'
+    apartmentTypes: 'غرفة,غرفة وصالة,غرفتين وصالة',
+    bookingSources: 'زيارة مباشرة,Booking.com,Airbnb'
   });
+
+  const [apartmentTypesList, setApartmentTypesList] = useState(['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
+  const [newApartmentType, setNewApartmentType] = useState('');
+
+  const [bookingSourcesList, setBookingSourcesList] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
+  const [newBookingSource, setNewBookingSource] = useState('');
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -39,8 +46,11 @@ export default function SettingsView() {
         customTerms: user.customTerms || '',
         taxEnabled: user.taxEnabled || false,
         taxPercentage: user.taxPercentage || '',
-        apartmentTypes: user.apartmentTypes || 'غرفة,غرفة وصالة,غرفتين وصالة'
+        apartmentTypes: user.apartmentTypes || 'غرفة,غرفة وصالة,غرفتين وصالة',
+        bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb'
       });
+      setApartmentTypesList(user.apartmentTypes ? user.apartmentTypes.split(',').map(s => s.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
+      setBookingSourcesList(user.bookingSources ? user.bookingSources.split(',').map(s => s.trim()).filter(Boolean) : ['زيارة مباشرة', 'Booking.com', 'Airbnb']);
     }
   }, [user]);
 
@@ -65,6 +75,36 @@ export default function SettingsView() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleAddApartmentType = () => {
+    if (newApartmentType.trim() && !apartmentTypesList.includes(newApartmentType.trim())) {
+      const updatedList = [...apartmentTypesList, newApartmentType.trim()];
+      setApartmentTypesList(updatedList);
+      setFormData({ ...formData, apartmentTypes: updatedList.join(',') });
+      setNewApartmentType('');
+    }
+  };
+
+  const handleRemoveApartmentType = (typeToRemove) => {
+    const updatedList = apartmentTypesList.filter(type => type !== typeToRemove);
+    setApartmentTypesList(updatedList);
+    setFormData({ ...formData, apartmentTypes: updatedList.join(',') });
+  };
+
+  const handleAddBookingSource = () => {
+    if (newBookingSource.trim() && !bookingSourcesList.includes(newBookingSource.trim())) {
+      const updatedList = [...bookingSourcesList, newBookingSource.trim()];
+      setBookingSourcesList(updatedList);
+      setFormData({ ...formData, bookingSources: updatedList.join(',') });
+      setNewBookingSource('');
+    }
+  };
+
+  const handleRemoveBookingSource = (sourceToRemove) => {
+    const updatedList = bookingSourcesList.filter(source => source !== sourceToRemove);
+    setBookingSourcesList(updatedList);
+    setFormData({ ...formData, bookingSources: updatedList.join(',') });
   };
 
   const handleSubmit = async (e) => {
@@ -211,15 +251,74 @@ export default function SettingsView() {
 
           <div>
             <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">أنواع الوحدات المتاحة</label>
-            <p className="text-xs text-gray-500 mb-2">قم بفصل الأنواع بفاصلة (مثال: غرفة مفردة,جناح,شقة عائلية)</p>
-            <textarea
-              name="apartmentTypes"
-              value={formData.apartmentTypes}
-              onChange={handleChange}
-              rows="2"
-              className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              placeholder="غرفة,غرفة وصالة,غرفتين وصالة"
-            ></textarea>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={newApartmentType}
+                onChange={(e) => setNewApartmentType(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddApartmentType())}
+                className="flex-1 border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="أضف نوع وحدة جديد (مثال: جناح ملكي)"
+              />
+              <button
+                type="button"
+                onClick={handleAddApartmentType}
+                className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-4 py-2 rounded-xl font-bold transition-colors flex items-center justify-center"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {apartmentTypesList.map((type, index) => (
+                <div key={index} className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
+                  <span className="text-sm font-medium">{type}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveApartmentType(type)}
+                    className="text-red-500 hover:text-red-700 transition-colors p-0.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              {apartmentTypesList.length === 0 && <span className="text-sm text-gray-500">لا توجد أنواع مضافة</span>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">مصادر الحجوزات</label>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={newBookingSource}
+                onChange={(e) => setNewBookingSource(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddBookingSource())}
+                className="flex-1 border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="أضف مصدر حجز جديد (مثال: Agoda)"
+              />
+              <button
+                type="button"
+                onClick={handleAddBookingSource}
+                className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-4 py-2 rounded-xl font-bold transition-colors flex items-center justify-center"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {bookingSourcesList.map((source, index) => (
+                <div key={index} className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
+                  <span className="text-sm font-medium">{source}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveBookingSource(source)}
+                    className="text-red-500 hover:text-red-700 transition-colors p-0.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              {bookingSourcesList.length === 0 && <span className="text-sm text-gray-500">لا توجد مصادر مضافة</span>}
+            </div>
           </div>
 
           <button

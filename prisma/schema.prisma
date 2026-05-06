@@ -19,6 +19,7 @@ model User {
   taxEnabled     Boolean     @default(false)
   taxPercentage  Decimal?
   apartmentTypes String?
+  bookingSources String?
   createdAt      DateTime    @default(now())
   apartments     Apartment[]
   bookings       Booking[]
