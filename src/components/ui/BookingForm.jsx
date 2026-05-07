@@ -125,17 +125,17 @@ export default function BookingForm({ onClose, initialData }) {
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">تاريخ الحجز (الدخول والمغادرة)</label>
-                <div className="border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 relative z-50">
+                <div className="border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 relative z-50" dir="ltr">
                   <Datepicker
                     value={dateValue}
                     onChange={newValue => setDateValue(newValue)}
                     showShortcuts={true}
                     primaryColor="blue"
-                    inputClassName="w-full px-4 py-2.5 outline-none bg-transparent text-gray-900 dark:text-slate-100 placeholder-gray-400"
+                    inputClassName="w-full pl-4 pr-12 py-2.5 outline-none bg-transparent text-gray-900 dark:text-slate-100 placeholder-gray-400 text-right"
                     placeholder="اختر تواريخ الحجز"
                     displayFormat="YYYY-MM-DD"
+                    useRange={true}
                     popoverDirection="down"
-                    useRange={false}
                   />
                 </div>
               </div>
