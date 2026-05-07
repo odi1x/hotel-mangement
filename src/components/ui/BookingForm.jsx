@@ -127,6 +127,17 @@ export default function BookingForm({ onClose, initialData }) {
                 <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">تاريخ الحجز (الدخول والمغادرة)</label>
                 <div className="border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 relative z-50" dir="ltr">
                   <Datepicker
+                    i18n={"ar"}
+                    configs={{
+                      shortcuts: {
+                        today: "اليوم",
+                        yesterday: "أمس",
+                        past: (period) => `آخر ${period} يوم`,
+                        currentMonth: "هذا الشهر",
+                        pastMonth: "الشهر الماضي",
+                      },
+                    }}
+
                     value={dateValue}
                     onChange={newValue => setDateValue(newValue)}
                     showShortcuts={true}
@@ -136,6 +147,7 @@ export default function BookingForm({ onClose, initialData }) {
                     displayFormat="YYYY-MM-DD"
                     useRange={true}
                     popoverDirection="down"
+                    containerClassName="relative" popoverClassName="rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden"
                   />
                 </div>
               </div>
