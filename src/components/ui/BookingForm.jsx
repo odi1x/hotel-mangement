@@ -79,7 +79,7 @@ export default function BookingForm({ onClose, initialData }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-start justify-center p-4 overflow-y-auto pt-10 pb-32" dir="rtl">
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-visible animate-in zoom-in-95 duration-200">
-        <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50">
+        <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50 rounded-t-3xl">
           <div>
             <h2 className="text-xl font-black text-gray-800 dark:text-slate-100 mb-1">إضافة حجز جديد</h2>
             <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">أدخل كافة التفاصيل لإعداد عقد الإيجار.</p>
