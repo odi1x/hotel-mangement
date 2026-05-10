@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Phone, Printer, Trash2, Search } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import PrintAgreement from '../ui/PrintAgreement';
 
 export default function ResidentsView() {
-  const { apartments, bookings, deleteBooking } = useData();
+  const { apartments, bookings, deleteBooking, toggleTrustedStatus } = useData();
   const [printBooking, setPrintBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -79,7 +79,12 @@ export default function ResidentsView() {
                 return (
                   <tr key={booking.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900 dark:text-slate-100">{booking.residentName}</div>
+                      <div className="font-bold text-gray-900 dark:text-slate-100 flex items-center">
+                        {booking.residentName}
+                        {booking.trusted && (
+                          <ShieldCheck size={14} className="ml-2 text-green-500" title="نزيل موثوق" />
+                        )}
+                      </div>
                       <div className="text-[10px] text-gray-400 font-medium mt-0.5">عبر: {booking.source}</div>
                     </td>
                     <td className="px-6 py-4">
@@ -104,13 +109,24 @@ export default function ResidentsView() {
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center space-x-reverse space-x-2">
                         <button
+                          onClick={() => toggleTrustedStatus(booking.phone, booking.trusted)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            booking.trusted
+                              ? 'text-green-600 hover:text-green-800 hover:bg-green-50 dark:hover:bg-green-900/30'
+                              : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
+                          }`}
+                          title={booking.trusted ? "إزالة من الموثوقين" : "تعيين كموثوق"}
+                        >
+                          {booking.trusted ? <ShieldAlert size={18} /> : <ShieldCheck size={18} />}
+                        </button>
+                        <button
                           onClick={() => setPrintBooking(booking)}
                           className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                           title="طباعة العقد"
                         >
                           <Printer size={18} />
                         </button>
-                        <button onClick={() => handleDelete(booking.id)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                        <button onClick={() => handleDelete(booking.id)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="حذف الحجز">
                           <Trash2 size={18} />
                         </button>
                       </div>

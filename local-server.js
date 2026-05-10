@@ -8,6 +8,7 @@ import meHandler from './api/auth/me.js';
 import passwordHandler from './api/auth/password.js';
 import apartmentsHandler from './api/apartments.js';
 import bookingsHandler from './api/bookings.js';
+import trustedBookingsHandler from './api/bookings/trusted.js';
 import analyticsHandler from './api/analytics.js';
 
 const app = express();
@@ -24,6 +25,7 @@ app.all('/api/auth/me', adaptHandler(meHandler));
 app.post('/api/auth/password', adaptHandler(passwordHandler));
 app.all('/api/apartments', adaptHandler(apartmentsHandler));
 app.all('/api/bookings', adaptHandler(bookingsHandler));
+app.all('/api/bookings/trusted', adaptHandler(trustedBookingsHandler));
 app.all('/api/analytics', adaptHandler(analyticsHandler));
 
 const PORT = 3001;

@@ -1,10 +1,15 @@
 import { useState, useMemo } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, X, Phone, User, Home, Receipt } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 
 export default function AvailabilityView({ openBookingForm }) {
   const { apartments, bookings } = useData();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
+
+  // Modals state
+  const [selectedDayBookings, setSelectedDayBookings] = useState(null); // { date, bookings }
+  const [selectedBookingDetails, setSelectedBookingDetails] = useState(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -53,7 +58,11 @@ export default function AvailabilityView({ openBookingForm }) {
   };
 
   const getBookingsForDate = (date) => {
-    return bookings.filter(b => isDateBetween(date, b.startDate, b.endDate));
+    let filteredBookings = bookings;
+    if (selectedApartmentFilter !== "all") {
+      filteredBookings = bookings.filter(b => b.apartmentId === selectedApartmentFilter);
+    }
+    return filteredBookings.filter(b => isDateBetween(date, b.startDate, b.endDate));
   };
 
   const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -87,6 +96,12 @@ export default function AvailabilityView({ openBookingForm }) {
     return colors[index % colors.length] || colors[0];
   };
 
+  const formatDateAr = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('ar-EG', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  };
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col h-[calc(100vh-180px)]">
       <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900">
@@ -101,7 +116,21 @@ export default function AvailabilityView({ openBookingForm }) {
             <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded text-gray-500 transition-colors"><ChevronLeft size={18} /></button>
           </div>
         </div>
-        <p className="text-xs text-gray-500 dark:text-slate-400 font-medium bg-blue-50 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-blue-100 dark:border-slate-700">اضغط على أي يوم لإضافة حجز</p>
+        <div className="flex items-center space-x-reverse space-x-4">
+          <p className="text-xs text-gray-500 dark:text-slate-400 font-medium bg-blue-50 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-blue-100 dark:border-slate-700">
+            اضغط على أي يوم لإضافة حجز او عرض جميع الحجوزات
+          </p>
+          <select
+            className="text-xs text-gray-700 dark:text-slate-300 font-medium bg-white dark:bg-slate-900 px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            value={selectedApartmentFilter}
+            onChange={(e) => setSelectedApartmentFilter(e.target.value)}
+          >
+            <option value="all">جميع الوحدات</option>
+            {apartments.map(apt => (
+              <option key={apt.id} value={apt.id}>{apt.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto bg-gray-50 dark:bg-slate-900/50">
@@ -127,7 +156,7 @@ export default function AvailabilityView({ openBookingForm }) {
                   ${isToday ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}
                 `}
                 onClick={() => {
-                  openBookingForm({ startDate: dayObj.date.toISOString().split('T')[0] });
+                  setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings });
                 }}
               >
                 <div className="flex justify-between items-start mb-2">
@@ -142,7 +171,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 </div>
 
                 <div className="space-y-1.5 overflow-y-auto max-h-[calc(100%-35px)] pr-1 custom-scrollbar">
-                  {dayBookings.map(booking => {
+                  {dayBookings.slice(0, 2).map(booking => {
                     const apt = apartments.find(a => a.id === booking.apartmentId);
                     if (!apt) return null;
 
@@ -161,7 +190,7 @@ export default function AvailabilityView({ openBookingForm }) {
                         `}
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Could open edit form here if needed
+                          setSelectedBookingDetails(booking);
                         }}
                       >
                         <span className="opacity-70 ml-1">{apt.name}:</span>
@@ -169,18 +198,133 @@ export default function AvailabilityView({ openBookingForm }) {
                       </div>
                     );
                   })}
-                </div>
-
-                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center pointer-events-none transition-opacity">
-                  <div className="bg-white dark:bg-slate-800 rounded-full p-2 shadow-lg text-blue-600">
-                    <Plus size={20} />
-                  </div>
+                  {dayBookings.length > 2 && (
+                    <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 px-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1.5"></span>
+                      +{dayBookings.length - 2} حجوزات
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* First Modal: List of bookings for the selected day */}
+      {selectedDayBookings && !selectedBookingDetails && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
+              <h2 className="text-xl font-black text-gray-800 dark:text-slate-100">حجوزات يوم {formatDateAr(selectedDayBookings.date)}</h2>
+              <button onClick={() => setSelectedDayBookings(null)} className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto flex-1">
+              {selectedDayBookings.bookings.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedDayBookings.bookings.map((booking) => {
+                    const apt = apartments.find(a => a.id === booking.apartmentId);
+                    return (
+                      <div
+                        key={booking.id}
+                        onClick={() => setSelectedBookingDetails(booking)}
+                        className="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all group"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-bold text-gray-800 dark:text-slate-200 group-hover:text-blue-600 transition-colors">{apt?.name || 'وحدة غير معروفة'}</span>
+                          <span className="text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-1 rounded-md">{booking.pricePerNight} ر.س</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600 dark:text-slate-400">
+                          <User size={14} className="ml-1" />
+                          {booking.residentName}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-gray-500 dark:text-slate-400 font-medium">لا توجد حجوزات في هذا اليوم</div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex justify-between">
+              <button
+                onClick={() => {
+                  setSelectedDayBookings(null);
+                  openBookingForm({ startDate: selectedDayBookings.date.toISOString().split('T')[0] });
+                }}
+                className="flex items-center space-x-reverse space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm"
+              >
+                <Plus size={16} />
+                <span className="mr-1">إضافة حجز جديد في هذا اليوم</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Second Modal: Specific Booking Details */}
+      {selectedBookingDetails && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
+              <h2 className="text-xl font-black text-gray-800 dark:text-slate-100">تفاصيل الحجز</h2>
+              <button onClick={() => setSelectedBookingDetails(null)} className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="flex items-center space-x-reverse space-x-3 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
+                <Home size={24} className="text-blue-600 dark:text-blue-400" />
+                <div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400 font-medium">الوحدة المحجوزة</div>
+                  <div className="font-bold text-gray-800 dark:text-slate-200">
+                    {apartments.find(a => a.id === selectedBookingDetails.apartmentId)?.name || 'غير معروف'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700">
+                  <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center mb-1"><User size={12} className="ml-1"/> اسم النزيل</div>
+                  <div className="font-bold text-sm text-gray-800 dark:text-slate-200">{selectedBookingDetails.residentName}</div>
+                </div>
+                <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700">
+                  <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center mb-1"><Phone size={12} className="ml-1"/> رقم التواصل</div>
+                  <div className="font-bold text-sm text-gray-800 dark:text-slate-200" dir="ltr">{selectedBookingDetails.phone}</div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
+                <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center mb-2"><Calendar size={12} className="ml-1"/> فترة الحجز</div>
+                <div className="flex justify-between items-center text-sm font-bold text-gray-800 dark:text-slate-200">
+                  <span>{new Date(selectedBookingDetails.startDate).toLocaleDateString('ar-EG')}</span>
+                  <span className="text-gray-400">إلى</span>
+                  <span>{new Date(selectedBookingDetails.endDate).toLocaleDateString('ar-EG')}</span>
+                </div>
+              </div>
+
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-100 dark:border-green-900/30">
+                <div className="text-xs text-green-600 dark:text-green-400 flex items-center mb-1"><Receipt size={12} className="ml-1"/> السعر لليلة</div>
+                <div className="font-black text-green-700 dark:text-green-300">{selectedBookingDetails.pricePerNight} ر.س</div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900">
+              <button
+                onClick={() => setSelectedBookingDetails(null)}
+                className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-800 dark:text-slate-200 px-4 py-2.5 rounded-xl font-bold transition-all text-sm"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

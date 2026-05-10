@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import toast from 'react-hot-toast';
 
 const DataContext = createContext();
 
@@ -106,6 +107,25 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  const toggleTrustedStatus = async (phone, currentStatus) => {
+    try {
+      // Find all bookings with this phone number to update them in the local state
+      const updatedBookings = bookings.map(b =>
+        b.phone === phone ? { ...b, trusted: !currentStatus } : b
+      );
+
+      setBookings(updatedBookings);
+
+      await axios.put(`${API_BASE_URL}/bookings/trusted`, { phone, trusted: !currentStatus });
+      toast.success(currentStatus ? 'تم إزالة حالة الموثوقية' : 'تم تعيين النزيل كموثوق');
+    } catch (err) {
+      console.error(err);
+      toast.error('حدث خطأ أثناء تحديث حالة النزيل');
+      // fetchBookings will implicitly re-fetch
+      fetchBookings();
+    }
+  };
+
   return (
     <DataContext.Provider value={{
       apartments,
@@ -118,6 +138,7 @@ export const DataProvider = ({ children }) => {
       deleteApartment,
       addBooking,
       deleteBooking,
+      toggleTrustedStatus,
       loading
     }}>
       {children}
