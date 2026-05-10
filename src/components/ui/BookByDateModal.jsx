@@ -48,8 +48,8 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-gray-100 dark:border-slate-800 flex flex-col max-h-[90vh]">
+        <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50 rounded-t-2xl">
           <h2 className="text-xl font-black text-gray-800 dark:text-slate-100 flex items-center">
             <Calendar className="ml-2 text-blue-600" size={24} />
             البحث بالتاريخ
@@ -59,7 +59,7 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
           </button>
         </div>
 
-        <div className="p-6 flex-1 overflow-y-auto">
+        <div className="p-6 flex-1 overflow-visible">
           <form onSubmit={handleSearch} className="mb-8">
             <div className="mb-4 relative z-50">
               <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">تاريخ الحجز</label>

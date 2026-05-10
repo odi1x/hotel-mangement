@@ -1,6 +1,7 @@
 import { useAuth } from './context/AuthContext';
 import Layout from './components/layout/Layout';
 import LoginView from './components/views/LoginView';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const { user, loading } = useAuth();
@@ -13,7 +14,12 @@ function App() {
     );
   }
 
-  return user ? <Layout /> : <LoginView />;
+  return (
+    <>
+      {user ? <Layout /> : <LoginView />}
+      <Toaster position="bottom-right" />
+    </>
+  );
 }
 
 export default App;
