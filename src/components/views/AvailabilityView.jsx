@@ -5,6 +5,7 @@ import { useData } from '../../context/DataContext';
 export default function AvailabilityView({ openBookingForm }) {
   const { apartments, bookings } = useData();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
 
   // Modals state
   const [selectedDayBookings, setSelectedDayBookings] = useState(null); // { date, bookings }
@@ -57,7 +58,11 @@ export default function AvailabilityView({ openBookingForm }) {
   };
 
   const getBookingsForDate = (date) => {
-    return bookings.filter(b => isDateBetween(date, b.startDate, b.endDate));
+    let filteredBookings = bookings;
+    if (selectedApartmentFilter !== "all") {
+      filteredBookings = bookings.filter(b => b.apartmentId === selectedApartmentFilter);
+    }
+    return filteredBookings.filter(b => isDateBetween(date, b.startDate, b.endDate));
   };
 
   const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -111,7 +116,21 @@ export default function AvailabilityView({ openBookingForm }) {
             <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded text-gray-500 transition-colors"><ChevronLeft size={18} /></button>
           </div>
         </div>
-        <p className="text-xs text-gray-500 dark:text-slate-400 font-medium bg-blue-50 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-blue-100 dark:border-slate-700">اضغط على أي يوم لإضافة حجز</p>
+        <div className="flex items-center space-x-reverse space-x-4">
+          <p className="text-xs text-gray-500 dark:text-slate-400 font-medium bg-blue-50 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-blue-100 dark:border-slate-700">
+            اضغط على أي يوم لإضافة حجز او عرض جميع الحجوزات
+          </p>
+          <select
+            className="text-xs text-gray-700 dark:text-slate-300 font-medium bg-white dark:bg-slate-900 px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+            value={selectedApartmentFilter}
+            onChange={(e) => setSelectedApartmentFilter(e.target.value)}
+          >
+            <option value="all">جميع الوحدات</option>
+            {apartments.map(apt => (
+              <option key={apt.id} value={apt.id}>{apt.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto bg-gray-50 dark:bg-slate-900/50">
