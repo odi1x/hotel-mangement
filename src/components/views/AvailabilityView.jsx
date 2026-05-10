@@ -152,7 +152,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 </div>
 
                 <div className="space-y-1.5 overflow-y-auto max-h-[calc(100%-35px)] pr-1 custom-scrollbar">
-                  {dayBookings.map(booking => {
+                  {dayBookings.slice(0, 2).map(booking => {
                     const apt = apartments.find(a => a.id === booking.apartmentId);
                     if (!apt) return null;
 
@@ -179,12 +179,12 @@ export default function AvailabilityView({ openBookingForm }) {
                       </div>
                     );
                   })}
-                </div>
-
-                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center pointer-events-none transition-opacity">
-                  <div className="bg-white dark:bg-slate-800 rounded-full p-2 shadow-lg text-blue-600">
-                    {dayBookings.length > 0 ? <Calendar size={20} /> : <Plus size={20} />}
-                  </div>
+                  {dayBookings.length > 2 && (
+                    <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 px-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1.5"></span>
+                      +{dayBookings.length - 2} حجوزات
+                    </div>
+                  )}
                 </div>
               </div>
             );
