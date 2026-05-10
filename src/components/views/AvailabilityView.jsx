@@ -170,7 +170,7 @@ export default function AvailabilityView({ openBookingForm }) {
                   {isToday && <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">اليوم</span>}
                 </div>
 
-                <div className="space-y-1.5 overflow-y-auto max-h-[calc(100%-35px)] pr-1 custom-scrollbar">
+                <div className="space-y-1.5 pr-1 overflow-hidden">
                   {dayBookings.slice(0, 2).map(booking => {
                     const apt = apartments.find(a => a.id === booking.apartmentId);
                     if (!apt) return null;
@@ -199,7 +199,7 @@ export default function AvailabilityView({ openBookingForm }) {
                     );
                   })}
                   {dayBookings.length > 2 && (
-                    <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 px-1">
+                    <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 absolute bottom-1 left-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded px-1.5 py-0.5 z-10 border border-gray-100 dark:border-slate-800">
                       <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1.5"></span>
                       +{dayBookings.length - 2} حجوزات
                     </div>
