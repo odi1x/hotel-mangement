@@ -1,19 +1,22 @@
 import { useState, useMemo } from 'react';
 import { X, Calendar, Search, Home } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import Datepicker from "react-tailwindcss-datepicker";
 
 export default function BookByDateModal({ onClose, onSelectApartment }) {
   const { apartments, bookings } = useData();
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [dateValue, setDateValue] = useState({
+    startDate: null,
+    endDate: null
+  });
   const [hasSearched, setHasSearched] = useState(false);
 
   // Check if an apartment is available during the given dates
   const isAvailable = (apartmentId) => {
-    if (!startDate || !endDate) return false;
+    if (!dateValue.startDate || !dateValue.endDate) return false;
 
-    const start = new Date(startDate).setHours(0,0,0,0);
-    const end = new Date(endDate).setHours(0,0,0,0);
+    const start = new Date(dateValue.startDate).setHours(0,0,0,0);
+    const end = new Date(dateValue.endDate).setHours(0,0,0,0);
 
     // Check all bookings for this apartment
     for (const booking of bookings) {
@@ -34,11 +37,11 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
   const availableApartments = useMemo(() => {
     if (!hasSearched) return [];
     return apartments.filter(apt => isAvailable(apt.id));
-  }, [apartments, bookings, startDate, endDate, hasSearched]);
+  }, [apartments, bookings, dateValue.startDate, dateValue.endDate, hasSearched]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (startDate && endDate) {
+    if (dateValue.startDate && dateValue.endDate) {
       setHasSearched(true);
     }
   };
@@ -58,34 +61,21 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
 
         <div className="p-6 flex-1 overflow-y-auto">
           <form onSubmit={handleSearch} className="mb-8">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">تاريخ الدخول</label>
-                <input
-                  type="date"
-                  required
-                  value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    setHasSearched(false);
-                  }}
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm font-medium"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">تاريخ الخروج</label>
-                <input
-                  type="date"
-                  required
-                  value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    setHasSearched(false);
-                  }}
-                  min={startDate}
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm font-medium"
-                />
-              </div>
+            <div className="mb-4 relative z-50">
+              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">تاريخ الحجز</label>
+              <Datepicker
+                primaryColor="blue"
+                value={dateValue}
+                onChange={(newValue) => {
+                  setDateValue(newValue);
+                  setHasSearched(false);
+                }}
+                showShortcuts={true}
+                i18n="ar"
+                displayFormat="YYYY/MM/DD"
+                placeholder="اختر فترة الحجز"
+                inputClassName="w-full py-2.5 pr-12 pl-4 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm font-medium"
+              />
             </div>
 
             <button
@@ -121,7 +111,7 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                         </p>
                       </div>
                       <button
-                        onClick={() => onSelectApartment(apt.id, startDate, endDate)}
+                        onClick={() => onSelectApartment(apt.id, dateValue.startDate, dateValue.endDate)}
                         className="w-full bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 py-2 rounded-lg font-bold text-sm transition-colors"
                       >
                         حجز هذه الوحدة

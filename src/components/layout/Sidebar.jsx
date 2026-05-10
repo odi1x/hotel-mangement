@@ -34,12 +34,12 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
     <aside className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 p-6 flex flex-col h-full shrink-0 relative`}>
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute top-6 right-6 text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+        className={`absolute top-6 text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200 z-10 ${isCollapsed ? 'right-6' : 'left-6'}`}
       >
         {isCollapsed ? <PanelRightOpen size={20} /> : <PanelRightClose size={20} />}
       </button>
 
-      <div className={`flex items-center space-x-reverse space-x-2 mb-10 ${isCollapsed ? 'justify-center mt-8 px-0' : 'px-2'} cursor-pointer`} onClick={() => setView('availability')}>
+      <div className={`flex items-center space-x-reverse space-x-2 mb-10 ${isCollapsed ? 'justify-center mt-10 px-0' : 'px-2'} cursor-pointer`} onClick={() => setView('availability')}>
         <div className="bg-blue-600 p-2 rounded-lg shadow-md shadow-blue-200 dark:shadow-none">
           <Home className="text-white" size={24} />
         </div>

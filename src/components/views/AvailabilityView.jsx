@@ -137,11 +137,7 @@ export default function AvailabilityView({ openBookingForm }) {
                   ${isToday ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}
                 `}
                 onClick={() => {
-                  if (dayBookings.length > 0) {
-                    setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings });
-                  } else {
-                    openBookingForm({ startDate: dayObj.date.toISOString().split('T')[0] });
-                  }
+                  setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings });
                 }}
               >
                 <div className="flex justify-between items-start mb-2">
