@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Home, Edit3, Trash2, Plus, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -41,12 +41,58 @@ export default function ApartmentsView() {
     }
   };
 
+  const { bookings } = useData();
+
+  const isApartmentCurrentlyBooked = (apartmentId) => {
+    const today = new Date().setHours(0,0,0,0);
+    return bookings.some(b => {
+      if (b.apartmentId !== apartmentId) return false;
+      const start = new Date(b.startDate).setHours(0,0,0,0);
+      const end = new Date(b.endDate).setHours(0,0,0,0);
+      return today >= start && today <= end;
+    });
+  };
+
+  const hasBookingEndedNeedsCleaning = (apt) => {
+    const today = new Date().setHours(0,0,0,0);
+    const lastCleaned = new Date(apt.lastCleanedAt || 0).setHours(0,0,0,0);
+
+    return bookings.some(b => {
+      if (b.apartmentId !== apt.id) return false;
+      const end = new Date(b.endDate).setHours(0,0,0,0);
+      return today > end && end >= lastCleaned;
+    });
+  };
+
+  useEffect(() => {
+    apartments.forEach(apt => {
+        const isCurrentlyBooked = isApartmentCurrentlyBooked(apt.id);
+        const needsCleaningAuto = hasBookingEndedNeedsCleaning(apt) && !isCurrentlyBooked;
+
+        if (needsCleaningAuto && !apt.needsCleaning) {
+            updateApartment({ ...apt, needsCleaning: true });
+        }
+    });
+  }, [apartments, bookings, updateApartment]);
+
+  const handleToggleCleaningStatus = async (apt) => {
+    await updateApartment({ ...apt, needsCleaning: !apt.needsCleaning });
+  };
+
   return (
     <div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {apartments.map((apt) => (
-          <div key={apt.id} className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-full relative group transition-all hover:shadow-md">
-            <div className="flex justify-between items-start mb-4">
+        {apartments.map((apt) => {
+          const isNotClean = apt.needsCleaning;
+
+          return (
+          <div key={apt.id} className={`bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border ${isNotClean ? 'border-red-500 shadow-red-100 dark:shadow-none' : 'border-gray-100 dark:border-slate-800'} flex flex-col h-full relative group transition-all hover:shadow-md`}>
+            {isNotClean && (
+              <div className="absolute top-0 left-0 w-full bg-red-500 text-white text-xs font-bold text-center py-1 rounded-t-2xl">
+                تحتاج إلى تنظيف
+              </div>
+            )}
+            <div className={`flex justify-between items-start mb-4 ${isNotClean ? 'mt-4' : ''}`}>
               <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><Home size={24} /></div>
               <div className="flex space-x-reverse space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
@@ -65,12 +111,22 @@ export default function ApartmentsView() {
             </div>
             <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100">{apt.name}</h3>
             <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 mt-1 font-medium">{apt.type} • {apt.description}</p>
+
+            {isNotClean && (
+              <button
+                onClick={() => handleToggleCleaningStatus(apt)}
+                className="mb-4 w-full bg-red-100 hover:bg-red-200 text-red-700 py-2 rounded-lg font-bold text-sm transition-colors"
+              >
+                تحديد كـ "تم التنظيف"
+              </button>
+            )}
+
             <div className="mt-auto pt-4 border-t border-gray-50 dark:border-slate-800">
               <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">السعر الأساسي</p>
               <p className="text-2xl font-black text-green-600 dark:text-green-400">{apt.basePrice} <span className="text-sm text-gray-400 font-bold">ر.س / ليلة</span></p>
             </div>
           </div>
-        ))}
+        )})}
         <button
           onClick={() => handleOpenModal()}
           className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-600 dark:hover:bg-slate-800 transition-all cursor-pointer bg-transparent min-h-[200px]"

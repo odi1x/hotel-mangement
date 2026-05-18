@@ -1,5 +1,6 @@
 import { Download, TrendingUp, Globe, UserCheck } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import Datepicker from 'react-tailwindcss-datepicker';
 
 export default function AnalyticsView() {
   const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter } = useData();
@@ -54,7 +55,7 @@ export default function AnalyticsView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
         <button
           onClick={exportToExcel}
           className="flex items-center space-x-reverse space-x-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-green-200 dark:shadow-none transition-all active:scale-95"
@@ -63,16 +64,51 @@ export default function AnalyticsView() {
           <span className="mr-2">تحميل التقرير الشامل (Excel)</span>
         </button>
 
-        <div className="flex items-center space-x-reverse space-x-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm">
-          <span className="text-sm font-bold text-gray-500 dark:text-slate-400">تصفية:</span>
-          <select
-            className="text-sm border-none bg-transparent outline-none font-black text-gray-800 dark:text-slate-200 cursor-pointer"
-            value={analyticsFilter}
-            onChange={(e) => setAnalyticsFilter(e.target.value)}
-          >
-            <option value="all">جميع الوحدات</option>
-            {apartments.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full md:w-auto">
+            <div className="w-full md:w-64" dir="ltr">
+               <Datepicker
+                  primaryColor="blue"
+                  value={{ startDate: analyticsFilter.startDate || null, endDate: analyticsFilter.endDate || null }}
+                  onChange={(val) => setAnalyticsFilter({ ...analyticsFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
+                  inputClassName="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 text-right transition-all text-sm font-bold"
+                  displayFormat="DD/MM/YYYY"
+                  placeholder="اختر فترة التقرير"
+                  configs={{
+                      shortcuts: {
+                          today: 'اليوم',
+                          yesterday: 'الأمس',
+                          past: p => `آخر ${p} يوم`,
+                          currentMonth: 'الشهر الحالي',
+                          pastMonth: 'الشهر الماضي',
+                      }
+                  }}
+              />
+            </div>
+          <div className="flex flex-col bg-white dark:bg-slate-900 p-3 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm max-h-40 overflow-y-auto min-w-[200px]">
+            <span className="text-sm font-bold text-gray-500 dark:text-slate-400 mb-2">تصفية بالوحدة:</span>
+            <div className="space-y-1.5">
+              {apartments.map(a => {
+                  const isChecked = analyticsFilter.apartmentIds?.includes(a.id);
+                  return (
+                      <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 p-1 rounded">
+                          <input
+                              type="checkbox"
+                              checked={isChecked || false}
+                              onChange={(e) => {
+                                  const currentIds = analyticsFilter.apartmentIds || [];
+                                  const newIds = e.target.checked
+                                      ? [...currentIds, a.id]
+                                      : currentIds.filter(id => id !== a.id);
+                                  setAnalyticsFilter({...analyticsFilter, apartmentIds: newIds});
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>{a.name}</span>
+                      </label>
+                  );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -127,9 +163,7 @@ export default function AnalyticsView() {
           </div>
           <h4 className="text-lg font-black text-gray-800 dark:text-slate-100 mb-2">مؤشر الكفاءة</h4>
           <p className="text-sm text-gray-500 dark:text-slate-400 max-w-sm leading-relaxed font-medium">
-              {analyticsFilter === 'all'
-                  ? "أنت تشاهد حالياً أداء كامل محفظتك العقارية. استخدم التصفية العلوية لعرض أداء وحدة معينة."
-                  : `تشاهد البيانات الخاصة بـ ${apartments.find(a => a.id === analyticsFilter)?.name}.`}
+              أنت تشاهد التحليلات المخصصة بناءً على فلاتر الوقت والوحدات المحددة أعلاه.
           </p>
         </div>
       </div>

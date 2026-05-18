@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'PUT') {
-      const { id, name, type, description, basePrice } = req.body;
+      const { id, name, type, description, basePrice, needsCleaning } = req.body;
 
       // Verify ownership
       const existing = await prisma.apartment.findUnique({ where: { id } });
@@ -41,14 +41,23 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
-      const apartment = await prisma.apartment.update({
-        where: { id },
-        data: {
+      const updateData = {
           name,
           type,
           description,
           basePrice: parseFloat(basePrice) || 0,
-        },
+      };
+
+      if (needsCleaning !== undefined) {
+          updateData.needsCleaning = needsCleaning;
+          if (needsCleaning === false) {
+              updateData.lastCleanedAt = new Date();
+          }
+      }
+
+      const apartment = await prisma.apartment.update({
+        where: { id },
+        data: updateData,
       });
       return res.status(200).json(apartment);
     }
