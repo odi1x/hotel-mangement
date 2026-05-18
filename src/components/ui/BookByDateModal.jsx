@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext';
 import Datepicker from "react-tailwindcss-datepicker";
 
 export default function BookByDateModal({ onClose, onSelectApartment }) {
-  const { apartments, bookings } = useData();
+  const { apartments, bookings, updateApartment } = useData();
   const [dateValue, setDateValue] = useState({
     startDate: null,
     endDate: null
@@ -110,12 +110,19 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
 
               {availableApartments.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {availableApartments.map(apt => (
+                  {availableApartments.map(apt => {
+                    const isNotClean = apt.needsCleaning;
+                    return (
                     <div
                       key={apt.id}
-                      className="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 flex flex-col justify-between"
+                      className={`relative bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border ${isNotClean ? 'border-red-500 bg-red-50/50 dark:bg-red-900/10' : 'border-gray-100 dark:border-slate-700'} flex flex-col justify-between`}
                     >
-                      <div>
+                      {isNotClean && (
+                        <div className="absolute top-0 left-0 w-full bg-red-500 text-white text-[10px] font-bold text-center py-0.5 rounded-t-xl">
+                          تحتاج تنظيف
+                        </div>
+                      )}
+                      <div className={isNotClean ? 'mt-3' : ''}>
                         <div className="flex items-center space-x-reverse space-x-2 mb-2">
                           <Home size={18} className="text-blue-600 dark:text-blue-400" />
                           <span className="font-bold text-gray-800 dark:text-slate-200">{apt.name}</span>
@@ -125,14 +132,24 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                           {apt.basePrice} ر.س / ليلة
                         </p>
                       </div>
-                      <button
-                        onClick={() => onSelectApartment(apt.id, dateValue.startDate, dateValue.endDate)}
-                        className="w-full bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 py-2 rounded-lg font-bold text-sm transition-colors"
-                      >
-                        حجز هذه الوحدة
-                      </button>
+
+                      {isNotClean ? (
+                        <button
+                          onClick={async () => await updateApartment({ ...apt, needsCleaning: false })}
+                          className="w-full bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 py-2 rounded-lg font-bold text-sm transition-colors"
+                        >
+                          تحديد كـ "تم التنظيف"
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onSelectApartment(apt.id, dateValue.startDate, dateValue.endDate)}
+                          className="w-full bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 py-2 rounded-lg font-bold text-sm transition-colors"
+                        >
+                          حجز هذه الوحدة
+                        </button>
+                      )}
                     </div>
-                  ))}
+                  )})}
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-700">
