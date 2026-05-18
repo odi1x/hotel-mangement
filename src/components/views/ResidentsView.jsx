@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert, Edit2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import PrintAgreement from '../ui/PrintAgreement';
 
-export default function ResidentsView() {
+export default function ResidentsView({ openBookingForm }) {
   const { apartments, bookings, deleteBooking, toggleTrustedStatus } = useData();
   const [printBooking, setPrintBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -125,6 +125,13 @@ export default function ResidentsView() {
                           title="طباعة العقد"
                         >
                           <Printer size={18} />
+                        </button>
+                        <button
+                          onClick={() => openBookingForm(booking)}
+                          className="text-orange-500 hover:text-orange-700 p-2 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
+                          title="تعديل الحجز"
+                        >
+                          <Edit2 size={18} />
                         </button>
                         <button onClick={() => handleDelete(booking.id)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="حذف الحجز">
                           <Trash2 size={18} />
