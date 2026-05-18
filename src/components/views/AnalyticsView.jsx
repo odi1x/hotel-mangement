@@ -1,9 +1,28 @@
-import { Download, TrendingUp, Globe, UserCheck } from 'lucide-react';
+import { useState } from 'react';
+import { Download, TrendingUp, Globe, UserCheck, Filter, ChevronDown, Check } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Datepicker from 'react-tailwindcss-datepicker';
 
 export default function AnalyticsView() {
   const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter } = useData();
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [tempFilter, setTempFilter] = useState({ ...analyticsFilter });
+
+  const hasFilterChanges = () => {
+    const startDiffers = tempFilter.startDate !== analyticsFilter.startDate;
+    const endDiffers = tempFilter.endDate !== analyticsFilter.endDate;
+
+    const tempIds = tempFilter.apartmentIds || [];
+    const activeIds = analyticsFilter.apartmentIds || [];
+    const idsDiffer = tempIds.length !== activeIds.length || !tempIds.every(id => activeIds.includes(id));
+
+    return startDiffers || endDiffers || idsDiffer;
+  };
+
+  const handleApplyFilter = () => {
+    setAnalyticsFilter({ ...tempFilter });
+    setIsFilterOpen(false);
+  };
 
   const calculateNights = (start, end) => {
     const s = new Date(start);
@@ -64,51 +83,84 @@ export default function AnalyticsView() {
           <span className="mr-2">تحميل التقرير الشامل (Excel)</span>
         </button>
 
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full md:w-auto">
-            <div className="w-full md:w-64" dir="ltr">
-               <Datepicker
-                  primaryColor="blue"
-                  value={{ startDate: analyticsFilter.startDate || null, endDate: analyticsFilter.endDate || null }}
-                  onChange={(val) => setAnalyticsFilter({ ...analyticsFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
-                  inputClassName="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 text-right transition-all text-sm font-bold"
-                  displayFormat="DD/MM/YYYY"
-                  placeholder="اختر فترة التقرير"
-                  configs={{
-                      shortcuts: {
-                          today: 'اليوم',
-                          yesterday: 'الأمس',
-                          past: p => `آخر ${p} يوم`,
-                          currentMonth: 'الشهر الحالي',
-                          pastMonth: 'الشهر الماضي',
-                      }
-                  }}
-              />
+        <div className="relative">
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`flex items-center space-x-reverse space-x-2 px-4 py-2.5 rounded-xl font-bold text-sm border transition-all ${
+              (analyticsFilter.apartmentIds?.length > 0 || analyticsFilter.startDate)
+                ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400'
+                : 'bg-white border-gray-200 text-gray-700 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Filter size={18} />
+            <span className="mr-2">تصفية التحليلات</span>
+            <ChevronDown size={16} className={`ml-1 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isFilterOpen && (
+            <div className="absolute top-full left-0 mt-2 w-[320px] bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl shadow-xl z-50 p-4">
+              <div className="mb-4">
+                <span className="block text-sm font-bold text-gray-500 dark:text-slate-400 mb-2">الفترة الزمنية:</span>
+                <div dir="ltr">
+                   <Datepicker
+                      primaryColor="blue"
+                      value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
+                      onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
+                      inputClassName="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 text-right transition-all text-sm font-bold"
+                      displayFormat="DD/MM/YYYY"
+                      placeholder="اختر فترة التقرير"
+                      configs={{
+                          shortcuts: {
+                              today: 'اليوم',
+                              yesterday: 'الأمس',
+                              past: p => `آخر ${p} يوم`,
+                              currentMonth: 'الشهر الحالي',
+                              pastMonth: 'الشهر الماضي',
+                          }
+                      }}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <span className="block text-sm font-bold text-gray-500 dark:text-slate-400 mb-2">الوحدات:</span>
+                <div className="max-h-48 overflow-y-auto space-y-1.5 p-1">
+                  {apartments.map(a => {
+                      const isChecked = tempFilter.apartmentIds?.includes(a.id);
+                      return (
+                          <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors">
+                              <input
+                                  type="checkbox"
+                                  checked={isChecked || false}
+                                  onChange={(e) => {
+                                      const currentIds = tempFilter.apartmentIds || [];
+                                      const newIds = e.target.checked
+                                          ? [...currentIds, a.id]
+                                          : currentIds.filter(id => id !== a.id);
+                                      setTempFilter({...tempFilter, apartmentIds: newIds});
+                                  }}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                              />
+                              <span>{a.name}</span>
+                          </label>
+                      );
+                  })}
+                </div>
+              </div>
+
+              {hasFilterChanges() && (
+                <div className="pt-3 border-t border-gray-100 dark:border-slate-800 flex justify-end">
+                  <button
+                    onClick={handleApplyFilter}
+                    className="flex items-center space-x-reverse space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95"
+                  >
+                    <Check size={16} />
+                    <span>تطبيق الفلاتر</span>
+                  </button>
+                </div>
+              )}
             </div>
-          <div className="flex flex-col bg-white dark:bg-slate-900 p-3 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm max-h-40 overflow-y-auto min-w-[200px]">
-            <span className="text-sm font-bold text-gray-500 dark:text-slate-400 mb-2">تصفية بالوحدة:</span>
-            <div className="space-y-1.5">
-              {apartments.map(a => {
-                  const isChecked = analyticsFilter.apartmentIds?.includes(a.id);
-                  return (
-                      <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 p-1 rounded">
-                          <input
-                              type="checkbox"
-                              checked={isChecked || false}
-                              onChange={(e) => {
-                                  const currentIds = analyticsFilter.apartmentIds || [];
-                                  const newIds = e.target.checked
-                                      ? [...currentIds, a.id]
-                                      : currentIds.filter(id => id !== a.id);
-                                  setAnalyticsFilter({...analyticsFilter, apartmentIds: newIds});
-                              }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span>{a.name}</span>
-                      </label>
-                  );
-              })}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
