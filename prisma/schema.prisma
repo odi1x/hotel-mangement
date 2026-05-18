@@ -26,15 +26,17 @@ model User {
 }
 
 model Apartment {
-  id          String    @id @default(uuid())
-  userId      String
-  name        String
-  type        String
-  description String?
-  basePrice   Decimal
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  bookings    Booking[]
+  id            String    @id @default(uuid())
+  userId        String
+  name          String
+  type          String
+  description   String?
+  basePrice     Decimal
+  needsCleaning Boolean   @default(false)
+  lastCleanedAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  bookings      Booking[]
 
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
