@@ -65,6 +65,16 @@ export default async function handler(req, res) {
           endDate: new Date(endDate)
         },
       });
+
+      // Edge case: If creating a historical booking (endDate < today), instantly flag unit as needing cleaning.
+      const today = new Date().setHours(0,0,0,0);
+      if (end.getTime() < today && !apartment.needsCleaning) {
+          await prisma.apartment.update({
+              where: { id: apartmentId },
+              data: { needsCleaning: true }
+          });
+      }
+
       return res.status(201).json(booking);
     }
 

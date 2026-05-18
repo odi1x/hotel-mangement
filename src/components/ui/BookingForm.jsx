@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Datepicker from "react-tailwindcss-datepicker";
 
 export default function BookingForm({ onClose, initialData }) {
-  const { apartments, bookings, addBooking } = useData();
+  const { apartments, bookings, addBooking, updateApartment } = useData();
   const { user } = useAuth();
 
   const [bookingSources, setBookingSources] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
@@ -64,6 +64,13 @@ export default function BookingForm({ onClose, initialData }) {
       return;
     }
 
+    // Block booking if apartment needs cleaning
+    const selectedApt = apartments.find(a => a.id === formData.apartmentId);
+    if (selectedApt && selectedApt.needsCleaning) {
+      setError('لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.');
+      return;
+    }
+
     try {
       await addBooking({
         ...formData,
@@ -89,8 +96,23 @@ export default function BookingForm({ onClose, initialData }) {
 
         <form onSubmit={handleSubmit} className="p-8">
           {error && (
-            <div className="mb-6 bg-red-50 text-red-700 p-3 rounded-lg text-sm font-medium border border-red-200">
-              {error}
+            <div className="mb-6 bg-red-50 text-red-700 p-3 rounded-lg text-sm font-medium border border-red-200 flex justify-between items-center">
+              <span>{error}</span>
+              {error === 'لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                      const apt = apartments.find(a => a.id === formData.apartmentId);
+                      if (apt) {
+                          await updateApartment({ ...apt, needsCleaning: false });
+                          setError('');
+                      }
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors"
+                >
+                  تحديد كـ "تم التنظيف"
+                </button>
+              )}
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
