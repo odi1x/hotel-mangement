@@ -74,7 +74,7 @@ export default function Layout() {
         <div className="pb-20">
           {view === 'availability' && <AvailabilityView openBookingForm={handleOpenBookingForm} />}
           {view === 'apartments' && <ApartmentsView />}
-          {view === 'residents' && <ResidentsView />}
+          {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
           {view === 'analytics' && <AnalyticsView />}
           {view === 'settings' && <SettingsView />}
         </div>
