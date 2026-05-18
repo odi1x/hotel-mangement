@@ -13,7 +13,7 @@ export const DataProvider = ({ children }) => {
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalNights: 0, sourceCounts: {}, count: 0 });
-  const [analyticsFilter, setAnalyticsFilter] = useState('all');
+  const [analyticsFilter, setAnalyticsFilter] = useState({});
   const [loading, setLoading] = useState(false);
 
   const API_BASE_URL = '/api'; // Configured via Vite proxy locally or direct path on Vercel
@@ -38,9 +38,15 @@ export const DataProvider = ({ children }) => {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/analytics`, {
-        params: { apartmentId: analyticsFilter }
-      });
+      const params = {};
+      if (analyticsFilter.apartmentIds?.length > 0) {
+        params.apartmentIds = analyticsFilter.apartmentIds.join(',');
+      }
+      if (analyticsFilter.startDate && analyticsFilter.endDate) {
+        params.startDate = analyticsFilter.startDate;
+        params.endDate = analyticsFilter.endDate;
+      }
+      const res = await axios.get(`${API_BASE_URL}/analytics`, { params });
       setAnalytics(res.data);
     } catch (err) {
       console.error(err);
