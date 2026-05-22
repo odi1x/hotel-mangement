@@ -35,18 +35,24 @@ export default function BookingForm({ onClose, initialData }) {
 
   const [retrievedNotes, setRetrievedNotes] = useState(null);
 
-  // Auto-retrieve past notes when phone number and ID match
+  // Auto-retrieve past notes when either phone number OR ID match
   useEffect(() => {
       // Don't auto-retrieve if we are editing an existing booking that already has notes
       if (formData.id) return;
 
-      if (formData.phone && formData.phone.length >= 8 && formData.residentId && formData.residentId.length >= 5) {
-          const pastBookings = bookings.filter(b =>
-              b.phone === formData.phone &&
-              b.residentId === formData.residentId &&
-              b.notes &&
-              b.notes.trim() !== ''
-          );
+      const hasPhone = formData.phone && formData.phone.length >= 8;
+      const hasId = formData.residentId && formData.residentId.length >= 5;
+
+      if (hasPhone || hasId) {
+          const pastBookings = bookings.filter(b => {
+              if (!b.notes || b.notes.trim() === '') return false;
+
+              const phoneMatch = hasPhone && b.phone === formData.phone;
+              const idMatch = hasId && b.residentId === formData.residentId;
+
+              return phoneMatch || idMatch;
+          });
+
           if (pastBookings.length > 0) {
               // Sort to get the most recent note
               pastBookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
