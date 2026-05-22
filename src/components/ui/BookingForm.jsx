@@ -22,14 +22,52 @@ export default function BookingForm({ onClose, initialData }) {
   });
 
   const [formData, setFormData] = useState({
+    id: initialData?.id || null, // Allow updating existing bookings
     apartmentId: initialData?.apartmentId || '',
-    residentName: '',
-    residentId: '',
-    phone: '',
-    address: '',
+    residentName: initialData?.residentName || '',
+    residentId: initialData?.residentId || '',
+    phone: initialData?.phone || '',
+    address: initialData?.address || '',
     pricePerNight: initialData?.pricePerNight || '',
-    source: 'زيارة مباشرة'
+    source: initialData?.source || 'زيارة مباشرة',
+    notes: initialData?.notes || ''
   });
+
+  const [retrievedNotes, setRetrievedNotes] = useState(null);
+
+  // Auto-retrieve past notes when either phone number OR ID match
+  useEffect(() => {
+      // Don't auto-retrieve if we are editing an existing booking that already has notes
+      if (formData.id) return;
+
+      const hasPhone = formData.phone && formData.phone.length >= 8;
+      const hasId = formData.residentId && formData.residentId.length >= 5;
+
+      if (hasPhone || hasId) {
+          const pastBookings = bookings.filter(b => {
+              if (!b.notes || b.notes.trim() === '') return false;
+
+              const phoneMatch = hasPhone && b.phone === formData.phone;
+              const idMatch = hasId && b.residentId === formData.residentId;
+
+              return phoneMatch || idMatch;
+          });
+
+          if (pastBookings.length > 0) {
+              // Sort to get the most recent note
+              pastBookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+              const latestNote = pastBookings[0].notes;
+
+              if (formData.notes !== latestNote && retrievedNotes !== latestNote) {
+                 setRetrievedNotes(latestNote);
+              }
+          } else {
+              setRetrievedNotes(null);
+          }
+      } else {
+          setRetrievedNotes(null);
+      }
+  }, [formData.phone, formData.residentId, bookings, formData.notes, formData.id]);
 
   const [error, setError] = useState('');
 
@@ -72,11 +110,19 @@ export default function BookingForm({ onClose, initialData }) {
     }
 
     try {
-      await addBooking({
-        ...formData,
-        startDate: dateValue.startDate,
-        endDate: dateValue.endDate
-      });
+      if (formData.id) {
+          await useData().updateBooking({ // Assuming updateBooking exists or needs to be added to context
+            ...formData,
+            startDate: dateValue.startDate,
+            endDate: dateValue.endDate
+          });
+      } else {
+          await addBooking({
+            ...formData,
+            startDate: dateValue.startDate,
+            endDate: dateValue.endDate
+          });
+      }
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء الحجز');
@@ -130,6 +176,24 @@ export default function BookingForm({ onClose, initialData }) {
                 <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">رقم الهاتف</label>
                 <input required type="tel" placeholder="05XXXXXXXX" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 dark:bg-slate-800 dark:text-slate-100" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
               </div>
+
+              {retrievedNotes && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 flex flex-col gap-2">
+                    <p className="text-xs text-yellow-800 dark:text-yellow-400 font-bold">يوجد ملاحظة سابقة لهذا النزيل:</p>
+                    <p className="text-xs text-yellow-700 dark:text-yellow-500 bg-white dark:bg-slate-800 p-2 rounded border border-yellow-100 dark:border-yellow-900">{retrievedNotes}</p>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setFormData({...formData, notes: retrievedNotes});
+                            setRetrievedNotes(null);
+                        }}
+                        className="text-xs bg-yellow-400 hover:bg-yellow-500 text-yellow-900 py-1.5 rounded font-bold transition-colors mt-1"
+                    >
+                        استعادة هذه الملاحظة للحجز الحالي
+                    </button>
+                </div>
+              )}
+
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">العنوان</label>
                 <input type="text" placeholder="الشارع، المدينة، الدولة" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 dark:bg-slate-800 dark:text-slate-100" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />

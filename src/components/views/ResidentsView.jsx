@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
-import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert, Edit2 } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert, Edit2, MessageSquare } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import PrintAgreement from '../ui/PrintAgreement';
+import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
-  const { apartments, bookings, deleteBooking, toggleTrustedStatus } = useData();
+  const { apartments, bookings, deleteBooking, toggleTrustedStatus, updateBooking } = useData();
   const [printBooking, setPrintBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [noteContent, setNoteContent] = useState('');
 
   const filteredBookings = useMemo(() => {
     if (!searchQuery.trim()) return bookings;
@@ -42,6 +45,25 @@ export default function ResidentsView({ openBookingForm }) {
     if(confirm('هل تريد حذف هذا الحجز؟')) {
       deleteBooking(id);
     }
+  };
+
+  const handleSaveNote = async () => {
+    const booking = bookings.find(b => b.id === editingNoteId);
+    if (booking) {
+      try {
+        await updateBooking({ ...booking, notes: noteContent });
+        toast.success('تم حفظ الملاحظة بنجاح');
+      } catch (err) {
+        toast.error('فشل حفظ الملاحظة');
+      }
+    }
+    setEditingNoteId(null);
+    setNoteContent('');
+  };
+
+  const openNoteModal = (booking) => {
+    setEditingNoteId(booking.id);
+    setNoteContent(booking.notes || '');
   };
 
   return (
@@ -127,6 +149,17 @@ export default function ResidentsView({ openBookingForm }) {
                           <Printer size={18} />
                         </button>
                         <button
+                          onClick={() => openNoteModal(booking)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            booking.notes && booking.notes.trim() !== ''
+                              ? 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
+                              : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
+                          }`}
+                          title="ملاحظات النزيل"
+                        >
+                          <MessageSquare size={18} />
+                        </button>
+                        <button
                           onClick={() => openBookingForm(booking)}
                           className="text-orange-500 hover:text-orange-700 p-2 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
                           title="تعديل الحجز"
@@ -153,6 +186,43 @@ export default function ResidentsView({ openBookingForm }) {
 
       {printBooking && (
         <PrintAgreement booking={printBooking} onClose={() => setPrintBooking(null)} />
+      )}
+
+      {editingNoteId && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
+              <h2 className="text-xl font-black text-gray-800 dark:text-slate-100 flex items-center">
+                <MessageSquare className="ml-2 text-yellow-500" size={20} />
+                ملاحظات النزيل
+              </h2>
+            </div>
+
+            <div className="p-6">
+              <textarea
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="أضف ملاحظات تخص هذا النزيل..."
+                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500 h-32 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 resize-none transition-all"
+              ></textarea>
+            </div>
+
+            <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex space-x-reverse space-x-3">
+              <button
+                onClick={handleSaveNote}
+                className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-yellow-200 dark:shadow-none"
+              >
+                حفظ الملاحظة
+              </button>
+              <button
+                onClick={() => setEditingNoteId(null)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-800 dark:text-slate-200 py-2.5 rounded-xl font-bold transition-all"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
