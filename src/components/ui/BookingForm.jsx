@@ -35,13 +35,18 @@ export default function BookingForm({ onClose, initialData }) {
 
   const [retrievedNotes, setRetrievedNotes] = useState(null);
 
-  // Auto-retrieve past notes when phone number matches
+  // Auto-retrieve past notes when phone number and ID match
   useEffect(() => {
       // Don't auto-retrieve if we are editing an existing booking that already has notes
       if (formData.id) return;
 
-      if (formData.phone && formData.phone.length >= 8) {
-          const pastBookings = bookings.filter(b => b.phone === formData.phone && b.notes && b.notes.trim() !== '');
+      if (formData.phone && formData.phone.length >= 8 && formData.residentId && formData.residentId.length >= 5) {
+          const pastBookings = bookings.filter(b =>
+              b.phone === formData.phone &&
+              b.residentId === formData.residentId &&
+              b.notes &&
+              b.notes.trim() !== ''
+          );
           if (pastBookings.length > 0) {
               // Sort to get the most recent note
               pastBookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -56,7 +61,7 @@ export default function BookingForm({ onClose, initialData }) {
       } else {
           setRetrievedNotes(null);
       }
-  }, [formData.phone, bookings, formData.notes, formData.id]);
+  }, [formData.phone, formData.residentId, bookings, formData.notes, formData.id]);
 
   const [error, setError] = useState('');
 
@@ -183,15 +188,9 @@ export default function BookingForm({ onClose, initialData }) {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">العنوان</label>
-                    <input type="text" placeholder="الشارع، المدينة، الدولة" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 dark:bg-slate-800 dark:text-slate-100" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">ملاحظات على النزيل</label>
-                    <input type="text" placeholder="ملاحظات سرية للنزيل..." className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 dark:bg-slate-800 dark:text-slate-100" value={formData.notes || ''} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
-                  </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">العنوان</label>
+                <input type="text" placeholder="الشارع، المدينة، الدولة" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 dark:bg-slate-800 dark:text-slate-100" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
               </div>
             </div>
 
