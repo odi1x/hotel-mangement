@@ -101,7 +101,18 @@ export const DataProvider = ({ children }) => {
       setBookings([res.data, ...bookings]);
     } catch (err) {
       console.error(err);
+      throw err; // Re-throw to allow form to catch and display error
     }
+  };
+
+  const updateBooking = async (bookingData) => {
+      try {
+        const res = await axios.put(`${API_BASE_URL}/bookings`, bookingData);
+        setBookings(bookings.map(b => b.id === bookingData.id ? res.data : b));
+      } catch (err) {
+        console.error(err);
+        throw err;
+      }
   };
 
   const deleteBooking = async (id) => {
@@ -143,6 +154,7 @@ export const DataProvider = ({ children }) => {
       updateApartment,
       deleteApartment,
       addBooking,
+      updateBooking,
       deleteBooking,
       toggleTrustedStatus,
       loading

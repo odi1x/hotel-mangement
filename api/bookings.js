@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'POST') {
-      const { apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate } = req.body;
+      const { apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate, notes } = req.body;
 
       // Validate dates
       const start = new Date(startDate);
@@ -51,6 +51,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
       }
 
+      // Check if user is trusted based on previous bookings
+      const previousBooking = await prisma.booking.findFirst({
+        where: { userId: user.userId, phone, trusted: true }
+      });
+
       const booking = await prisma.booking.create({
         data: {
           userId: user.userId,
@@ -62,7 +67,9 @@ export default async function handler(req, res) {
           pricePerNight: parseFloat(pricePerNight),
           source,
           startDate: new Date(startDate),
-          endDate: new Date(endDate)
+          endDate: new Date(endDate),
+          trusted: !!previousBooking,
+          notes
         },
       });
 
@@ -79,7 +86,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'PUT') {
-      const { id, apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate } = req.body;
+      const { id, apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate, notes } = req.body;
 
       // Validate dates
       const start = new Date(startDate);
@@ -131,7 +138,8 @@ export default async function handler(req, res) {
           pricePerNight: parseFloat(pricePerNight),
           source,
           startDate: new Date(startDate),
-          endDate: new Date(endDate)
+          endDate: new Date(endDate),
+          notes
         },
       });
       return res.status(200).json(booking);
