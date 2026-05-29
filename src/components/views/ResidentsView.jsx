@@ -110,6 +110,9 @@ export default function ResidentsView({ openBookingForm }) {
                         )}
                       </div>
                       <div className="text-[10px] text-gray-400 font-medium mt-0.5">عبر: {booking.source}</div>
+                      {booking.creatorName && (
+                        <div className="text-[10px] text-blue-500 font-medium mt-0.5">بواسطة: {booking.creatorName}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium flex items-center text-gray-700 dark:text-slate-300"><Phone size={14} className="ml-1.5 text-gray-400"/> {booking.phone}</div>
