@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import { X, Calendar, Search, Home } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import Datepicker from "react-tailwindcss-datepicker";
 
 export default function BookByDateModal({ onClose, onSelectApartment }) {
   const { apartments, bookings, updateApartment } = useData();
+  const { user } = useAuth();
   const [dateValue, setDateValue] = useState({
     startDate: null,
     endDate: null
@@ -134,12 +136,18 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                       </div>
 
                       {isNotClean ? (
-                        <button
-                          onClick={async () => await updateApartment({ ...apt, needsCleaning: false })}
-                          className="w-full bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 py-2 rounded-lg font-bold text-sm transition-colors"
-                        >
-                          تحديد كـ "تم التنظيف"
-                        </button>
+                        (user?.role === 'admin' || user?.permissions?.canEdit) ? (
+                          <button
+                            onClick={async () => await updateApartment({ ...apt, needsCleaning: false })}
+                            className="w-full bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 py-2 rounded-lg font-bold text-sm transition-colors"
+                          >
+                            تحديد كـ "تم التنظيف"
+                          </button>
+                        ) : (
+                          <div className="w-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 py-2 rounded-lg font-bold text-sm text-center">
+                            الوحدة تحتاج لتنظيف
+                          </div>
+                        )
                       ) : (
                         <button
                           onClick={() => onSelectApartment(apt.id, dateValue.startDate, dateValue.endDate)}

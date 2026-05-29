@@ -95,18 +95,22 @@ export default function ApartmentsView() {
             <div className={`flex justify-between items-start mb-4 ${isNotClean ? 'mt-4' : ''}`}>
               <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><Home size={24} /></div>
               <div className="flex space-x-reverse space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleOpenModal(apt)}
-                  className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                >
-                  <Edit3 size={18} />
-                </button>
-                <button
-                  onClick={() => handleDelete(apt.id)}
-                  className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                >
-                  <Trash2 size={18} />
-                </button>
+                {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                  <button
+                    onClick={() => handleOpenModal(apt)}
+                    className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                  >
+                    <Edit3 size={18} />
+                  </button>
+                )}
+                {(user?.role === 'admin' || user?.permissions?.canDelete) && (
+                  <button
+                    onClick={() => handleDelete(apt.id)}
+                    className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
             </div>
             <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100">{apt.name}</h3>
@@ -127,13 +131,15 @@ export default function ApartmentsView() {
             </div>
           </div>
         )})}
-        <button
-          onClick={() => handleOpenModal()}
-          className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-600 dark:hover:bg-slate-800 transition-all cursor-pointer bg-transparent min-h-[200px]"
-        >
-          <div className="p-3 rounded-full bg-gray-50 dark:bg-slate-800 mb-3"><Plus size={24} /></div>
-          <span className="font-bold">إضافة وحدة جديدة</span>
-        </button>
+        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+          <button
+            onClick={() => handleOpenModal()}
+            className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-600 dark:hover:bg-slate-800 transition-all cursor-pointer bg-transparent min-h-[200px]"
+          >
+            <div className="p-3 rounded-full bg-gray-50 dark:bg-slate-800 mb-3"><Plus size={24} /></div>
+            <span className="font-bold">إضافة وحدة جديدة</span>
+          </button>
+        )}
       </div>
 
       {isModalOpen && (

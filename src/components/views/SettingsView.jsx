@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Save, Lock, Plus, Trash2 } from 'lucide-react';
+import { Save, Plus, Trash2, Settings, Shield } from 'lucide-react';
+import StaffManagement from './settings/StaffManagement';
 
 export default function SettingsView() {
-  const { user, updateProfile, changePassword } = useAuth();
+  const { user, updateProfile } = useAuth();
+  const [activeTab, setActiveTab] = useState('general');
 
   const [formData, setFormData] = useState({
     businessName: '',
@@ -35,6 +37,17 @@ export default function SettingsView() {
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdSuccessMsg, setPwdSuccessMsg] = useState('');
   const [pwdErrorMsg, setPwdErrorMsg] = useState('');
+
+  // Restrict access for non-admins if they don't have permission
+  if (user?.role !== 'admin' && !user?.permissions?.canViewSettings) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-slate-400">
+        <Shield size={48} className="mb-4 text-gray-300 dark:text-slate-600" />
+        <h2 className="text-xl font-bold">عذراً، ليس لديك صلاحية</h2>
+        <p>يرجى التواصل مع مدير النظام للوصول إلى هذه الصفحة.</p>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (user) {
@@ -146,9 +159,40 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="max-w-5xl space-y-8 pb-12">
+
+      {user?.role === 'admin' && (
+        <div className="flex gap-2 border-b border-gray-200 dark:border-slate-800 pb-px">
+          <button
+            onClick={() => setActiveTab('general')}
+            className={`px-6 py-3 font-bold text-sm rounded-t-xl transition-colors flex items-center gap-2 ${
+              activeTab === 'general'
+                ? 'bg-blue-50 text-blue-700 dark:bg-slate-800 dark:text-blue-400 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <Settings size={18} />
+            إعدادات المنشأة
+          </button>
+          <button
+            onClick={() => setActiveTab('staff')}
+            className={`px-6 py-3 font-bold text-sm rounded-t-xl transition-colors flex items-center gap-2 ${
+              activeTab === 'staff'
+                ? 'bg-blue-50 text-blue-700 dark:bg-slate-800 dark:text-blue-400 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <Shield size={18} />
+            إدارة الموظفين
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'staff' && user?.role === 'admin' ? (
+        <StaffManagement />
+      ) : (
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 shadow-sm">
-        <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white border-b pb-4">إعدادات المنشأة</h2>
+        <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white border-b pb-4">إعدادات المنشأة العامة</h2>
 
         {successMsg && (
           <div className="mb-6 bg-green-50 text-green-700 p-3 rounded-lg text-sm font-medium border border-green-200">
@@ -331,69 +375,7 @@ export default function SettingsView() {
           </button>
         </form>
       </div>
-
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 shadow-sm">
-        <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white border-b pb-4">تغيير كلمة المرور</h2>
-
-        {pwdSuccessMsg && (
-          <div className="mb-6 bg-green-50 text-green-700 p-3 rounded-lg text-sm font-medium border border-green-200">
-            {pwdSuccessMsg}
-          </div>
-        )}
-
-        {pwdErrorMsg && (
-          <div className="mb-6 bg-red-50 text-red-700 p-3 rounded-lg text-sm font-medium border border-red-200">
-            {pwdErrorMsg}
-          </div>
-        )}
-
-        <form onSubmit={handlePasswordSubmit} className="space-y-6 max-w-md">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">كلمة المرور الحالية</label>
-            <input
-              type="password"
-              name="currentPassword"
-              value={passwordData.currentPassword}
-              onChange={handlePasswordChange}
-              required
-              className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">كلمة المرور الجديدة</label>
-            <input
-              type="password"
-              name="newPassword"
-              value={passwordData.newPassword}
-              onChange={handlePasswordChange}
-              required
-              className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">تأكيد كلمة المرور الجديدة</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={passwordData.confirmPassword}
-              onChange={handlePasswordChange}
-              required
-              className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={pwdLoading}
-            className="flex items-center space-x-reverse space-x-2 bg-gray-800 hover:bg-gray-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
-          >
-            <Lock size={18} />
-            <span className="mr-2">{pwdLoading ? 'جاري التغيير...' : 'تغيير كلمة المرور'}</span>
-          </button>
-        </form>
-      </div>
+      )}
     </div>
   );
 }

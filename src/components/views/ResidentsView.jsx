@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert, Edit2, MessageSquare } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
   const { apartments, bookings, deleteBooking, toggleTrustedStatus, updateBooking } = useData();
+  const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
@@ -130,17 +132,19 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center space-x-reverse space-x-2">
-                        <button
-                          onClick={() => toggleTrustedStatus(booking.phone, booking.trusted)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            booking.trusted
-                              ? 'text-green-600 hover:text-green-800 hover:bg-green-50 dark:hover:bg-green-900/30'
-                              : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
-                          }`}
-                          title={booking.trusted ? "إزالة من الموثوقين" : "تعيين كموثوق"}
-                        >
-                          {booking.trusted ? <ShieldAlert size={18} /> : <ShieldCheck size={18} />}
-                        </button>
+                        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                          <button
+                            onClick={() => toggleTrustedStatus(booking.phone, booking.trusted)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              booking.trusted
+                                ? 'text-green-600 hover:text-green-800 hover:bg-green-50 dark:hover:bg-green-900/30'
+                                : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
+                            }`}
+                            title={booking.trusted ? "إزالة من الموثوقين" : "تعيين كموثوق"}
+                          >
+                            {booking.trusted ? <ShieldAlert size={18} /> : <ShieldCheck size={18} />}
+                          </button>
+                        )}
                         <button
                           onClick={() => setPrintBooking(booking)}
                           className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -148,27 +152,33 @@ export default function ResidentsView({ openBookingForm }) {
                         >
                           <Printer size={18} />
                         </button>
-                        <button
-                          onClick={() => openNoteModal(booking)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            booking.notes && booking.notes.trim() !== ''
-                              ? 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
-                              : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
-                          }`}
-                          title="ملاحظات النزيل"
-                        >
-                          <MessageSquare size={18} />
-                        </button>
-                        <button
-                          onClick={() => openBookingForm(booking)}
-                          className="text-orange-500 hover:text-orange-700 p-2 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
-                          title="تعديل الحجز"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button onClick={() => handleDelete(booking.id)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="حذف الحجز">
-                          <Trash2 size={18} />
-                        </button>
+                        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                          <button
+                            onClick={() => openNoteModal(booking)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              booking.notes && booking.notes.trim() !== ''
+                                ? 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
+                                : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
+                            }`}
+                            title="ملاحظات النزيل"
+                          >
+                            <MessageSquare size={18} />
+                          </button>
+                        )}
+                        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                          <button
+                            onClick={() => openBookingForm(booking)}
+                            className="text-orange-500 hover:text-orange-700 p-2 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
+                            title="تعديل الحجز"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                        )}
+                        {(user?.role === 'admin' || user?.permissions?.canDelete) && (
+                          <button onClick={() => handleDelete(booking.id)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="حذف الحجز">
+                            <Trash2 size={18} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

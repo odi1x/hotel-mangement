@@ -18,6 +18,10 @@ export default async function handler(req, res) {
       return res.status(200).json({
         id: user.id,
         username: user.username,
+        name: user.name,
+        profilePicture: user.profilePicture,
+        role: user.role,
+        adminId: user.adminId,
         businessName: user.businessName,
         tourismLicense: user.tourismLicense,
         logoUrl: user.logoUrl,
@@ -26,15 +30,24 @@ export default async function handler(req, res) {
         taxEnabled: user.taxEnabled,
         taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes,
-        bookingSources: user.bookingSources
+        bookingSources: user.bookingSources,
+        permissions: {
+          canBook: user.canBook,
+          canEdit: user.canEdit,
+          canDelete: user.canDelete,
+          canViewAnalytics: user.canViewAnalytics,
+          canViewSettings: user.canViewSettings
+        }
       });
     }
 
     else if (req.method === 'PUT') {
-      const { businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources } = req.body;
+      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources } = req.body;
       const user = await prisma.user.update({
         where: { id: decoded.userId },
         data: {
+          name: name !== undefined ? name : undefined,
+          profilePicture: profilePicture !== undefined ? profilePicture : undefined,
           businessName,
           tourismLicense,
           logoUrl,
@@ -49,6 +62,10 @@ export default async function handler(req, res) {
       return res.status(200).json({
         id: user.id,
         username: user.username,
+        name: user.name,
+        profilePicture: user.profilePicture,
+        role: user.role,
+        adminId: user.adminId,
         businessName: user.businessName,
         tourismLicense: user.tourismLicense,
         logoUrl: user.logoUrl,
@@ -57,7 +74,14 @@ export default async function handler(req, res) {
         taxEnabled: user.taxEnabled,
         taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes,
-        bookingSources: user.bookingSources
+        bookingSources: user.bookingSources,
+        permissions: {
+          canBook: user.canBook,
+          canEdit: user.canEdit,
+          canDelete: user.canDelete,
+          canViewAnalytics: user.canViewAnalytics,
+          canViewSettings: user.canViewSettings
+        }
       });
     }
 

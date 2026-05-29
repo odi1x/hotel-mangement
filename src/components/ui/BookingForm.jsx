@@ -144,7 +144,7 @@ export default function BookingForm({ onClose, initialData }) {
           {error && (
             <div className="mb-6 bg-red-50 text-red-700 p-3 rounded-lg text-sm font-medium border border-red-200 flex justify-between items-center">
               <span>{error}</span>
-              {error === 'لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.' && (
+              {error === 'لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.' && (user?.role === 'admin' || user?.permissions?.canEdit) && (
                 <button
                   type="button"
                   onClick={async () => {
