@@ -1,4 +1,4 @@
-import ImageKit from '@imagekit/nodejs';
+import ImageKit from 'imagekit';
 import { cors } from '../../utils.js';
 
 export default async function handler(req, res) {
