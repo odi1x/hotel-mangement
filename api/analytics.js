@@ -15,8 +15,10 @@ export default async function handler(req, res) {
 
   const { apartmentIds, startDate, endDate } = req.query;
 
+  const targetUserId = user.adminId || user.userId;
+
   try {
-    const filter = { userId: user.userId };
+    const filter = { userId: targetUserId };
 
     if (apartmentIds) {
         filter.apartmentId = { in: apartmentIds.split(',') };

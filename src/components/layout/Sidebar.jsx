@@ -5,7 +5,7 @@ import { useData } from '../../context/DataContext';
 
 export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) {
   const { darkMode, toggleDarkMode } = useTheme();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { apartments, bookings } = useData();
 
   const isDateBetween = (date, start, end) => {
@@ -50,8 +50,14 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         <SidebarItem icon={Calendar} label="التوفر" id="availability" />
         <SidebarItem icon={Home} label="الشقق" id="apartments" />
         <SidebarItem icon={Users} label="سجل النزلاء" id="residents" />
-        <SidebarItem icon={BarChart3} label="التحليلات" id="analytics" />
-        <SidebarItem icon={Settings} label="الإعدادات" id="settings" />
+
+        {(user?.role === 'admin' || user?.permissions?.canViewAnalytics) && (
+          <SidebarItem icon={BarChart3} label="التحليلات" id="analytics" />
+        )}
+
+        {(user?.role === 'admin' || user?.permissions?.canViewSettings) && (
+          <SidebarItem icon={Settings} label="الإعدادات" id="settings" />
+        )}
       </nav>
 
       <div className="mt-auto space-y-4">

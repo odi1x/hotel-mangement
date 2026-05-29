@@ -9,10 +9,13 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
+  // If user is staff, target the admin's account ID for data ownership
+  const targetUserId = user.adminId || user.userId;
+
   try {
     if (req.method === 'GET') {
       const apartments = await prisma.apartment.findMany({
-        where: { userId: user.userId },
+        where: { userId: targetUserId },
         orderBy: { createdAt: 'desc' }
       });
       return res.status(200).json(apartments);
@@ -22,7 +25,7 @@ export default async function handler(req, res) {
       const { name, type, description, basePrice } = req.body;
       const apartment = await prisma.apartment.create({
         data: {
-          userId: user.userId,
+          userId: targetUserId,
           name,
           type,
           description,
@@ -37,7 +40,7 @@ export default async function handler(req, res) {
 
       // Verify ownership
       const existing = await prisma.apartment.findUnique({ where: { id } });
-      if (!existing || existing.userId !== user.userId) {
+      if (!existing || existing.userId !== targetUserId) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
@@ -67,7 +70,7 @@ export default async function handler(req, res) {
 
       // Verify ownership
       const existing = await prisma.apartment.findUnique({ where: { id } });
-      if (!existing || existing.userId !== user.userId) {
+      if (!existing || existing.userId !== targetUserId) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 

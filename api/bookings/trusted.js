@@ -12,6 +12,8 @@ export default async function handler(req, res) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+    const targetUserId = user.adminId || user.userId;
+
     const { phone, trusted } = req.body;
 
     if (!phone) {
@@ -21,7 +23,7 @@ export default async function handler(req, res) {
     // Update all bookings for this user's apartments that have this phone number
     await prisma.booking.updateMany({
       where: {
-        userId: user.id,
+        userId: targetUserId,
         phone: phone,
       },
       data: {

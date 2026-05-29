@@ -13,10 +13,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { username, password } = req.body;
+    const { username, password, name, profilePicture } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password are required' });
+    if (!username || !password || !name) {
+      return res.status(400).json({ message: 'Username, password, and name are required' });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -33,14 +33,41 @@ export default async function handler(req, res) {
       data: {
         username,
         password: hashedPassword,
+        name,
+        profilePicture,
+        role: 'admin',
       },
     });
 
-    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, {
+    const token = jwt.sign({
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+      adminId: user.adminId
+    }, JWT_SECRET, {
       expiresIn: '7d',
     });
 
-    res.status(201).json({ token, user: { id: user.id, username: user.username, businessName: user.businessName, tourismLicense: user.tourismLicense } });
+    res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        profilePicture: user.profilePicture,
+        role: user.role,
+        adminId: user.adminId,
+        businessName: user.businessName,
+        tourismLicense: user.tourismLicense,
+        permissions: {
+          canBook: user.canBook,
+          canEdit: user.canEdit,
+          canDelete: user.canDelete,
+          canViewAnalytics: user.canViewAnalytics,
+          canViewSettings: user.canViewSettings
+        }
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });

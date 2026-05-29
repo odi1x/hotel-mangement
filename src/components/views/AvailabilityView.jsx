@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { ChevronRight, ChevronLeft, Calendar, Search, Plus, Home, User, Phone, Receipt, X, MessageSquare } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AvailabilityView({ openBookingForm }) {
   const { apartments, bookings } = useData();
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
 
@@ -250,18 +252,20 @@ export default function AvailabilityView({ openBookingForm }) {
               )}
             </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex justify-between">
-              <button
-                onClick={() => {
-                  setSelectedDayBookings(null);
-                  openBookingForm({ startDate: selectedDayBookings.date.toISOString().split('T')[0] });
-                }}
-                className="flex items-center space-x-reverse space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm"
-              >
-                <Plus size={16} />
-                <span className="mr-1">إضافة حجز جديد في هذا اليوم</span>
-              </button>
-            </div>
+            {(user?.role === 'admin' || user?.permissions?.canBook) && (
+              <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex justify-between">
+                <button
+                  onClick={() => {
+                    setSelectedDayBookings(null);
+                    openBookingForm({ startDate: selectedDayBookings.date.toISOString().split('T')[0] });
+                  }}
+                  className="flex items-center space-x-reverse space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm"
+                >
+                  <Plus size={16} />
+                  <span className="mr-1">إضافة حجز جديد في هذا اليوم</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -319,19 +323,27 @@ export default function AvailabilityView({ openBookingForm }) {
                   <div className="text-sm font-bold text-yellow-800 dark:text-yellow-300">{selectedBookingDetails.notes}</div>
                 </div>
               )}
+
+              {selectedBookingDetails.creatorName && (
+                <div className="text-xs text-gray-500 dark:text-slate-400 text-center">
+                  تم إضافة الحجز بواسطة: <span className="font-bold">{selectedBookingDetails.creatorName}</span>
+                </div>
+              )}
             </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => {
-                  const bookingToEdit = selectedBookingDetails;
-                  setSelectedBookingDetails(null);
-                  openBookingForm(bookingToEdit);
-                }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all text-sm"
-              >
-                تعديل الحجز
-              </button>
+            <div className={`p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 grid gap-3 ${user?.role === 'admin' || user?.permissions?.canEdit ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                <button
+                  onClick={() => {
+                    const bookingToEdit = selectedBookingDetails;
+                    setSelectedBookingDetails(null);
+                    openBookingForm(bookingToEdit);
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all text-sm"
+                >
+                  تعديل الحجز
+                </button>
+              )}
               <button
                 onClick={() => setSelectedBookingDetails(null)}
                 className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-800 dark:text-slate-200 px-4 py-2.5 rounded-xl font-bold transition-all text-sm"

@@ -9,10 +9,12 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
+  const targetUserId = user.adminId || user.userId;
+
   try {
     if (req.method === 'GET') {
       const bookings = await prisma.booking.findMany({
-        where: { userId: user.userId },
+        where: { userId: targetUserId },
         orderBy: { startDate: 'desc' }
       });
       return res.status(200).json(bookings);
@@ -32,7 +34,7 @@ export default async function handler(req, res) {
 
       // Verify ownership of the apartment being booked
       const apartment = await prisma.apartment.findUnique({ where: { id: apartmentId } });
-      if (!apartment || apartment.userId !== user.userId) {
+      if (!apartment || apartment.userId !== targetUserId) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
@@ -53,12 +55,12 @@ export default async function handler(req, res) {
 
       // Check if user is trusted based on previous bookings
       const previousBooking = await prisma.booking.findFirst({
-        where: { userId: user.userId, phone, trusted: true }
+        where: { userId: targetUserId, phone, trusted: true }
       });
 
       const booking = await prisma.booking.create({
         data: {
-          userId: user.userId,
+          userId: targetUserId,
           apartmentId,
           residentName,
           residentId,
@@ -69,7 +71,8 @@ export default async function handler(req, res) {
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           trusted: !!previousBooking,
-          notes
+          notes,
+          creatorName: user.name || user.username
         },
       });
 
@@ -99,14 +102,14 @@ export default async function handler(req, res) {
 
       // Verify ownership of the booking
       const existing = await prisma.booking.findUnique({ where: { id } });
-      if (!existing || existing.userId !== user.userId) {
+      if (!existing || existing.userId !== targetUserId) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
       // If apartment changed, verify ownership of new apartment
       if (apartmentId !== existing.apartmentId) {
         const apartment = await prisma.apartment.findUnique({ where: { id: apartmentId } });
-        if (!apartment || apartment.userId !== user.userId) {
+        if (!apartment || apartment.userId !== targetUserId) {
           return res.status(403).json({ message: 'Forbidden' });
         }
       }
@@ -150,7 +153,7 @@ export default async function handler(req, res) {
 
       // Verify ownership
       const existing = await prisma.booking.findUnique({ where: { id } });
-      if (!existing || existing.userId !== user.userId) {
+      if (!existing || existing.userId !== targetUserId) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 

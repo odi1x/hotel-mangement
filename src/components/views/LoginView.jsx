@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Home } from 'lucide-react';
+import ImageUpload from '../ui/ImageUpload';
+import toast from 'react-hot-toast';
 
 export default function LoginView() {
   const { login, register } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [profilePicture, setProfilePicture] = useState(null);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
@@ -14,9 +18,14 @@ export default function LoginView() {
     setError('');
     try {
       if (isLogin) {
-        await login(username, password);
+        const user = await login(username, password);
+        toast.success(`مرحباً بك ${user.name || user.username}`);
       } else {
-        await register(username, password);
+        if (!name.trim()) {
+          return setError('الاسم الكامل مطلوب');
+        }
+        const user = await register({ username, password, name, profilePicture });
+        toast.success(`مرحباً بك ${user.name || user.username}`);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ ما');
@@ -37,9 +46,31 @@ export default function LoginView() {
         {error && <div className="bg-red-50 text-red-500 p-3 rounded-lg mb-4 text-sm text-center border border-red-100">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div className="flex flex-col items-center mb-6">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">الصورة الشخصية (اختياري)</label>
+              <ImageUpload
+                onUploadSuccess={url => setProfilePicture(url)}
+                currentImage={profilePicture}
+              />
+            </div>
+          )}
+          {!isLogin && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">الاسم الكامل</label>
+              <input
+                required={!isLogin}
+                type="text"
+                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-white transition-all"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">اسم المستخدم</label>
             <input
+              name="username"
               required
               type="text"
               className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-white transition-all"
@@ -50,6 +81,7 @@ export default function LoginView() {
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">كلمة المرور</label>
             <input
+              name="password"
               required
               type="password"
               className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-white transition-all"

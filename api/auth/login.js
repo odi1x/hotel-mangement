@@ -33,11 +33,35 @@ export default async function handler(req, res) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, {
+    const token = jwt.sign({
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+      adminId: user.adminId
+    }, JWT_SECRET, {
       expiresIn: '7d',
     });
 
-    res.status(200).json({ token, user: { id: user.id, username: user.username, businessName: user.businessName, tourismLicense: user.tourismLicense } });
+    res.status(200).json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        profilePicture: user.profilePicture,
+        role: user.role,
+        adminId: user.adminId,
+        businessName: user.businessName,
+        tourismLicense: user.tourismLicense,
+        permissions: {
+          canBook: user.canBook,
+          canEdit: user.canEdit,
+          canDelete: user.canDelete,
+          canViewAnalytics: user.canViewAnalytics,
+          canViewSettings: user.canViewSettings
+        }
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal Server Error' });
