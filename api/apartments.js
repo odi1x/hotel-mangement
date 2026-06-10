@@ -22,7 +22,13 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'POST') {
-      const { name, type, description, basePrice } = req.body;
+      const {
+        name, type, description, basePrice,
+        rentCost, rentPeriod, cleaningCost,
+        platformFeeType, platformFee,
+        otherExpenseLabel, otherExpenseAmount,
+        licenseId
+      } = req.body;
       const apartment = await prisma.apartment.create({
         data: {
           userId: targetUserId,
@@ -30,13 +36,27 @@ export default async function handler(req, res) {
           type,
           description,
           basePrice: parseFloat(basePrice) || 0,
+          rentCost: rentCost ? parseFloat(rentCost) : null,
+          rentPeriod,
+          cleaningCost: cleaningCost ? parseFloat(cleaningCost) : null,
+          platformFeeType,
+          platformFee: platformFee ? parseFloat(platformFee) : null,
+          otherExpenseLabel,
+          otherExpenseAmount: otherExpenseAmount ? parseFloat(otherExpenseAmount) : null,
+          licenseId: licenseId || null,
         },
       });
       return res.status(201).json(apartment);
     }
 
     else if (req.method === 'PUT') {
-      const { id, name, type, description, basePrice, needsCleaning } = req.body;
+      const {
+        id, name, type, description, basePrice, needsCleaning,
+        rentCost, rentPeriod, cleaningCost,
+        platformFeeType, platformFee,
+        otherExpenseLabel, otherExpenseAmount,
+        licenseId
+      } = req.body;
 
       // Verify ownership
       const existing = await prisma.apartment.findUnique({ where: { id } });
@@ -49,6 +69,14 @@ export default async function handler(req, res) {
           type,
           description,
           basePrice: parseFloat(basePrice) || 0,
+          rentCost: rentCost ? parseFloat(rentCost) : null,
+          rentPeriod,
+          cleaningCost: cleaningCost ? parseFloat(cleaningCost) : null,
+          platformFeeType,
+          platformFee: platformFee ? parseFloat(platformFee) : null,
+          otherExpenseLabel,
+          otherExpenseAmount: otherExpenseAmount ? parseFloat(otherExpenseAmount) : null,
+          licenseId: licenseId || null,
       };
 
       if (needsCleaning !== undefined) {

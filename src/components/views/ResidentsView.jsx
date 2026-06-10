@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert, Edit2, MessageSquare } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert, Edit2, MessageSquare, LogOut } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
-  const { apartments, bookings, deleteBooking, toggleTrustedStatus, updateBooking } = useData();
+  const { apartments, bookings, deleteBooking, checkoutBooking, toggleTrustedStatus, updateBooking } = useData();
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,6 +46,12 @@ export default function ResidentsView({ openBookingForm }) {
   const handleDelete = (id) => {
     if(confirm('هل تريد حذف هذا الحجز؟')) {
       deleteBooking(id);
+    }
+  };
+
+  const handleCheckout = (id) => {
+    if(confirm('هل أنت متأكد من رغبتك في تسجيل خروج هذا النزيل مبكراً؟ سيتم تحديث تاريخ المغادرة للوقت الحالي مع الاحتفاظ بالقيمة المالية وإتاحة الوحدة للإيجار مجدداً.')) {
+      checkoutBooking(id);
     }
   };
 
@@ -127,7 +133,9 @@ export default function ResidentsView({ openBookingForm }) {
                       <div className="text-[10px] text-gray-400 font-bold uppercase mt-1 bg-gray-100 dark:bg-slate-800 inline-block px-2 py-0.5 rounded">{calculateNights(booking.startDate, booking.endDate)} ليالي</div>
                     </td>
                     <td className="px-6 py-4">
-                      {isCurrent ? (
+                      {booking.status === 'checked_out_early' ? (
+                          <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50">خروج مبكر</span>
+                      ) : isCurrent ? (
                         <span className="px-2.5 py-1 rounded-md text-[11px] font-black bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800/50">مقيم حالياً</span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400 border border-gray-200 dark:border-slate-700">مغادر</span>
@@ -135,6 +143,15 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center space-x-reverse space-x-2">
+                        {isCurrent && booking.status !== 'checked_out_early' && (
+                          <button
+                            onClick={() => handleCheckout(booking.id)}
+                            className="text-orange-600 hover:text-orange-800 p-2 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors flex items-center"
+                            title="تسجيل خروج مبكر"
+                          >
+                            <LogOut size={18} />
+                          </button>
+                        )}
                         {(user?.role === 'admin' || user?.permissions?.canEdit) && (
                           <button
                             onClick={() => toggleTrustedStatus(booking.phone, booking.trusted)}

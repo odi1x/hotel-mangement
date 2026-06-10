@@ -29,6 +29,10 @@ model User {
   taxPercentage    Decimal?
   apartmentTypes   String?
   bookingSources   String?
+
+  cleanerSalary    Decimal?
+  generalExpenses  Decimal?
+
   createdAt        DateTime    @default(now())
 
   admin            User?       @relation("AdminStaff", fields: [adminId], references: [id])
@@ -36,6 +40,17 @@ model User {
 
   apartments       Apartment[]
   bookings         Booking[]
+  licenses         License[]
+}
+
+model License {
+  id            String    @id @default(uuid())
+  userId        String
+  licenseNumber String
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apartments    Apartment[]
 }
 
 model Apartment {
@@ -47,11 +62,23 @@ model Apartment {
   basePrice     Decimal
   needsCleaning Boolean   @default(false)
   lastCleanedAt DateTime  @default(now())
+
+  rentCost           Decimal?
+  rentPeriod         String?   // "monthly" or "yearly"
+  cleaningCost       Decimal?
+  platformFeeType    String?   // "percentage" or "fixed"
+  platformFee        Decimal?
+  otherExpenseLabel  String?
+  otherExpenseAmount Decimal?
+
+  licenseId     String?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   bookings      Booking[]
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  license       License?  @relation(fields: [licenseId], references: [id], onDelete: SetNull)
 }
 
 model Booking {
@@ -63,9 +90,11 @@ model Booking {
   phone         String
   address       String?
   pricePerNight Decimal
+  totalPrice    Decimal?
   source        String    @default("زيارة مباشرة")
   startDate     DateTime
   endDate       DateTime
+  status        String    @default("active") // "active", "completed", "checked_out_early"
   trusted       Boolean   @default(false)
   notes         String?
   creatorName   String?

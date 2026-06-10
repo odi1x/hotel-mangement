@@ -12,7 +12,8 @@ export const DataProvider = ({ children }) => {
 
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalNights: 0, sourceCounts: {}, count: 0 });
+  const [licenses, setLicenses] = useState([]);
+  const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -22,6 +23,15 @@ export const DataProvider = ({ children }) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/apartments`);
       setApartments(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchLicenses = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/licenses`);
+      setLicenses(res.data);
     } catch (err) {
       console.error(err);
     }
@@ -57,6 +67,7 @@ export const DataProvider = ({ children }) => {
     if (token) {
       fetchApartments();
       fetchBookings();
+      fetchLicenses();
     }
   }, [token]);
 
@@ -72,6 +83,28 @@ export const DataProvider = ({ children }) => {
       setApartments([res.data, ...apartments]);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const addLicense = async (licenseNumber) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/licenses`, { licenseNumber });
+      setLicenses([res.data, ...licenses]);
+      toast.success('تمت إضافة الترخيص بنجاح');
+    } catch (err) {
+      console.error(err);
+      toast.error('حدث خطأ أثناء إضافة الترخيص');
+    }
+  };
+
+  const deleteLicense = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/licenses?id=${id}`);
+      setLicenses(licenses.filter(l => l.id !== id));
+      toast.success('تم حذف الترخيص بنجاح');
+    } catch (err) {
+      console.error(err);
+      toast.error('حدث خطأ أثناء حذف الترخيص');
     }
   };
 
@@ -115,6 +148,19 @@ export const DataProvider = ({ children }) => {
       }
   };
 
+  const checkoutBooking = async (id) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/bookings`, { id, isCheckout: true });
+      setBookings(bookings.map(b => b.id === id ? res.data : b));
+      toast.success('تم تسجيل الخروج المبكر بنجاح');
+      fetchApartments(); // re-fetch apartments to update needsCleaning status
+    } catch (err) {
+      console.error(err);
+      toast.error('حدث خطأ أثناء تسجيل الخروج');
+      throw err;
+    }
+  };
+
   const deleteBooking = async (id) => {
     try {
       await axios.delete(`${API_BASE_URL}/bookings?id=${id}`);
@@ -146,6 +192,7 @@ export const DataProvider = ({ children }) => {
   return (
     <DataContext.Provider value={{
       apartments,
+      licenses,
       bookings,
       analytics,
       analyticsFilter,
@@ -153,9 +200,12 @@ export const DataProvider = ({ children }) => {
       addApartment,
       updateApartment,
       deleteApartment,
+      addLicense,
+      deleteLicense,
       addBooking,
       updateBooking,
       deleteBooking,
+      checkoutBooking,
       toggleTrustedStatus,
       loading
     }}>

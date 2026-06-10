@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { Save, Plus, Trash2, Settings, Shield } from 'lucide-react';
 import StaffManagement from './settings/StaffManagement';
 
 export default function SettingsView() {
   const { user, updateProfile } = useAuth();
+  const { licenses, addLicense, deleteLicense } = useData();
   const [activeTab, setActiveTab] = useState('general');
 
   const [formData, setFormData] = useState({
@@ -16,7 +18,9 @@ export default function SettingsView() {
     taxEnabled: false,
     taxPercentage: '',
     apartmentTypes: 'غرفة,غرفة وصالة,غرفتين وصالة',
-    bookingSources: 'زيارة مباشرة,Booking.com,Airbnb'
+    bookingSources: 'زيارة مباشرة,Booking.com,Airbnb',
+    cleanerSalary: '',
+    generalExpenses: ''
   });
 
   const [apartmentTypesList, setApartmentTypesList] = useState(['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
@@ -24,6 +28,7 @@ export default function SettingsView() {
 
   const [bookingSourcesList, setBookingSourcesList] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
   const [newBookingSource, setNewBookingSource] = useState('');
+  const [newLicenseNumber, setNewLicenseNumber] = useState('');
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -60,7 +65,9 @@ export default function SettingsView() {
         taxEnabled: user.taxEnabled || false,
         taxPercentage: user.taxPercentage || '',
         apartmentTypes: user.apartmentTypes || 'غرفة,غرفة وصالة,غرفتين وصالة',
-        bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb'
+        bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb',
+        cleanerSalary: user.cleanerSalary || '',
+        generalExpenses: user.generalExpenses || ''
       });
       setApartmentTypesList(user.apartmentTypes ? user.apartmentTypes.split(',').map(s => s.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
       setBookingSourcesList(user.bookingSources ? user.bookingSources.split(',').map(s => s.trim()).filter(Boolean) : ['زيارة مباشرة', 'Booking.com', 'Airbnb']);
@@ -77,6 +84,13 @@ export default function SettingsView() {
 
   const handlePasswordChange = (e) => {
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+  };
+
+  const handleAddLicense = () => {
+    if (newLicenseNumber.trim()) {
+      addLicense(newLicenseNumber.trim());
+      setNewLicenseNumber('');
+    }
   };
 
   const handleImageUpload = (e, field) => {
@@ -215,15 +229,85 @@ export default function SettingsView() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">رقم رخصة السياحة / السجل التجاري</label>
-              <input
-                type="text"
-                name="tourismLicense"
-                value={formData.tourismLicense}
-                onChange={handleChange}
-                className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="مثال: 1234567890"
-              />
+              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">أرقام التراخيص (تراخيص السياحة)</label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newLicenseNumber}
+                  onChange={(e) => setNewLicenseNumber(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLicense())}
+                  className="flex-1 border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="أضف رقم ترخيص جديد"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddLicense}
+                  className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-4 py-2 rounded-xl font-bold transition-colors flex items-center justify-center"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {licenses.map((license) => (
+                  <div key={license.id} className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
+                    <span className="text-sm font-medium">{license.licenseNumber}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('هل أنت متأكد من حذف هذا الترخيص؟')) {
+                          deleteLicense(license.id);
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-700 transition-colors p-0.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                {licenses.length === 0 && <span className="text-sm text-gray-500">لا توجد تراخيص مضافة</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
+              <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 mb-4 border-b pb-2 border-gray-200 dark:border-slate-600">التكاليف والمصروفات التشغيلية (شهرياً)</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">راتب النظافة الشهري (Staff Payroll)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="cleanerSalary"
+                      value={formData.cleanerSalary}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="مثال: 1500"
+                    />
+                    <span className="absolute left-3 top-2 text-xs font-bold text-gray-400">ر.س / شهر</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">مصروفات عامة أخرى (كهرباء، ماء، إنترنت)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="generalExpenses"
+                      value={formData.generalExpenses}
+                      onChange={handleChange}
+                      className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="إجمالي المصروفات الثابتة"
+                    />
+                    <span className="absolute left-3 top-2 text-xs font-bold text-gray-400">ر.س / شهر</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-end text-xs text-gray-500 dark:text-slate-400">
+                <p className="bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 p-3 rounded-xl">
+                    ملاحظة: سيتم توزيع التكاليف الشهرية المدخلة هنا على عدد الأيام لحساب صافي الأرباح بشكل دقيق في التحليلات العامة. يمكنك ترك هذه الحقول فارغة إذا كنت تفضل حساب رسوم التنظيف كنسبة أو مبلغ مقطوع لكل حجز من إعدادات كل وحدة.
+                </p>
             </div>
           </div>
 
