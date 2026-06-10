@@ -6,7 +6,7 @@ import StaffManagement from './settings/StaffManagement';
 
 export default function SettingsView() {
   const { user, updateProfile } = useAuth();
-  const { licenses, addLicense, deleteLicense } = useData();
+  const { apartments, licenses, addLicense, deleteLicense } = useData();
   const [activeTab, setActiveTab] = useState('general');
 
   const [formData, setFormData] = useState({
@@ -20,6 +20,7 @@ export default function SettingsView() {
     apartmentTypes: 'غرفة,غرفة وصالة,غرفتين وصالة',
     bookingSources: 'زيارة مباشرة,Booking.com,Airbnb',
     cleanerSalary: '',
+    cleanerScope: '',
     generalExpenses: ''
   });
 
@@ -67,6 +68,7 @@ export default function SettingsView() {
         apartmentTypes: user.apartmentTypes || 'غرفة,غرفة وصالة,غرفتين وصالة',
         bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb',
         cleanerSalary: user.cleanerSalary || '',
+        cleanerScope: user.cleanerScope || '',
         generalExpenses: user.generalExpenses || ''
       });
       setApartmentTypesList(user.apartmentTypes ? user.apartmentTypes.split(',').map(s => s.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
@@ -273,18 +275,50 @@ export default function SettingsView() {
             <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
               <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 mb-4 border-b pb-2 border-gray-200 dark:border-slate-600">التكاليف والمصروفات التشغيلية (شهرياً)</h3>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">راتب النظافة الشهري (Staff Payroll)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      name="cleanerSalary"
-                      value={formData.cleanerSalary}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="مثال: 1500"
-                    />
-                    <span className="absolute left-3 top-2 text-xs font-bold text-gray-400">ر.س / شهر</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">راتب النظافة الشهري (Staff Payroll)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="cleanerSalary"
+                        value={formData.cleanerSalary}
+                        onChange={handleChange}
+                        className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+                        placeholder="1500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">النطاق (Scope)</label>
+                    <div className="relative">
+                        <select
+                            className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-2 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors text-xs overflow-hidden text-ellipsis"
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '') {
+                                    setFormData({...formData, cleanerScope: ''});
+                                } else {
+                                    const current = formData.cleanerScope ? formData.cleanerScope.split(',') : [];
+                                    if (current.includes(val)) {
+                                        setFormData({...formData, cleanerScope: current.filter(id => id !== val).join(',')});
+                                    } else {
+                                        setFormData({...formData, cleanerScope: [...current, val].join(',')});
+                                    }
+                                }
+                                // Reset the select back to default visual
+                                e.target.value = 'default';
+                            }}
+                        >
+                            <option value="default">{(formData.cleanerScope || '').split(',').filter(Boolean).length === 0 ? 'جميع الوحدات (الكل)' : `محدد (${formData.cleanerScope.split(',').filter(Boolean).length}) - اضغط للتعديل`}</option>
+                            <option value="">-- إعادة تعيين للكل --</option>
+                            {apartments.map(apt => (
+                                <option key={apt.id} value={apt.id}>
+                                    {formData.cleanerScope && formData.cleanerScope.includes(apt.id) ? '✓ ' : ''}{apt.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -295,10 +329,9 @@ export default function SettingsView() {
                       name="generalExpenses"
                       value={formData.generalExpenses}
                       onChange={handleChange}
-                      className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                       placeholder="إجمالي المصروفات الثابتة"
                     />
-                    <span className="absolute left-3 top-2 text-xs font-bold text-gray-400">ر.س / شهر</span>
                   </div>
                 </div>
               </div>
@@ -306,7 +339,7 @@ export default function SettingsView() {
 
             <div className="flex flex-col justify-end text-xs text-gray-500 dark:text-slate-400">
                 <p className="bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 p-3 rounded-xl">
-                    ملاحظة: سيتم توزيع التكاليف الشهرية المدخلة هنا على عدد الأيام لحساب صافي الأرباح بشكل دقيق في التحليلات العامة. يمكنك ترك هذه الحقول فارغة إذا كنت تفضل حساب رسوم التنظيف كنسبة أو مبلغ مقطوع لكل حجز من إعدادات كل وحدة.
+                    ملاحظة: سيتم توزيع التكاليف الشهرية المدخلة هنا على عدد الأيام لحساب صافي الأرباح بشكل دقيق في التحليلات العامة. يتم تقسيم المصروفات العامة على جميع الوحدات بالتساوي، بينما يتم تخصيص راتب النظافة للوحدات المحددة في النطاق فقط.
                 </p>
             </div>
           </div>
