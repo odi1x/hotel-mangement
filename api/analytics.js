@@ -181,11 +181,16 @@ export default async function handler(req, res) {
     // Assuming cleaner salary is monthly and general expenses are monthly
     let apportionedGlobalExpenses = 0;
     if (userSettings) {
+        // Calculate the ratio of selected apartments vs total apartments owned by user
+        // This ensures if someone filters 1 apartment out of 10, they only see 1/10th of the global overhead.
+        const totalAptCount = allApartments.length > 0 ? allApartments.length : 1;
+        const ratio = filteredAptCount / totalAptCount;
+
         if (userSettings.cleanerSalary) {
-             apportionedGlobalExpenses += (Number(userSettings.cleanerSalary) / 30) * periodDays;
+             apportionedGlobalExpenses += ((Number(userSettings.cleanerSalary) / 30) * periodDays) * ratio;
         }
         if (userSettings.generalExpenses) {
-             apportionedGlobalExpenses += (Number(userSettings.generalExpenses) / 30) * periodDays;
+             apportionedGlobalExpenses += ((Number(userSettings.generalExpenses) / 30) * periodDays) * ratio;
         }
     }
 

@@ -212,29 +212,29 @@ export default function AnalyticsView() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-bl-[100%] transition-transform group-hover:scale-110"></div>
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">إجمالي الإيرادات</p>
+          <div className="absolute top-0 left-0 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">إجمالي الإيرادات</p>
           <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400 relative z-10">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-bl-[100%] transition-transform group-hover:scale-110"></div>
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">صافي الأرباح</p>
+          <div className="absolute top-0 left-0 w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">صافي الأرباح</p>
           <h3 className="text-3xl font-black text-green-600 dark:text-green-400 relative z-10">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-bl-[100%] transition-transform group-hover:scale-110"></div>
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">معدل الإشغال</p>
+          <div className="absolute top-0 left-0 w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">معدل الإشغال</p>
           <h3 className="text-3xl font-black text-orange-500 relative z-10">{Math.round(analytics.occupancyRate)}<span className="text-sm font-bold text-gray-400">%</span></h3>
-          <p className="text-xs text-gray-400 mt-2 font-medium">من إجمالي الأيام المتاحة</p>
+          <p className="text-xs text-gray-400 mt-2 font-medium relative z-10">من إجمالي الأيام المتاحة</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-bl-[100%] transition-transform group-hover:scale-110"></div>
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">الليالي المؤجرة</p>
+          <div className="absolute top-0 left-0 w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">الليالي المؤجرة</p>
           <h3 className="text-3xl font-black text-purple-600 relative z-10">{analytics.totalNights} <span className="text-sm font-bold text-gray-400">ليلة</span></h3>
-          <p className="text-xs text-gray-400 mt-2 font-medium">عبر {analytics.count} حجز</p>
+          <p className="text-xs text-gray-400 mt-2 font-medium relative z-10">عبر {analytics.count} حجز</p>
         </div>
       </div>
 
