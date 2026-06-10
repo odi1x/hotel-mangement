@@ -207,8 +207,51 @@ export default function SettingsView() {
       {activeTab === 'staff' && user?.role === 'admin' ? (
         <StaffManagement />
       ) : (
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-8 shadow-sm">
-        <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white border-b pb-4">إعدادات المنشأة العامة</h2>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-6 md:p-8 shadow-sm">
+
+        {/* Sub-Navigation for General Settings */}
+        <div className="flex flex-wrap gap-2 mb-8 border-b border-gray-100 dark:border-slate-800 pb-4">
+            <button
+              onClick={() => setFacilityTab('identity')}
+              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
+                facilityTab === 'identity'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              الهوية والمعلومات
+            </button>
+            <button
+              onClick={() => setFacilityTab('legal')}
+              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
+                facilityTab === 'legal'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              التراخيص والعقود
+            </button>
+            <button
+              onClick={() => setFacilityTab('finance')}
+              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
+                facilityTab === 'finance'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              المصروفات والتشغيل
+            </button>
+            <button
+              onClick={() => setFacilityTab('system')}
+              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
+                facilityTab === 'system'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              خيارات النظام
+            </button>
+        </div>
 
         {successMsg && (
           <div className="mb-6 bg-green-50 text-green-700 p-3 rounded-lg text-sm font-medium border border-green-200">
@@ -216,271 +259,289 @@ export default function SettingsView() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">اسم المنشأة / العقار</label>
-              <input
-                type="text"
-                name="businessName"
-                value={formData.businessName}
-                onChange={handleChange}
-                className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="مثال: فنادق السعادة"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
 
-            <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">أرقام التراخيص (تراخيص السياحة)</label>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  value={newLicenseNumber}
-                  onChange={(e) => setNewLicenseNumber(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLicense())}
-                  className="flex-1 border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="أضف رقم ترخيص جديد"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddLicense}
-                  className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-4 py-2 rounded-xl font-bold transition-colors flex items-center justify-center"
-                >
-                  <Plus size={20} />
-                </button>
+          {/* Identity Tab */}
+          {facilityTab === 'identity' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">اسم المنشأة / العقار</label>
+                  <input
+                    type="text"
+                    name="businessName"
+                    value={formData.businessName}
+                    onChange={handleChange}
+                    className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="مثال: فنادق السعادة"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">شعار المنشأة (للطباعة)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, 'logoUrl')}
+                      className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
+                    />
+                    {formData.logoUrl && <img src={formData.logoUrl} alt="Logo preview" className="mt-4 h-20 object-contain rounded-lg border border-gray-100 dark:border-slate-700 p-2" />}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">الختم / التوقيع (للطباعة)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, 'stampUrl')}
+                      className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
+                    />
+                    {formData.stampUrl && <img src={formData.stampUrl} alt="Stamp preview" className="mt-4 h-20 object-contain rounded-lg border border-gray-100 dark:border-slate-700 p-2" />}
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {licenses.map((license) => (
-                  <div key={license.id} className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
-                    <span className="text-sm font-medium">{license.licenseNumber}</span>
+          )}
+
+          {/* Legal & Licenses Tab */}
+          {facilityTab === 'legal' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">أرقام التراخيص (تراخيص السياحة)</label>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newLicenseNumber}
+                      onChange={(e) => setNewLicenseNumber(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLicense())}
+                      className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="أضف رقم ترخيص جديد"
+                    />
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm('هل أنت متأكد من حذف هذا الترخيص؟')) {
-                          deleteLicense(license.id);
-                        }
-                      }}
-                      className="text-red-500 hover:text-red-700 transition-colors p-0.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                      onClick={handleAddLicense}
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center"
                     >
-                      <Trash2 size={14} />
+                      <Plus size={20} />
                     </button>
                   </div>
-                ))}
-                {licenses.length === 0 && <span className="text-sm text-gray-500">لا توجد تراخيص مضافة</span>}
-              </div>
-            </div>
-          </div>
+                  <div className="flex flex-col gap-2">
+                    {licenses.map((license) => (
+                      <div key={license.id} className="flex justify-between items-center bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 px-4 py-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                        <span className="text-sm font-bold">{license.licenseNumber}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm('هل أنت متأكد من حذف هذا الترخيص؟')) {
+                              deleteLicense(license.id);
+                            }
+                          }}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    {licenses.length === 0 && <span className="text-sm text-gray-500 p-4 bg-gray-50 dark:bg-slate-800 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 text-center">لا توجد تراخيص مضافة</span>}
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700">
-              <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 mb-4 border-b pb-2 border-gray-200 dark:border-slate-600">التكاليف والمصروفات التشغيلية (شهرياً)</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">راتب النظافة الشهري (Staff Payroll)</label>
-                    <div className="relative">
+                <div className="border border-gray-200 dark:border-slate-700 rounded-xl p-5 bg-gray-50/50 dark:bg-slate-800/50">
+                  <div className="flex items-center mb-4">
+                    <input
+                      type="checkbox"
+                      name="taxEnabled"
+                      id="taxEnabled"
+                      checked={formData.taxEnabled}
+                      onChange={handleChange}
+                      className="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-slate-700 dark:border-gray-600 ml-3"
+                    />
+                    <label htmlFor="taxEnabled" className="text-sm font-bold text-gray-700 dark:text-slate-300 cursor-pointer">تفعيل ضريبة القيمة المضافة / رسوم البلدية</label>
+                  </div>
+
+                  {formData.taxEnabled && (
+                    <div className="w-1/2">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-2">النسبة المئوية (%)</label>
                       <input
                         type="number"
-                        name="cleanerSalary"
-                        value={formData.cleanerSalary}
+                        name="taxPercentage"
+                        value={formData.taxPercentage}
                         onChange={handleChange}
-                        className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
-                        placeholder="1500"
+                        min="0"
+                        max="100"
+                        className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        placeholder="15"
                       />
                     </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">الشروط والأحكام المخصصة (تظهر في العقد)</label>
+                  <textarea
+                    name="customTerms"
+                    value={formData.customTerms}
+                    onChange={handleChange}
+                    rows="5"
+                    className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors leading-relaxed"
+                    placeholder="أدخل الشروط والأحكام الخاصة بمنشأتك هنا..."
+                  ></textarea>
+                </div>
+              </div>
+          )}
+
+          {/* Finance Tab */}
+          {facilityTab === 'finance' && (
+              <div className="space-y-6 animate-in fade-in duration-300 flex flex-col min-h-[400px]">
+                <div className="bg-gray-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-gray-100 dark:border-slate-700">
+                  <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 mb-6 flex items-center border-b border-gray-200 dark:border-slate-700 pb-3">التكاليف والمصروفات التشغيلية الثابتة (شهرياً)</h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">راتب النظافة الشهري (Staff Payroll)</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          name="cleanerSalary"
+                          value={formData.cleanerSalary}
+                          onChange={handleChange}
+                          className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors font-bold"
+                          placeholder="مثال: 1500"
+                        />
+                        <span className="absolute left-4 top-3 text-xs font-bold text-gray-400">ر.س / شهر</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">النطاق (Scope)</label>
+                      <div className="relative">
+                          <select
+                              className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors text-sm overflow-hidden text-ellipsis font-bold"
+                              onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === '') {
+                                      setFormData({...formData, cleanerScope: ''});
+                                  } else {
+                                      const current = formData.cleanerScope ? formData.cleanerScope.split(',') : [];
+                                      if (current.includes(val)) {
+                                          setFormData({...formData, cleanerScope: current.filter(id => id !== val).join(',')});
+                                      } else {
+                                          setFormData({...formData, cleanerScope: [...current, val].join(',')});
+                                      }
+                                  }
+                                  e.target.value = 'default';
+                              }}
+                          >
+                              <option value="default">{(formData.cleanerScope || '').split(',').filter(Boolean).length === 0 ? 'جميع الوحدات (الكل)' : `محدد (${formData.cleanerScope.split(',').filter(Boolean).length}) - اضغط للتعديل`}</option>
+                              <option value="">-- إعادة تعيين للكل --</option>
+                              {apartments.map(apt => (
+                                  <option key={apt.id} value={apt.id}>
+                                      {formData.cleanerScope && formData.cleanerScope.includes(apt.id) ? '✓ ' : ''}{apt.name}
+                                  </option>
+                              ))}
+                          </select>
+                      </div>
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">النطاق (Scope)</label>
-                    <div className="relative">
-                        <select
-                            className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-2 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors text-xs overflow-hidden text-ellipsis"
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === '') {
-                                    setFormData({...formData, cleanerScope: ''});
-                                } else {
-                                    const current = formData.cleanerScope ? formData.cleanerScope.split(',') : [];
-                                    if (current.includes(val)) {
-                                        setFormData({...formData, cleanerScope: current.filter(id => id !== val).join(',')});
-                                    } else {
-                                        setFormData({...formData, cleanerScope: [...current, val].join(',')});
-                                    }
-                                }
-                                // Reset the select back to default visual
-                                e.target.value = 'default';
-                            }}
-                        >
-                            <option value="default">{(formData.cleanerScope || '').split(',').filter(Boolean).length === 0 ? 'جميع الوحدات (الكل)' : `محدد (${formData.cleanerScope.split(',').filter(Boolean).length}) - اضغط للتعديل`}</option>
-                            <option value="">-- إعادة تعيين للكل --</option>
-                            {apartments.map(apt => (
-                                <option key={apt.id} value={apt.id}>
-                                    {formData.cleanerScope && formData.cleanerScope.includes(apt.id) ? '✓ ' : ''}{apt.name}
-                                </option>
-                            ))}
-                        </select>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">مصروفات عامة أخرى (إيجارات، كهرباء، ماء، إنترنت)</label>
+                    <div className="relative md:w-1/2">
+                      <input
+                        type="number"
+                        name="generalExpenses"
+                        value={formData.generalExpenses}
+                        onChange={handleChange}
+                        className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors font-bold"
+                        placeholder="إجمالي المصروفات الثابتة"
+                      />
+                      <span className="absolute left-4 top-3 text-xs font-bold text-gray-400">ر.س / شهر</span>
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-auto pt-6 text-xs text-blue-700 dark:text-blue-300">
+                    <p className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl leading-relaxed border border-blue-100 dark:border-blue-800/30">
+                        <span className="font-bold block mb-1">كيفية الحساب:</span>
+                        سيتم توزيع التكاليف الشهرية المدخلة هنا على عدد الأيام لحساب صافي الأرباح بشكل دقيق في التحليلات العامة. يتم تقسيم المصروفات العامة على جميع الوحدات بالتساوي، بينما يتم تخصيص راتب النظافة للوحدات المحددة في النطاق فقط.
+                    </p>
+                </div>
+              </div>
+          )}
+
+          {/* System Tab */}
+          {facilityTab === 'system' && (
+              <div className="space-y-8 animate-in fade-in duration-300">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">مصروفات عامة أخرى (كهرباء، ماء، إنترنت)</label>
-                  <div className="relative">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-3">أنواع الوحدات المتاحة</label>
+                  <div className="flex gap-2 mb-4">
                     <input
-                      type="number"
-                      name="generalExpenses"
-                      value={formData.generalExpenses}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
-                      placeholder="إجمالي المصروفات الثابتة"
+                      type="text"
+                      value={newApartmentType}
+                      onChange={(e) => setNewApartmentType(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddApartmentType())}
+                      className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="أضف نوع وحدة جديد (مثال: جناح ملكي)"
                     />
+                    <button
+                      type="button"
+                      onClick={handleAddApartmentType}
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {apartmentTypesList.map((type, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-700 shadow-sm group">
+                        <span className="text-sm font-bold">{type}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveApartmentType(type)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {apartmentTypesList.length === 0 && <span className="text-sm text-gray-500">لا توجد أنواع مضافة</span>}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-3">مصادر الحجوزات</label>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newBookingSource}
+                      onChange={(e) => setNewBookingSource(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddBookingSource())}
+                      className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="أضف مصدر حجز جديد (مثال: Agoda)"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddBookingSource}
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {bookingSourcesList.map((source, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-700 shadow-sm group">
+                        <span className="text-sm font-bold">{source}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBookingSource(source)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {bookingSourcesList.length === 0 && <span className="text-sm text-gray-500">لا توجد مصادر مضافة</span>}
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="flex flex-col justify-end text-xs text-gray-500 dark:text-slate-400">
-                <p className="bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 p-3 rounded-xl">
-                    ملاحظة: سيتم توزيع التكاليف الشهرية المدخلة هنا على عدد الأيام لحساب صافي الأرباح بشكل دقيق في التحليلات العامة. يتم تقسيم المصروفات العامة على جميع الوحدات بالتساوي، بينما يتم تخصيص راتب النظافة للوحدات المحددة في النطاق فقط.
-                </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">شعار المنشأة (للطباعة)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, 'logoUrl')}
-                className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
-              />
-              {formData.logoUrl && <img src={formData.logoUrl} alt="Logo preview" className="mt-2 h-16 object-contain" />}
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">الختم / التوقيع (للطباعة)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, 'stampUrl')}
-                className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
-              />
-              {formData.stampUrl && <img src={formData.stampUrl} alt="Stamp preview" className="mt-2 h-16 object-contain" />}
-            </div>
-          </div>
-
-          <div className="border border-gray-200 dark:border-slate-700 rounded-xl p-4 bg-gray-50 dark:bg-slate-800/50">
-            <div className="flex items-center mb-4">
-              <input
-                type="checkbox"
-                name="taxEnabled"
-                id="taxEnabled"
-                checked={formData.taxEnabled}
-                onChange={handleChange}
-                className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600 ml-3"
-              />
-              <label htmlFor="taxEnabled" className="text-sm font-bold text-gray-700 dark:text-slate-300">تفعيل ضريبة القيمة المضافة / رسوم البلدية</label>
-            </div>
-
-            {formData.taxEnabled && (
-              <div className="w-1/3">
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-400 mb-1">النسبة المئوية (%)</label>
-                <input
-                  type="number"
-                  name="taxPercentage"
-                  value={formData.taxPercentage}
-                  onChange={handleChange}
-                  min="0"
-                  max="100"
-                  className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  placeholder="15"
-                />
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">الشروط والأحكام المخصصة (تظهر في العقد)</label>
-            <textarea
-              name="customTerms"
-              value={formData.customTerms}
-              onChange={handleChange}
-              rows="4"
-              className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              placeholder="أدخل الشروط والأحكام الخاصة بمنشأتك هنا..."
-            ></textarea>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">أنواع الوحدات المتاحة</label>
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={newApartmentType}
-                onChange={(e) => setNewApartmentType(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddApartmentType())}
-                className="flex-1 border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="أضف نوع وحدة جديد (مثال: جناح ملكي)"
-              />
-              <button
-                type="button"
-                onClick={handleAddApartmentType}
-                className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-4 py-2 rounded-xl font-bold transition-colors flex items-center justify-center"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {apartmentTypesList.map((type, index) => (
-                <div key={index} className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
-                  <span className="text-sm font-medium">{type}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveApartmentType(type)}
-                    className="text-red-500 hover:text-red-700 transition-colors p-0.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-              {apartmentTypesList.length === 0 && <span className="text-sm text-gray-500">لا توجد أنواع مضافة</span>}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">مصادر الحجوزات</label>
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={newBookingSource}
-                onChange={(e) => setNewBookingSource(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddBookingSource())}
-                className="flex-1 border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="أضف مصدر حجز جديد (مثال: Agoda)"
-              />
-              <button
-                type="button"
-                onClick={handleAddBookingSource}
-                className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-4 py-2 rounded-xl font-bold transition-colors flex items-center justify-center"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {bookingSourcesList.map((source, index) => (
-                <div key={index} className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
-                  <span className="text-sm font-medium">{source}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveBookingSource(source)}
-                    className="text-red-500 hover:text-red-700 transition-colors p-0.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-              {bookingSourcesList.length === 0 && <span className="text-sm text-gray-500">لا توجد مصادر مضافة</span>}
-            </div>
-          </div>
+          )}
 
           <button
             type="submit"

@@ -43,6 +43,12 @@ export default function ResidentsView({ openBookingForm }) {
     return d >= s && d <= e;
   };
 
+  const isFutureBooking = (startDate) => {
+    const today = new Date().setHours(0,0,0,0);
+    const start = new Date(startDate).setHours(0,0,0,0);
+    return start > today;
+  };
+
   const handleDelete = (id) => {
     if(confirm('هل تريد حذف هذا الحجز؟')) {
       deleteBooking(id);
@@ -106,6 +112,7 @@ export default function ResidentsView({ openBookingForm }) {
               {filteredBookings.map((booking) => {
                 const apt = apartments.find(a => a.id === booking.apartmentId);
                 const isCurrent = isDateBetween(new Date(), booking.startDate, booking.endDate);
+                const isFuture = isFutureBooking(booking.startDate);
                 return (
                   <tr key={booking.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="px-6 py-4">
@@ -137,6 +144,8 @@ export default function ResidentsView({ openBookingForm }) {
                           <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50">خروج مبكر</span>
                       ) : isCurrent ? (
                         <span className="px-2.5 py-1 rounded-md text-[11px] font-black bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800/50">مقيم حالياً</span>
+                      ) : isFuture ? (
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50">متوقع وصوله</span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400 border border-gray-200 dark:border-slate-700">مغادر</span>
                       )}
