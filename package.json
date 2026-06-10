@@ -17,8 +17,9 @@
     "axios": "^1.15.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
+    "dayjs": "^1.11.21",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
+    "express": "^4.22.2",
     "imagekit": "^6.0.0",
     "imagekitio-react": "^4.3.0",
     "jsonwebtoken": "^9.0.3",
@@ -29,7 +30,7 @@
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.14.2",
     "react-tailwindcss-datepicker": "^2.0.0",
-    "recharts": "^3.8.1",
+    "recharts": "^2.12.7",
     "tailwindcss": "^3.4.1"
   },
   "devDependencies": {
