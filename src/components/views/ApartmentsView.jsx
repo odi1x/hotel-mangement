@@ -14,7 +14,7 @@ export default function ApartmentsView() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
       name: '', type: defaultType, description: '', basePrice: '',
-      rentCost: '', rentPeriod: 'monthly', cleaningCost: '',
+      rentCost: '', rentPeriod: 'monthly', cleaningType: 'salaried', cleaningCost: '',
       platformFeeType: 'percentage', platformFee: '',
       otherExpenseLabel: '', otherExpenseAmount: '', licenseId: ''
   });
@@ -25,6 +25,7 @@ export default function ApartmentsView() {
           ...apt,
           rentCost: apt.rentCost || '',
           rentPeriod: apt.rentPeriod || 'monthly',
+          cleaningType: apt.cleaningType || 'salaried',
           cleaningCost: apt.cleaningCost || '',
           platformFeeType: apt.platformFeeType || 'percentage',
           platformFee: apt.platformFee || '',
@@ -221,9 +222,29 @@ export default function ApartmentsView() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">رسوم التنظيف (لكل حجز) <span className="text-xs font-normal text-gray-400">اختياري</span></label>
-                    <input type="number" placeholder="مثال: 50" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.cleaningCost} onChange={(e) => setFormData({...formData, cleaningCost: e.target.value})} />
-                    <p className="text-[10px] text-gray-400 mt-1">تجاهل هذا الحقل إذا كنت تدفع راتب شهري لعمال النظافة (من الإعدادات)</p>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">نوع النظافة والتكلفة</label>
+                    <div className="flex gap-2 mb-3 bg-gray-50 dark:bg-slate-800 p-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({...formData, cleaningType: 'salaried'})}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${formData.cleaningType === 'salaried' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                        >
+                          موظف براتب
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({...formData, cleaningType: 'per_booking'})}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${formData.cleaningType === 'per_booking' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                        >
+                          رسوم لكل حجز
+                        </button>
+                    </div>
+                    {formData.cleaningType === 'per_booking' && (
+                        <input type="number" placeholder="تكلفة التنظيف للحجز الواحد (مثال: 50)" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.cleaningCost} onChange={(e) => setFormData({...formData, cleaningCost: e.target.value})} />
+                    )}
+                    {formData.cleaningType === 'salaried' && (
+                        <p className="text-[10px] text-gray-400">سيتم حساب التكلفة من راتب النظافة الشهري في الإعدادات العامة ولن يتم خصم رسوم تنظيف إضافية لهذه الوحدة عند الحجز.</p>
+                    )}
                   </div>
                 </div>
 

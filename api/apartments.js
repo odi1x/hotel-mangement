@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     else if (req.method === 'POST') {
       const {
         name, type, description, basePrice,
-        rentCost, rentPeriod, cleaningCost,
+        rentCost, rentPeriod, cleaningType, cleaningCost,
         platformFeeType, platformFee,
         otherExpenseLabel, otherExpenseAmount,
         licenseId
@@ -38,7 +38,8 @@ export default async function handler(req, res) {
           basePrice: parseFloat(basePrice) || 0,
           rentCost: rentCost ? parseFloat(rentCost) : null,
           rentPeriod,
-          cleaningCost: cleaningCost ? parseFloat(cleaningCost) : null,
+          cleaningType: cleaningType || 'salaried',
+          cleaningCost: cleaningType === 'per_booking' && cleaningCost ? parseFloat(cleaningCost) : null,
           platformFeeType,
           platformFee: platformFee ? parseFloat(platformFee) : null,
           otherExpenseLabel,
@@ -52,7 +53,7 @@ export default async function handler(req, res) {
     else if (req.method === 'PUT') {
       const {
         id, name, type, description, basePrice, needsCleaning,
-        rentCost, rentPeriod, cleaningCost,
+        rentCost, rentPeriod, cleaningType, cleaningCost,
         platformFeeType, platformFee,
         otherExpenseLabel, otherExpenseAmount,
         licenseId
@@ -71,7 +72,8 @@ export default async function handler(req, res) {
           basePrice: parseFloat(basePrice) || 0,
           rentCost: rentCost ? parseFloat(rentCost) : null,
           rentPeriod,
-          cleaningCost: cleaningCost ? parseFloat(cleaningCost) : null,
+          cleaningType: cleaningType || 'salaried',
+          cleaningCost: cleaningType === 'per_booking' && cleaningCost ? parseFloat(cleaningCost) : null,
           platformFeeType,
           platformFee: platformFee ? parseFloat(platformFee) : null,
           otherExpenseLabel,
