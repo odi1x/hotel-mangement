@@ -59,30 +59,11 @@ export default function AnalyticsView() {
 
   // Transform data for line chart
   const trendData = useMemo(() => {
-      const dataByDate = {};
-
-      const filteredBookings = analyticsFilter === 'all' || !analyticsFilter.apartmentIds
-      ? bookings
-      : bookings.filter(b => analyticsFilter.apartmentIds?.includes(b.apartmentId));
-
-      filteredBookings.forEach(b => {
-          const dateStr = new Date(b.startDate).toLocaleDateString('en-CA', { month: 'short', year: 'numeric' });
-          if (!dataByDate[dateStr]) {
-              dataByDate[dateStr] = { name: dateStr, revenue: 0, expenses: 0 };
-          }
-          const nights = calculateNights(b.startDate, b.endDate);
-          const revenue = b.totalPrice !== null ? b.totalPrice : (b.pricePerNight * nights);
-          dataByDate[dateStr].revenue += Number(revenue);
-
-          // Estimate expenses for chart just as a percentage if precise history isn't loaded per-date
-          // Since we already calculated total expenses in backend, we can just show revenue here, or roughly estimate
-          // A better approach is to rely on actual data, but for trend, we can use 20% as a dummy expense for visual if actual isn't easy
-          // We will use 25% of revenue as a placeholder for expenses if we don't have per-booking expenses frontend side easily
-          dataByDate[dateStr].expenses += Number(revenue) * 0.25;
-      });
-
-      return Object.values(dataByDate).sort((a, b) => new Date(a.name) - new Date(b.name));
-  }, [bookings, analyticsFilter]);
+      if (analytics.dailyTrend && analytics.dailyTrend.length > 0) {
+          return analytics.dailyTrend;
+      }
+      return [];
+  }, [analytics.dailyTrend]);
 
   // Transform source counts for pie chart
   const sourceChartData = useMemo(() => {
@@ -283,7 +264,7 @@ export default function AnalyticsView() {
                   labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
                 />
                 <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                <Area type="monotone" dataKey="expenses" name="المصروفات (تقديري)" stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
+                <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
               </AreaChart>
             </ResponsiveContainer>
         </div>

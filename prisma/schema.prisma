@@ -29,6 +29,10 @@ model User {
   taxPercentage    Decimal?
   apartmentTypes   String?
   bookingSources   String?
+
+  cleanerSalary    Decimal?
+  generalExpenses  Decimal?
+
   createdAt        DateTime    @default(now())
 
   admin            User?       @relation("AdminStaff", fields: [adminId], references: [id])
