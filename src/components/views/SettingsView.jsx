@@ -8,6 +8,7 @@ export default function SettingsView() {
   const { user, updateProfile } = useAuth();
   const { apartments, licenses, addLicense, deleteLicense } = useData();
   const [activeTab, setActiveTab] = useState('general');
+  const [facilityTab, setFacilityTab] = useState('identity');
 
   const [formData, setFormData] = useState({
     businessName: '',
