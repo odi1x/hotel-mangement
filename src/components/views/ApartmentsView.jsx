@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ApartmentsView() {
-  const { apartments, addApartment, updateApartment, deleteApartment } = useData();
+  const { apartments, addApartment, updateApartment, deleteApartment, licenses } = useData();
   const { user } = useAuth();
 
   const customTypes = user?.apartmentTypes ? user.apartmentTypes.split(',').map(t => t.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة', 'استوديو', 'شقة'];
@@ -12,11 +12,26 @@ export default function ApartmentsView() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', type: defaultType, description: '', basePrice: '' });
+  const [formData, setFormData] = useState({
+      name: '', type: defaultType, description: '', basePrice: '',
+      rentCost: '', rentPeriod: 'monthly', cleaningCost: '',
+      platformFeeType: 'percentage', platformFee: '',
+      otherExpenseLabel: '', otherExpenseAmount: '', licenseId: ''
+  });
 
   const handleOpenModal = (apt = null) => {
     if (apt) {
-      setFormData({ ...apt });
+      setFormData({
+          ...apt,
+          rentCost: apt.rentCost || '',
+          rentPeriod: apt.rentPeriod || 'monthly',
+          cleaningCost: apt.cleaningCost || '',
+          platformFeeType: apt.platformFeeType || 'percentage',
+          platformFee: apt.platformFee || '',
+          otherExpenseLabel: apt.otherExpenseLabel || '',
+          otherExpenseAmount: apt.otherExpenseAmount || '',
+          licenseId: apt.licenseId || ''
+      });
       setEditingId(apt.id);
     } else {
       setFormData({ name: '', type: defaultType, description: '', basePrice: '' });
@@ -144,40 +159,99 @@ export default function ApartmentsView() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 shrink-0">
               <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100">
                 {editingId ? 'تعديل بيانات الوحدة' : 'إضافة وحدة جديدة'}
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors"><X size={20}/></button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">اسم/رقم الوحدة</label>
+            <div className="overflow-y-auto p-6">
+              <form onSubmit={handleSave} className="space-y-6">
+
+              <div className="space-y-4">
+                <h3 className="font-bold text-gray-800 dark:text-slate-100 border-b pb-2">المعلومات الأساسية</h3>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">اسم/رقم الوحدة</label>
                 <input required type="text" placeholder="مثال: شقة 101" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">النوع</label>
+                      <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                          {customTypes.map((t, idx) => (
+                            <option key={idx} value={t}>{t}</option>
+                          ))}
+                      </select>
+                  </div>
+                  <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">السعر الافتراضي</label>
+                      <input required type="number" placeholder="200" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.basePrice} onChange={(e) => setFormData({...formData, basePrice: e.target.value})} />
+                  </div>
+                </div>
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">النوع</label>
-                    <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                        {customTypes.map((t, idx) => (
-                          <option key={idx} value={t}>{t}</option>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ملاحظات/وصف</label>
+                  <textarea className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-28 bg-white dark:bg-slate-800 dark:text-slate-100 resize-none transition-all" placeholder="وصف الشقة أو ملاحظات داخلية..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})}></textarea>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ترخيص السياحة (اختياري)</label>
+                    <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.licenseId} onChange={(e) => setFormData({...formData, licenseId: e.target.value})}>
+                        <option value="">بدون ترخيص محدد</option>
+                        {licenses.map(l => (
+                          <option key={l.id} value={l.id}>{l.licenseNumber}</option>
                         ))}
                     </select>
                 </div>
-                <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">السعر الافتراضي</label>
-                    <input required type="number" placeholder="200" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.basePrice} onChange={(e) => setFormData({...formData, basePrice: parseFloat(e.target.value)})} />
+              </div>
+
+              {/* Financials & Costs Section */}
+              <div className="space-y-4 pt-4">
+                <h3 className="font-bold text-gray-800 dark:text-slate-100 border-b pb-2">التكاليف والمالية (اختياري)</h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">تكلفة الإيجار</label>
+                    <div className="flex space-x-reverse space-x-2">
+                        <input type="number" placeholder="المبلغ" className="w-2/3 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.rentCost} onChange={(e) => setFormData({...formData, rentCost: e.target.value})} />
+                        <select className="w-1/3 px-2 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.rentPeriod} onChange={(e) => setFormData({...formData, rentPeriod: e.target.value})}>
+                            <option value="monthly">شهري</option>
+                            <option value="yearly">سنوي</option>
+                        </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">رسوم التنظيف (لكل حجز)</label>
+                    <input type="number" placeholder="مثال: 50" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.cleaningCost} onChange={(e) => setFormData({...formData, cleaningCost: e.target.value})} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">عمولات المنصات (لكل حجز)</label>
+                    <div className="flex space-x-reverse space-x-2">
+                        <input type="number" placeholder="العمولة" className="w-2/3 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.platformFee} onChange={(e) => setFormData({...formData, platformFee: e.target.value})} />
+                        <select className="w-1/3 px-2 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.platformFeeType} onChange={(e) => setFormData({...formData, platformFeeType: e.target.value})}>
+                            <option value="percentage">نسبة %</option>
+                            <option value="fixed">مبلغ ثابت</option>
+                        </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">مصاريف أخرى (لكل حجز)</label>
+                    <div className="flex space-x-reverse space-x-2">
+                        <input type="text" placeholder="الاسم (مثال: ضيافة)" className="w-1/2 px-3 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.otherExpenseLabel} onChange={(e) => setFormData({...formData, otherExpenseLabel: e.target.value})} />
+                        <input type="number" placeholder="المبلغ" className="w-1/2 px-3 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.otherExpenseAmount} onChange={(e) => setFormData({...formData, otherExpenseAmount: e.target.value})} />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ملاحظات/وصف</label>
-                <textarea className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-28 bg-white dark:bg-slate-800 dark:text-slate-100 resize-none transition-all" placeholder="وصف الشقة أو ملاحظات داخلية..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})}></textarea>
-              </div>
+
               <button type="submit" className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95 mt-4">
                 {editingId ? 'تحديث البيانات' : 'حفظ الوحدة'}
               </button>
             </form>
+            </div>
           </div>
         </div>
       )}

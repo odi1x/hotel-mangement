@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { Save, Plus, Trash2, Settings, Shield } from 'lucide-react';
 import StaffManagement from './settings/StaffManagement';
 
 export default function SettingsView() {
   const { user, updateProfile } = useAuth();
+  const { licenses, addLicense, deleteLicense } = useData();
   const [activeTab, setActiveTab] = useState('general');
 
   const [formData, setFormData] = useState({
@@ -24,6 +26,7 @@ export default function SettingsView() {
 
   const [bookingSourcesList, setBookingSourcesList] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
   const [newBookingSource, setNewBookingSource] = useState('');
+  const [newLicenseNumber, setNewLicenseNumber] = useState('');
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -77,6 +80,13 @@ export default function SettingsView() {
 
   const handlePasswordChange = (e) => {
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+  };
+
+  const handleAddLicense = () => {
+    if (newLicenseNumber.trim()) {
+      addLicense(newLicenseNumber.trim());
+      setNewLicenseNumber('');
+    }
   };
 
   const handleImageUpload = (e, field) => {
@@ -215,15 +225,43 @@ export default function SettingsView() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">رقم رخصة السياحة / السجل التجاري</label>
-              <input
-                type="text"
-                name="tourismLicense"
-                value={formData.tourismLicense}
-                onChange={handleChange}
-                className="w-full border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="مثال: 1234567890"
-              />
+              <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">أرقام التراخيص (تراخيص السياحة)</label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newLicenseNumber}
+                  onChange={(e) => setNewLicenseNumber(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLicense())}
+                  className="flex-1 border border-gray-300 dark:border-slate-700 rounded-xl px-4 py-2 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="أضف رقم ترخيص جديد"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddLicense}
+                  className="bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-4 py-2 rounded-xl font-bold transition-colors flex items-center justify-center"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {licenses.map((license) => (
+                  <div key={license.id} className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
+                    <span className="text-sm font-medium">{license.licenseNumber}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('هل أنت متأكد من حذف هذا الترخيص؟')) {
+                          deleteLicense(license.id);
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-700 transition-colors p-0.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                {licenses.length === 0 && <span className="text-sm text-gray-500">لا توجد تراخيص مضافة</span>}
+              </div>
             </div>
           </div>
 

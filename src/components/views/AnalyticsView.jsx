@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { Download, TrendingUp, Globe, UserCheck, Filter, ChevronDown, Check } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Download, TrendingUp, TrendingDown, Globe, UserCheck, Filter, ChevronDown, Check, Star } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Datepicker from 'react-tailwindcss-datepicker';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+
+const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
 
 export default function AnalyticsView() {
   const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter } = useData();
@@ -30,6 +33,65 @@ export default function AnalyticsView() {
     const diffTime = Math.abs(e - s);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
+
+  // Calculate top performing units
+  const topUnits = useMemo(() => {
+    const unitStats = {};
+    const filteredBookings = analyticsFilter === 'all' || !analyticsFilter.apartmentIds
+      ? bookings
+      : bookings.filter(b => analyticsFilter.apartmentIds?.includes(b.apartmentId));
+
+    filteredBookings.forEach(b => {
+      if (!unitStats[b.apartmentId]) {
+        unitStats[b.apartmentId] = { id: b.apartmentId, name: apartments.find(a => a.id === b.apartmentId)?.name || 'غير معروف', revenue: 0, nights: 0 };
+      }
+      const nights = calculateNights(b.startDate, b.endDate);
+      const revenue = b.totalPrice !== null ? b.totalPrice : (b.pricePerNight * nights);
+
+      unitStats[b.apartmentId].revenue += Number(revenue);
+      unitStats[b.apartmentId].nights += nights;
+    });
+
+    return Object.values(unitStats)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }, [bookings, apartments, analyticsFilter]);
+
+  // Transform data for line chart
+  const trendData = useMemo(() => {
+      const dataByDate = {};
+
+      const filteredBookings = analyticsFilter === 'all' || !analyticsFilter.apartmentIds
+      ? bookings
+      : bookings.filter(b => analyticsFilter.apartmentIds?.includes(b.apartmentId));
+
+      filteredBookings.forEach(b => {
+          const dateStr = new Date(b.startDate).toLocaleDateString('en-CA', { month: 'short', year: 'numeric' });
+          if (!dataByDate[dateStr]) {
+              dataByDate[dateStr] = { name: dateStr, revenue: 0, expenses: 0 };
+          }
+          const nights = calculateNights(b.startDate, b.endDate);
+          const revenue = b.totalPrice !== null ? b.totalPrice : (b.pricePerNight * nights);
+          dataByDate[dateStr].revenue += Number(revenue);
+
+          // Estimate expenses for chart just as a percentage if precise history isn't loaded per-date
+          // Since we already calculated total expenses in backend, we can just show revenue here, or roughly estimate
+          // A better approach is to rely on actual data, but for trend, we can use 20% as a dummy expense for visual if actual isn't easy
+          // We will use 25% of revenue as a placeholder for expenses if we don't have per-booking expenses frontend side easily
+          dataByDate[dateStr].expenses += Number(revenue) * 0.25;
+      });
+
+      return Object.values(dataByDate).sort((a, b) => new Date(a.name) - new Date(b.name));
+  }, [bookings, analyticsFilter]);
+
+  // Transform source counts for pie chart
+  const sourceChartData = useMemo(() => {
+    return Object.entries(analytics.sourceCounts || {}).map(([name, value]) => ({
+      name,
+      value
+    }));
+  }, [analytics.sourceCounts]);
+
 
   const exportToExcel = () => {
     let csvContent = "اسم النزيل,رقم الهوية,الجوال,الشقة,تاريخ الدخول,تاريخ الخروج,عدد الليالي,سعر الليلة,الإجمالي,المصدر\n";
@@ -60,6 +122,9 @@ export default function AnalyticsView() {
     });
 
     csvContent += `\nإجمالي الإيرادات,,,,,${analytics.totalRevenue}\n`;
+    csvContent += `إجمالي المصروفات,,,,,${analytics.totalExpenses}\n`;
+    csvContent += `صافي الربح,,,,,${analytics.netProfit}\n`;
+    csvContent += `معدل الإشغال,,,,,${Math.round(analytics.occupancyRate)}%\n`;
     csvContent += `إجمالي الليالي,,,,,${analytics.totalNights}\n`;
 
     const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -164,59 +229,126 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-bl-[100%] transition-transform group-hover:scale-110"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">إجمالي الإيرادات</p>
-          <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
-          <div className="mt-4 flex items-center text-green-500 text-xs font-bold bg-green-50 dark:bg-green-900/20 inline-flex px-2 py-1 rounded-md">
-            <TrendingUp size={14} className="ml-1" /> مؤشر إيجابي
-          </div>
+          <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400 relative z-10">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">إجمالي الحجوزات</p>
-          <h3 className="text-3xl font-black text-gray-800 dark:text-slate-100">{analytics.count}</h3>
-          <p className="text-xs text-gray-400 mt-4 font-medium">عدد العمليات المسجلة</p>
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-bl-[100%] transition-transform group-hover:scale-110"></div>
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">صافي الأرباح</p>
+          <h3 className="text-3xl font-black text-green-600 dark:text-green-400 relative z-10">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-bl-[100%] transition-transform group-hover:scale-110"></div>
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">معدل الإشغال</p>
+          <h3 className="text-3xl font-black text-orange-500 relative z-10">{Math.round(analytics.occupancyRate)}<span className="text-sm font-bold text-gray-400">%</span></h3>
+          <p className="text-xs text-gray-400 mt-2 font-medium">من إجمالي الأيام المتاحة</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-bl-[100%] transition-transform group-hover:scale-110"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">الليالي المؤجرة</p>
-          <h3 className="text-3xl font-black text-orange-500">{analytics.totalNights}</h3>
-          <p className="text-xs text-gray-400 mt-4 font-medium">إجمالي الأيام المحجوزة</p>
+          <h3 className="text-3xl font-black text-purple-600 relative z-10">{analytics.totalNights} <span className="text-sm font-bold text-gray-400">ليلة</span></h3>
+          <p className="text-xs text-gray-400 mt-2 font-medium">عبر {analytics.count} حجز</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2">متوسط مدة الإقامة</p>
-          <h3 className="text-3xl font-black text-purple-600">{(analytics.totalNights / (analytics.count || 1)).toFixed(1)} <span className="text-sm font-bold text-gray-400">أيام</span></h3>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
+        <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-6 flex items-center">
+            <TrendingUp size={18} className="ml-2 text-blue-500" />
+            اتجاه الإيرادات والمصروفات
+        </h4>
+        <div className="h-72 w-full" dir="ltr">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dx={-10} tickFormatter={(val) => `${val/1000}k`} />
+                <RechartsTooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
+                  labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
+                />
+                <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                <Area type="monotone" dataKey="expenses" name="المصروفات (تقديري)" stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
+              </AreaChart>
+            </ResponsiveContainer>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-6 flex items-center"><Globe size={18} className="ml-2 text-blue-500" /> مصادر التسويق</h4>
-          <div className="space-y-5">
-            {Object.keys(analytics.sourceCounts).length > 0 ? Object.entries(analytics.sourceCounts).map(([source, count]) => (
-              <div key={source}>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-bold text-gray-600 dark:text-slate-300">{source}</span>
-                  <span className="font-black text-gray-800 dark:text-slate-100">{count}</span>
-                </div>
-                <div className="w-full bg-gray-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-blue-500 h-full rounded-full transition-all duration-1000 ease-out"
-                    style={{ width: `${(count / analytics.count) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )) : <div className="text-center py-10 text-gray-400 font-medium">لا توجد بيانات كافية</div>}
+          <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-2 flex items-center">
+            <Star size={18} className="ml-2 text-yellow-500" /> الأعلى أداءً
+          </h4>
+          <p className="text-xs text-gray-500 mb-6">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
+
+          <div className="space-y-4">
+              {topUnits.length > 0 ? topUnits.map((unit, idx) => (
+                  <div key={unit.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-700">
+                      <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-gray-200 text-gray-700' : idx === 2 ? 'bg-orange-100 text-orange-800' : 'bg-blue-50 text-blue-600'}`}>
+                              #{idx + 1}
+                          </div>
+                          <div>
+                              <p className="font-bold text-gray-800 dark:text-slate-200">{unit.name}</p>
+                              <p className="text-xs text-gray-500">{unit.nights} ليلة مؤجرة</p>
+                          </div>
+                      </div>
+                      <div className="text-left">
+                          <p className="font-black text-green-600 dark:text-green-400">{unit.revenue.toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400">ر.س</p>
+                      </div>
+                  </div>
+              )) : <div className="text-center py-10 text-gray-400 font-medium">لا توجد بيانات كافية</div>}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col justify-center items-center text-center">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-full mb-6">
-              <UserCheck size={40} className="text-blue-600 dark:text-blue-400" />
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col">
+          <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-2 flex items-center"><Globe size={18} className="ml-2 text-blue-500" /> مصادر التسويق</h4>
+          <p className="text-xs text-gray-500 mb-4">توزيع الحجوزات حسب المنصات</p>
+
+          <div className="flex-1 min-h-[250px] w-full" dir="ltr">
+            {sourceChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sourceChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {sourceChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                        formatter={(value) => [`${value} حجوزات`, 'العدد']}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
+                    />
+                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontFamily: 'inherit', fontSize: '12px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+            ) : (
+                <div className="h-full flex items-center justify-center text-gray-400 font-medium">لا توجد بيانات كافية</div>
+            )}
           </div>
-          <h4 className="text-lg font-black text-gray-800 dark:text-slate-100 mb-2">مؤشر الكفاءة</h4>
-          <p className="text-sm text-gray-500 dark:text-slate-400 max-w-sm leading-relaxed font-medium">
-              أنت تشاهد التحليلات المخصصة بناءً على فلاتر الوقت والوحدات المحددة أعلاه.
-          </p>
         </div>
       </div>
     </div>

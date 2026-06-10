@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'POST') {
-      const { apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate, notes } = req.body;
+      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, status } = req.body;
 
       // Validate dates
       const start = new Date(startDate);
@@ -38,10 +38,11 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
-      // Check for overlapping bookings
+      // Check for overlapping bookings (ignore checked_out_early ones if they don't actually overlap after their new endDate)
       const overlappingBookings = await prisma.booking.findMany({
         where: {
           apartmentId,
+          status: { notIn: ['checked_out_early'] },
           AND: [
             { startDate: { lte: end } },
             { endDate: { gte: start } }
@@ -67,9 +68,11 @@ export default async function handler(req, res) {
           phone,
           address,
           pricePerNight: parseFloat(pricePerNight),
+          totalPrice: totalPrice !== undefined ? parseFloat(totalPrice) : null,
           source,
           startDate: new Date(startDate),
           endDate: new Date(endDate),
+          status: status || 'active',
           trusted: !!previousBooking,
           notes,
           creatorName: user.name || user.username
@@ -89,7 +92,37 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'PUT') {
-      const { id, apartmentId, residentName, residentId, phone, address, pricePerNight, source, startDate, endDate, notes } = req.body;
+      const { id, isCheckout, ...updateDataObj } = req.body;
+
+      // Verify ownership of the booking
+      const existing = await prisma.booking.findUnique({ where: { id } });
+      if (!existing || existing.userId !== targetUserId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      if (isCheckout) {
+        // Handle Early Checkout
+        const newEndDate = new Date();
+        const booking = await prisma.booking.update({
+          where: { id },
+          data: {
+            endDate: newEndDate,
+            status: 'checked_out_early',
+            // Keep original totalPrice by setting it if not already set
+            totalPrice: existing.totalPrice || (existing.pricePerNight * Math.ceil(Math.abs(new Date(existing.endDate) - new Date(existing.startDate)) / (1000 * 60 * 60 * 24)))
+          }
+        });
+
+        // Also set unit to needs cleaning
+        await prisma.apartment.update({
+          where: { id: existing.apartmentId },
+          data: { needsCleaning: true }
+        });
+
+        return res.status(200).json(booking);
+      }
+
+      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, status } = updateDataObj;
 
       // Validate dates
       const start = new Date(startDate);
@@ -98,12 +131,6 @@ export default async function handler(req, res) {
       end.setHours(0,0,0,0);
       if (end < start) {
         return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
-      }
-
-      // Verify ownership of the booking
-      const existing = await prisma.booking.findUnique({ where: { id } });
-      if (!existing || existing.userId !== targetUserId) {
-        return res.status(403).json({ message: 'Forbidden' });
       }
 
       // If apartment changed, verify ownership of new apartment
@@ -119,6 +146,7 @@ export default async function handler(req, res) {
         where: {
           apartmentId,
           id: { not: id },
+          status: { notIn: ['checked_out_early'] },
           AND: [
             { startDate: { lte: end } },
             { endDate: { gte: start } }
@@ -139,9 +167,11 @@ export default async function handler(req, res) {
           phone,
           address,
           pricePerNight: parseFloat(pricePerNight),
+          totalPrice: totalPrice !== undefined ? parseFloat(totalPrice) : null,
           source,
           startDate: new Date(startDate),
           endDate: new Date(endDate),
+          status: status || existing.status,
           notes
         },
       });
