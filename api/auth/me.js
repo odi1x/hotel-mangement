@@ -31,8 +31,8 @@ export default async function handler(req, res) {
         taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes,
         bookingSources: user.bookingSources,
-        cleanerSalary: user.cleanerSalary,
-        cleanerScope: user.cleanerScope,
+
+
         generalExpenses: user.generalExpenses,
         permissions: {
           canBook: user.canBook,
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'PUT') {
-      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, cleanerSalary, cleanerScope, generalExpenses } = req.body;
+      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses } = req.body;
       const user = await prisma.user.update({
         where: { id: decoded.userId },
         data: {
@@ -60,8 +60,8 @@ export default async function handler(req, res) {
           taxPercentage: taxPercentage ? parseFloat(taxPercentage) : null,
           apartmentTypes: apartmentTypes !== undefined ? apartmentTypes : null,
           bookingSources: bookingSources !== undefined ? bookingSources : null,
-          cleanerSalary: cleanerSalary ? parseFloat(cleanerSalary) : null,
-          cleanerScope: cleanerScope !== undefined ? cleanerScope : null,
+
+
           generalExpenses: generalExpenses ? parseFloat(generalExpenses) : null
         }
       });
@@ -81,8 +81,8 @@ export default async function handler(req, res) {
         taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes,
         bookingSources: user.bookingSources,
-        cleanerSalary: user.cleanerSalary,
-        cleanerScope: user.cleanerScope,
+
+
         generalExpenses: user.generalExpenses,
         permissions: {
           canBook: user.canBook,
