@@ -1,14 +1,18 @@
 import { PrismaClient } from '@prisma/client';
-import { getUserIdFromToken, sendError, cors } from '../utils.js';
+import { verifyToken, cors } from '../utils.js';
 
 const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
-  const userId = getUserIdFromToken(req);
+  const decoded = verifyToken(req);
+  if (!decoded) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  const userId = decoded.userId || decoded.id;
   if (!userId) {
-    return sendError(res, 'Unauthorized', 401);
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 
   try {
@@ -24,7 +28,7 @@ export default async function handler(req, res) {
       const { name, monthlySalary, scope } = req.body;
 
       if (!name || !monthlySalary) {
-        return sendError(res, 'Name and Monthly Salary are required', 400);
+        return res.status(400).json({ message: 'Name and Monthly Salary are required' });
       }
 
       const expense = await prisma.staffExpense.create({
@@ -43,7 +47,7 @@ export default async function handler(req, res) {
       const { id } = req.query;
 
       if (!id) {
-        return sendError(res, 'Expense ID is required', 400);
+        return res.status(400).json({ message: 'Expense ID is required' });
       }
 
       await prisma.staffExpense.delete({
@@ -53,9 +57,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: 'Expense deleted successfully' });
     }
 
-    return sendError(res, 'Method not allowed', 405);
+    return res.status(405).json({ message: 'Method not allowed' });
   } catch (error) {
     console.error('Staff Expense API Error:', error);
-    return sendError(res, 'Internal server error', 500);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 }
