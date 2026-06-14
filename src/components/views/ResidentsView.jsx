@@ -303,7 +303,7 @@ export default function ResidentsView({ openBookingForm }) {
       {checkoutModalOpen && checkoutData.booking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }}></div>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-red-100 dark:border-red-900/30">
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-red-100 dark:border-red-900/30">
             <div className="px-6 py-4 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/30 flex justify-between items-center">
               <h3 className="font-bold text-red-700 dark:text-red-400 text-lg flex items-center gap-2">
                 <LogOut size={20} />
