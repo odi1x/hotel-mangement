@@ -393,7 +393,7 @@ export default function SettingsView() {
                 <div className="bg-gray-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-gray-100 dark:border-slate-700">
                   <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 mb-6 flex items-center border-b border-gray-200 dark:border-slate-700 pb-3">التكاليف والمصروفات التشغيلية الثابتة (شهرياً)</h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="flex flex-col gap-6 mb-6">
                                         {/* Staff Expenses Management */}
                     <div className="mt-8 border-t border-gray-100 dark:border-slate-800 pt-8">
                       <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6">الرواتب والموظفين</h3>
