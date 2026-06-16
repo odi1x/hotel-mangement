@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     const fetchUser = async () => {
       if (token) {
         try {
-          const res = await axios.get('/api/auth/me');
+          const res = await axios.get('/api/auth?action=me');
           setUser(res.data);
         } catch (error) {
           console.error("Failed to fetch user:", error);
@@ -59,16 +59,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateProfile = async (data) => {
-    const res = await axios.put('/api/auth/me', data);
+    const res = await axios.put('/api/auth?action=me', data);
     setUser(res.data);
   };
 
   const changePassword = async (currentPassword, newPassword) => {
-    await axios.post('/api/auth/password', { currentPassword, newPassword });
+    await axios.post('/api/auth?action=password', { currentPassword, newPassword });
   };
 
   const login = async (username, password) => {
-    const res = await axios.post('/api/auth/login', { username, password });
+    const res = await axios.post('/api/auth?action=login', { username, password });
     axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
     localStorage.setItem('token', res.data.token);
     setToken(res.data.token);
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (data) => {
-    const res = await axios.post('/api/auth/register', data);
+    const res = await axios.post('/api/auth?action=register', data);
     axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
     localStorage.setItem('token', res.data.token);
     setToken(res.data.token);

@@ -2,10 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 
-import registerHandler from './api/auth/register.js';
-import loginHandler from './api/auth/login.js';
-import meHandler from './api/auth/me.js';
-import passwordHandler from './api/auth/password.js';
+import authHandler from './api/auth.js';
+import staffExpensesHandler from './api/staff-expenses.js';
 import apartmentsHandler from './api/apartments.js';
 import bookingsHandler from './api/bookings.js';
 import trustedBookingsHandler from './api/bookings/trusted.js';
@@ -23,10 +21,8 @@ const adaptHandler = (handler) => (req, res) => {
     return handler(req, res);
 };
 
-app.post('/api/auth/register', adaptHandler(registerHandler));
-app.post('/api/auth/login', adaptHandler(loginHandler));
-app.all('/api/auth/me', adaptHandler(meHandler));
-app.post('/api/auth/password', adaptHandler(passwordHandler));
+app.all('/api/auth', adaptHandler(authHandler));
+app.all('/api/staff-expenses', adaptHandler(staffExpensesHandler));
 app.all('/api/apartments', adaptHandler(apartmentsHandler));
 app.all('/api/bookings', adaptHandler(bookingsHandler));
 app.all('/api/licenses', adaptHandler(licensesHandler));

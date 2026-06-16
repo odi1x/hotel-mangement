@@ -67,7 +67,12 @@ export default async function handler(req, res) {
     // Get user global settings for staff and general expenses
     const userSettings = await prisma.user.findUnique({
         where: { id: targetUserId },
-        select: { cleanerSalary: true, cleanerScope: true, generalExpenses: true }
+        select: { generalExpenses: true }
+    });
+
+        // Fetch StaffExpenses
+    const staffExpenses = await prisma.staffExpense.findMany({
+        where: { userId: targetUserId }
     });
 
     // Default period for occupancy calculation if no dates provided (assume 30 days)
@@ -186,26 +191,26 @@ export default async function handler(req, res) {
         const totalAptCount = allApartments.length > 0 ? allApartments.length : 1;
         const ratio = filteredAptCount / totalAptCount;
 
-        if (userSettings.cleanerSalary) {
-            // Apply cleaner salary only if the current filter overlaps with the cleanerScope (or scope is all)
-            const scopeArr = userSettings.cleanerScope ? userSettings.cleanerScope.split(',') : [];
-            let scopedAptCount = totalAptCount;
-            let ratioToUse = ratio;
+        // Dynamic Staff Payroll Apportioning
+        if (staffExpenses && staffExpenses.length > 0) {
+            staffExpenses.forEach(staff => {
+                const scopeArr = staff.scope && staff.scope !== 'all' ? staff.scope.split(',') : [];
+                let ratioToUse = ratio; // Default applies to all (meaning we scale it by the general filter ratio)
 
-            if (scopeArr.length > 0) {
-                // If there's a specific scope, only apportion the salary for units in the scope that are also in the current view filter
-                scopedAptCount = scopeArr.length;
-                let activeScopedUnits = scopeArr.length;
+                if (scopeArr.length > 0) {
+                    let scopedAptCount = scopeArr.length;
+                    let activeScopedUnits = scopeArr.length;
 
-                if (apartmentIds) {
-                    const filteredArr = apartmentIds.split(',');
-                    activeScopedUnits = filteredArr.filter(id => scopeArr.includes(id)).length;
+                    if (apartmentIds) {
+                        const filteredArr = apartmentIds.split(',');
+                        activeScopedUnits = filteredArr.filter(id => scopeArr.includes(id)).length;
+                    }
+
+                    ratioToUse = scopedAptCount > 0 ? (activeScopedUnits / scopedAptCount) : 0;
                 }
 
-                ratioToUse = scopedAptCount > 0 ? (activeScopedUnits / scopedAptCount) : 0;
-            }
-
-            apportionedGlobalExpenses += ((Number(userSettings.cleanerSalary) / 30) * periodDays) * ratioToUse;
+                apportionedGlobalExpenses += ((Number(staff.monthlySalary) / 30) * periodDays) * ratioToUse;
+            });
         }
         if (userSettings.generalExpenses) {
              apportionedGlobalExpenses += ((Number(userSettings.generalExpenses) / 30) * periodDays) * ratio;

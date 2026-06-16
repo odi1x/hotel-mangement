@@ -30,8 +30,8 @@ model User {
   apartmentTypes   String?
   bookingSources   String?
 
-  cleanerSalary    Decimal?
-  cleanerScope     String?     // Comma-separated apartment IDs or empty for 'all'
+
+
   generalExpenses  Decimal?
 
   createdAt        DateTime    @default(now())
@@ -42,6 +42,7 @@ model User {
   apartments       Apartment[]
   bookings         Booking[]
   licenses         License[]
+  staffExpenses    StaffExpense[]
 }
 
 model License {
@@ -104,5 +105,15 @@ model Booking {
   updatedAt     DateTime  @updatedAt
 
   apartment     Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model StaffExpense {
+  id            String    @id @default(uuid())
+  userId        String
+  name          String
+  monthlySalary Decimal
+  scope         String?   // Comma-separated apartment IDs or empty for 'all'
+  createdAt     DateTime  @default(now())
+
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

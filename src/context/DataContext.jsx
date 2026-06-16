@@ -13,6 +13,7 @@ export const DataProvider = ({ children }) => {
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [licenses, setLicenses] = useState([]);
+  const [staffExpenses, setStaffExpenses] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,16 @@ export const DataProvider = ({ children }) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/apartments`);
       setApartments(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
+  const fetchStaffExpenses = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/staff-expenses`);
+      setStaffExpenses(res.data);
     } catch (err) {
       console.error(err);
     }
@@ -68,6 +79,7 @@ export const DataProvider = ({ children }) => {
       fetchApartments();
       fetchBookings();
       fetchLicenses();
+      fetchStaffExpenses();
     }
   }, [token]);
 
@@ -207,6 +219,10 @@ export const DataProvider = ({ children }) => {
       deleteBooking,
       checkoutBooking,
       toggleTrustedStatus,
+      fetchBookings,
+      fetchApartments,
+      staffExpenses,
+      fetchStaffExpenses,
       loading
     }}>
       {children}
