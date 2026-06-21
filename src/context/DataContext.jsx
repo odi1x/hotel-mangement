@@ -98,9 +98,9 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  const addLicense = async (licenseNumber) => {
+  const addLicense = async (licenseNumber, expirationDate) => {
     try {
-      const res = await axios.post(`${API_BASE_URL}/licenses`, { licenseNumber });
+      const res = await axios.post(`${API_BASE_URL}/licenses`, { licenseNumber, expirationDate });
       setLicenses([res.data, ...licenses]);
       toast.success('تمت إضافة الترخيص بنجاح');
     } catch (err) {

@@ -26,7 +26,7 @@ export default async function handler(req, res) {
           return res.status(403).json({ message: 'Forbidden' });
       }
 
-      const { licenseNumber } = req.body;
+      const { licenseNumber, expirationDate } = req.body;
       if (!licenseNumber) {
           return res.status(400).json({ message: 'License number is required' });
       }
@@ -34,7 +34,8 @@ export default async function handler(req, res) {
       const license = await prisma.license.create({
         data: {
           userId: targetUserId,
-          licenseNumber
+          licenseNumber,
+          expirationDate: expirationDate ? new Date(expirationDate) : null
         },
       });
       return res.status(201).json(license);

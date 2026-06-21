@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { User as UserIcon, Settings, LogOut } from 'lucide-react';
+import NotificationsDropdown from './NotificationsDropdown';
 import ImageUpload from '../ui/ImageUpload';
 import toast from 'react-hot-toast';
 
@@ -25,7 +26,8 @@ export default function Header({ openStaffSettings }) {
   };
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 py-3 px-8 flex justify-end items-center relative z-20">
+    <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 py-3 px-8 flex justify-end items-center gap-4 relative z-20">
+      <NotificationsDropdown />
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen(!dropdownOpen)}

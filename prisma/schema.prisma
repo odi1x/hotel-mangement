@@ -30,8 +30,6 @@ model User {
   apartmentTypes   String?
   bookingSources   String?
 
-
-
   generalExpenses  Decimal?
 
   createdAt        DateTime    @default(now())
@@ -43,13 +41,15 @@ model User {
   bookings         Booking[]
   licenses         License[]
   staffExpenses    StaffExpense[]
+  notifications    Notification[]
 }
 
 model License {
-  id            String    @id @default(uuid())
-  userId        String
-  licenseNumber String
-  createdAt     DateTime  @default(now())
+  id             String    @id @default(uuid())
+  userId         String
+  licenseNumber  String
+  expirationDate DateTime?
+  createdAt      DateTime  @default(now())
 
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   apartments    Apartment[]
@@ -107,6 +107,7 @@ model Booking {
   apartment     Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
 model StaffExpense {
   id            String    @id @default(uuid())
   userId        String
@@ -116,4 +117,17 @@ model StaffExpense {
   createdAt     DateTime  @default(now())
 
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // 'info', 'success', 'warning', 'booking'
+  isRead    Boolean  @default(false)
+  isCleared Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
