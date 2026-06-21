@@ -316,6 +316,13 @@ export default function SettingsView() {
                       className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="أضف رقم ترخيص جديد"
                     />
+                    <input
+                      type="date"
+                      value={newLicenseExpiration}
+                      onChange={(e) => setNewLicenseExpiration(e.target.value)}
+                      className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      title="تاريخ الانتهاء"
+                    />
                     <button
                       type="button"
                       onClick={handleAddLicense}
