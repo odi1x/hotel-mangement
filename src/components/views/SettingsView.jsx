@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
 import { Save, Plus, Trash2, Settings, Shield } from 'lucide-react';
 import axios from 'axios';
@@ -82,6 +83,18 @@ export default function SettingsView() {
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
+  };
+
+
+  const handleEnablePush = async () => {
+    const success = await subscribeToPushNotifications();
+    if (success) {
+      setPushStatus('granted');
+      toast.success('تم تفعيل إشعارات المتصفح بنجاح');
+    } else {
+      setPushStatus('denied');
+      toast.error('لم يتم تفعيل إشعارات المتصفح. قد تكون محظورة من المتصفح.');
+    }
   };
 
   const handlePasswordChange = (e) => {

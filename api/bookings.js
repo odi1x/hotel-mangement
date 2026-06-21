@@ -1,5 +1,6 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
+import { sendWebPush } from './push-helper.js';
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -89,6 +90,7 @@ export default async function handler(req, res) {
           type: 'booking'
         }
       });
+      await sendWebPush(apartment.userId, 'حجز جديد', `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name}`);
 
       const today = new Date().setHours(0,0,0,0);
       if (end.getTime() < today && !apartment.needsCleaning) {
@@ -138,6 +140,7 @@ export default async function handler(req, res) {
                 type: 'warning'
             }
         });
+        await sendWebPush(apartment.userId, 'مغادرة مبكرة', `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`);
 
         // Also notify the Admin if the apartment owner is not the admin
         if (user.adminId && apartment.userId !== user.adminId) {
@@ -149,6 +152,7 @@ export default async function handler(req, res) {
                     type: 'warning'
                 }
             });
+            await sendWebPush(user.adminId, 'مغادرة مبكرة', `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`);
         }
 
         const booking = await prisma.booking.update({
