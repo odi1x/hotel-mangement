@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import prisma from '../prisma.js';
+import prisma from './prisma.js';
 
 // Configure Web Push with VAPID keys
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY;

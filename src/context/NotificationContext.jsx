@@ -95,7 +95,7 @@ export const NotificationProvider = ({ children }) => {
       const registration = await navigator.serviceWorker.register('/sw.js');
 
       // 3. Get VAPID public key from backend
-      const vapidRes = await axios.get(`${API_BASE_URL}/push`);
+      const vapidRes = await axios.get(`${API_BASE_URL}/notifications?action=push`);
       const publicVapidKey = vapidRes.data.publicKey;
       if (!publicVapidKey) {
           throw new Error('No VAPID public key returned from server.');
@@ -108,7 +108,7 @@ export const NotificationProvider = ({ children }) => {
       });
 
       // 5. Send subscription to backend
-      await axios.post(`${API_BASE_URL}/push`, {
+      await axios.post(`${API_BASE_URL}/notifications?action=push`, {
         subscription: subscription
       });
 

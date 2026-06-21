@@ -1,10 +1,11 @@
+/* global process */
 import prisma from '../../prisma.js';
-import { sendWebPush } from '../push-helper.js';
+import { sendWebPush } from '../../push-helper.js';
 
 export default async function handler(req, res) {
   // Verify Vercel Cron Authorization
   const authHeader = req.headers.authorization;
-  if (authHeader !== \`Bearer \${process.env.CRON_SECRET}\` && process.env.NODE_ENV === 'production') {
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV === 'production') {
     return res.status(401).json({ message: 'Unauthorized cron request' });
   }
 
@@ -32,10 +33,11 @@ export default async function handler(req, res) {
         data: {
           userId: booking.apartment.userId,
           title: 'وصول متوقع اليوم',
-          message: \`وصول متوقع اليوم: النزيل \${booking.residentName} في شقة \${booking.apartment.name}\`,
+          message: `وصول متوقع اليوم: النزيل ${booking.residentName} في شقة ${booking.apartment.name}`,
           type: 'info',
         },
       });
+      await sendWebPush(booking.apartment.userId, 'وصول متوقع اليوم', `النزيل ${booking.residentName} في شقة ${booking.apartment.name}`);
     }
 
     // 2. Expected Departures Today
@@ -55,10 +57,11 @@ export default async function handler(req, res) {
         data: {
           userId: booking.apartment.userId,
           title: 'مغادرة متوقعة اليوم',
-          message: \`مغادرة متوقعة اليوم: النزيل \${booking.residentName} من شقة \${booking.apartment.name}\`,
+          message: `مغادرة متوقعة اليوم: النزيل ${booking.residentName} من شقة ${booking.apartment.name}`,
           type: 'info',
         },
       });
+      await sendWebPush(booking.apartment.userId, 'مغادرة متوقعة اليوم', `النزيل ${booking.residentName} من شقة ${booking.apartment.name}`);
     }
 
     // 3. License Expirations (30 days and 7 days)
@@ -81,10 +84,11 @@ export default async function handler(req, res) {
         data: {
           userId: license.userId,
           title: 'تنبيه انتهاء ترخيص',
-          message: \`الترخيص رقم \${license.licenseNumber} سينتهي بعد 30 يوماً\`,
+          message: `الترخيص رقم ${license.licenseNumber} سينتهي بعد 30 يوماً`,
           type: 'warning',
         },
       });
+      await sendWebPush(license.userId, 'تنبيه انتهاء ترخيص', `الترخيص رقم ${license.licenseNumber} سينتهي بعد 30 يوماً`);
     }
 
     const target7Days = new Date(today);
@@ -106,10 +110,11 @@ export default async function handler(req, res) {
         data: {
           userId: license.userId,
           title: 'تنبيه هام جداً: انتهاء ترخيص',
-          message: \`الترخيص رقم \${license.licenseNumber} سينتهي بعد 7 أيام فقط!\`,
+          message: `الترخيص رقم ${license.licenseNumber} سينتهي بعد 7 أيام فقط!`,
           type: 'warning',
         },
       });
+      await sendWebPush(license.userId, 'تنبيه هام جداً: انتهاء ترخيص', `الترخيص رقم ${license.licenseNumber} سينتهي بعد 7 أيام فقط!`);
     }
 
     return res.status(200).json({

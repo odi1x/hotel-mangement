@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Phone, Printer, Trash2, Search, ShieldCheck, ShieldAlert, Edit2, MessageSquare, LogOut, X } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -7,7 +7,7 @@ import PrintAgreement from '../ui/PrintAgreement';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
-  const { apartments, bookings, deleteBooking, checkoutBooking, toggleTrustedStatus, updateBooking, fetchBookings, fetchApartments } = useData();
+  const { apartments, bookings, deleteBooking, checkoutBooking, updateBooking, fetchBookings, fetchApartments } = useData(); // eslint-disable-line no-unused-vars
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,7 +91,7 @@ export default function ResidentsView({ openBookingForm }) {
       fetchApartments(); // Refresh apartment status
       toast.success('تم تسجيل الخروج بنجاح');
       setCheckoutModalOpen(false);
-    } catch (e) {
+    } catch (e) { console.error(e);
       toast.error('حدث خطأ أثناء الخروج');
     }
   };
@@ -102,7 +102,7 @@ export default function ResidentsView({ openBookingForm }) {
       try {
         await updateBooking({ ...booking, notes: noteContent });
         toast.success('تم حفظ الملاحظة بنجاح');
-      } catch (err) {
+      } catch (err) { console.error(err);
         toast.error('فشل حفظ الملاحظة');
       }
     }
@@ -153,9 +153,7 @@ export default function ResidentsView({ openBookingForm }) {
                     <td className="px-6 py-4">
                       <div className="font-bold text-gray-900 dark:text-slate-100 flex items-center">
                         {booking.residentName}
-                        {booking.trusted && (
-                          <ShieldCheck size={14} className="ml-2 text-green-500" title="نزيل موثوق" />
-                        )}
+
                       </div>
                       <div className="text-[10px] text-gray-400 font-medium mt-0.5">عبر: {booking.source}</div>
                       {booking.creatorName && (
@@ -196,19 +194,7 @@ export default function ResidentsView({ openBookingForm }) {
                             <LogOut size={18} />
                           </button>
                         )}
-                        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                          <button
-                            onClick={() => toggleTrustedStatus(booking.phone, booking.trusted)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              booking.trusted
-                                ? 'text-green-600 hover:text-green-800 hover:bg-green-50 dark:hover:bg-green-900/30'
-                                : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30'
-                            }`}
-                            title={booking.trusted ? "إزالة من الموثوقين" : "تعيين كموثوق"}
-                          >
-                            {booking.trusted ? <ShieldAlert size={18} /> : <ShieldCheck size={18} />}
-                          </button>
-                        )}
+
                         <button
                           onClick={() => setPrintBooking(booking)}
                           className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"

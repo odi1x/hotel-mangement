@@ -99,7 +99,6 @@ model Booking {
   startDate     DateTime
   endDate       DateTime
   status        String    @default("active") // "active", "completed", "checked_out_early"
-  trusted       Boolean   @default(false)
   notes         String?
   creatorName   String?
   createdAt     DateTime  @default(now())
