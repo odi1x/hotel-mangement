@@ -31,6 +31,7 @@ export default function SettingsView() {
   const [bookingSourcesList, setBookingSourcesList] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
   const [newBookingSource, setNewBookingSource] = useState('');
   const [newLicenseNumber, setNewLicenseNumber] = useState('');
+  const [newLicenseExpiration, setNewLicenseExpiration] = useState('');
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -89,8 +90,9 @@ export default function SettingsView() {
 
   const handleAddLicense = () => {
     if (newLicenseNumber.trim()) {
-      addLicense(newLicenseNumber.trim());
+      addLicense(newLicenseNumber.trim(), newLicenseExpiration);
       setNewLicenseNumber('');
+      setNewLicenseExpiration('');
     }
   };
 
@@ -325,7 +327,7 @@ export default function SettingsView() {
                   <div className="flex flex-col gap-2">
                     {licenses.map((license) => (
                       <div key={license.id} className="flex justify-between items-center bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 px-4 py-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
-                        <span className="text-sm font-bold">{license.licenseNumber}</span>
+                        <div className="flex flex-col"><span className="text-sm font-bold">{license.licenseNumber}</span>{license.expirationDate && <span className="text-xs text-gray-500">ينتهي في: {new Date(license.expirationDate).toLocaleDateString('ar-SA')}</span>}</div>
                         <button
                           type="button"
                           onClick={() => {

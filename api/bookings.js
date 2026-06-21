@@ -80,6 +80,16 @@ export default async function handler(req, res) {
       });
 
       // Edge case: If creating a historical booking (endDate < today), instantly flag unit as needing cleaning.
+      // Create notification for new booking
+      await prisma.notification.create({
+        data: {
+          userId: apartment.userId, // Target the user mapped to the apartment (staff or admin)
+          title: 'حجز جديد',
+          message: `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name}`,
+          type: 'booking'
+        }
+      });
+
       const today = new Date().setHours(0,0,0,0);
       if (end.getTime() < today && !apartment.needsCleaning) {
           await prisma.apartment.update({
@@ -115,6 +125,30 @@ export default async function handler(req, res) {
         let updatedNotes = existing.notes || '';
         if (reasonNotes && reasonNotes.trim() !== '') {
             updatedNotes += (updatedNotes ? '\n\n' : '') + '--- سبب المغادرة المبكرة ---\n' + reasonNotes;
+        }
+
+        const apartment = await prisma.apartment.findUnique({ where: { id: existing.apartmentId } });
+
+        // Notify the specific staff member (apartment owner)
+        await prisma.notification.create({
+            data: {
+                userId: apartment.userId,
+                title: 'مغادرة مبكرة',
+                message: `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`,
+                type: 'warning'
+            }
+        });
+
+        // Also notify the Admin if the apartment owner is not the admin
+        if (user.adminId && apartment.userId !== user.adminId) {
+            await prisma.notification.create({
+                data: {
+                    userId: user.adminId,
+                    title: 'مغادرة مبكرة',
+                    message: `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`,
+                    type: 'warning'
+                }
+            });
         }
 
         const booking = await prisma.booking.update({
