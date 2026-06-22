@@ -75,16 +75,29 @@ export default async function handler(req, res) {
       });
 
       // Edge case: If creating a historical booking (endDate < today), instantly flag unit as needing cleaning.
-      // Create notification for new booking
+// Create notification for new booking
       await prisma.notification.create({
         data: {
-          userId: apartment.userId, // Target the user mapped to the apartment (staff or admin)
+          userId: targetUserId, // Send to Admin
           title: 'حجز جديد',
-          message: `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name}`,
+          message: `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name} بواسطة ${user.name || user.username}`,
           type: 'booking'
         }
       });
-      await sendWebPush(apartment.userId, 'حجز جديد', `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name}`);
+      await sendWebPush(targetUserId, 'حجز جديد', `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name}`);
+
+      // If a staff member created this, ALSO notify the staff member so they see the confirmation!
+      if (user.userId !== targetUserId) {
+          await prisma.notification.create({
+            data: {
+              userId: user.userId,
+              title: 'تم تأكيد الحجز',
+              message: `تم تأكيد حجزك للنزيل ${residentName} في وحدة ${apartment.name}`,
+              type: 'success'
+            }
+          });
+          await sendWebPush(user.userId, 'تم تأكيد الحجز', `تم تأكيد حجزك للنزيل ${residentName} في وحدة ${apartment.name}`);
+      }
 
       const today = new Date().setHours(0,0,0,0);
       if (end.getTime() < today && !apartment.needsCleaning) {
