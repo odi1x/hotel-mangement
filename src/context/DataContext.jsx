@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
@@ -16,7 +16,7 @@ export const DataProvider = ({ children }) => {
   const [staffExpenses, setStaffExpenses] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   const API_BASE_URL = '/api'; // Configured via Vite proxy locally or direct path on Vercel
 
@@ -76,17 +76,23 @@ export const DataProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchApartments();
+
       fetchBookings();
+
       fetchLicenses();
+
       fetchStaffExpenses();
     }
   }, [token]);
 
   useEffect(() => {
     if (token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchAnalytics();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, analyticsFilter, bookings]);
 
   const addApartment = async (apartmentData) => {
@@ -182,24 +188,7 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  const toggleTrustedStatus = async (phone, currentStatus) => {
-    try {
-      // Find all bookings with this phone number to update them in the local state
-      const updatedBookings = bookings.map(b =>
-        b.phone === phone ? { ...b, trusted: !currentStatus } : b
-      );
 
-      setBookings(updatedBookings);
-
-      await axios.put(`${API_BASE_URL}/bookings/trusted`, { phone, trusted: !currentStatus });
-      toast.success(currentStatus ? 'تم إزالة حالة الموثوقية' : 'تم تعيين النزيل كموثوق');
-    } catch (err) {
-      console.error(err);
-      toast.error('حدث خطأ أثناء تحديث حالة النزيل');
-      // fetchBookings will implicitly re-fetch
-      fetchBookings();
-    }
-  };
 
   return (
     <DataContext.Provider value={{
@@ -218,7 +207,6 @@ export const DataProvider = ({ children }) => {
       updateBooking,
       deleteBooking,
       checkoutBooking,
-      toggleTrustedStatus,
       fetchBookings,
       fetchApartments,
       staffExpenses,

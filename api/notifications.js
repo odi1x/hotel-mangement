@@ -1,3 +1,4 @@
+/* global process */
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 
@@ -12,6 +13,39 @@ export default async function handler(req, res) {
   const userId = user.userId;
 
   try {
+    const { action } = req.query;
+
+    if (action === 'push') {
+        if (req.method === 'GET') {
+          return res.status(200).json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+        }
+        else if (req.method === 'POST') {
+          const { subscription } = req.body;
+          if (!subscription) return res.status(400).json({ message: 'Subscription object is required' });
+
+          const existing = await prisma.pushSubscription.findFirst({ where: { userId } });
+          const exists = existing && existing.subscription.endpoint === subscription.endpoint;
+
+          if (!exists) {
+              await prisma.pushSubscription.create({ data: { userId, subscription } });
+          }
+          return res.status(201).json({ message: 'Subscription saved successfully.' });
+        }
+        else if (req.method === 'DELETE') {
+           const { endpoint } = req.body;
+           if (!endpoint) return res.status(400).json({ message: 'Endpoint is required to delete' });
+
+           const subs = await prisma.pushSubscription.findMany({ where: { userId } });
+           for (const sub of subs) {
+               if (sub.subscription.endpoint === endpoint) {
+                   await prisma.pushSubscription.delete({ where: { id: sub.id } });
+               }
+           }
+           return res.status(200).json({ message: 'Subscription removed.' });
+        }
+        return res.status(405).json({ message: 'Method Not Allowed' });
+    }
+
     if (req.method === 'GET') {
       const notifications = await prisma.notification.findMany({
         where: {

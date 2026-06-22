@@ -61,6 +61,64 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
+
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const subscribeToPushNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.warn('Push notifications are not supported by the browser.');
+      return false;
+    }
+
+    try {
+      // 1. Request permission
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        console.warn('Permission for notifications was denied');
+        return false;
+      }
+
+      // 2. Register Service Worker
+      const registration = await navigator.serviceWorker.register('/sw.js');
+
+      // 3. Get VAPID public key from backend
+      const vapidRes = await axios.get(`${API_BASE_URL}/notifications?action=push`);
+      const publicVapidKey = vapidRes.data.publicKey;
+      if (!publicVapidKey) {
+          throw new Error('No VAPID public key returned from server.');
+      }
+
+      // 4. Subscribe
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+      });
+
+      // 5. Send subscription to backend
+      await axios.post(`${API_BASE_URL}/notifications?action=push`, {
+        subscription: subscription
+      });
+
+      return true;
+    } catch (err) {
+      console.error('Failed to subscribe to push notifications', err);
+      return false;
+    }
+  };
+
   const clearAll = async () => {
     try {
       // Optimistically remove read notifications from the UI list
@@ -79,6 +137,7 @@ export const NotificationProvider = ({ children }) => {
       markAsRead,
       markAllAsRead,
       clearAll,
+      subscribeToPushNotifications,
       fetchNotifications
     }}>
       {children}

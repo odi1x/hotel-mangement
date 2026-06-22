@@ -1,5 +1,15 @@
+/* global process */
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+
+import ImageKit from 'imagekit';
+
+const imagekit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
+});
+
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 
@@ -67,6 +77,13 @@ export default async function handler(req, res) {
           }
         }
       });
+    }
+
+
+    // IMAGEKIT AUTH
+    if (action === 'imagekit_auth' && req.method === 'GET') {
+      const authenticationParameters = imagekit.getAuthenticationParameters();
+      return res.status(200).json(authenticationParameters);
     }
 
     // REQUIRES AUTH

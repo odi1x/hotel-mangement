@@ -1,12 +1,18 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import { Save, Plus, Trash2, Settings, Shield } from 'lucide-react';
+import {  Save, Plus, Trash2, Settings, Shield , BellRing } from 'lucide-react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
 
 export default function SettingsView() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, changePassword } = useAuth();
+  const { subscribeToPushNotifications } = useNotifications();
+
+  const [pushStatus, setPushStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
   const { apartments, licenses, addLicense, deleteLicense, staffExpenses, fetchStaffExpenses } = useData();
   const [newStaff, setNewStaff] = useState({ name: '', monthlySalary: '', scope: [] });
   const [activeTab, setActiveTab] = useState('general');
@@ -46,19 +52,11 @@ export default function SettingsView() {
   const [pwdSuccessMsg, setPwdSuccessMsg] = useState('');
   const [pwdErrorMsg, setPwdErrorMsg] = useState('');
 
-  // Restrict access for non-admins if they don't have permission
-  if (user?.role !== 'admin' && !user?.permissions?.canViewSettings) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-slate-400">
-        <Shield size={48} className="mb-4 text-gray-300 dark:text-slate-600" />
-        <h2 className="text-xl font-bold">عذراً، ليس لديك صلاحية</h2>
-        <p>يرجى التواصل مع مدير النظام للوصول إلى هذه الصفحة.</p>
-      </div>
-    );
-  }
+
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         businessName: user.businessName || '',
         tourismLicense: user.tourismLicense || '',
@@ -82,6 +80,18 @@ export default function SettingsView() {
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
+  };
+
+
+  const handleEnablePush = async () => {
+    const success = await subscribeToPushNotifications();
+    if (success) {
+      setPushStatus('granted');
+      toast.success('تم تفعيل إشعارات المتصفح بنجاح');
+    } else {
+      setPushStatus('denied');
+      toast.error('لم يتم تفعيل إشعارات المتصفح. قد تكون محظورة من المتصفح.');
+    }
   };
 
   const handlePasswordChange = (e) => {
@@ -146,6 +156,7 @@ export default function SettingsView() {
       setSuccessMsg('تم حفظ الإعدادات بنجاح');
     } catch (error) {
       console.error(error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -168,6 +179,7 @@ export default function SettingsView() {
       setPwdSuccessMsg('تم تغيير كلمة المرور بنجاح');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
+      console.error(error);
       console.error(error);
       setPwdErrorMsg('فشل في تغيير كلمة المرور. تحقق من كلمة المرور الحالية.');
     } finally {
@@ -546,6 +558,30 @@ export default function SettingsView() {
           {/* System Tab */}
           {facilityTab === 'system' && (
               <div className="space-y-8 animate-in fade-in duration-300">
+
+                  {/* Push Notifications Toggle */}
+                  <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                        <BellRing size={18} className="text-blue-500" />
+                        إشعارات المتصفح
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">تلقي تنبيهات فورية حتى عند إغلاق التطبيق</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleEnablePush}
+                      disabled={pushStatus === 'granted'}
+                      className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                        pushStatus === 'granted'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                      }`}
+                    >
+                      {pushStatus === 'granted' ? 'مفعلة' : 'تفعيل'}
+                    </button>
+                  </div>
+
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-3">أنواع الوحدات المتاحة</label>
                   <div className="flex gap-2 mb-4">

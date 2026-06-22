@@ -42,6 +42,7 @@ model User {
   licenses         License[]
   staffExpenses    StaffExpense[]
   notifications    Notification[]
+  pushSubscriptions PushSubscription[]
 }
 
 model License {
@@ -98,7 +99,6 @@ model Booking {
   startDate     DateTime
   endDate       DateTime
   status        String    @default("active") // "active", "completed", "checked_out_early"
-  trusted       Boolean   @default(false)
   notes         String?
   creatorName   String?
   createdAt     DateTime  @default(now())
@@ -130,4 +130,13 @@ model Notification {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id           String   @id @default(uuid())
+  userId       String
+  subscription Json
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
