@@ -1,6 +1,6 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { sendWebPush } from '../push-helper.js';
+import { sendWebPush } from './push-helper.js';
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -55,6 +55,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
       }
 
+      // Check if user is trusted based on previous bookings
+      const previousBooking = await prisma.booking.findFirst({
+        where: { userId: targetUserId, phone, trusted: true }
+      });
 
       const booking = await prisma.booking.create({
         data: {
@@ -70,6 +74,7 @@ export default async function handler(req, res) {
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           status: status || 'active',
+          trusted: !!previousBooking,
           notes,
           creatorName: user.name || user.username
         },
@@ -126,28 +131,28 @@ export default async function handler(req, res) {
 
         const apartment = await prisma.apartment.findUnique({ where: { id: existing.apartmentId } });
 
-        // Notify the specific staff member (apartment owner)
+        // Notify the Admin (apartment owner)
         await prisma.notification.create({
             data: {
-                userId: apartment.userId,
+                userId: targetUserId,
                 title: 'مغادرة مبكرة',
                 message: `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`,
                 type: 'warning'
             }
         });
-        await sendWebPush(apartment.userId, 'مغادرة مبكرة', `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`);
+        await sendWebPush(targetUserId, 'مغادرة مبكرة', `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`);
 
-        // Also notify the Admin if the apartment owner is not the admin
-        if (user.adminId && apartment.userId !== user.adminId) {
+        // Also notify the staff who performed the checkout if they are different
+        if (user.userId !== targetUserId) {
             await prisma.notification.create({
                 data: {
-                    userId: user.adminId,
+                    userId: user.userId,
                     title: 'مغادرة مبكرة',
-                    message: `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`,
-                    type: 'warning'
+                    message: `تم تسجيل المغادرة المبكرة للنزيل ${existing.residentName} بنجاح.`,
+                    type: 'success'
                 }
             });
-            await sendWebPush(user.adminId, 'مغادرة مبكرة', `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`);
+            await sendWebPush(user.userId, 'مغادرة مبكرة', `تم تسجيل المغادرة المبكرة للنزيل ${existing.residentName} بنجاح.`);
         }
 
         const booking = await prisma.booking.update({
