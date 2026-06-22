@@ -55,11 +55,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
       }
 
-      // Check if user is trusted based on previous bookings
-      const previousBooking = await prisma.booking.findFirst({
-        where: { userId: targetUserId, phone, trusted: true }
-      });
-
       const booking = await prisma.booking.create({
         data: {
           userId: targetUserId,
@@ -74,7 +69,6 @@ export default async function handler(req, res) {
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           status: status || 'active',
-          trusted: !!previousBooking,
           notes,
           creatorName: user.name || user.username
         },
