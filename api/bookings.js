@@ -1,6 +1,6 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { sendWebPush } from './push-helper.js';
+import { sendWebPush } from '../push-helper.js';
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
