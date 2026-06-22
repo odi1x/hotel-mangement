@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, Save, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -40,7 +40,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
         if (!dataToUpdate.password) {
           delete dataToUpdate.password;
         }
-        await axios.put(`/api/staff/${staff.id}`, dataToUpdate);
+        await axios.put(`/api/staff?id=${staff.id}`, dataToUpdate);
         toast.success('تم تحديث بيانات الموظف بنجاح');
       } else {
         if (!formData.password) {

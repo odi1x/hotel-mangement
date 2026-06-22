@@ -9,6 +9,7 @@ export default function StaffManagement() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const fetchStaff = async () => {
     setLoading(true);
@@ -37,17 +38,25 @@ export default function StaffManagement() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteStaff = async (id) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا الموظف؟ لن يمكن التراجع عن هذا الإجراء.')) return;
+
+  const handleDeleteStaff = async () => {
+    if (!deleteConfirmId) return;
 
     try {
-      await axios.delete(`/api/staff?id=${id}`);
+      await axios.delete(`/api/staff?id=${deleteConfirmId}`);
       toast.success('تم حذف الموظف بنجاح');
-      setStaff(staff.filter(s => s.id !== id));
+      setStaff(staff.filter(s => s.id !== deleteConfirmId));
+      setDeleteConfirmId(null);
     } catch (err) {
       toast.error(err.response?.data?.message || 'فشل في حذف الموظف');
+      setDeleteConfirmId(null);
     }
   };
+
+  const confirmDelete = (id) => {
+    setDeleteConfirmId(id);
+  };
+
 
   if (loading) {
     return <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
@@ -128,7 +137,7 @@ export default function StaffManagement() {
                       <Edit2 size={18} />
                     </button>
                     <button
-                      onClick={() => handleDeleteStaff(s.id)}
+                      onClick={() => confirmDelete(s.id)}
                       className="p-1.5 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                       title="حذف الموظف"
                     >
@@ -159,6 +168,38 @@ export default function StaffManagement() {
           }}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-red-100 dark:border-red-900/30">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4 text-red-600 dark:text-red-400">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-2">تأكيد الحذف</h3>
+              <p className="text-gray-500 dark:text-slate-400 text-sm">هل أنت متأكد من حذف هذا الموظف؟ لن يمكن التراجع عن هذا الإجراء.</p>
+            </div>
+
+            <div className="p-4 bg-gray-50 dark:bg-slate-800 flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleDeleteStaff}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all"
+              >
+                حذف الموظف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
