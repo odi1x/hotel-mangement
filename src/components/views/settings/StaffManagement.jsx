@@ -15,7 +15,7 @@ export default function StaffManagement() {
     try {
       const res = await axios.get('/api/staff');
       setStaff(res.data);
-    } catch (err) {
+    } catch {
       toast.error('فشل في جلب قائمة الموظفين');
     } finally {
       setLoading(false);
@@ -23,6 +23,7 @@ export default function StaffManagement() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStaff();
   }, []);
 
@@ -40,7 +41,7 @@ export default function StaffManagement() {
     if (!window.confirm('هل أنت متأكد من حذف هذا الموظف؟ لن يمكن التراجع عن هذا الإجراء.')) return;
 
     try {
-      await axios.delete(`/api/staff/${id}`);
+      await axios.delete(`/api/staff?id=${id}`);
       toast.success('تم حذف الموظف بنجاح');
       setStaff(staff.filter(s => s.id !== id));
     } catch (err) {
