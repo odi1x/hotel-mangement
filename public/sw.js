@@ -1,23 +1,16 @@
-self.addEventListener('push', function(event) {
-  if (event.data) {
-    const data = event.data.json();
+/* global clients */
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'تنبيه جديد', body: '' };
 
-    const options = {
-      body: data.message,
-      icon: '/vite.svg', // Default icon, can be customized later
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/vite.svg', // Ensure an icon path exists
       badge: '/vite.svg',
       vibrate: [100, 50, 100],
-      data: {
-        dateOfArrival: Date.now(),
-        primaryKey: '2'
-      },
       dir: 'rtl'
-    };
-
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-    );
-  }
+    })
+  );
 });
 
 self.addEventListener('notificationclick', function(event) {
