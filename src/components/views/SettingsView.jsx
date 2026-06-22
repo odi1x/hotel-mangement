@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import { Save, Plus, Trash2, Settings, Shield } from 'lucide-react';
+import {  Save, Plus, Trash2, Settings, Shield , BellRing } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
@@ -52,7 +52,6 @@ export default function SettingsView() {
   const [pwdSuccessMsg, setPwdSuccessMsg] = useState('');
   const [pwdErrorMsg, setPwdErrorMsg] = useState('');
 
-  // Restrict access for non-admins if they don't have permission
 
 
   useEffect(() => {
@@ -559,6 +558,30 @@ export default function SettingsView() {
           {/* System Tab */}
           {facilityTab === 'system' && (
               <div className="space-y-8 animate-in fade-in duration-300">
+
+                  {/* Push Notifications Toggle */}
+                  <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                        <BellRing size={18} className="text-blue-500" />
+                        إشعارات المتصفح
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">تلقي تنبيهات فورية حتى عند إغلاق التطبيق</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleEnablePush}
+                      disabled={pushStatus === 'granted'}
+                      className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                        pushStatus === 'granted'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                      }`}
+                    >
+                      {pushStatus === 'granted' ? 'مفعلة' : 'تفعيل'}
+                    </button>
+                  </div>
+
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-3">أنواع الوحدات المتاحة</label>
                   <div className="flex gap-2 mb-4">
