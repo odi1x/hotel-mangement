@@ -65,7 +65,7 @@ export const NotificationProvider = ({ children }) => {
   const urlBase64ToUint8Array = (base64String) => {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
+      .replace(/-/g, '+')
       .replace(/_/g, '/');
 
     const rawData = window.atob(base64);
@@ -91,8 +91,19 @@ export const NotificationProvider = ({ children }) => {
         return false;
       }
 
-      // 2. Register Service Worker
-      const registration = await navigator.serviceWorker.register('/sw.js');
+// 2. Register Service Worker
+      const registration = await navigator.serviceWorker.register('/sw.js')
+        .then(reg => {
+          console.log('Service Worker Registered Successfully!', reg);
+          return reg;
+        })
+        .catch(err => {
+          console.error('Service Worker Registration Failed:', err);
+          throw err;
+        });
+
+      // Wait for service worker to be ready
+      await navigator.serviceWorker.ready;
 
       // 3. Get VAPID public key from backend
       const vapidRes = await axios.get(`${API_BASE_URL}/notifications?action=push`);
@@ -106,11 +117,13 @@ export const NotificationProvider = ({ children }) => {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
       });
+      console.log('Push subscription generated:', subscription);
 
       // 5. Send subscription to backend
       await axios.post(`${API_BASE_URL}/notifications?action=push`, {
         subscription: subscription
       });
+      console.log('Subscription successfully saved to DB');
 
       return true;
     } catch (err) {

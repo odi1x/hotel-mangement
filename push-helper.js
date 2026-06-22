@@ -1,3 +1,4 @@
+/* global process */
 import webpush from 'web-push';
 import prisma from './prisma.js';
 
@@ -28,7 +29,7 @@ export async function sendWebPush(userId, title, message) {
 
     const payload = JSON.stringify({
       title,
-      message
+      body: message
     });
 
     // 2. Broadcast and handle cleanup for expired/invalid subscriptions
@@ -48,7 +49,12 @@ export async function sendWebPush(userId, title, message) {
       }
     });
 
-    await Promise.all(pushPromises);
+    const results = await Promise.allSettled(pushPromises);
+    results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+            console.error(`Push notification ${index} failed:`, result.reason);
+        }
+    });
   } catch (err) {
     console.error('Error in sendWebPush helper:', err);
   }
