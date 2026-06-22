@@ -16,8 +16,13 @@ export default async function handler(req, res) {
     const { action } = req.query;
 
     if (action === 'push') {
-        if (req.method === 'GET') {
-          return res.status(200).json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+if (req.method === 'GET') {
+          const pubKey = process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+          if (!pubKey) {
+            console.error('CRITICAL: VAPID_PUBLIC_KEY is not defined in the server environment variables.');
+            return res.status(500).json({ message: 'Server configuration error: Missing VAPID Keys.' });
+          }
+          return res.status(200).json({ publicKey: pubKey });
         }
         else if (req.method === 'POST') {
           const { subscription } = req.body;
