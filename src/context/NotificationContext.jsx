@@ -91,10 +91,10 @@ export const NotificationProvider = ({ children }) => {
         return false;
       }
 
-// 2. Register Service Worker
-      const registration = await navigator.serviceWorker.register('/sw.js')
+// 2. Register Service Worker using exact origin
+      const registration = await navigator.serviceWorker.register(`${window.location.origin}/sw.js`)
         .then(reg => {
-          console.log('Service Worker Registered Successfully!', reg);
+          console.log('Service Worker registered on correct origin:', reg.scope);
           return reg;
         })
         .catch(err => {
