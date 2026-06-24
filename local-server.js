@@ -26,7 +26,6 @@ app.all('/api/apartments', adaptHandler(apartmentsHandler));
 app.all('/api/bookings', adaptHandler(bookingsHandler));
 app.all('/api/licenses', adaptHandler(licensesHandler));
 app.all('/api/notifications', adaptHandler(notificationsHandler));
-app.all('/api/notifications/:action', adaptHandler(notificationsHandler));
 app.all('/api/cron/daily', adaptHandler(dailyCronHandler));
 app.all('/api/analytics', adaptHandler(analyticsHandler));
 app.all('/api/staff', adaptHandler(staffHandler));

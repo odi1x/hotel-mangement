@@ -54,7 +54,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       setNotifications(notifications.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
-      await axios.post(`${API_BASE_URL}/notifications/mark-all-read`);
+      await axios.post(`${API_BASE_URL}/notifications?action=mark-all-read`);
     } catch (err) {
       console.error(err);
       fetchNotifications();
@@ -136,7 +136,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       // Optimistically remove read notifications from the UI list
       setNotifications(notifications.filter(n => !n.isRead));
-      await axios.post(`${API_BASE_URL}/notifications/clear-all`);
+      await axios.post(`${API_BASE_URL}/notifications?action=clear-all`);
     } catch (err) {
       console.error(err);
       fetchNotifications();
