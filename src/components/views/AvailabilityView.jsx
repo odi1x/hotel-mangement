@@ -22,14 +22,14 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
       // Approximate heights:
       // cell padding: 16px (p-2 is 8px top+bottom)
       // header (day number): ~28px + 8px mb-2 = 36px
-      const headerSpace = 52;
+      const headerSpace = 44; // Reduced slightly to not be too aggressive
       const availableHeight = cellHeight - headerSpace;
 
-      const itemHeight = 28; // booking item height (approx 24px + 4px gap)
+      const itemHeight = 22; // Reduced booking item height (approx 18px + 4px gap)
       const moreLabelHeight = 24; // "+X" indicator height + padding
 
       if (availableHeight < itemHeight) {
-         setMaxVisible(0);
+         setMaxVisible(dayBookings.length > 0 ? 1 : 0);
          return;
       }
 
@@ -38,6 +38,11 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
       if (fitCount < dayBookings.length) {
         // If we can't fit all items, we must leave room for the "+X more" label
         fitCount = Math.floor((availableHeight - moreLabelHeight) / itemHeight);
+      }
+
+      // Force a minimum of 1 visible item if there are bookings
+      if (fitCount <= 0 && dayBookings.length > 0) {
+        fitCount = 1;
       }
 
       setMaxVisible(Math.max(0, fitCount));
@@ -95,10 +100,10 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
           const isEnd = new Date(booking.endDate).toDateString() === dateStr;
           return (
             <div key={booking.id} title={`${apt.name} - ${booking.residentName}`}
-              className={`text-[10px] px-2 py-1 rounded-md font-bold truncate cursor-pointer transition-all hover:opacity-80 border border-transparent shrink-0
-                ${colorClass} ${isStart ? 'rounded-r-full ml-1' : ''} ${isEnd ? 'rounded-l-full mr-1' : ''}`}
+              className={`text-[10px] px-2 py-0.5 rounded flex items-center h-5 font-bold truncate cursor-pointer transition-all hover:opacity-80 border border-transparent shrink-0
+                ${colorClass} ${isStart ? 'rounded-r-md ml-0.5' : ''} ${isEnd ? 'rounded-l-md mr-0.5' : ''}`}
               onClick={(e) => { e.stopPropagation(); setSelectedBookingDetails(booking); }}
-            ><span className="opacity-70 ml-1">{apt.name}:</span>{booking.residentName}</div>
+            ><span className="opacity-70 ml-1 truncate">{apt.name}:</span><span className="truncate">{booking.residentName}</span></div>
           );
         })}
       </div>
