@@ -244,8 +244,9 @@ export default function AnalyticsView() {
               <TrendingUp size={18} className="ml-2 text-blue-500" />
               اتجاه الإيرادات والمصروفات
           </h4>
-          <div className="flex-1 w-full min-h-0 relative" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-1 w-full min-h-0 relative overflow-hidden" dir="ltr">
+            <div className="absolute inset-0 pb-4">
+              <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -268,6 +269,7 @@ export default function AnalyticsView() {
                 <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
               </AreaChart>
             </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -307,8 +309,9 @@ export default function AnalyticsView() {
             <p className="text-xs text-gray-500 mb-2">توزيع الحجوزات حسب المنصات</p>
           </div>
 
-          <div className="flex-1 min-h-0 w-full relative pb-4" dir="ltr">
+          <div className="flex-1 min-h-0 w-full relative overflow-hidden" dir="ltr">
             {sourceChartData.length > 0 ? (
+              <div className="absolute inset-0 pb-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -331,6 +334,7 @@ export default function AnalyticsView() {
                     <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontFamily: 'inherit', fontSize: '12px' }} />
                   </PieChart>
                 </ResponsiveContainer>
+              </div>
             ) : (
                 <div className="h-full flex items-center justify-center text-gray-400 font-medium">لا توجد بيانات كافية</div>
             )}
