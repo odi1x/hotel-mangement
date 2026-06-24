@@ -1,9 +1,0 @@
-refactor: dynamic calendar density and strict viewport layout
-
-- Set `h-screen overflow-hidden` on main parent layout container.
-- Updated calendar grid container to use `flex-1 overflow-hidden min-h-0`.
-- Implemented `ResizeObserver` inside `DayCell` to dynamically calculate
-  booking bar capacity based on real available screen height.
-- Implemented intelligent "+X more" truncation to prevent day cell expansion.
-- Changed grid configuration to dynamically stretch rows (`repeat(X, minmax(0, 1fr))`).
-- Removed strict max booking limit to fully utilize screen density.

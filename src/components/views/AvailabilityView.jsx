@@ -22,11 +22,11 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
       // Approximate heights:
       // cell padding: 16px (p-2 is 8px top+bottom)
       // header (day number): ~28px + 8px mb-2 = 36px
-      const headerSpace = 44; // Reduced slightly to not be too aggressive
+      const headerSpace = 40; // Adjusted for padding and header
       const availableHeight = cellHeight - headerSpace;
 
-      const itemHeight = 22; // Reduced booking item height (approx 18px + 4px gap)
-      const moreLabelHeight = 24; // "+X" indicator height + padding
+      const itemHeight = 24; // Adjusted booking item height (approx 20px h-5 + 4px gap)
+      const moreLabelHeight = 26; // "+X" indicator height + gap
 
       if (availableHeight < itemHeight) {
          setMaxVisible(dayBookings.length > 0 ? 1 : 0);
@@ -35,8 +35,8 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
 
       let fitCount = Math.floor(availableHeight / itemHeight);
 
+      // If we can't fit all items, we must leave room for the "+X more" label
       if (fitCount < dayBookings.length) {
-        // If we can't fit all items, we must leave room for the "+X more" label
         fitCount = Math.floor((availableHeight - moreLabelHeight) / itemHeight);
       }
 
@@ -83,7 +83,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
       onClick={() => setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings })}
     >
       <div className="flex justify-between items-start mb-2 shrink-0">
-        <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full
+        <span className={`text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full
           ${isToday ? 'bg-blue-600 text-white shadow-md' :
             !dayObj.isCurrentMonth ? 'text-gray-400 dark:text-slate-600' : 'text-gray-700 dark:text-slate-300'
           }
@@ -100,7 +100,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
           const isEnd = new Date(booking.endDate).toDateString() === dateStr;
           return (
             <div key={booking.id} title={`${apt.name} - ${booking.residentName}`}
-              className={`text-[10px] px-2 py-0.5 rounded flex items-center h-5 font-bold truncate cursor-pointer transition-all hover:opacity-80 border border-transparent shrink-0
+              className={`text-[10px] px-1.5 py-0.5 rounded flex items-center h-5 font-bold truncate cursor-pointer transition-all hover:opacity-80 border border-transparent shrink-0 w-full
                 ${colorClass} ${isStart ? 'rounded-r-md ml-0.5' : ''} ${isEnd ? 'rounded-l-md mr-0.5' : ''}`}
               onClick={(e) => { e.stopPropagation(); setSelectedBookingDetails(booking); }}
             ><span className="opacity-70 ml-1 truncate">{apt.name}:</span><span className="truncate">{booking.residentName}</span></div>
@@ -108,7 +108,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
         })}
       </div>
       {hiddenCount > 0 && (
-        <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 absolute bottom-1 left-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded px-1.5 py-0.5 z-10 border border-gray-100 dark:border-slate-800">
+        <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 bg-white dark:bg-slate-800 rounded px-1.5 py-0.5 z-10 border border-gray-100 dark:border-slate-800 shrink-0 self-start shadow-sm">
           <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1.5"></span>+{hiddenCount} حجوزات
         </div>
       )}
