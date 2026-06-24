@@ -1,7 +1,93 @@
-import { useState, useMemo } from 'react';
-import { ChevronRight, ChevronLeft, Calendar, Search, Plus, Home, User, Phone, Receipt, X, MessageSquare } from 'lucide-react';
+import {  useState, useMemo , useRef, useLayoutEffect } from 'react';
+import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+
+const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, setSelectedDayBookings, setSelectedBookingDetails }) => {
+  const containerRef = useRef(null);
+  const [maxVisible, setMaxVisible] = useState(dayBookings.length);
+
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+
+    const calculateVisibleItems = () => {
+      const containerHeight = containerRef.current.clientHeight;
+      const itemHeight = 28; // height of each booking + space-y-1.5 margin
+      const moreLabelHeight = 24; // height of the "+X" indicator
+
+      if (containerHeight < itemHeight) {
+         setMaxVisible(0);
+         return;
+      }
+
+      let fitCount = Math.floor(containerHeight / itemHeight);
+
+      if (fitCount < dayBookings.length) {
+        fitCount = Math.floor((containerHeight - moreLabelHeight) / itemHeight);
+      }
+
+      setMaxVisible(Math.max(0, fitCount));
+    };
+
+    const observer = new ResizeObserver(calculateVisibleItems);
+    observer.observe(containerRef.current);
+
+    calculateVisibleItems();
+
+    return () => observer.disconnect();
+  }, [dayBookings.length]);
+
+
+
+  const getAptColor = (aptId) => {
+    const index = apartments.findIndex(a => a.id === aptId);
+    return colors[index % colors.length] || colors[0];
+  };
+
+  const visibleBookings = dayBookings.slice(0, maxVisible);
+  const hiddenCount = dayBookings.length - maxVisible;
+
+  return (
+    <div
+      className={`flex flex-col min-h-0 p-2 border-b border-l border-gray-200 dark:border-slate-800 last:border-l-0 relative group transition-colors overflow-hidden
+        ${!dayObj.isCurrentMonth ? 'bg-gray-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800/50'}
+        ${isToday ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}
+      `}
+      onClick={() => setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings })}
+    >
+      <div className="flex justify-between items-start mb-2 shrink-0">
+        <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full
+          ${isToday ? 'bg-blue-600 text-white shadow-md' :
+            !dayObj.isCurrentMonth ? 'text-gray-400 dark:text-slate-600' : 'text-gray-700 dark:text-slate-300'
+          }
+        `}>{dayObj.date.getDate()}</span>
+        {isToday && <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">اليوم</span>}
+      </div>
+
+      <div ref={containerRef} className="flex-1 overflow-hidden space-y-1.5 pr-1 relative flex flex-col min-h-0">
+        {visibleBookings.map(booking => {
+          const apt = apartments.find(a => a.id === booking.apartmentId);
+          if (!apt) return null;
+          const colorClass = getAptColor(apt.id);
+          const isStart = new Date(booking.startDate).toDateString() === dateStr;
+          const isEnd = new Date(booking.endDate).toDateString() === dateStr;
+          return (
+            <div key={booking.id} title={`${apt.name} - ${booking.residentName}`}
+              className={`text-[10px] px-2 py-1 rounded-md font-bold truncate cursor-pointer transition-all hover:opacity-80 border border-transparent shrink-0
+                ${colorClass} ${isStart ? 'rounded-r-full ml-1' : ''} ${isEnd ? 'rounded-l-full mr-1' : ''}`}
+              onClick={(e) => { e.stopPropagation(); setSelectedBookingDetails(booking); }}
+            ><span className="opacity-70 ml-1">{apt.name}:</span>{booking.residentName}</div>
+          );
+        })}
+      </div>
+      {hiddenCount > 0 && (
+        <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 absolute bottom-1 left-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded px-1.5 py-0.5 z-10 border border-gray-100 dark:border-slate-800">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1.5"></span>+{hiddenCount} حجوزات
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function AvailabilityView({ openBookingForm }) {
   const { apartments, bookings } = useData();
@@ -93,10 +179,6 @@ export default function AvailabilityView({ openBookingForm }) {
     'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
   ];
 
-  const getAptColor = (aptId) => {
-    const index = apartments.findIndex(a => a.id === aptId);
-    return colors[index % colors.length] || colors[0];
-  };
 
   const formatDateAr = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('ar-EG', {
@@ -144,70 +226,23 @@ export default function AvailabilityView({ openBookingForm }) {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 auto-rows-fr h-full">
+        <div className="grid grid-cols-7 flex-1 min-h-0" style={{ gridTemplateRows: `repeat(${calendarDays.length / 7}, minmax(0, 1fr))` }}>
           {calendarDays.map((dayObj, i) => {
             const dateStr = dayObj.date.toDateString();
             const isToday = dateStr === new Date().toDateString();
             const dayBookings = getBookingsForDate(dayObj.date);
-
             return (
-              <div
+              <DayCell
                 key={i}
-                className={`min-h-[120px] p-2 border-b border-l border-gray-200 dark:border-slate-800 last:border-l-0 relative group transition-colors
-                  ${!dayObj.isCurrentMonth ? 'bg-gray-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800/50'}
-                  ${isToday ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}
-                `}
-                onClick={() => {
-                  setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings });
-                }}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full
-                    ${isToday ? 'bg-blue-600 text-white shadow-md' :
-                      !dayObj.isCurrentMonth ? 'text-gray-400 dark:text-slate-600' : 'text-gray-700 dark:text-slate-300'
-                    }
-                  `}>
-                    {dayObj.date.getDate()}
-                  </span>
-                  {isToday && <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">اليوم</span>}
-                </div>
-
-                <div className="space-y-1.5 pr-1 overflow-hidden">
-                  {dayBookings.slice(0, 2).map(booking => {
-                    const apt = apartments.find(a => a.id === booking.apartmentId);
-                    if (!apt) return null;
-
-                    const colorClass = getAptColor(apt.id);
-                    const isStart = new Date(booking.startDate).toDateString() === dateStr;
-                    const isEnd = new Date(booking.endDate).toDateString() === dateStr;
-
-                    return (
-                      <div
-                        key={booking.id}
-                        title={`${apt.name} - ${booking.residentName}`}
-                        className={`text-[10px] px-2 py-1 rounded-md font-bold truncate cursor-pointer transition-all hover:opacity-80 border border-transparent
-                          ${colorClass}
-                          ${isStart ? 'rounded-r-full ml-1' : ''}
-                          ${isEnd ? 'rounded-l-full mr-1' : ''}
-                        `}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedBookingDetails(booking);
-                        }}
-                      >
-                        <span className="opacity-70 ml-1">{apt.name}:</span>
-                        {booking.residentName}
-                      </div>
-                    );
-                  })}
-                  {dayBookings.length > 2 && (
-                    <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 absolute bottom-1 left-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded px-1.5 py-0.5 z-10 border border-gray-100 dark:border-slate-800">
-                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1.5"></span>
-                      +{dayBookings.length - 2} حجوزات
-                    </div>
-                  )}
-                </div>
-              </div>
+                dayObj={dayObj}
+                isToday={isToday}
+                dateStr={dateStr}
+                dayBookings={dayBookings}
+                apartments={apartments}
+                colors={colors}
+                setSelectedDayBookings={setSelectedDayBookings}
+                setSelectedBookingDetails={setSelectedBookingDetails}
+              />
             );
           })}
         </div>
