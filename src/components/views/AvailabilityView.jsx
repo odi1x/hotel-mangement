@@ -91,7 +91,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
         {isToday && <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">اليوم</span>}
       </div>
 
-      <div className="flex-1 w-full h-full overflow-hidden flex flex-col gap-1 min-h-0 relative">
+      <div className="w-full flex flex-col gap-1 overflow-hidden relative">
         {visibleBookings.map(booking => {
           const apt = apartments.find(a => a.id === booking.apartmentId);
           if (!apt) return null;
@@ -244,7 +244,7 @@ export default function AvailabilityView({ openBookingForm }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-slate-900/50">
+      <div className="flex-1 overflow-hidden flex flex-col bg-gray-50 dark:bg-slate-900/50">
         <div className="grid grid-cols-7 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
           {['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map((day) => (
             <div key={day} className="py-3 text-center text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider border-l border-gray-100 dark:border-slate-800 last:border-l-0">
