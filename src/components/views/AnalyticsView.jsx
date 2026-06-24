@@ -238,13 +238,13 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
+      <div className="flex-1 min-h-0 w-full overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 lg:col-span-2 flex flex-col h-full">
           <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center shrink-0">
               <TrendingUp size={18} className="ml-2 text-blue-500" />
               اتجاه الإيرادات والمصروفات
           </h4>
-          <div className="flex-1 w-full min-h-[250px]" dir="ltr">
+          <div className="flex-1 w-full min-h-0 relative" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
@@ -307,7 +307,7 @@ export default function AnalyticsView() {
             <p className="text-xs text-gray-500 mb-2">توزيع الحجوزات حسب المنصات</p>
           </div>
 
-          <div className="flex-1 min-h-0 w-full" dir="ltr">
+          <div className="flex-1 min-h-0 w-full relative pb-4" dir="ltr">
             {sourceChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
