@@ -22,11 +22,10 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
       // Approximate heights:
       // cell padding: 16px (p-2 is 8px top+bottom)
       // header (day number): ~28px + 8px mb-2 = 36px
-      const headerSpace = 40; // Adjusted for padding and header
+      const headerSpace = 34; // Reduced to allow more items
       const availableHeight = cellHeight - headerSpace;
 
-      const itemHeight = 24; // Adjusted booking item height (approx 20px h-5 + 4px gap)
-      const moreLabelHeight = 26; // "+X" indicator height + gap
+      const itemHeight = 22; // Booking item height + gap
 
       if (availableHeight < itemHeight) {
          setMaxVisible(dayBookings.length > 0 ? 1 : 0);
@@ -35,10 +34,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
 
       let fitCount = Math.floor(availableHeight / itemHeight);
 
-      // If we can't fit all items, we must leave room for the "+X more" label
-      if (fitCount < dayBookings.length) {
-        fitCount = Math.floor((availableHeight - moreLabelHeight) / itemHeight);
-      }
+      // Since the "+X" label floats, we don't need to subtract its height
 
       // Force a minimum of 1 visible item if there are bookings
       if (fitCount <= 0 && dayBookings.length > 0) {
@@ -108,8 +104,8 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
         })}
       </div>
       {hiddenCount > 0 && (
-        <div className="flex items-center text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1 bg-white dark:bg-slate-800 rounded px-1.5 py-0.5 z-10 border border-gray-100 dark:border-slate-800 shrink-0 self-start shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1.5"></span>+{hiddenCount} حجوزات
+        <div className="flex items-center text-[10px] font-bold text-gray-600 dark:text-gray-300 absolute bottom-1 left-1 bg-white/95 dark:bg-slate-800/95 rounded px-1.5 py-0.5 z-10 border border-gray-200 dark:border-slate-700 shadow-sm backdrop-blur-sm shadow-sm">
+          +{hiddenCount}
         </div>
       )}
     </div>
