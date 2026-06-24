@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, Edit3, Trash2, Plus, X } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -12,6 +12,8 @@ export default function ApartmentsView() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   const [formData, setFormData] = useState({
       name: '', type: defaultType, description: '', basePrice: '',
       rentCost: '', rentPeriod: 'monthly', cleaningType: 'salaried', cleaningCost: '',
@@ -95,22 +97,32 @@ export default function ApartmentsView() {
     await updateApartment({ ...apt, needsCleaning: !apt.needsCleaning });
   };
 
+
+  const totalPages = Math.ceil(apartments.length / itemsPerPage);
+  const paginatedApartments = apartments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
-    <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {apartments.map((apt) => {
+    <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+        {paginatedApartments.map((apt) => {
           const isNotClean = apt.needsCleaning;
 
           return (
-          <div key={apt.id} className={`bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border ${isNotClean ? 'border-red-500 shadow-red-100 dark:shadow-none' : 'border-gray-100 dark:border-slate-800'} flex flex-col h-full relative group transition-all hover:shadow-md`}>
-            {isNotClean && (
-              <div className="absolute top-0 left-0 w-full bg-red-500 text-white text-xs font-bold text-center py-1 rounded-t-2xl">
-                تحتاج إلى تنظيف
+          <div key={apt.id} className={`bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border ${isNotClean ? 'border-gray-100 dark:border-slate-800 border-r-4 border-r-amber-500' : 'border-gray-100 dark:border-slate-800'} flex flex-col h-full relative group transition-all hover:shadow-md`}>
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><Home size={20} /></div>
+                {isNotClean && (
+                  <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-md">
+                    تحتاج لتنظيف
+                  </span>
+                )}
               </div>
-            )}
-            <div className={`flex justify-between items-start mb-4 ${isNotClean ? 'mt-4' : ''}`}>
-              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><Home size={24} /></div>
-              <div className="flex space-x-reverse space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex space-x-reverse space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {(user?.role === 'admin' || user?.permissions?.canEdit) && (
                   <button
                     onClick={() => handleOpenModal(apt)}
@@ -129,21 +141,22 @@ export default function ApartmentsView() {
                 )}
               </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100">{apt.name}</h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 mt-1 font-medium">{apt.type} • {apt.description}</p>
+            <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100">{apt.name}</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 mt-1 font-medium line-clamp-1">{apt.type} • {apt.description}</p>
 
-            {isNotClean && (
-              <button
-                onClick={() => handleToggleCleaningStatus(apt)}
-                className="mb-4 w-full bg-red-100 hover:bg-red-200 text-red-700 py-2 rounded-lg font-bold text-sm transition-colors"
-              >
-                تحديد كـ "تم التنظيف"
-              </button>
-            )}
-
-            <div className="mt-auto pt-4 border-t border-gray-50 dark:border-slate-800">
-              <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">السعر الأساسي</p>
-              <p className="text-2xl font-black text-green-600 dark:text-green-400">{apt.basePrice} <span className="text-sm text-gray-400 font-bold">ر.س / ليلة</span></p>
+            <div className="mt-auto flex items-end justify-between pt-3 border-t border-gray-50 dark:border-slate-800">
+              <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">السعر الأساسي</p>
+                <p className="text-xl font-black text-green-600 dark:text-green-400">{apt.basePrice} <span className="text-xs text-gray-400 font-bold">ر.س / ليلة</span></p>
+              </div>
+              {isNotClean && (
+                <button
+                  onClick={() => handleToggleCleaningStatus(apt)}
+                  className="text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  تم التنظيف
+                </button>
+              )}
             </div>
           </div>
         )})}
@@ -156,7 +169,32 @@ export default function ApartmentsView() {
             <span className="font-bold">إضافة وحدة جديدة</span>
           </button>
         )}
+
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center py-4 border-t border-gray-100 dark:border-slate-800 shrink-0">
+          <div className="flex space-x-reverse space-x-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronRight size={20} />
+            </button>
+            <span className="px-4 py-2 text-sm font-bold text-gray-700 dark:text-slate-300">
+              صفحة {currentPage} من {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
@@ -277,6 +315,7 @@ export default function ApartmentsView() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

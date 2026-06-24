@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Download, TrendingUp, TrendingDown, Globe, UserCheck, Filter, ChevronDown, Check, Star } from 'lucide-react';
+import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, Star } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Datepicker from 'react-tailwindcss-datepicker';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -119,7 +119,7 @@ export default function AnalyticsView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-hidden flex flex-col space-y-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
         <button
           onClick={exportToExcel}
@@ -210,27 +210,27 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">إجمالي الإيرادات</p>
           <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400 relative z-10">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">صافي الأرباح</p>
           <h3 className="text-3xl font-black text-green-600 dark:text-green-400 relative z-10">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">معدل الإشغال</p>
           <h3 className="text-3xl font-black text-orange-500 relative z-10">{Math.round(analytics.occupancyRate)}<span className="text-sm font-bold text-gray-400">%</span></h3>
           <p className="text-xs text-gray-400 mt-2 font-medium relative z-10">من إجمالي الأيام المتاحة</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">الليالي المؤجرة</p>
           <h3 className="text-3xl font-black text-purple-600 relative z-10">{analytics.totalNights} <span className="text-sm font-bold text-gray-400">ليلة</span></h3>
@@ -238,12 +238,13 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-        <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-6 flex items-center">
-            <TrendingUp size={18} className="ml-2 text-blue-500" />
-            اتجاه الإيرادات والمصروفات
-        </h4>
-        <div className="h-72 w-full" dir="ltr">
+      <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 lg:col-span-2 flex flex-col h-full">
+          <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center shrink-0">
+              <TrendingUp size={18} className="ml-2 text-blue-500" />
+              اتجاه الإيرادات والمصروفات
+          </h4>
+          <div className="flex-1 w-full min-h-[250px]" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
@@ -267,17 +268,19 @@ export default function AnalyticsView() {
                 <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-          <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-2 flex items-center">
-            <Star size={18} className="ml-2 text-yellow-500" /> الأعلى أداءً
-          </h4>
-          <p className="text-xs text-gray-500 mb-6">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
+        <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col flex-1 min-h-0">
+          <div className="shrink-0">
+            <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-1 flex items-center">
+              <Star size={18} className="ml-2 text-yellow-500" /> الأعلى أداءً
+            </h4>
+            <p className="text-xs text-gray-500 mb-3">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
+          </div>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
               {topUnits.length > 0 ? topUnits.map((unit, idx) => (
                   <div key={unit.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-700">
                       <div className="flex items-center gap-3">
@@ -298,11 +301,13 @@ export default function AnalyticsView() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col">
-          <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-2 flex items-center"><Globe size={18} className="ml-2 text-blue-500" /> مصادر التسويق</h4>
-          <p className="text-xs text-gray-500 mb-4">توزيع الحجوزات حسب المنصات</p>
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col flex-1 min-h-0">
+          <div className="shrink-0">
+            <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-1 flex items-center"><Globe size={18} className="ml-2 text-blue-500" /> مصادر التسويق</h4>
+            <p className="text-xs text-gray-500 mb-2">توزيع الحجوزات حسب المنصات</p>
+          </div>
 
-          <div className="flex-1 min-h-[250px] w-full" dir="ltr">
+          <div className="flex-1 min-h-0 w-full" dir="ltr">
             {sourceChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -330,6 +335,7 @@ export default function AnalyticsView() {
                 <div className="h-full flex items-center justify-center text-gray-400 font-medium">لا توجد بيانات كافية</div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>
