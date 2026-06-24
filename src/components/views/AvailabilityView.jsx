@@ -214,7 +214,7 @@ export default function AvailabilityView({ openBookingForm }) {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col h-[calc(100vh-180px)]">
+    <div className="flex-1 min-h-0 h-full w-full bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col">
       <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900">
         <div className="flex items-center space-x-reverse space-x-4">
           <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center text-lg">
