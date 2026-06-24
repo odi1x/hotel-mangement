@@ -11,6 +11,8 @@ export default function ResidentsView({ openBookingForm }) {
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 8;
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteContent, setNoteContent] = useState('');
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -57,6 +59,7 @@ export default function ResidentsView({ openBookingForm }) {
       deleteBooking(id);
     }
   };
+
 
   const handleCheckout = (booking) => {
     const s = new Date(booking.startDate);
@@ -115,9 +118,12 @@ export default function ResidentsView({ openBookingForm }) {
     setNoteContent(booking.notes || '');
   };
 
+  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const paginatedBookings = filteredBookings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+      <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col min-h-0">
         <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex justify-between items-center">
           <h3 className="font-bold text-gray-800 dark:text-slate-100">سجلات الحجز الكاملة</h3>
           <div className="relative w-64">
@@ -125,13 +131,13 @@ export default function ResidentsView({ openBookingForm }) {
               type="text"
               placeholder="البحث بالاسم أو رقم الجوال..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm"
             />
             <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto flex-1 h-full min-h-0">
           <table className="w-full text-right">
             <thead>
               <tr className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50">
@@ -143,8 +149,8 @@ export default function ResidentsView({ openBookingForm }) {
                 <th className="px-6 py-4 text-center">الإجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
-              {filteredBookings.map((booking) => {
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50 flex-1">
+              {paginatedBookings.map((booking) => {
                 const apt = apartments.find(a => a.id === booking.apartmentId);
                 const isCurrent = isDateBetween(new Date(), booking.startDate, booking.endDate);
                 const isFuture = isFutureBooking(booking.startDate);
@@ -234,6 +240,11 @@ export default function ResidentsView({ openBookingForm }) {
                   </tr>
                 );
               })}
+              {paginatedBookings.length > 0 && paginatedBookings.length < ITEMS_PER_PAGE && Array.from({ length: ITEMS_PER_PAGE - paginatedBookings.length }).map((_, idx) => (
+                <tr key={`dummy-${idx}`} className="invisible pointer-events-none">
+                  <td className="px-6 py-4">&nbsp;</td>
+                </tr>
+              ))}
               {filteredBookings.length === 0 && (
                 <tr>
                   <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">لا توجد حجوزات مطابقة</td>
@@ -242,6 +253,41 @@ export default function ResidentsView({ openBookingForm }) {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 mt-auto shrink-0">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              السابق
+            </button>
+            <div className="flex space-x-reverse space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              التالي
+            </button>
+          </div>
+        )}
       </div>
 
       {printBooking && (

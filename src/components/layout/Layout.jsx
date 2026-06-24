@@ -53,8 +53,8 @@ export default function Layout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto p-8 bg-gray-50 dark:bg-slate-950">
-          <div className="flex justify-between items-center mb-8">
+        <main className="flex-1 overflow-hidden p-6 pb-6 bg-gray-50 dark:bg-slate-950 flex flex-col min-h-0">
+          <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-3xl font-black text-gray-800 dark:text-slate-100 mb-1">
               {getViewTitle()}
@@ -81,7 +81,7 @@ export default function Layout() {
           )}
         </div>
 
-          <div className="pb-20">
+          <div className="flex-1 min-h-0 h-full flex flex-col">
             {view === 'availability' && <AvailabilityView openBookingForm={handleOpenBookingForm} />}
             {view === 'apartments' && <ApartmentsView />}
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
