@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import {  Save, Plus, Trash2, Settings, Shield , BellRing } from 'lucide-react';
+import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
@@ -188,7 +188,7 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="max-w-5xl space-y-8 pb-12">
+    <div className="h-full overflow-hidden flex flex-col w-full max-w-6xl mx-auto">
 
       {user?.role === 'admin' && (
         <div className="flex gap-2 border-b border-gray-200 dark:border-slate-800 pb-px">
@@ -220,10 +220,11 @@ export default function SettingsView() {
       {activeTab === 'staff' && user?.role === 'admin' ? (
         <StaffManagement />
       ) : (
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 p-6 md:p-8 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
 
         {/* Sub-Navigation for General Settings */}
-        <div className="flex flex-wrap gap-2 mb-8 border-b border-gray-100 dark:border-slate-800 pb-4">
+        <div className="p-6 md:p-8 pb-0 shrink-0">
+          <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-4">
             <button
               onClick={() => setFacilityTab('identity')}
               className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
@@ -265,14 +266,16 @@ export default function SettingsView() {
               خيارات النظام
             </button>
         </div>
+        </div>
 
-        {successMsg && (
-          <div className="mb-6 bg-green-50 text-green-700 p-3 rounded-lg text-sm font-medium border border-green-200">
-            {successMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 md:px-8 pt-4 pb-6">
+            <div className="space-y-6 max-w-3xl">
+              {successMsg && (
+                <div className="mb-6 bg-green-50 text-green-700 p-3 rounded-lg text-sm font-medium border border-green-200">
+                  {successMsg}
+                </div>
+              )}
 
           {/* Identity Tab */}
           {facilityTab === 'identity' && (
@@ -291,23 +294,31 @@ export default function SettingsView() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">شعار المنشأة (للطباعة)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, 'logoUrl')}
-                      className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
-                    />
+                    <label className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-800 transition cursor-pointer">
+                      <UploadCloud size={24} className="text-gray-400 mb-2" />
+                      <span className="text-sm font-medium text-gray-500 dark:text-slate-400">اضغط هنا لرفع الشعار</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, 'logoUrl')}
+                        className="hidden"
+                      />
+                    </label>
                     {formData.logoUrl && <img src={formData.logoUrl} alt="Logo preview" className="mt-4 h-20 object-contain rounded-lg border border-gray-100 dark:border-slate-700 p-2" />}
                   </div>
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">الختم / التوقيع (للطباعة)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, 'stampUrl')}
-                      className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
-                    />
+                    <label className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-800 transition cursor-pointer">
+                      <UploadCloud size={24} className="text-gray-400 mb-2" />
+                      <span className="text-sm font-medium text-gray-500 dark:text-slate-400">اضغط هنا لرفع الختم</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, 'stampUrl')}
+                        className="hidden"
+                      />
+                    </label>
                     {formData.stampUrl && <img src={formData.stampUrl} alt="Stamp preview" className="mt-4 h-20 object-contain rounded-lg border border-gray-100 dark:border-slate-700 p-2" />}
                   </div>
                 </div>
@@ -419,55 +430,73 @@ export default function SettingsView() {
                     <div className="mt-8 border-t border-gray-100 dark:border-slate-800 pt-8">
                       <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6">الرواتب والموظفين</h3>
 
-                      <div className="space-y-4 mb-6">
-                        {staffExpenses?.map(staff => (
-                          <div key={staff.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-700">
-                            <div>
-                              <p className="font-bold text-gray-900 dark:text-white text-sm">{staff.name}</p>
-                              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">الراتب: {staff.monthlySalary} ر.س | النطاق: {staff.scope === 'all' ? 'جميع الوحدات' : staff.scope?.split(',').length + ' وحدات'}</p>
-                            </div>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await axios.delete(`/api/staff-expenses?id=${staff.id}`);
-                                  fetchStaffExpenses();
-                                  toast.success('تم الحذف بنجاح');
-                                } catch(e) {
-                                  toast.error('حدث خطأ');
-                                }
-                              }}
-                              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        ))}
+                      <div className="mb-6 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+                        <table className="w-full text-right">
+                          <thead className="bg-gray-50 dark:bg-slate-800/80 border-b border-gray-200 dark:border-slate-700">
+                            <tr>
+                              <th className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-300">الاسم / المسمى</th>
+                              <th className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-300">الراتب الشهري</th>
+                              <th className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-300">النطاق</th>
+                              <th className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-300">إجراء</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50 bg-white dark:bg-slate-900">
+                            {staffExpenses?.map(staff => (
+                              <tr key={staff.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{staff.name}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-slate-400">{staff.monthlySalary} ر.س</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-slate-400">{staff.scope === 'all' ? 'جميع الوحدات' : staff.scope?.split(',').length + ' وحدات'}</td>
+                                <td className="px-4 py-3 text-sm">
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await axios.delete(`/api/staff-expenses?id=${staff.id}`);
+                                        fetchStaffExpenses();
+                                        toast.success('تم الحذف بنجاح');
+                                      } catch(e) {
+                                        toast.error('حدث خطأ');
+                                      }
+                                    }}
+                                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                            {(!staffExpenses || staffExpenses.length === 0) && (
+                              <tr>
+                                <td colSpan="4" className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">لا يوجد موظفين مضافين</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                       </div>
 
                       <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-gray-200 dark:border-slate-700 space-y-4">
                         <h4 className="text-sm font-bold text-gray-700 dark:text-slate-300">إضافة مصروف راتب +</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
+                        <div className="flex flex-col md:flex-row gap-4">
+                          <div className="flex-grow">
                             <input
                               type="text"
                               value={newStaff.name}
                               onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
                               placeholder="المسمى الوظيفي / الاسم"
-                              className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              className="w-full h-11 border border-gray-200 dark:border-slate-600 rounded-xl px-4 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
-                          <div>
+                          <div className="w-full md:w-40 shrink-0">
                             <input
                               type="number"
                               value={newStaff.monthlySalary}
                               onChange={(e) => setNewStaff({...newStaff, monthlySalary: e.target.value})}
-                              placeholder="الراتب الشهري (ر.س)"
-                              className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm"
+                              placeholder="الراتب (ر.س)"
+                              className="w-full h-11 border border-gray-200 dark:border-slate-600 rounded-xl px-4 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
-                          <div className="relative">
+                          <div className="w-full md:w-56 shrink-0 relative">
                             <select
-                                className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-bold"
+                                className="w-full h-11 border border-gray-200 dark:border-slate-600 rounded-xl px-4 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-bold focus:ring-2 focus:ring-blue-500"
                                 onChange={(e) => {
                                     const val = e.target.value;
                                     if (val === '') {
@@ -483,49 +512,48 @@ export default function SettingsView() {
                                 }}
                                 value=""
                             >
-                                <option value="" disabled className="font-bold">تحديد النطاق (اختر الشقق)...</option>
-                                <option value="" className="font-bold text-blue-600">-- جميع الوحدات -- (مسح التحديد)</option>
+                                <option value="" disabled className="font-bold">النطاق...</option>
+                                <option value="" className="font-bold text-blue-600">جميع الوحدات</option>
                                 {apartments.map(apt => (
                                     <option key={apt.id} value={apt.id} className="font-bold">
                                         {newStaff.scope.includes(apt.id) ? '✓ ' : ''}{apt.name}
                                     </option>
                                 ))}
                             </select>
-
-                            {newStaff.scope.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                    {newStaff.scope.map(id => {
-                                        const apt = apartments.find(a => a.id === id);
-                                        return apt ? (
-                                            <span key={id} className="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded text-xs font-bold">
-                                                {apt.name}
-                                                <button type="button" onClick={() => setNewStaff({...newStaff, scope: newStaff.scope.filter(s => s !== id)})} className="hover:text-blue-900">×</button>
-                                            </span>
-                                        ) : null;
-                                    })}
-                                </div>
-                            )}
                           </div>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if(!newStaff.name || !newStaff.monthlySalary) return toast.error('أكمل البيانات');
+                              try {
+                                await axios.post('/api/staff-expenses', {
+                                  name: newStaff.name,
+                                  monthlySalary: newStaff.monthlySalary,
+                                  scope: newStaff.scope.length ? newStaff.scope.join(',') : 'all'
+                                });
+                                setNewStaff({ name: '', monthlySalary: '', scope: [] });
+                                fetchStaffExpenses();
+                                toast.success('تم الإضافة بنجاح');
+                              } catch(e) { toast.error('حدث خطأ'); }
+                            }}
+                            className="h-11 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-colors shrink-0"
+                          >
+                            إضافة +
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if(!newStaff.name || !newStaff.monthlySalary) return toast.error('أكمل البيانات');
-                            try {
-                              await axios.post('/api/staff-expenses', {
-                                name: newStaff.name,
-                                monthlySalary: newStaff.monthlySalary,
-                                scope: newStaff.scope.length ? newStaff.scope.join(',') : 'all'
-                              });
-                              setNewStaff({ name: '', monthlySalary: '', scope: [] });
-                              fetchStaffExpenses();
-                              toast.success('تم الإضافة بنجاح');
-                            } catch(e) { toast.error('حدث خطأ'); }
-                          }}
-                          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors w-full md:w-auto"
-                        >
-                          إضافة الموظف +
-                        </button>
+                        {newStaff.scope.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2 px-1">
+                              {newStaff.scope.map(id => {
+                                  const apt = apartments.find(a => a.id === id);
+                                  return apt ? (
+                                      <span key={id} className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 dark:border-blue-800/30 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-lg text-xs font-bold">
+                                          {apt.name}
+                                          <button type="button" onClick={() => setNewStaff({...newStaff, scope: newStaff.scope.filter(s => s !== id)})} className="hover:text-red-500 transition-colors">×</button>
+                                      </span>
+                                  ) : null;
+                              })}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -572,13 +600,17 @@ export default function SettingsView() {
                       type="button"
                       onClick={handleEnablePush}
                       disabled={pushStatus === 'granted'}
-                      className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${
                         pushStatus === 'granted'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                          ? 'bg-blue-600 cursor-not-allowed'
+                          : 'bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 cursor-pointer'
                       }`}
                     >
-                      {pushStatus === 'granted' ? 'مفعلة' : 'تفعيل'}
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+                          pushStatus === 'granted' ? '-translate-x-6' : '-translate-x-1'
+                        }`}
+                      />
                     </button>
                   </div>
 
@@ -603,7 +635,7 @@ export default function SettingsView() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {apartmentTypesList.map((type, index) => (
-                      <div key={index} className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-700 shadow-sm group">
+                      <div key={index} className="bg-blue-50 text-blue-600 rounded-lg px-3 py-1 text-sm font-medium border border-blue-100/50 flex items-center gap-2 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30">
                         <span className="text-sm font-bold">{type}</span>
                         <button
                           type="button"
@@ -639,7 +671,7 @@ export default function SettingsView() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {bookingSourcesList.map((source, index) => (
-                      <div key={index} className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-full border border-gray-200 dark:border-slate-700 shadow-sm group">
+                      <div key={index} className="bg-blue-50 text-blue-600 rounded-lg px-3 py-1 text-sm font-medium border border-blue-100/50 flex items-center gap-2 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30">
                         <span className="text-sm font-bold">{source}</span>
                         <button
                           type="button"
@@ -656,14 +688,18 @@ export default function SettingsView() {
               </div>
           )}
 
-          <button
-            type="submit"
+            </div>
+          </div>
+          <div className="shrink-0 p-6 md:p-8 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex justify-start">
+            <button
+              type="submit"
             disabled={loading}
             className="flex items-center space-x-reverse space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
           >
             <Save size={18} />
-            <span className="mr-2">{loading ? 'جاري الحفظ...' : 'حفظ الإعدادات'}</span>
-          </button>
+              <span className="mr-2">{loading ? 'جاري الحفظ...' : 'حفظ الإعدادات'}</span>
+            </button>
+          </div>
         </form>
       </div>
       )}
