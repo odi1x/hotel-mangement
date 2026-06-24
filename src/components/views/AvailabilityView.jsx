@@ -5,39 +5,48 @@ import { useAuth } from '../../context/AuthContext';
 
 const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, setSelectedDayBookings, setSelectedBookingDetails }) => {
   const containerRef = useRef(null);
-  const [maxVisible, setMaxVisible] = useState(dayBookings.length);
+  const [maxVisible, setMaxVisible] = useState(Math.min(dayBookings.length, 3));
 
   useLayoutEffect(() => {
     if (!containerRef.current) return;
 
+    let timeoutId = null;
+
     const calculateVisibleItems = () => {
       const containerHeight = containerRef.current.clientHeight;
-      const itemHeight = 28; // height of each booking + space-y-1.5 margin
-      const moreLabelHeight = 24; // height of the "+X" indicator
 
-      if (containerHeight < itemHeight) {
-         setMaxVisible(0);
-         return;
-      }
+      // Early return if DOM hasn't fully painted
+      if (containerHeight === 0) return;
+
+      const itemHeight = 28; // booking item height (approx 24px + 4px gap)
+      const moreLabelHeight = 24; // "+X" indicator height + padding
 
       let fitCount = Math.floor(containerHeight / itemHeight);
 
       if (fitCount < dayBookings.length) {
+        // If we can't fit all items, we must leave room for the "+X more" label
         fitCount = Math.floor((containerHeight - moreLabelHeight) / itemHeight);
       }
 
       setMaxVisible(Math.max(0, fitCount));
     };
 
-    const observer = new ResizeObserver(calculateVisibleItems);
+    const debouncedCalculate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(calculateVisibleItems, 50);
+    };
+
+    const observer = new ResizeObserver(debouncedCalculate);
     observer.observe(containerRef.current);
 
+    // Initial calculation immediately (without debounce)
     calculateVisibleItems();
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [dayBookings.length]);
-
-
 
   const getAptColor = (aptId) => {
     const index = apartments.findIndex(a => a.id === aptId);
@@ -64,7 +73,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
         {isToday && <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">اليوم</span>}
       </div>
 
-      <div ref={containerRef} className="flex-1 overflow-hidden space-y-1.5 pr-1 relative flex flex-col min-h-0">
+      <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden flex flex-col gap-1 min-h-0 relative">
         {visibleBookings.map(booking => {
           const apt = apartments.find(a => a.id === booking.apartmentId);
           if (!apt) return null;
