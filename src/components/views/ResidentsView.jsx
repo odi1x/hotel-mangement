@@ -137,7 +137,7 @@ export default function ResidentsView({ openBookingForm }) {
             <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
           </div>
         </div>
-        <div className="overflow-x-auto flex-1">
+        <div className="overflow-x-auto overflow-y-auto flex-1 h-full min-h-0">
           <table className="w-full text-right">
             <thead>
               <tr className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50">
@@ -149,7 +149,7 @@ export default function ResidentsView({ openBookingForm }) {
                 <th className="px-6 py-4 text-center">الإجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50 flex-1">
               {paginatedBookings.map((booking) => {
                 const apt = apartments.find(a => a.id === booking.apartmentId);
                 const isCurrent = isDateBetween(new Date(), booking.startDate, booking.endDate);
@@ -240,6 +240,11 @@ export default function ResidentsView({ openBookingForm }) {
                   </tr>
                 );
               })}
+              {paginatedBookings.length > 0 && paginatedBookings.length < ITEMS_PER_PAGE && Array.from({ length: ITEMS_PER_PAGE - paginatedBookings.length }).map((_, idx) => (
+                <tr key={`dummy-${idx}`} className="invisible pointer-events-none">
+                  <td className="px-6 py-4">&nbsp;</td>
+                </tr>
+              ))}
               {filteredBookings.length === 0 && (
                 <tr>
                   <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">لا توجد حجوزات مطابقة</td>

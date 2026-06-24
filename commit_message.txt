@@ -1,7 +1,0 @@
-feat: refactor apartments grid to viewport-locked compact layout
-
-- Set the main container to `flex-1 flex flex-col h-full overflow-hidden min-h-0 bg-transparent` to enforce a viewport lock and remove double scrolling.
-- Downsized the apartment cards into a compact grid layout with smaller paddings, fonts, and an optimized 140px fixed height.
-- Redesigned the "Needs Cleaning" state by removing the bulky red top-bar and replacing it with an elegant side accent border (`border-r-4 border-amber-500`) and a subtle inner badge.
-- Shrunk the "Mark as Cleaned" button to a small action button at the bottom of the card.
-- Implemented a clean Pagination system at the bottom footer limiting to 8 cards per page.
