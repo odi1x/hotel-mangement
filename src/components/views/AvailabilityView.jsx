@@ -22,7 +22,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
       // Approximate heights:
       // cell padding: 16px (p-2 is 8px top+bottom)
       // header (day number): ~28px + 8px mb-2 = 36px
-      const headerSpace = 34; // Reduced to allow more items
+      const headerSpace = 30; // Reduced to allow more items
       const availableHeight = cellHeight - headerSpace;
 
       const itemHeight = 22; // Booking item height + gap
@@ -78,7 +78,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
       `}
       onClick={() => setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings })}
     >
-      <div className="flex justify-between items-start mb-2 shrink-0">
+      <div className="flex justify-between items-start mb-1 shrink-0">
         <span className={`text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full
           ${isToday ? 'bg-blue-600 text-white shadow-md' :
             !dayObj.isCurrentMonth ? 'text-gray-400 dark:text-slate-600' : 'text-gray-700 dark:text-slate-300'
