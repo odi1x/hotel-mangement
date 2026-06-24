@@ -4,28 +4,40 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
 const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, setSelectedDayBookings, setSelectedBookingDetails }) => {
-  const containerRef = useRef(null);
+  const cellRef = useRef(null);
   const [maxVisible, setMaxVisible] = useState(Math.min(dayBookings.length, 3));
 
   useLayoutEffect(() => {
-    if (!containerRef.current) return;
+    if (!cellRef.current) return;
 
     let timeoutId = null;
 
     const calculateVisibleItems = () => {
-      const containerHeight = containerRef.current.clientHeight;
+      // Measure the full height of the outer cell
+      const cellHeight = cellRef.current.clientHeight;
 
       // Early return if DOM hasn't fully painted
-      if (containerHeight === 0) return;
+      if (cellHeight === 0) return;
+
+      // Approximate heights:
+      // cell padding: 16px (p-2 is 8px top+bottom)
+      // header (day number): ~28px + 8px mb-2 = 36px
+      const headerSpace = 52;
+      const availableHeight = cellHeight - headerSpace;
 
       const itemHeight = 28; // booking item height (approx 24px + 4px gap)
       const moreLabelHeight = 24; // "+X" indicator height + padding
 
-      let fitCount = Math.floor(containerHeight / itemHeight);
+      if (availableHeight < itemHeight) {
+         setMaxVisible(0);
+         return;
+      }
+
+      let fitCount = Math.floor(availableHeight / itemHeight);
 
       if (fitCount < dayBookings.length) {
         // If we can't fit all items, we must leave room for the "+X more" label
-        fitCount = Math.floor((containerHeight - moreLabelHeight) / itemHeight);
+        fitCount = Math.floor((availableHeight - moreLabelHeight) / itemHeight);
       }
 
       setMaxVisible(Math.max(0, fitCount));
@@ -37,7 +49,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
     };
 
     const observer = new ResizeObserver(debouncedCalculate);
-    observer.observe(containerRef.current);
+    observer.observe(cellRef.current);
 
     // Initial calculation immediately (without debounce)
     calculateVisibleItems();
@@ -58,7 +70,8 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
 
   return (
     <div
-      className={`flex flex-col min-h-0 p-2 border-b border-l border-gray-200 dark:border-slate-800 last:border-l-0 relative group transition-colors overflow-hidden
+      ref={cellRef}
+      className={`flex flex-col min-h-0 h-full p-2 border-b border-l border-gray-200 dark:border-slate-800 last:border-l-0 relative group transition-colors overflow-hidden
         ${!dayObj.isCurrentMonth ? 'bg-gray-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800/50'}
         ${isToday ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}
       `}
@@ -73,7 +86,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
         {isToday && <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">اليوم</span>}
       </div>
 
-      <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden flex flex-col gap-1 min-h-0 relative">
+      <div className="flex-1 w-full h-full overflow-hidden flex flex-col gap-1 min-h-0 relative">
         {visibleBookings.map(booking => {
           const apt = apartments.find(a => a.id === booking.apartmentId);
           if (!apt) return null;
