@@ -33,6 +33,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
       }
 
+      const queryStart = new Date(`${startStr}T23:59:59.999Z`);
+      const queryEnd = new Date(`${endStr}T00:00:00.000Z`);
+
       // Verify ownership of the apartment being booked
       const apartment = await prisma.apartment.findUnique({ where: { id: apartmentId } });
       if (!apartment || apartment.userId !== targetUserId) {
@@ -45,8 +48,8 @@ export default async function handler(req, res) {
           apartmentId,
           status: { notIn: ['checked_out_early'] },
           AND: [
-            { startDate: { lt: end } },
-            { endDate: { gt: start } }
+            { startDate: { lt: queryEnd } },
+            { endDate: { gt: queryStart } }
           ]
         }
       });
@@ -192,6 +195,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
       }
 
+      const queryStart = new Date(`${startStr}T23:59:59.999Z`);
+      const queryEnd = new Date(`${endStr}T00:00:00.000Z`);
+
       // If apartment changed, verify ownership of new apartment
       if (apartmentId !== existing.apartmentId) {
         const apartment = await prisma.apartment.findUnique({ where: { id: apartmentId } });
@@ -207,8 +213,8 @@ export default async function handler(req, res) {
           id: { not: id },
           status: { notIn: ['checked_out_early'] },
           AND: [
-            { startDate: { lt: end } },
-            { endDate: { gt: start } }
+            { startDate: { lt: queryEnd } },
+            { endDate: { gt: queryStart } }
           ]
         }
       });
