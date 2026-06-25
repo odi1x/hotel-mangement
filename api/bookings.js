@@ -25,10 +25,10 @@ export default async function handler(req, res) {
       const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, status } = req.body;
 
       // Validate dates
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      start.setHours(0,0,0,0);
-      end.setHours(0,0,0,0);
+      const startStr = (startDate.split && startDate.split('T')[0]) || new Date(startDate).toISOString().split('T')[0];
+      const endStr = (endDate.split && endDate.split('T')[0]) || new Date(endDate).toISOString().split('T')[0];
+      const start = new Date(`${startStr}T12:00:00.000Z`);
+      const end = new Date(`${endStr}T12:00:00.000Z`);
       if (end < start) {
         return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
       }
@@ -66,8 +66,8 @@ export default async function handler(req, res) {
           pricePerNight: parseFloat(pricePerNight),
           totalPrice: totalPrice !== undefined ? parseFloat(totalPrice) : null,
           source,
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
+          startDate: start,
+          endDate: end,
           status: status || 'active',
           notes,
           creatorName: user.name || user.username
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
           await sendWebPush(user.userId, 'تم تأكيد الحجز', `تم تأكيد حجزك للنزيل ${residentName} في وحدة ${apartment.name}`);
       }
 
-      const today = new Date().setHours(0,0,0,0);
+      const today = new Date(new Date().toISOString().split('T')[0] + 'T12:00:00.000Z').getTime();
       if (end.getTime() < today && !apartment.needsCleaning) {
           await prisma.apartment.update({
               where: { id: apartmentId },
@@ -184,10 +184,10 @@ export default async function handler(req, res) {
       const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, status } = updateDataObj;
 
       // Validate dates
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      start.setHours(0,0,0,0);
-      end.setHours(0,0,0,0);
+      const startStr = (startDate.split && startDate.split('T')[0]) || new Date(startDate).toISOString().split('T')[0];
+      const endStr = (endDate.split && endDate.split('T')[0]) || new Date(endDate).toISOString().split('T')[0];
+      const start = new Date(`${startStr}T12:00:00.000Z`);
+      const end = new Date(`${endStr}T12:00:00.000Z`);
       if (end < start) {
         return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
       }
@@ -228,8 +228,8 @@ export default async function handler(req, res) {
           pricePerNight: parseFloat(pricePerNight),
           totalPrice: totalPrice !== undefined ? parseFloat(totalPrice) : null,
           source,
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
+          startDate: start,
+          endDate: end,
           status: status || existing.status,
           notes
         },
