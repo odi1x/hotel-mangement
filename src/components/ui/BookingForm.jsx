@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Datepicker from "react-tailwindcss-datepicker";
 
 export default function BookingForm({ onClose, initialData }) {
-  const { apartments, bookings, addBooking, updateApartment } = useData();
+  const { apartments, bookings, addBooking, updateBooking, updateApartment } = useData();
   const { user } = useAuth();
 
   const [bookingSources, setBookingSources] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
@@ -111,7 +111,7 @@ export default function BookingForm({ onClose, initialData }) {
 
     try {
       if (formData.id) {
-          await useData().updateBooking({ // Assuming updateBooking exists or needs to be added to context
+          await updateBooking({
             ...formData,
             startDate: dateValue.startDate,
             endDate: dateValue.endDate

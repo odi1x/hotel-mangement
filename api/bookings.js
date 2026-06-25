@@ -45,8 +45,8 @@ export default async function handler(req, res) {
           apartmentId,
           status: { notIn: ['checked_out_early'] },
           AND: [
-            { startDate: { lte: end } },
-            { endDate: { gte: start } }
+            { startDate: { lt: end } },
+            { endDate: { gt: start } }
           ]
         }
       });
@@ -207,8 +207,8 @@ export default async function handler(req, res) {
           id: { not: id },
           status: { notIn: ['checked_out_early'] },
           AND: [
-            { startDate: { lte: end } },
-            { endDate: { gte: start } }
+            { startDate: { lt: end } },
+            { endDate: { gt: start } }
           ]
         }
       });
