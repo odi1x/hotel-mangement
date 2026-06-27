@@ -2,10 +2,11 @@ import { Printer } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
-export default function PrintAgreement({ booking, onClose }) {
+export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
   const { apartments } = useData();
   const { user } = useAuth();
   const apartment = apartments.find(a => a.id === booking.apartmentId);
+  const licenseNumber = apartment?.licenseNumber || user?.tourismLicense;
 
   const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
     month: 'long',
@@ -27,12 +28,29 @@ export default function PrintAgreement({ booking, onClose }) {
     : 0;
   const total = subtotal + taxAmount;
 
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
+    const resName = booking.residentName ? booking.residentName.replace(/\s+/g, '_') : 'نزيل';
+    const startDateStr = booking.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
+
+    document.title = `حجز_${resName}_${aptName}${startDateStr ? '_' + startDateStr : ''}`;
+
+    setTimeout(() => {
+      window.print();
+      document.title = originalTitle;
+    }, 100); // slight delay to let the browser register the title change before print dialog
+  };
+
+
   return (
     <div className="fixed inset-0 bg-white z-[100] flex flex-col items-center p-10 overflow-y-auto" dir="rtl">
       <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper">
         <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
             <div>
-                <h1 className="text-3xl font-black tracking-tighter text-gray-900">عقد إيجار وحدات سكنية</h1>
+                <h1 className="text-3xl font-black tracking-tighter text-gray-900">
+                  {documentType === 'voucher' ? 'سند قبض / تقرير مالي' : 'عقد إيجار وحدات سكنية'}
+                </h1>
                 <p className="text-gray-500 font-bold">المرجع: #{booking.id.toUpperCase()}</p>
             </div>
             <div className="text-left flex flex-col items-end">
@@ -40,8 +58,8 @@ export default function PrintAgreement({ booking, onClose }) {
                   <img src={user.logoUrl} alt="Logo" className="h-16 mb-2 object-contain" />
                 )}
                 <p className="font-black text-xl text-gray-900">{user?.businessName || 'رنت فلو العقارية'}</p>
-                {user?.tourismLicense && (
-                  <p className="text-sm text-gray-500 italic font-medium">ترخيص رقم: {user.tourismLicense}</p>
+                {licenseNumber && (
+                  <p className="text-sm text-gray-500 italic font-medium">ترخيص رقم: {licenseNumber}</p>
                 )}
             </div>
         </div>
@@ -104,7 +122,7 @@ export default function PrintAgreement({ booking, onClose }) {
                 </div>
             </section>
 
-            <section className="pt-10 border-t-2 border-dashed border-gray-200 mt-10">
+            {documentType !== 'voucher' && (<section className="pt-10 border-t-2 border-dashed border-gray-200 mt-10">
                 <p className="text-[11px] text-gray-500 font-medium leading-relaxed text-justify whitespace-pre-wrap">
                     {user?.customTerms
                       ? user.customTerms
@@ -126,13 +144,13 @@ export default function PrintAgreement({ booking, onClose }) {
                         <p className="text-xs font-bold text-gray-500">توقيع المستأجر</p>
                     </div>
                 </div>
-            </section>
+            </section>)}
         </div>
       </div>
 
       <div className="mt-8 flex space-x-reverse space-x-4 print:hidden">
         <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold flex items-center space-x-reverse space-x-2 shadow-lg shadow-blue-200 transition-all active:scale-95"
         >
             <Printer size={20}/>
