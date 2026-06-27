@@ -1,5 +1,4 @@
 import { Printer } from 'lucide-react';
-import { useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -30,19 +29,33 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
   const total = subtotal + taxAmount;
 
 
-  useEffect(() => {
+  const handlePrint = () => {
     const originalTitle = document.title;
     const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
     const resName = booking.residentName ? booking.residentName.replace(/\s+/g, '_') : 'نزيل';
     const startDateStr = booking.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
 
-    // Set document title so it is ready whenever the user decides to print (even via Ctrl+P)
+    // Set document title
     document.title = `حجز_${resName}_${aptName}${startDateStr ? '_' + startDateStr : ''}`;
 
-    return () => {
-      document.title = originalTitle;
-    };
-  }, [apartment, booking]);
+    // Wait for the browser to register the title change in its internal state
+    setTimeout(() => {
+      // Setup listener to restore title after printing dialog is closed
+      const afterPrint = () => {
+        document.title = originalTitle;
+        window.removeEventListener('afterprint', afterPrint);
+      };
+      window.addEventListener('afterprint', afterPrint);
+
+      // In case afterprint is not supported or fails, have a fallback timeout
+      setTimeout(() => {
+         document.title = originalTitle;
+      }, 2000);
+
+      window.print();
+    }, 200);
+  };
+
 
 
 
@@ -153,7 +166,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
       <div className="mt-8 flex space-x-reverse space-x-4 print:hidden">
         <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold flex items-center space-x-reverse space-x-2 shadow-lg shadow-blue-200 transition-all active:scale-95"
         >
             <Printer size={20}/>
