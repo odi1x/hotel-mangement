@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -10,12 +10,14 @@ export default function ResidentsView({ openBookingForm }) {
   const { apartments, bookings, deleteBooking, checkoutBooking, updateBooking, fetchBookings, fetchApartments } = useData(); // eslint-disable-line no-unused-vars
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
+  const [printSelectorBooking, setPrintSelectorBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 8;
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteContent, setNoteContent] = useState('');
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [checkoutData, setCheckoutData] = useState({ id: null, option: 'keep', days: '', notes: '', booking: null });
 
   const filteredBookings = useMemo(() => {
@@ -55,8 +57,13 @@ export default function ResidentsView({ openBookingForm }) {
   };
 
   const handleDelete = (id) => {
-    if(confirm('هل تريد حذف هذا الحجز؟')) {
-      deleteBooking(id);
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteBooking(deleteConfirmId);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -202,7 +209,7 @@ export default function ResidentsView({ openBookingForm }) {
                         )}
 
                         <button
-                          onClick={() => setPrintBooking(booking)}
+                          onClick={() => setPrintSelectorBooking(booking)}
                           className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                           title="طباعة العقد"
                         >
@@ -291,7 +298,7 @@ export default function ResidentsView({ openBookingForm }) {
       </div>
 
       {printBooking && (
-        <PrintAgreement booking={printBooking} onClose={() => setPrintBooking(null)} />
+        <PrintAgreement booking={printBooking.booking} documentType={printBooking.type} onClose={() => setPrintBooking(null)} />
       )}
 
       {editingNoteId && (
@@ -421,6 +428,93 @@ export default function ResidentsView({ openBookingForm }) {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-red-100 dark:border-red-900/30 transform transition-all">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-5">
+                <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-500" />
+              </div>
+              <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+                تأكيد الحذف
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                هل أنت متأكد من حذف هذا النزيل؟ لا يمكن التراجع عن هذا الإجراء.
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-slate-800/50 flex space-x-reverse space-x-3">
+              <button
+                onClick={confirmDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-red-200 dark:shadow-none"
+              >
+                تأكيد الحذف
+              </button>
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 bg-transparent hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl font-bold transition-all border border-gray-300 dark:border-slate-600"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Options Modal */}
+      {printSelectorBooking && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setPrintSelectorBooking(null)}></div>
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-slate-800 transform transition-all">
+            <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+              <h3 className="font-black text-gray-900 dark:text-white text-lg flex items-center gap-2">
+                <Printer size={20} className="text-blue-600 dark:text-blue-500" />
+                خيارات الطباعة
+              </h3>
+              <button onClick={() => setPrintSelectorBooking(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <button
+                onClick={() => {
+                  setPrintBooking({ booking: printSelectorBooking, type: 'voucher' });
+                  setPrintSelectorBooking(null);
+                }}
+                className="w-full flex items-center justify-between p-4 border-2 border-transparent bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-800 dark:text-blue-200 rounded-2xl transition-all group"
+              >
+                <div className="flex flex-col text-right">
+                  <span className="font-black text-lg mb-1 group-hover:text-blue-900 dark:group-hover:text-blue-100 transition-colors">طباعة تقرير مالي</span>
+                  <span className="text-sm opacity-80 font-medium text-blue-700 dark:text-blue-300">سند قبض للمبالغ المدفوعة</span>
+                </div>
+                <div className="bg-blue-200/50 dark:bg-blue-800/50 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                  <Printer size={24} />
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setPrintBooking({ booking: printSelectorBooking, type: 'confirmation' });
+                  setPrintSelectorBooking(null);
+                }}
+                className="w-full flex items-center justify-between p-4 border-2 border-transparent bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 rounded-2xl transition-all group"
+              >
+                <div className="flex flex-col text-right">
+                  <span className="font-black text-lg mb-1 group-hover:text-emerald-900 dark:group-hover:text-emerald-100 transition-colors">طباعة تأكيد الحجز</span>
+                  <span className="text-sm opacity-80 font-medium text-emerald-700 dark:text-emerald-300">تفاصيل الحجز وشروطه</span>
+                </div>
+                <div className="bg-emerald-200/50 dark:bg-emerald-800/50 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                  <Printer size={24} />
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 }
