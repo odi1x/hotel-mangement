@@ -1,4 +1,5 @@
 import { Printer } from 'lucide-react';
+import { useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -28,19 +29,21 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
     : 0;
   const total = subtotal + taxAmount;
 
-  const handlePrint = () => {
+
+  useEffect(() => {
     const originalTitle = document.title;
     const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
     const resName = booking.residentName ? booking.residentName.replace(/\s+/g, '_') : 'نزيل';
     const startDateStr = booking.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
 
+    // Set document title so it is ready whenever the user decides to print (even via Ctrl+P)
     document.title = `حجز_${resName}_${aptName}${startDateStr ? '_' + startDateStr : ''}`;
 
-    setTimeout(() => {
-      window.print();
+    return () => {
       document.title = originalTitle;
-    }, 100); // slight delay to let the browser register the title change before print dialog
-  };
+    };
+  }, [apartment, booking]);
+
 
 
   return (
@@ -150,7 +153,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
       <div className="mt-8 flex space-x-reverse space-x-4 print:hidden">
         <button
-            onClick={handlePrint}
+            onClick={() => window.print()}
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold flex items-center space-x-reverse space-x-2 shadow-lg shadow-blue-200 transition-all active:scale-95"
         >
             <Printer size={20}/>
