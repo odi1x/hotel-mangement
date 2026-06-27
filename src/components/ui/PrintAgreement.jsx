@@ -28,35 +28,19 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
     : 0;
   const total = subtotal + taxAmount;
 
-
   const handlePrint = () => {
     const originalTitle = document.title;
     const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
     const resName = booking.residentName ? booking.residentName.replace(/\s+/g, '_') : 'نزيل';
     const startDateStr = booking.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
 
-    // Set document title
     document.title = `حجز_${resName}_${aptName}${startDateStr ? '_' + startDateStr : ''}`;
 
-    // Wait for the browser to register the title change in its internal state
     setTimeout(() => {
-      // Setup listener to restore title after printing dialog is closed
-      const afterPrint = () => {
-        document.title = originalTitle;
-        window.removeEventListener('afterprint', afterPrint);
-      };
-      window.addEventListener('afterprint', afterPrint);
-
-      // In case afterprint is not supported or fails, have a fallback timeout
-      setTimeout(() => {
-         document.title = originalTitle;
-      }, 2000);
-
       window.print();
-    }, 200);
+      document.title = originalTitle;
+    }, 100); // slight delay to let the browser register the title change before print dialog
   };
-
-
 
 
   return (
