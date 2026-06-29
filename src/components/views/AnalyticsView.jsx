@@ -85,6 +85,20 @@ export default function AnalyticsView() {
   }, [filteredTrendData]);
 
 
+  const displayTrendData = useMemo(() => {
+    if (filteredTrendData.length === 1) {
+      // Pad with dummy data to force area fill
+      const item = filteredTrendData[0];
+      return [
+        { ...item, name: ' ' },
+        item,
+        { ...item, name: '  ' }
+      ];
+    }
+    return filteredTrendData;
+  }, [filteredTrendData]);
+
+
   // Transform source counts for pie chart
   const sourceChartData = useMemo(() => {
     return Object.entries(analytics.sourceCounts || {}).map(([name, value]) => ({
@@ -268,9 +282,9 @@ export default function AnalyticsView() {
               <p className="text-xs text-gray-500 mb-3">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
             </div>
 
-            <div className="flex-1 flex flex-col justify-between space-y-2 pr-1 pt-2">
+            <div className="flex-1 flex flex-col justify-center gap-2 pr-1">
                 {topUnits.length > 0 ? topUnits.map((unit, idx) => (
-                    <div key={unit.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-700">
+                    <div key={unit.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-700">
                         <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-gray-200 text-gray-700' : idx === 2 ? 'bg-orange-100 text-orange-800' : 'bg-blue-50 text-blue-600'}`}>
                                 #{idx + 1}
@@ -373,7 +387,7 @@ export default function AnalyticsView() {
           <div className="flex-1 w-full min-h-[250px] lg:min-h-0 relative overflow-hidden" dir="ltr">
             <div className="absolute inset-0 pb-8 pr-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={filteredTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
