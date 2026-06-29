@@ -365,11 +365,9 @@ export default function AnalyticsView() {
                         ))}
                       </Pie>
                       <RechartsTooltip
-                    formatter={(value) => [`${value.toLocaleString()} ر.س`]}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
-                    labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
-                  />
-                  <Legend verticalAlign="top" height={36} wrapperStyle={{ fontFamily: 'inherit', fontSize: '12px', fontWeight: 'bold' }} />
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
+                        labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
+                      />
                       <Legend verticalAlign="bottom" height={24} wrapperStyle={{ fontFamily: 'inherit', fontSize: '11px', paddingTop: '10px' }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -439,9 +437,11 @@ export default function AnalyticsView() {
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dy={15} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dx={-10} tickFormatter={(val) => `${val/1000}k`} />
                   <RechartsTooltip
+                    formatter={(value) => [`${value.toLocaleString()} ر.س`]}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
                     labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
                   />
+                  <Legend verticalAlign="top" height={36} wrapperStyle={{ fontFamily: 'inherit', fontSize: '12px', fontWeight: 'bold' }} />
                   <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                   <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
                 </AreaChart>

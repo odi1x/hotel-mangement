@@ -38,7 +38,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
     setTimeout(() => {
       window.print();
-      document.title = originalTitle;
+
     }, 100); // slight delay to let the browser register the title change before print dialog
   };
 
