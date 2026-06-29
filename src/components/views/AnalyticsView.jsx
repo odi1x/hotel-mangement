@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, Star } from 'lucide-react';
+import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, Star, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import Datepicker from 'react-tailwindcss-datepicker';
+import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
@@ -10,6 +11,9 @@ export default function AnalyticsView() {
   const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter } = useData();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [tempFilter, setTempFilter] = useState({ ...analyticsFilter });
+  const [breakdownModal, setBreakdownModal] = useState(null);
+  const [breakdownData, setBreakdownData] = useState([]);
+  const [isBreakdownLoading, setIsBreakdownLoading] = useState(false);
   const [chartFilter, setChartFilter] = useState('6m');
 
   const hasFilterChanges = () => {
@@ -26,6 +30,26 @@ export default function AnalyticsView() {
   const handleApplyFilter = () => {
     setAnalyticsFilter({ ...tempFilter });
     setIsFilterOpen(false);
+  };
+
+
+  const fetchBreakdown = async (type) => {
+    setBreakdownModal(type);
+    setIsBreakdownLoading(true);
+    setBreakdownData([]);
+    try {
+      const params = new URLSearchParams({ action: 'breakdown', type });
+      if (analyticsFilter.apartmentIds) params.append('apartmentIds', analyticsFilter.apartmentIds.join(','));
+      if (analyticsFilter.startDate) params.append('startDate', analyticsFilter.startDate);
+      if (analyticsFilter.endDate) params.append('endDate', analyticsFilter.endDate);
+
+      const res = await axios.get(`/api/analytics?${params.toString()}`);
+      setBreakdownData(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch breakdown', err);
+    } finally {
+      setIsBreakdownLoading(false);
+    }
   };
 
   const calculateNights = (start, end) => {
@@ -244,30 +268,43 @@ export default function AnalyticsView() {
         </div>
       </div>
 
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+        <div
+          onClick={() => fetchBreakdown('revenue')}
+          className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+        >
           <div className="absolute top-0 left-0 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">إجمالي الإيرادات</p>
-          <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400 relative z-10">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
+          <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400 relative z-10 tracking-tight">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+        <div
+          onClick={() => fetchBreakdown('profit')}
+          className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+        >
           <div className="absolute top-0 left-0 w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">صافي الأرباح</p>
-          <h3 className="text-3xl text-lg font-black text-green-600 dark:text-green-400 leading-none relative z-10">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
+          <h3 className="text-3xl font-black text-green-600 dark:text-green-400 relative z-10 tracking-tight">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+        <div
+          onClick={() => fetchBreakdown('occupancy')}
+          className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+        >
           <div className="absolute top-0 left-0 w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">معدل الإشغال</p>
-          <h3 className="text-3xl font-black text-orange-500 relative z-10">{Math.round(analytics.occupancyRate)}<span className="text-sm font-bold text-gray-400">%</span></h3>
+          <h3 className="text-3xl font-black text-orange-500 relative z-10 tracking-tight">{Math.round(analytics.occupancyRate)}<span className="text-sm font-bold text-gray-400">%</span></h3>
           <p className="text-xs text-gray-400 mt-2 font-medium relative z-10">من إجمالي الأيام المتاحة</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
+        <div
+          onClick={() => fetchBreakdown('nights')}
+          className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+        >
           <div className="absolute top-0 left-0 w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">الليالي المؤجرة</p>
-          <h3 className="text-3xl font-black text-purple-600 relative z-10">{analytics.totalNights} <span className="text-sm font-bold text-gray-400">ليلة</span></h3>
+          <h3 className="text-3xl font-black text-purple-600 relative z-10 tracking-tight">{analytics.totalNights} <span className="text-sm font-bold text-gray-400">ليلة</span></h3>
           <p className="text-xs text-gray-400 mt-2 font-medium relative z-10">عبر {analytics.count} حجز</p>
         </div>
       </div>
@@ -413,6 +450,110 @@ export default function AnalyticsView() {
           </div>
         </div>
       </div>
+
+      {/* Breakdown Modal */}
+      {breakdownModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-100 dark:border-slate-800 animate-fade-in">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+              <h3 className="font-black text-gray-900 dark:text-white text-lg flex items-center gap-2">
+                {breakdownModal === 'revenue' && 'تفصيل الإيرادات حسب الوحدة'}
+                {breakdownModal === 'profit' && 'سجل المصروفات والأرباح'}
+                {(breakdownModal === 'occupancy' || breakdownModal === 'nights') && 'تفصيل الإشغال حسب الوحدة'}
+              </h3>
+              <button onClick={() => setBreakdownModal(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+              {isBreakdownLoading ? (
+                <div className="space-y-4">
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} className="h-12 bg-gray-100 dark:bg-slate-800 rounded-xl animate-pulse"></div>
+                  ))}
+                </div>
+              ) : (
+                <div className="w-full">
+                  {breakdownModal === 'profit' ? (
+                     <table className="w-full text-sm text-right">
+                        <thead>
+                          <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
+                            <th className="pb-3 font-bold">البند</th>
+                            <th className="pb-3 font-bold">المبلغ (ر.س)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
+                          {breakdownData.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                              <td className={`py-3 font-bold ${item.type === 'income' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-800 dark:text-slate-200'}`}>{item.category}</td>
+                              <td className={`py-3 font-black ${item.type === 'income' ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}>
+                                {item.type === 'expense' ? '- ' : ''}{item.amount.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr className="bg-gray-50 dark:bg-slate-800">
+                            <td className="py-4 px-2 font-black text-gray-900 dark:text-white rounded-r-xl">الصافي</td>
+                            <td className="py-4 px-2 font-black text-green-600 dark:text-green-400 rounded-l-xl">
+                              {breakdownData.reduce((acc, curr) => curr.type === 'income' ? acc + curr.amount : acc - curr.amount, 0).toLocaleString()}
+                            </td>
+                          </tr>
+                        </tbody>
+                     </table>
+                  ) : (
+                    <table className="w-full text-sm text-right">
+                      <thead>
+                        <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
+                          <th className="pb-3 font-bold">الوحدة</th>
+                          {breakdownModal === 'revenue' && (
+                            <>
+                              <th className="pb-3 font-bold">الإيرادات (ر.س)</th>
+                              <th className="pb-3 font-bold">النسبة</th>
+                              <th className="pb-3 font-bold">الحجوزات</th>
+                            </>
+                          )}
+                          {(breakdownModal === 'occupancy' || breakdownModal === 'nights') && (
+                            <>
+                              <th className="pb-3 font-bold">الليالي المؤجرة</th>
+                              <th className="pb-3 font-bold">الليالي المتاحة</th>
+                              <th className="pb-3 font-bold">معدل الإشغال</th>
+                            </>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
+                        {breakdownData.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td className="py-3 font-bold text-gray-800 dark:text-slate-200">{item.name}</td>
+
+                            {breakdownModal === 'revenue' && (
+                              <>
+                                <td className="py-3 font-black text-green-600 dark:text-green-400">{item.revenue.toLocaleString()}</td>
+                                <td className="py-3 font-bold text-gray-600 dark:text-gray-300">{item.percentage}%</td>
+                                <td className="py-3 font-bold text-gray-600 dark:text-gray-300">{item.count}</td>
+                              </>
+                            )}
+
+                            {(breakdownModal === 'occupancy' || breakdownModal === 'nights') && (
+                              <>
+                                <td className="py-3 font-black text-purple-600 dark:text-purple-400">{item.nights}</td>
+                                <td className="py-3 font-bold text-gray-600 dark:text-gray-400">{item.availableNights}</td>
+                                <td className="py-3 font-black text-orange-500">{item.occupancy}%</td>
+                              </>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
 }
