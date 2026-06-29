@@ -10,6 +10,7 @@ export default function AnalyticsView() {
   const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter } = useData();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [tempFilter, setTempFilter] = useState({ ...analyticsFilter });
+  const [chartFilter, setChartFilter] = useState('6m');
 
   const hasFilterChanges = () => {
     const startDiffers = tempFilter.startDate !== analyticsFilter.startDate;
@@ -54,16 +55,35 @@ export default function AnalyticsView() {
 
     return Object.values(unitStats)
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+      .slice(0, 3);
   }, [bookings, apartments, analyticsFilter]);
 
+
   // Transform data for line chart
-  const trendData = useMemo(() => {
+  const filteredTrendData = useMemo(() => {
+      let data = [];
       if (analytics.dailyTrend && analytics.dailyTrend.length > 0) {
-          return analytics.dailyTrend;
+          data = [...analytics.dailyTrend];
       }
-      return [];
-  }, [analytics.dailyTrend]);
+
+      // Filter by time range from the end
+      if (chartFilter === '1m') data = data.slice(-1);
+      else if (chartFilter === '3m') data = data.slice(-3);
+      else if (chartFilter === '6m') data = data.slice(-6);
+      else if (chartFilter === '1y') data = data.slice(-12);
+
+      return data;
+  }, [analytics.dailyTrend, chartFilter]);
+
+  const chartKPIs = useMemo(() => {
+    let rev = 0, exp = 0;
+    filteredTrendData.forEach(item => {
+      rev += item.revenue;
+      exp += item.expenses;
+    });
+    return { revenue: rev, expenses: exp, profit: rev - exp };
+  }, [filteredTrendData]);
+
 
   // Transform source counts for pie chart
   const sourceChartData = useMemo(() => {
@@ -220,7 +240,7 @@ export default function AnalyticsView() {
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
           <p className="text-sm text-gray-500 dark:text-slate-400 font-bold mb-2 relative z-10">صافي الأرباح</p>
-          <h3 className="text-3xl font-black text-green-600 dark:text-green-400 relative z-10">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
+          <h3 className="text-3xl text-lg font-black text-green-600 dark:text-green-400 leading-none relative z-10">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-gray-400">ر.س</span></h3>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 relative overflow-hidden group">
@@ -248,7 +268,7 @@ export default function AnalyticsView() {
               <p className="text-xs text-gray-500 mb-3">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+            <div className="flex-1 flex flex-col justify-between space-y-2 pr-1 pt-2">
                 {topUnits.length > 0 ? topUnits.map((unit, idx) => (
                     <div key={unit.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-slate-700">
                         <div className="flex items-center gap-3">
@@ -256,13 +276,13 @@ export default function AnalyticsView() {
                                 #{idx + 1}
                             </div>
                             <div>
-                                <p className="font-bold text-gray-800 dark:text-slate-200">{unit.name}</p>
+                                <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{unit.name}</p>
                                 <p className="text-xs text-gray-500">{unit.nights} ليلة مؤجرة</p>
                             </div>
                         </div>
                         <div className="text-left">
-                            <p className="font-black text-green-600 dark:text-green-400">{unit.revenue.toLocaleString()}</p>
-                            <p className="text-[10px] text-gray-400">ر.س</p>
+                            <p className="text-lg font-black text-green-600 dark:text-green-400 leading-none">{unit.revenue.toLocaleString()}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">ر.س</p>
                         </div>
                     </div>
                 )) : <div className="text-center py-10 text-gray-400 font-medium">لا توجد بيانات كافية</div>}
@@ -294,9 +314,11 @@ export default function AnalyticsView() {
                         ))}
                       </Pie>
                       <RechartsTooltip
-                          formatter={(value) => [`${value} حجوزات`, 'العدد']}
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
-                      />
+                    formatter={(value) => [`${value.toLocaleString()} ر.س`]}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
+                    labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
+                  />
+                  <Legend verticalAlign="top" height={36} wrapperStyle={{ fontFamily: 'inherit', fontSize: '12px', fontWeight: 'bold' }} />
                       <Legend verticalAlign="bottom" height={24} wrapperStyle={{ fontFamily: 'inherit', fontSize: '11px', paddingTop: '10px' }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -309,14 +331,49 @@ export default function AnalyticsView() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 lg:col-span-2 flex flex-col h-full min-h-0">
-          <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-4 flex items-center shrink-0">
-              <TrendingUp size={18} className="ml-2 text-blue-500" />
-              اتجاه الإيرادات والمصروفات
-          </h4>
+
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
+            <h4 className="font-bold text-gray-800 dark:text-slate-100 flex items-center">
+                <TrendingUp size={18} className="ml-2 text-blue-500" />
+                اتجاه الإيرادات والمصروفات
+            </h4>
+            <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+              {[
+                { id: '1m', label: '1 شهر' },
+                { id: '3m', label: '3 أشهر' },
+                { id: '6m', label: '6 أشهر' },
+                { id: '1y', label: 'السنة' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => setChartFilter(opt.id)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${chartFilter === opt.id ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-6 mb-4 shrink-0 border-b border-gray-100 dark:border-slate-800 pb-4">
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">إجمالي الإيرادات</p>
+              <p className="font-black text-blue-600 dark:text-blue-400">{chartKPIs.revenue.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">إجمالي المصروفات</p>
+              <p className="font-black text-red-500">{chartKPIs.expenses.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">صافي الأرباح</p>
+              <p className="text-lg font-black text-green-600 dark:text-green-400 leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
+            </div>
+          </div>
+
           <div className="flex-1 w-full min-h-[250px] lg:min-h-0 relative overflow-hidden" dir="ltr">
-            <div className="absolute inset-0 pb-6 pr-4">
+            <div className="absolute inset-0 pb-8 pr-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={filteredTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
