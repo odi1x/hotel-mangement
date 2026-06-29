@@ -106,8 +106,7 @@ export default async function handler(req, res) {
          });
 
          let rev = 0;
-         let cleaning = 0;
-         let platform = 0;
+                  let platform = 0;
          let other = 0;
          let rent = 0;
 
@@ -122,8 +121,7 @@ export default async function handler(req, res) {
 
             const apt = b.apartment;
             if (apt) {
-               if (apt.cleaningType === 'per_booking' && apt.cleaningCost) cleaning += Number(apt.cleaningCost);
-               if (apt.otherExpenseAmount) other += Number(apt.otherExpenseAmount);
+                              if (apt.otherExpenseAmount) other += Number(apt.otherExpenseAmount);
                if (apt.platformFee) {
                    if (apt.platformFeeType === 'percentage') platform += (r * (Number(apt.platformFee) / 100));
                    else platform += Number(apt.platformFee);
@@ -175,7 +173,6 @@ export default async function handler(req, res) {
                  { category: 'إجمالي الإيرادات', amount: rev, type: 'income' },
                  { category: 'تكاليف الإيجار', amount: rent, type: 'expense' },
                  { category: 'رسوم المنصات', amount: platform, type: 'expense' },
-                 { category: 'تكاليف التنظيف', amount: cleaning, type: 'expense' },
                  { category: 'رواتب الموظفين', amount: staffExp, type: 'expense' },
                  { category: 'مصروفات عامة وأخرى', amount: global + other, type: 'expense' },
              ]

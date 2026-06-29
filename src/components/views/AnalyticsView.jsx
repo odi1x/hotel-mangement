@@ -479,14 +479,14 @@ export default function AnalyticsView() {
                   {breakdownModal === 'profit' ? (
                      <table className="w-full text-sm text-right">
                         <thead>
-                          <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
+                          <tr className="text-gray-500 dark:text-gray-400">
                             <th className="pb-3 font-bold">البند</th>
                             <th className="pb-3 font-bold">المبلغ (ر.س)</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
+                        <tbody>
                           {breakdownData.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors border-t border-gray-100 dark:border-slate-800/50">
                               <td className={`py-3 font-bold ${item.type === 'income' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-800 dark:text-slate-200'}`}>{item.category}</td>
                               <td className={`py-3 font-black ${item.type === 'income' ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}>
                                 {item.type === 'expense' ? '- ' : ''}{item.amount.toLocaleString()}
@@ -504,7 +504,7 @@ export default function AnalyticsView() {
                   ) : (
                     <table className="w-full text-sm text-right">
                       <thead>
-                        <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-slate-800">
+                        <tr className="text-gray-500 dark:text-gray-400">
                           <th className="pb-3 font-bold">الوحدة</th>
                           {breakdownModal === 'revenue' && (
                             <>
@@ -522,9 +522,9 @@ export default function AnalyticsView() {
                           )}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">
+                      <tbody>
                         {breakdownData.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                          <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors border-t border-gray-100 dark:border-slate-800/50">
                             <td className="py-3 font-bold text-gray-800 dark:text-slate-200">{item.name}</td>
 
                             {breakdownModal === 'revenue' && (
