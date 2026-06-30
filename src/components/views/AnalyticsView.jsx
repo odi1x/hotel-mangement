@@ -441,8 +441,7 @@ export default function AnalyticsView() {
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
                     labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
                   />
-                  <Legend verticalAlign="top" height={36} wrapperStyle={{ fontFamily: 'inherit', fontSize: '12px', fontWeight: 'bold' }} />
-                  <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                                    <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                   <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -453,9 +452,9 @@ export default function AnalyticsView() {
 
       {/* Breakdown Modal */}
       {breakdownModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm m-0 border-0 outline-none">
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
-          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-100 dark:border-slate-800 animate-fade-in">
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-100 dark:border-slate-800 ">
             <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
               <h3 className="font-black text-gray-900 dark:text-white text-lg flex items-center gap-2">
                 {breakdownModal === 'revenue' && 'تفصيل الإيرادات حسب الوحدة'}

@@ -29,7 +29,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
   const total = subtotal + taxAmount;
 
   const handlePrint = () => {
-    const originalTitle = document.title;
+
     const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
     const resName = booking.residentName ? booking.residentName.replace(/\s+/g, '_') : 'نزيل';
     const startDateStr = booking.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
