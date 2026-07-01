@@ -28,7 +28,7 @@ export default function PublicBookingView() {
         params.startDate = dateRange.startDate;
         params.endDate = dateRange.endDate;
       }
-      const res = await axios.get('/api/public/apartments', { params });
+      const res = await axios.get('/api/public?action=apartments', { params });
       setApartments(res.data);
     } catch (error) {
       console.error('Error fetching apartments:', error);
@@ -58,7 +58,7 @@ export default function PublicBookingView() {
 
     setIsSubmitting(true);
     try {
-      await axios.post('/api/public/book', {
+      await axios.post('/api/public?action=book', {
         adminId,
         apartmentId: selectedApartment.id,
         residentName: formData.name,

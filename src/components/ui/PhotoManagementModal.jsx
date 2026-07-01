@@ -22,7 +22,7 @@ export default function PhotoManagementModal({ apartment, onClose, onSave }) {
     setIsUploading(true);
     try {
       // 1. Get auth params from our lightweight serverless endpoint
-      const authRes = await axios.get('/api/imagekit-auth');
+      const authRes = await axios.get('/api/auth?action=imagekit-auth');
       const { token, expire, signature } = authRes.data;
 
       // 2. Upload directly to ImageKit using their upload API
