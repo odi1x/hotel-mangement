@@ -8,7 +8,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
 
 export default function AnalyticsView() {
-  const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter } = useData();
+  const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter, loading } = useData();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [tempFilter, setTempFilter] = useState({ ...analyticsFilter });
   const [breakdownModal, setBreakdownModal] = useState(null);
@@ -59,28 +59,11 @@ export default function AnalyticsView() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
 
-  // Calculate top performing units
+  // Extract top performing units directly from backend analytics payload
   const topUnits = useMemo(() => {
-    const unitStats = {};
-    const filteredBookings = analyticsFilter === 'all' || !analyticsFilter.apartmentIds
-      ? bookings
-      : bookings.filter(b => analyticsFilter.apartmentIds?.includes(b.apartmentId));
-
-    filteredBookings.forEach(b => {
-      if (!unitStats[b.apartmentId]) {
-        unitStats[b.apartmentId] = { id: b.apartmentId, name: apartments.find(a => a.id === b.apartmentId)?.name || 'غير معروف', revenue: 0, nights: 0 };
-      }
-      const nights = calculateNights(b.startDate, b.endDate);
-      const revenue = b.totalPrice !== null ? b.totalPrice : (b.pricePerNight * nights);
-
-      unitStats[b.apartmentId].revenue += Number(revenue);
-      unitStats[b.apartmentId].nights += nights;
-    });
-
-    return Object.values(unitStats)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 3);
-  }, [bookings, apartments, analyticsFilter]);
+    // Rely on the heavily optimized api/analytics.js aggregation
+    return analytics.topUnits || [];
+  }, [analytics.topUnits]);
 
 
   // Transform data for line chart
@@ -132,18 +115,30 @@ export default function AnalyticsView() {
   }, [analytics.sourceCounts]);
 
 
-  const exportToExcel = () => {
+  const exportToExcel = (isFiltered = false) => {
     let csvContent = "اسم النزيل,رقم الهوية,الجوال,الشقة,تاريخ الدخول,تاريخ الخروج,عدد الليالي,سعر الليلة,الإجمالي,المصدر\n";
 
-    // Filter bookings based on current analytics filter
-    const filteredBookings = analyticsFilter === 'all'
-      ? bookings
-      : bookings.filter(b => b.apartmentId === analyticsFilter);
+    let exportBookings = bookings;
 
-    filteredBookings.forEach(b => {
+    if (isFiltered && hasActiveFilters) {
+      if (analyticsFilter.apartmentIds?.length > 0) {
+        exportBookings = exportBookings.filter(b => analyticsFilter.apartmentIds.includes(b.apartmentId));
+      }
+      if (analyticsFilter.startDate && analyticsFilter.endDate) {
+        const fStart = new Date(analyticsFilter.startDate).getTime();
+        const fEnd = new Date(analyticsFilter.endDate).getTime();
+        exportBookings = exportBookings.filter(b => {
+          const bStart = new Date(b.startDate).getTime();
+          const bEnd = new Date(b.endDate).getTime();
+          return bStart <= fEnd && bEnd >= fStart;
+        });
+      }
+    }
+
+    exportBookings.forEach(b => {
       const apt = apartments.find(a => a.id === b.apartmentId);
       const nights = calculateNights(b.startDate, b.endDate);
-      const total = b.pricePerNight * nights;
+      const total = b.totalPrice || (b.pricePerNight * nights);
 
       const row = [
         b.residentName,
@@ -155,37 +150,107 @@ export default function AnalyticsView() {
         nights,
         b.pricePerNight,
         total,
-        b.source
-      ].join(",");
-      csvContent += row + "\n";
+        b.source || 'زيارة مباشرة'
+      ];
+      csvContent += row.join(",") + "\n";
     });
 
-    csvContent += `\nإجمالي الإيرادات,,,,,${analytics.totalRevenue}\n`;
-    csvContent += `إجمالي المصروفات,,,,,${analytics.totalExpenses}\n`;
-    csvContent += `صافي الربح,,,,,${analytics.netProfit}\n`;
-    csvContent += `معدل الإشغال,,,,,${Math.round(analytics.occupancyRate)}%\n`;
-    csvContent += `إجمالي الليالي,,,,,${analytics.totalNights}\n`;
-
-    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `تقرير_التحليلات_${new Date().toLocaleDateString('ar-EG')}.csv`);
+    const fileName = isFiltered && hasActiveFilters ? `تقرير_التحليلات_المصفى_${new Date().toLocaleDateString('ar-EG')}.csv` : `تقرير_التحليلات_الشامل_${new Date().toLocaleDateString('ar-EG')}.csv`;
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  const hasActiveFilters = analyticsFilter.apartmentIds?.length > 0 || (analyticsFilter.startDate && analyticsFilter.endDate);
+
+
+  if (loading) {
+    return (
+      <div className="h-full overflow-hidden flex flex-col space-y-4 animate-pulse">
+        <div className="flex justify-between items-center mb-4">
+          <div className="h-10 w-48 bg-gray-200 dark:bg-slate-800 rounded-xl"></div>
+          <div className="h-10 w-32 bg-gray-200 dark:bg-slate-800 rounded-xl"></div>
+        </div>
+
+        {/* 4 KPI Skeleton Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-gray-100 dark:border-slate-800 h-28 flex flex-col justify-center">
+              <div className="h-4 w-20 bg-gray-200 dark:bg-slate-800 rounded mb-3"></div>
+              <div className="h-8 w-32 bg-gray-200 dark:bg-slate-800 rounded mb-2"></div>
+              <div className="h-3 w-24 bg-gray-100 dark:bg-slate-800 rounded"></div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 min-h-0 w-full overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
+          {/* Top Performers and Pie Chart Skeleton */}
+          <div className="lg:col-span-1 flex flex-col gap-4 h-full min-h-0">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 flex-1 min-h-0 flex flex-col">
+               <div className="h-5 w-24 bg-gray-200 dark:bg-slate-800 rounded mb-2"></div>
+               <div className="h-3 w-32 bg-gray-100 dark:bg-slate-800 rounded mb-4"></div>
+               <div className="flex-1 flex flex-col gap-3 justify-center">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="flex justify-between items-center">
+                       <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-800"></div><div className="h-4 w-20 bg-gray-200 dark:bg-slate-800 rounded"></div></div>
+                       <div className="h-6 w-16 bg-gray-200 dark:bg-slate-800 rounded"></div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 flex-1 min-h-0 flex flex-col items-center justify-center">
+              <div className="self-start h-5 w-24 bg-gray-200 dark:bg-slate-800 rounded mb-2"></div>
+              <div className="self-start h-3 w-32 bg-gray-100 dark:bg-slate-800 rounded mb-4"></div>
+              <div className="w-32 h-32 rounded-full border-8 border-gray-100 dark:border-slate-800 mt-4"></div>
+            </div>
+          </div>
+
+          {/* Area Chart Skeleton */}
+          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-5 flex flex-col h-full min-h-0">
+            <div className="flex justify-between items-center mb-6">
+              <div className="h-5 w-40 bg-gray-200 dark:bg-slate-800 rounded"></div>
+              <div className="h-8 w-48 bg-gray-100 dark:bg-slate-800 rounded-lg"></div>
+            </div>
+            <div className="flex gap-6 mb-6">
+               <div className="h-10 w-24 bg-gray-100 dark:bg-slate-800 rounded"></div>
+               <div className="h-10 w-24 bg-gray-100 dark:bg-slate-800 rounded"></div>
+               <div className="h-10 w-24 bg-gray-100 dark:bg-slate-800 rounded"></div>
+            </div>
+            <div className="flex-1 w-full bg-gray-50 dark:bg-slate-800/50 rounded-xl"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-hidden flex flex-col space-y-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-        <button
-          onClick={exportToExcel}
-          className="flex items-center space-x-reverse space-x-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-green-200 dark:shadow-none transition-all active:scale-95"
-        >
-          <Download size={18} />
-          <span className="mr-2">تحميل التقرير الشامل (Excel)</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => exportToExcel(false)}
+            className="flex items-center space-x-reverse space-x-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-green-200 dark:shadow-none transition-all active:scale-95"
+          >
+            <Download size={18} />
+            <span className="mr-2">تحميل التقرير الشامل (Excel)</span>
+          </button>
+
+          {hasActiveFilters && (
+            <button
+              onClick={() => exportToExcel(true)}
+              className="flex items-center space-x-reverse space-x-2 bg-white dark:bg-slate-800 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-900/50 hover:bg-green-50 dark:hover:bg-slate-700 px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
+            >
+              <Download size={18} />
+              <span className="mr-2">تحميل التقرير المصفى</span>
+            </button>
+          )}
+        </div>
 
         <div className="relative">
           <button

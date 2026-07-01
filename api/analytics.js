@@ -262,6 +262,7 @@ export default async function handler(req, res) {
     let totalExpenses = 0;
     const sourceCounts = {};
     const dailyTrendMap = {}; // { 'YYYY-MM': { name: 'YYYY-MM', revenue: 0, expenses: 0 } }
+    const aptStats = {};
 
     // Keep track of which apartments we've already counted rent for in this period to avoid over-counting rent
     const countedRentApartmentIds = new Set();
@@ -277,6 +278,15 @@ export default async function handler(req, res) {
         // Calculate revenue
         const revenue = booking.totalPrice !== null ? Number(booking.totalPrice) : (Number(booking.pricePerNight) * nights);
         totalRevenue += revenue;
+
+        if (booking.apartment) {
+            const aptId = booking.apartment.id;
+            if (!aptStats[aptId]) {
+                aptStats[aptId] = { id: aptId, name: booking.apartment.name, revenue: 0, nights: 0 };
+            }
+            aptStats[aptId].revenue += revenue;
+            aptStats[aptId].nights += nights;
+        }
 
         const dateStr = new Date(booking.startDate).toLocaleDateString('en-CA', { month: 'short', year: 'numeric' });
         if (!dailyTrendMap[dateStr]) {
@@ -403,6 +413,10 @@ export default async function handler(req, res) {
 
     const dailyTrend = Object.values(dailyTrendMap).sort((a, b) => new Date(a.name) - new Date(b.name));
 
+    const topUnits = Object.values(aptStats)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 3);
+
     res.status(200).json({
       totalRevenue,
       totalExpenses,
@@ -411,7 +425,8 @@ export default async function handler(req, res) {
       occupancyRate,
       sourceCounts,
       count: bookings.length,
-      dailyTrend
+      dailyTrend,
+      topUnits
     });
 
   } catch (error) {
