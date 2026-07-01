@@ -1,6 +1,5 @@
 import { useAuth } from './context/AuthContext';
 import Layout from './components/layout/Layout';
-import PublicBookingView from './components/views/PublicBookingView';
 import LoginView from './components/views/LoginView';
 import { Toaster } from 'react-hot-toast';
 

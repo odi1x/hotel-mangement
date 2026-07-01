@@ -81,7 +81,7 @@ export default async function handler(req, res) {
 
 
     // IMAGEKIT AUTH
-    if (action === 'imagekit_auth' && req.method === 'GET') {
+    if (action === 'imagekit-auth' && req.method === 'GET') {
       const authenticationParameters = imagekit.getAuthenticationParameters();
       return res.status(200).json(authenticationParameters);
     }
