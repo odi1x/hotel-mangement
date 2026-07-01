@@ -11,6 +11,9 @@ export default function ApartmentsView() {
   const defaultType = customTypes.length > 0 ? customTypes[0] : 'استوديو';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [activeApartmentForPhotos, setActiveApartmentForPhotos] = useState(null);
+
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
