@@ -17,6 +17,7 @@ export const DataProvider = ({ children }) => {
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
   const [loading] = useState(false);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
 
   const API_BASE_URL = '/api'; // Configured via Vite proxy locally or direct path on Vercel
 
@@ -58,6 +59,7 @@ export const DataProvider = ({ children }) => {
   };
 
   const fetchAnalytics = async () => {
+    setIsAnalyticsLoading(true);
     try {
       const params = {};
       if (analyticsFilter.apartmentIds?.length > 0) {
@@ -71,6 +73,8 @@ export const DataProvider = ({ children }) => {
       setAnalytics(res.data);
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsAnalyticsLoading(false);
     }
   };
 
@@ -211,7 +215,8 @@ export const DataProvider = ({ children }) => {
       fetchApartments,
       staffExpenses,
       fetchStaffExpenses,
-      loading
+      loading,
+      isAnalyticsLoading
     }}>
       {children}
     </DataContext.Provider>

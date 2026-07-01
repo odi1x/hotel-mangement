@@ -8,7 +8,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
 
 export default function AnalyticsView() {
-  const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter, loading } = useData();
+  const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter, isAnalyticsLoading } = useData();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [tempFilter, setTempFilter] = useState({ ...analyticsFilter });
   const [breakdownModal, setBreakdownModal] = useState(null);
@@ -169,7 +169,7 @@ export default function AnalyticsView() {
   const hasActiveFilters = analyticsFilter.apartmentIds?.length > 0 || (analyticsFilter.startDate && analyticsFilter.endDate);
 
 
-  if (loading) {
+  if (isAnalyticsLoading) {
     return (
       <div className="h-full overflow-hidden flex flex-col space-y-4 animate-pulse">
         <div className="flex justify-between items-center mb-4">
