@@ -62,6 +62,9 @@ importers:
       react-tailwindcss-datepicker:
         specifier: ^2.0.0
         version: 2.0.0(dayjs@1.11.21)(react@19.2.7)
+      react-turnstile:
+        specifier: ^1.1.5
+        version: 1.1.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       recharts:
         specifier: ^2.15.0
         version: 2.15.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -1562,6 +1565,12 @@ packages:
     peerDependencies:
       react: '>=16.6.0'
       react-dom: '>=16.6.0'
+
+  react-turnstile@1.1.5:
+    resolution: {integrity: sha512-VTL5OeHAatzCEVQxAZox70/TPmhKxEbNgtr++dg+8zm9QrWKuoU9E0+7gqmycOSCDZuJFzvMMLKQb5PVUPLV6w==}
+    peerDependencies:
+      react: '>= 16.13.1'
+      react-dom: '>= 16.13.1'
 
   react@19.2.7:
     resolution: {integrity: sha512-HNe9WslTbXmFK8o8cmwgAeJFSBvt1bPdHCVKtaaV+WlAN36mpT4hcRpwbf3fY56ar2oIXzsBpOAiIRHAdY0OlQ==}
@@ -3186,6 +3195,11 @@ snapshots:
       dom-helpers: 5.2.1
       loose-envify: 1.4.0
       prop-types: 15.8.1
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
+
+  react-turnstile@1.1.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+    dependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
