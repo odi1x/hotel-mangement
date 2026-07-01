@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
@@ -7,7 +7,7 @@ import PrintAgreement from '../ui/PrintAgreement';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
-  const { apartments, bookings, deleteBooking, checkoutBooking, updateBooking, fetchBookings, fetchApartments } = useData(); // eslint-disable-line no-unused-vars
+  const { apartments, deleteBooking, checkoutBooking, updateBooking, fetchBookings } = useData(); // eslint-disable-line no-unused-vars
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [printSelectorBooking, setPrintSelectorBooking] = useState(null);
@@ -20,15 +20,54 @@ export default function ResidentsView({ openBookingForm }) {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [checkoutData, setCheckoutData] = useState({ id: null, option: 'keep', days: '', notes: '', booking: null });
 
-  const filteredBookings = useMemo(() => {
-    if (!searchQuery.trim()) return bookings;
+  // Server-side pagination state
+  const [paginatedData, setPaginatedData] = useState({
+    bookings: [],
+    metadata: {
+      totalCount: 0,
+      totalPages: 1,
+      currentPage: 1,
+      limit: ITEMS_PER_PAGE
+    }
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
-    const query = searchQuery.toLowerCase();
-    return bookings.filter(b =>
-      b.residentName.toLowerCase().includes(query) ||
-      b.phone.includes(query)
-    );
-  }, [bookings, searchQuery]);
+  useEffect(() => {
+    const fetchPaginatedBookings = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.get('/api/bookings', {
+          params: {
+            page: currentPage,
+            limit: ITEMS_PER_PAGE,
+            search: searchQuery.trim() || undefined
+          }
+        });
+        if (response.data && response.data.metadata) {
+          setPaginatedData(response.data);
+        } else {
+          // Fallback if the API doesn't return metadata (e.g. backend not updated yet)
+          setPaginatedData({
+             bookings: Array.isArray(response.data) ? response.data : [],
+             metadata: { totalPages: 1, currentPage: 1, limit: ITEMS_PER_PAGE, totalCount: Array.isArray(response.data) ? response.data.length : 0 }
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch paginated bookings', err);
+        toast.error('فشل في تحميل الحجوزات');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Use a small timeout to debounce search typing
+    const timeoutId = setTimeout(() => {
+      fetchPaginatedBookings();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentPage, searchQuery, bookings]); // Depend on bookings to re-fetch when global context bookings update (like after adding/deleting)
+
 
   const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
     month: 'short',
@@ -107,11 +146,12 @@ export default function ResidentsView({ openBookingForm }) {
   };
 
   const handleSaveNote = async () => {
-    const booking = bookings.find(b => b.id === editingNoteId);
+    const booking = currentBookings.find(b => b.id === editingNoteId);
     if (booking) {
       try {
         await updateBooking({ ...booking, notes: noteContent });
         toast.success('تم حفظ الملاحظة بنجاح');
+        fetchBookings(); // Trigger global refresh just in case
       } catch (err) { console.error(err);
         toast.error('فشل حفظ الملاحظة');
       }
@@ -125,8 +165,8 @@ export default function ResidentsView({ openBookingForm }) {
     setNoteContent(booking.notes || '');
   };
 
-  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
-  const paginatedBookings = filteredBookings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const { bookings: currentBookings, metadata } = paginatedData;
+  const totalPages = metadata.totalPages;
 
   return (
     <>
@@ -157,7 +197,24 @@ export default function ResidentsView({ openBookingForm }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50 flex-1">
-              {paginatedBookings.map((booking) => {
+              {isLoading ? (
+                Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+                  <tr key={`skeleton-${idx}`} className="animate-pulse border-b border-gray-100 dark:border-slate-800">
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-24"></div></td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-32 mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-20"></div>
+                    </td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-28"></div></td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-24 mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
+                    </td>
+                    <td className="px-6 py-4"><div className="h-6 bg-gray-200 dark:bg-slate-700 rounded-full w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-8 bg-gray-200 dark:bg-slate-700 rounded-lg w-24"></div></td>
+                  </tr>
+                ))
+              ) : currentBookings.map((booking) => {
                 const apt = apartments.find(a => a.id === booking.apartmentId);
                 const isCurrent = isDateBetween(new Date(), booking.startDate, booking.endDate);
                 const isFuture = isFutureBooking(booking.startDate);
@@ -247,12 +304,12 @@ export default function ResidentsView({ openBookingForm }) {
                   </tr>
                 );
               })}
-              {paginatedBookings.length > 0 && paginatedBookings.length < ITEMS_PER_PAGE && Array.from({ length: ITEMS_PER_PAGE - paginatedBookings.length }).map((_, idx) => (
+              {currentBookings.length > 0 && currentBookings.length < ITEMS_PER_PAGE && Array.from({ length: ITEMS_PER_PAGE - currentBookings.length }).map((_, idx) => (
                 <tr key={`dummy-${idx}`} className="invisible pointer-events-none">
                   <td className="px-6 py-4">&nbsp;</td>
                 </tr>
               ))}
-              {filteredBookings.length === 0 && (
+              {!isLoading && currentBookings.length === 0 && (
                 <tr>
                   <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">لا توجد حجوزات مطابقة</td>
                 </tr>
@@ -272,19 +329,37 @@ export default function ResidentsView({ openBookingForm }) {
               السابق
             </button>
             <div className="flex space-x-reverse space-x-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              {(() => {
+                const pages = [];
+                const maxVisible = 5;
+                if (totalPages <= maxVisible) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                  if (currentPage <= 3) {
+                    pages.push(1, 2, 3, 4, '...', totalPages);
+                  } else if (currentPage >= totalPages - 2) {
+                    pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+                  } else {
+                    pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+                  }
+                }
+                return pages.map((page, index) => (
+                  <button
+                    key={`${page}-${index}`}
+                    onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                    disabled={page === '...'}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : page === '...'
+                        ? 'text-gray-400 cursor-default'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ));
+              })()}
             </div>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}

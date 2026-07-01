@@ -14,11 +14,50 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const bookings = await prisma.booking.findMany({
-        where: { userId: targetUserId },
-        orderBy: { startDate: 'desc' }
-      });
-      return res.status(200).json(bookings);
+      const { page, limit, search } = req.query;
+
+      let whereClause = { userId: targetUserId };
+
+      if (search) {
+        whereClause = {
+          ...whereClause,
+          OR: [
+            { residentName: { contains: search, mode: 'insensitive' } },
+            { phone: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+      }
+
+      if (page && limit) {
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+
+        const [bookings, totalCount] = await Promise.all([
+          prisma.booking.findMany({
+            where: whereClause,
+            orderBy: { startDate: 'desc' },
+            skip: (pageNum - 1) * limitNum,
+            take: limitNum,
+          }),
+          prisma.booking.count({ where: whereClause })
+        ]);
+
+        return res.status(200).json({
+          bookings,
+          metadata: {
+            totalCount,
+            totalPages: Math.ceil(totalCount / limitNum),
+            currentPage: pageNum,
+            limit: limitNum
+          }
+        });
+      } else {
+        const bookings = await prisma.booking.findMany({
+          where: whereClause,
+          orderBy: { startDate: 'desc' }
+        });
+        return res.status(200).json(bookings);
+      }
     }
 
     else if (req.method === 'POST') {
