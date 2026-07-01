@@ -7,7 +7,7 @@ import PrintAgreement from '../ui/PrintAgreement';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
-  const { apartments, deleteBooking, checkoutBooking, updateBooking, fetchBookings } = useData(); // eslint-disable-line no-unused-vars
+  const { apartments, bookings, deleteBooking, checkoutBooking, updateBooking, fetchBookings, fetchApartments } = useData(); // eslint-disable-line no-unused-vars
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [printSelectorBooking, setPrintSelectorBooking] = useState(null);
