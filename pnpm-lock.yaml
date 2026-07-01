@@ -103,7 +103,7 @@ importers:
         specifier: ^17.5.0
         version: 17.7.0
       prisma:
-        specifier: 5.22.0
+        specifier: ^5.22.0
         version: 5.22.0
       vite:
         specifier: ^8.0.10

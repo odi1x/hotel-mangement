@@ -119,7 +119,16 @@ export default function ApartmentsView() {
                 onClick={() => handleOpenPhotoModal(apt)}
             >
                 {apt.coverPhoto ? (
+                    <>
                     <img src={apt.coverPhoto} alt={apt.name} className="w-full h-full object-cover" />
+                    {apt.images && apt.images.length > 1 && (
+                      <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-sm flex items-center gap-1">
+                        <ImageIcon size={12} />
+                        <span dir="ltr">+{apt.images.length - 1}</span>
+                      </div>
+                    )}
+                  </>
+
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
                         <ImageIcon size={32} className="mb-2 opacity-50" />
