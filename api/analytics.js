@@ -13,9 +13,179 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { apartmentIds, startDate, endDate } = req.query;
+
+  const { apartmentIds, startDate, endDate, action, type } = req.query;
 
   const targetUserId = user.adminId || user.userId;
+
+  if (action === 'breakdown') {
+    try {
+      const filter = { userId: targetUserId };
+      if (apartmentIds) {
+          filter.apartmentId = { in: apartmentIds.split(',') };
+      }
+      if (startDate && endDate) {
+          filter.AND = [
+              { startDate: { lte: new Date(endDate) } },
+              { endDate: { gte: new Date(startDate) } }
+          ];
+      }
+
+      // Default period
+      let periodDays = 30;
+      if (startDate && endDate) {
+          const s = new Date(startDate);
+          const e = new Date(endDate);
+          periodDays = Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)));
+      }
+
+      if (type === 'revenue' || type === 'occupancy' || type === 'nights') {
+        const bookings = await prisma.booking.findMany({
+            where: filter,
+            select: {
+                totalPrice: true, pricePerNight: true, startDate: true, endDate: true,
+                apartment: { select: { id: true, name: true } }
+            }
+        });
+
+        let totalRev = 0;
+        const aptMap = {};
+
+        bookings.forEach(b => {
+          if (!b.apartment) return;
+          const s = new Date(b.startDate);
+          const e = new Date(b.endDate);
+          const nights = Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)));
+          const rev = b.totalPrice !== null ? Number(b.totalPrice) : (Number(b.pricePerNight) * nights);
+
+          if (!aptMap[b.apartment.id]) {
+            aptMap[b.apartment.id] = { id: b.apartment.id, name: b.apartment.name, revenue: 0, count: 0, nights: 0, availableNights: periodDays };
+          }
+
+          aptMap[b.apartment.id].revenue += rev;
+          aptMap[b.apartment.id].count += 1;
+          aptMap[b.apartment.id].nights += nights;
+          totalRev += rev;
+        });
+
+        // Add empty apartments that passed filter
+        const allApts = await prisma.apartment.findMany({
+          where: apartmentIds ? { id: { in: apartmentIds.split(',') } } : { userId: targetUserId },
+          select: { id: true, name: true }
+        });
+
+        allApts.forEach(a => {
+           if (!aptMap[a.id]) {
+               aptMap[a.id] = { id: a.id, name: a.name, revenue: 0, count: 0, nights: 0, availableNights: periodDays };
+           }
+        });
+
+        let results = Object.values(aptMap).map(a => ({
+           ...a,
+           percentage: totalRev > 0 ? ((a.revenue / totalRev) * 100).toFixed(1) : 0,
+           occupancy: ((a.nights / a.availableNights) * 100).toFixed(1)
+        }));
+
+        if (type === 'revenue') {
+          results.sort((a,b) => b.revenue - a.revenue);
+        } else {
+          results.sort((a,b) => b.nights - a.nights);
+        }
+
+        return res.status(200).json({ data: results });
+      }
+
+      if (type === 'profit') {
+         // To build a robust ledger, we need total revenue and categorized expenses
+         // We can recalculate or fetch from the same logic used in the main endpoint.
+         // For brevity and scalability, we will simulate the categorized ledger calculation based on the same logic.
+
+         const bookings = await prisma.booking.findMany({
+            where: filter,
+            select: { totalPrice: true, pricePerNight: true, startDate: true, endDate: true, apartment: { select: { id: true, rentCost: true, rentPeriod: true, cleaningType: true, cleaningCost: true, platformFeeType: true, platformFee: true, otherExpenseAmount: true } } }
+         });
+
+         let rev = 0;
+                  let platform = 0;
+         let other = 0;
+         let rent = 0;
+
+         const countedRent = new Set();
+
+         bookings.forEach(b => {
+            const s = new Date(b.startDate);
+            const e = new Date(b.endDate);
+            const n = Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)));
+            const r = b.totalPrice !== null ? Number(b.totalPrice) : (Number(b.pricePerNight) * n);
+            rev += r;
+
+            const apt = b.apartment;
+            if (apt) {
+                              if (apt.otherExpenseAmount) other += Number(apt.otherExpenseAmount);
+               if (apt.platformFee) {
+                   if (apt.platformFeeType === 'percentage') platform += (r * (Number(apt.platformFee) / 100));
+                   else platform += Number(apt.platformFee);
+               }
+               if (apt.rentCost && !countedRent.has(apt.id)) {
+                   let dRent = 0;
+                   if (apt.rentPeriod === 'monthly') dRent = Number(apt.rentCost) / 30;
+                   else if (apt.rentPeriod === 'yearly') dRent = Number(apt.rentCost) / 365;
+                   rent += dRent * periodDays;
+                   countedRent.add(apt.id);
+               }
+            }
+         });
+
+         const allApts = await prisma.apartment.findMany({
+          where: apartmentIds ? { id: { in: apartmentIds.split(',') } } : { userId: targetUserId },
+          select: { id: true, rentCost: true, rentPeriod: true }
+         });
+
+         allApts.forEach(apt => {
+            if (apt.rentCost && !countedRent.has(apt.id)) {
+                   let dRent = 0;
+                   if (apt.rentPeriod === 'monthly') dRent = Number(apt.rentCost) / 30;
+                   else if (apt.rentPeriod === 'yearly') dRent = Number(apt.rentCost) / 365;
+                   rent += dRent * periodDays;
+                   countedRent.add(apt.id);
+            }
+         });
+
+         // Staff and Global
+         let global = 0;
+         let staffExp = 0;
+         const userSettings = await prisma.user.findUnique({ where: { id: targetUserId }, select: { generalExpenses: true } });
+         const staffList = await prisma.staffExpense.findMany({ where: { userId: targetUserId } });
+
+         const ratio = (apartmentIds ? apartmentIds.split(',').length : allApts.length) / (allApts.length || 1);
+         if (userSettings && userSettings.generalExpenses) {
+             global += ((Number(userSettings.generalExpenses) / 30) * periodDays) * ratio;
+         }
+
+         if (staffList) {
+             staffList.forEach(st => {
+                 staffExp += ((Number(st.monthlySalary) / 30) * periodDays) * ratio; // simplified scope for breakdown
+             });
+         }
+
+         return res.status(200).json({
+             data: [
+                 { category: 'إجمالي الإيرادات', amount: rev, type: 'income' },
+                 { category: 'تكاليف الإيجار', amount: rent, type: 'expense' },
+                 { category: 'رسوم المنصات', amount: platform, type: 'expense' },
+                 { category: 'رواتب الموظفين', amount: staffExp, type: 'expense' },
+                 { category: 'مصروفات عامة وأخرى', amount: global + other, type: 'expense' },
+             ]
+         });
+      }
+
+      return res.status(400).json({ message: 'Invalid breakdown type' });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Error fetching breakdown' });
+    }
+  }
+
 
   try {
     const filter = { userId: targetUserId };
@@ -92,6 +262,7 @@ export default async function handler(req, res) {
     let totalExpenses = 0;
     const sourceCounts = {};
     const dailyTrendMap = {}; // { 'YYYY-MM': { name: 'YYYY-MM', revenue: 0, expenses: 0 } }
+    const aptStats = {};
 
     // Keep track of which apartments we've already counted rent for in this period to avoid over-counting rent
     const countedRentApartmentIds = new Set();
@@ -107,6 +278,15 @@ export default async function handler(req, res) {
         // Calculate revenue
         const revenue = booking.totalPrice !== null ? Number(booking.totalPrice) : (Number(booking.pricePerNight) * nights);
         totalRevenue += revenue;
+
+        if (booking.apartment) {
+            const aptId = booking.apartment.id;
+            if (!aptStats[aptId]) {
+                aptStats[aptId] = { id: aptId, name: booking.apartment.name, revenue: 0, nights: 0 };
+            }
+            aptStats[aptId].revenue += revenue;
+            aptStats[aptId].nights += nights;
+        }
 
         const dateStr = new Date(booking.startDate).toLocaleDateString('en-CA', { month: 'short', year: 'numeric' });
         if (!dailyTrendMap[dateStr]) {
@@ -233,6 +413,10 @@ export default async function handler(req, res) {
 
     const dailyTrend = Object.values(dailyTrendMap).sort((a, b) => new Date(a.name) - new Date(b.name));
 
+    const topUnits = Object.values(aptStats)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 3);
+
     res.status(200).json({
       totalRevenue,
       totalExpenses,
@@ -241,7 +425,8 @@ export default async function handler(req, res) {
       occupancyRate,
       sourceCounts,
       count: bookings.length,
-      dailyTrend
+      dailyTrend,
+      topUnits
     });
 
   } catch (error) {

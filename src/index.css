@@ -6,3 +6,11 @@
 [dir="ltr"] > div > div > div {
   border-radius: 0.75rem !important; /* rounded-xl */
 }
+
+
+
+
+body {
+  margin: 0;
+  padding: 0;
+}
