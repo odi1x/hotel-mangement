@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
