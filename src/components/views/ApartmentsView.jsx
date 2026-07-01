@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy } from 'lucide-react';
+import PhotoManagementModal from '../ui/PhotoManagementModal';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -31,12 +32,12 @@ export default function ApartmentsView() {
 
   const handleSavePhotos = async (photoData) => {
     try {
-      const response = await axios.put('/api/apartments', {
+      await axios.put('/api/apartments', {
         ...activeApartmentForPhotos,
         images: photoData.images,
         coverPhoto: photoData.coverPhoto
       });
-      refreshData();
+      fetchApartments();
       setShowPhotoModal(false);
       toast.success('تم تحديث الصور بنجاح');
     } catch (error) {
