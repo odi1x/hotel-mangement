@@ -12,7 +12,7 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0(react@19.2.7)
       '@prisma/client':
-        specifier: ^5.22.0
+        specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
       autoprefixer:
         specifier: ^10.5.0
@@ -103,7 +103,7 @@ importers:
         specifier: ^17.5.0
         version: 17.7.0
       prisma:
-        specifier: ^5.22.0
+        specifier: 5.22.0
         version: 5.22.0
       vite:
         specifier: ^8.0.10

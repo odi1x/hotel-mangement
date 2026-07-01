@@ -21,6 +21,26 @@ export default function ApartmentsView() {
       otherExpenseLabel: '', otherExpenseAmount: '', licenseId: ''
   });
 
+  const handleOpenPhotoModal = (apt) => {
+    setActiveApartmentForPhotos(apt);
+    setShowPhotoModal(true);
+  };
+
+  const handleSavePhotos = async (photoData) => {
+    try {
+      const response = await axios.put('/api/apartments', {
+        ...activeApartmentForPhotos,
+        images: photoData.images,
+        coverPhoto: photoData.coverPhoto
+      });
+      refreshData();
+      setShowPhotoModal(false);
+      toast.success('تم تحديث الصور بنجاح');
+    } catch (error) {
+      toast.error('حدث خطأ أثناء حفظ الصور');
+    }
+  };
+
   const handleOpenModal = (apt = null) => {
     if (apt) {
       setFormData({
@@ -112,8 +132,55 @@ export default function ApartmentsView() {
           const isNotClean = apt.needsCleaning;
 
           return (
-          <div key={apt.id} className={`bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border ${isNotClean ? 'border-gray-100 dark:border-slate-800 border-r-4 border-r-amber-500' : 'border-gray-100 dark:border-slate-800'} flex flex-col h-full relative group transition-all hover:shadow-md`}>
-            <div className="flex justify-between items-start mb-3">
+          <div key={apt.id} className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border ${isNotClean ? 'border-gray-100 dark:border-slate-800 border-r-4 border-r-amber-500' : 'border-gray-100 dark:border-slate-800'} flex flex-col h-full relative group transition-all hover:shadow-md overflow-hidden`}>
+            {/* Top Half: Photo */}
+            <div
+                className="w-full h-40 bg-gray-200 dark:bg-slate-800 relative cursor-pointer group-hover:brightness-95 transition-all"
+                onClick={() => handleOpenPhotoModal(apt)}
+            >
+                {apt.coverPhoto ? (
+                    <img src={apt.coverPhoto} alt={apt.name} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                        <ImageIcon size={32} className="mb-2 opacity-50" />
+                        <span className="text-xs font-bold">أضف صورة</span>
+                    </div>
+                )}
+                {/* Overlay actions */}
+                <div className="absolute top-2 right-2 flex space-x-reverse space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-900/90 rounded-lg p-1 backdrop-blur-sm">
+                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenModal(apt); }}
+                        className="text-gray-600 dark:text-gray-300 hover:text-blue-600 p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                    >
+                        <Edit3 size={16} />
+                    </button>
+                    )}
+                    {(user?.role === 'admin' || user?.permissions?.canDelete) && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(apt.id); }}
+                        className="text-gray-600 dark:text-gray-300 hover:text-red-500 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                    )}
+                </div>
+                {isNotClean && (
+                    <div className="absolute bottom-2 right-2">
+                        <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                            تحتاج لتنظيف
+                        </span>
+                    </div>
+                )}
+            </div>
+
+            {/* Bottom Half: Meta */}
+            <div className="p-4 flex flex-col flex-1">
+              <div className="flex justify-between items-start mb-1">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><Home size={20} /></div>
+                </div>
+              </div>
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><Home size={20} /></div>
                 {isNotClean && (
@@ -122,25 +189,7 @@ export default function ApartmentsView() {
                   </span>
                 )}
               </div>
-              <div className="flex space-x-reverse space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                  <button
-                    onClick={() => handleOpenModal(apt)}
-                    className="text-gray-400 hover:text-blue-600 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                  >
-                    <Edit3 size={18} />
-                  </button>
-                )}
-                {(user?.role === 'admin' || user?.permissions?.canDelete) && (
-                  <button
-                    onClick={() => handleDelete(apt.id)}
-                    className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
               </div>
-            </div>
             <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100">{apt.name}</h3>
             <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 mt-1 font-medium line-clamp-1">{apt.type} • {apt.description}</p>
 
@@ -159,7 +208,9 @@ export default function ApartmentsView() {
               )}
             </div>
           </div>
-        )})}
+          );
+        })}
+
         {(user?.role === 'admin' || user?.permissions?.canEdit) && (
           <button
             onClick={() => handleOpenModal()}
@@ -196,7 +247,17 @@ export default function ApartmentsView() {
         </div>
       )}
 
+
+      {showPhotoModal && activeApartmentForPhotos && (
+        <PhotoManagementModal
+          apartment={activeApartmentForPhotos}
+          onClose={() => setShowPhotoModal(false)}
+          onSave={handleSavePhotos}
+        />
+      )}
+
       {isModalOpen && (
+
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 shrink-0">
