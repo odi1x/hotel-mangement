@@ -86,7 +86,26 @@ export default async function handler(req, res) {
       return res.status(200).json(authenticationParameters);
     }
 
-    // REQUIRES AUTH
+
+    // IMAGEKIT DELETE
+    if (action === 'imagekit-delete' && req.method === 'DELETE') {
+      const { fileId } = req.body;
+      if (!fileId) return res.status(400).json({ message: 'fileId is required' });
+
+      try {
+        await new Promise((resolve, reject) => {
+          imagekit.deleteFile(fileId, function(error, result) {
+            if (error) reject(error);
+            else resolve(result);
+          });
+        });
+        return res.status(200).json({ message: 'File deleted successfully' });
+      } catch (err) {
+        console.error('ImageKit Delete Error:', err);
+        return res.status(500).json({ message: 'Failed to delete file from ImageKit' });
+      }
+    }
+  // REQUIRES AUTH
     const decoded = verifyToken(req);
     if (!decoded) return res.status(401).json({ message: 'Unauthorized' });
 

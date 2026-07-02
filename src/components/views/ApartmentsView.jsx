@@ -63,8 +63,12 @@ export default function ApartmentsView() {
       fd.append('folder', '/apartments');
       const uploadRes = await axios.post('https://upload.imagekit.io/api/v1/files/upload', fd);
       const imageUrl = uploadRes.data.url;
+      const fileId = uploadRes.data.fileId;
 
-      const newImages = [...(formData.images || []), imageUrl];
+      // We will append fileId to the URL as a query param so we can extract it later for deletion
+      const urlWithId = `${imageUrl}?fileId=${fileId}`;
+
+      const newImages = [...(formData.images || []), urlWithId];
       setFormData(prev => ({
         ...prev,
         images: newImages,
@@ -78,7 +82,17 @@ export default function ApartmentsView() {
       setIsUploading(false);
     }
   };
-  const removeImage = (url) => {
+  const removeImage = async (url) => {
+    // Attempt to extract fileId and delete from ImageKit
+    const urlObj = new URL(url);
+    const fileId = urlObj.searchParams.get('fileId');
+    if (fileId) {
+       try {
+         await axios.delete('/api/auth?action=imagekit-delete', { data: { fileId } });
+       } catch (err) {
+         console.error('Failed to delete image from ImageKit', err);
+       }
+    }
     const newImages = formData.images.filter(img => img !== url);
     setFormData(prev => ({
       ...prev,
