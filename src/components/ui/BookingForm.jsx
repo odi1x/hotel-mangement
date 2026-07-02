@@ -116,7 +116,7 @@ export default function BookingForm({ onClose, initialData }) {
             ...formData,
             startDate: dateValue.startDate,
             endDate: dateValue.endDate
-          });
+          , status: formData.status === 'pending' ? 'active' : formData.status});
       } else {
           await addBooking({
             ...formData,

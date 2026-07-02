@@ -21,6 +21,9 @@ export default function RequestsView({ openBookingForm }) {
   };
 
   const handleConfirm = (booking) => {
+    // Overwrite the status from pending to active automatically when opening the form,
+    // so when the admin clicks save it saves as active.
+    booking.status = 'active';
     // Open the existing booking form to finalize price and save as confirmed
     openBookingForm(booking);
   };
