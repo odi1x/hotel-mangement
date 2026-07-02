@@ -182,6 +182,38 @@ export default function ApartmentsView() {
   );
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
+
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 relative">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">إدارة الشقق</h1>
+        <p className="text-gray-500 dark:text-gray-400">إدارة التأجير اليومي والأسبوعي والشهري بدقة.</p>
+      </div>
+
+      {/* Link Sharing Widget */}
+      <div className="bg-white dark:bg-slate-800 p-2 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex items-center gap-3 w-full md:w-auto">
+        <div className="bg-blue-50 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
+          <Share2 size={20} />
+        </div>
+        <div className="flex-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">رابط الحجز المباشر للعملاء</p>
+          <input
+            type="text"
+            readOnly
+            value={shareableLink}
+            className="w-full text-sm bg-transparent border-none outline-none text-gray-700 dark:text-gray-200 text-left"
+            dir="ltr"
+          />
+        </div>
+        <button
+          onClick={handleCopyLink}
+          className={`p-2.5 rounded-lg font-bold flex items-center gap-2 transition-all ${isCopied ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+        >
+          {isCopied ? <Check size={16} /> : <Copy size={16} />}
+          <span className="hidden sm:inline">{isCopied ? 'تم النسخ' : 'نسخ الرابط'}</span>
+        </button>
+      </div>
+    </div>
+
       <div className="flex-1 overflow-y-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
         {paginatedApartments.map((apt) => {
