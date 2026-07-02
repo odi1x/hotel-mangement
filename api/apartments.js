@@ -27,7 +27,7 @@ export default async function handler(req, res) {
         rentCost, rentPeriod, cleaningType, cleaningCost,
         platformFeeType, platformFee,
         otherExpenseLabel, otherExpenseAmount,
-        licenseId
+        licenseId, images, coverPhoto, images, coverPhoto
       } = req.body;
       const apartment = await prisma.apartment.create({
         data: {
@@ -45,6 +45,10 @@ export default async function handler(req, res) {
           otherExpenseLabel,
           otherExpenseAmount: otherExpenseAmount ? parseFloat(otherExpenseAmount) : null,
           licenseId: licenseId || null,
+          images: images !== undefined ? images : existing.images,
+          coverPhoto: coverPhoto !== undefined ? coverPhoto : existing.coverPhoto,
+          images: images || [],
+          coverPhoto: coverPhoto || null,
         },
       });
       return res.status(201).json(apartment);
@@ -56,7 +60,7 @@ export default async function handler(req, res) {
         rentCost, rentPeriod, cleaningType, cleaningCost,
         platformFeeType, platformFee,
         otherExpenseLabel, otherExpenseAmount,
-        licenseId
+        licenseId, images, coverPhoto
       } = req.body;
 
       // Verify ownership
@@ -79,6 +83,8 @@ export default async function handler(req, res) {
           otherExpenseLabel,
           otherExpenseAmount: otherExpenseAmount ? parseFloat(otherExpenseAmount) : null,
           licenseId: licenseId || null,
+          images: images !== undefined ? images : existing.images,
+          coverPhoto: coverPhoto !== undefined ? coverPhoto : existing.coverPhoto,
       };
 
       if (needsCleaning !== undefined) {

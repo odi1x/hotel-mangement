@@ -68,7 +68,7 @@ export default function ApartmentsView() {
       setFormData(prev => ({
         ...prev,
         images: newImages,
-        coverPhoto: prev.coverPhoto ? prev.coverPhoto : imageUrl
+        coverPhoto: prev.coverPhoto || imageUrl
       }));
       toast.success('تم رفع الصورة');
     } catch (error) {
@@ -384,7 +384,7 @@ export default function ApartmentsView() {
                   className="w-full flex justify-between items-center font-bold text-gray-800 dark:text-slate-100 pb-2"
                 >
                   <span>التكاليف والمالية (إعدادات متقدمة)</span>
-                  <span className="text-gray-400">{showAdvancedFinancials ? '🔼' : '🔽'}</span>
+                  <span className="text-gray-400">{showAdvancedFinancials ? <ChevronLeft className="-rotate-90 transition-transform" /> : <ChevronLeft className="transition-transform" />}</span>
                 </button>
                 <div className={`transition-all duration-300 overflow-hidden ${showAdvancedFinancials ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   <div className="space-y-4 pt-2">
