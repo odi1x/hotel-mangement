@@ -7,6 +7,7 @@ import ApartmentsView from '../views/ApartmentsView';
 import ResidentsView from '../views/ResidentsView';
 import AnalyticsView from '../views/AnalyticsView';
 import SettingsView from '../views/SettingsView';
+import RequestsView from '../views/RequestsView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
@@ -52,6 +53,7 @@ export default function Layout() {
       case 'residents': return 'سجل النزلاء';
       case 'analytics': return 'تحليلات الأداء';
       case 'settings': return 'الإعدادات';
+      case 'requests': return 'طلبات الحجز';
       default: return '';
     }
   };
@@ -120,6 +122,7 @@ export default function Layout() {
 
           <div className="flex-1 min-h-0 h-full flex flex-col">
             {view === 'availability' && <AvailabilityView openBookingForm={handleOpenBookingForm} />}
+            {view === 'requests' && <RequestsView openBookingForm={handleOpenBookingForm} />}
             {view === 'apartments' && <ApartmentsView />}
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
             {view === 'analytics' && <AnalyticsView />}

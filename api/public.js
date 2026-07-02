@@ -1,3 +1,4 @@
+/* global process */
 import prisma from '../prisma.js';
 import { cors } from '../utils.js';
 

@@ -1,9 +1,10 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 
 export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) {
+  const pendingCount = bookings?.filter(b => b.status === 'pending').length || 0;
   const { darkMode, toggleDarkMode } = useTheme();
   const { user, logout } = useAuth();
   const { apartments, bookings } = useData();
@@ -15,7 +16,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
     return d >= s && d <= e;
   };
 
-  const SidebarItem = ({ icon: Icon, label, id }) => (
+  const SidebarItem = ({ icon: Icon, label, id, badgeCount }) => (
     <button
       onClick={() => setView(id)}
       className={`w-full flex items-center space-x-reverse ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 rounded-lg transition-colors ${
@@ -26,7 +27,15 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
       title={isCollapsed ? label : ''}
     >
       <Icon size={20} />
-      {!isCollapsed && <span className="font-medium mr-3">{label}</span>}
+      {!isCollapsed && <span className="font-medium mr-3 flex-1 text-right">{label}</span>}
+      {!isCollapsed && badgeCount > 0 && (
+        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+          {badgeCount}
+        </span>
+      )}
+      {isCollapsed && badgeCount > 0 && (
+        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+      )}
     </button>
   );
 
@@ -49,6 +58,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
       <nav className="space-y-2 flex-1">
         <SidebarItem icon={Calendar} label="التوفر" id="availability" />
         <SidebarItem icon={Home} label="الشقق" id="apartments" />
+        <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} />
         <SidebarItem icon={Users} label="سجل النزلاء" id="residents" />
 
         {(user?.role === 'admin' || user?.permissions?.canViewAnalytics) && (
