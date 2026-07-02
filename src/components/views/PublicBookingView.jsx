@@ -163,7 +163,7 @@ export default function PublicBookingView() {
             <div className="flex justify-between items-end mb-8">
               <div>
                 <h2 className="text-2xl font-black text-gray-900 mb-1">الوحدات المتاحة</h2>
-                <p className="text-gray-500 text-sm">من {dateRange.startDate} إلى {dateRange.endDate}</p>
+                <p className="text-gray-500 text-sm">من {typeof dateRange.startDate === 'object' && dateRange.startDate !== null ? dateRange.startDate.toLocaleDateString() : dateRange.startDate} إلى {typeof dateRange.endDate === 'object' && dateRange.endDate !== null ? dateRange.endDate.toLocaleDateString() : dateRange.endDate}</p>
               </div>
               <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">{availableApartments.length} وحدات</span>
             </div>
