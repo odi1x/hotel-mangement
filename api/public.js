@@ -103,7 +103,7 @@ export default async function handler(req, res) {
           endDate: new Date(endDate),
           status: 'pending',
           source: 'Public Link',
-          totalAmount: 0 // Will be calculated by admin upon approval
+          totalPrice: 0 // Will be calculated by admin upon approval
         }
       });
 
