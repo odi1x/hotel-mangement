@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
+import toast from 'react-hot-toast';
 import Header from './Header';
 import AvailabilityView from '../views/AvailabilityView';
 import ApartmentsView from '../views/ApartmentsView';
@@ -9,7 +10,7 @@ import SettingsView from '../views/SettingsView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
-import { Plus, CalendarSearch } from 'lucide-react';
+import { Plus, CalendarSearch, Share2, Copy, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Layout() {
@@ -17,6 +18,7 @@ export default function Layout() {
   const [view, setView] = useState('availability');
   const [isAddingBooking, setIsAddingBooking] = useState(false);
   const [isBookingByDate, setIsBookingByDate] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [initialBookingData, setInitialBookingData] = useState({});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -62,7 +64,34 @@ export default function Layout() {
             <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">إدارة التأجير اليومي والأسبوعي والشهري بدقة.</p>
           </div>
           {(user?.role === 'admin' || user?.permissions?.canBook) && (
-            <div className="flex space-x-reverse space-x-3">
+            <div className="flex items-center space-x-reverse space-x-3">
+
+              {view === 'apartments' && (
+                <div className="bg-white dark:bg-slate-800 p-1.5 rounded-xl border border-blue-200 dark:border-slate-700 shadow-sm flex items-center gap-2 max-w-[300px]">
+                  <div className="bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-lg text-blue-600 dark:text-blue-400">
+                    <Share2 size={16} />
+                  </div>
+                  <div className="flex-1 overflow-hidden hidden md:block">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 truncate">رابط الحجز المباشر للعملاء</p>
+                    <input
+                      type="text"
+                      readOnly
+                      value={shareableLink}
+                      className="w-full text-xs bg-transparent border-none outline-none text-gray-700 dark:text-gray-200 text-left truncate"
+                      dir="ltr"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCopyLink}
+                    className={`p-1.5 rounded-lg font-bold flex items-center gap-1 transition-all ${isCopied ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                    title="نسخ الرابط"
+                  >
+                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                    <span className="text-xs hidden lg:inline">{isCopied ? 'تم' : 'نسخ الرابط'}</span>
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={() => setIsBookingByDate(true)}
                 className="flex items-center space-x-reverse space-x-2 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700 px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95"

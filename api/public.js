@@ -94,9 +94,11 @@ export default async function handler(req, res) {
         data: {
           userId: adminId,
           apartmentId,
-          customerName,
-          customerPhone,
+          residentName: customerName,
+          residentId: 'NA', // public booking placeholder
+          phone: customerPhone || 'NA',
           notes,
+          pricePerNight: 0,
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           status: 'pending',
