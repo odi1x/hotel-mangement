@@ -19,6 +19,14 @@ export default function Layout() {
   const [isAddingBooking, setIsAddingBooking] = useState(false);
   const [isBookingByDate, setIsBookingByDate] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+
+  const shareableLink = `${window.location.origin}/book/${user?.adminId || user?.id}`;
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareableLink);
+    setIsCopied(true);
+    toast.success('تم نسخ الرابط!');
+    setTimeout(() => setIsCopied(false), 2000);
+  };
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [initialBookingData, setInitialBookingData] = useState({});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
