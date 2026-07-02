@@ -7,7 +7,7 @@ export default function RequestsView({ openBookingForm }) {
   const { bookings, apartments, deleteBooking } = useData();
 
   // Filter only pending requests
-  const pendingRequests = bookings.filter(b => b.status === 'pending');
+  const pendingRequests = (bookings || []).filter(b => b.status === 'pending');
 
   const handleDeny = async (id) => {
     if (confirm('هل أنت متأكد من رفض هذا الطلب؟ سيتم حذفه من النظام.')) {
