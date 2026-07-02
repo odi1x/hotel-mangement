@@ -37,6 +37,13 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, [token]);
 
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    delete axios.defaults.headers.common['Authorization'];
+    localStorage.removeItem('token');
+  };
+
   // Intercept 401s to automatically logout
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
@@ -51,12 +58,6 @@ export const AuthProvider = ({ children }) => {
     return () => axios.interceptors.response.eject(interceptor);
   }, []);
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
-    localStorage.removeItem('token');
-  };
 
   const updateProfile = async (data) => {
     const res = await axios.put('/api/auth?action=me', data);

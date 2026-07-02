@@ -91,7 +91,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
         {visibleBookings.map(booking => {
           const apt = apartments.find(a => a.id === booking.apartmentId);
           if (!apt) return null;
-          const colorClass = getAptColor(apt.id);
+          const colorClass = booking.status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-300' : getAptColor(apt.id);
           const isStart = new Date(booking.startDate).toDateString() === dateStr;
           const isEnd = new Date(booking.endDate).toDateString() === dateStr;
           return (
@@ -113,7 +113,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, colors, se
 };
 
 export default function AvailabilityView({ openBookingForm }) {
-  const { apartments, bookings } = useData();
+  const { apartments, bookings, deleteBooking } = useData();
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
@@ -295,7 +295,11 @@ export default function AvailabilityView({ openBookingForm }) {
                       >
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-bold text-gray-800 dark:text-slate-200 group-hover:text-blue-600 transition-colors">{apt?.name || 'وحدة غير معروفة'}</span>
-                          <span className="text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-1 rounded-md">{booking.pricePerNight} ر.س</span>
+                          {booking.status === 'pending' ? (
+     <span className="text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 px-2 py-1 rounded-md">طلب معلق</span>
+   ) : (
+     <span className="text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-1 rounded-md">{booking.pricePerNight} ر.س</span>
+   )}
                         </div>
                         <div className="flex items-center text-sm text-gray-600 dark:text-slate-400">
                           <User size={14} className="ml-1" />

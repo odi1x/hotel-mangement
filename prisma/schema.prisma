@@ -72,6 +72,8 @@ model Apartment {
   cleaningCost       Decimal?
   platformFeeType    String?   // "percentage" or "fixed"
   platformFee        Decimal?
+  images             String[]  @default([])
+  coverPhoto         String?
   otherExpenseLabel  String?
   otherExpenseAmount Decimal?
 

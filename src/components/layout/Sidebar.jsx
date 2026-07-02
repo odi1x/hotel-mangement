@@ -1,12 +1,37 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+
+
+const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isCollapsed }) => (
+  <button
+    onClick={() => setView(id)}
+    className={`w-full flex items-center space-x-reverse ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 rounded-lg transition-colors ${
+      view === id
+      ? 'bg-blue-600 text-white shadow-md'
+      : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
+    }`}
+    title={isCollapsed ? label : ''}
+  >
+    <Icon size={20} />
+    {!isCollapsed && <span className="font-medium mr-3 flex-1 text-right">{label}</span>}
+    {!isCollapsed && badgeCount > 0 && (
+      <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+        {badgeCount}
+      </span>
+    )}
+    {isCollapsed && badgeCount > 0 && (
+      <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+    )}
+  </button>
+);
 
 export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) {
   const { darkMode, toggleDarkMode } = useTheme();
   const { user, logout } = useAuth();
   const { apartments, bookings } = useData();
+  const pendingCount = (bookings || []).filter(b => b.status === 'pending').length;
 
   const isDateBetween = (date, start, end) => {
     const d = new Date(date).setHours(0,0,0,0);
@@ -15,20 +40,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
     return d >= s && d <= e;
   };
 
-  const SidebarItem = ({ icon: Icon, label, id }) => (
-    <button
-      onClick={() => setView(id)}
-      className={`w-full flex items-center space-x-reverse ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 rounded-lg transition-colors ${
-        view === id
-        ? 'bg-blue-600 text-white shadow-md'
-        : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
-      }`}
-      title={isCollapsed ? label : ''}
-    >
-      <Icon size={20} />
-      {!isCollapsed && <span className="font-medium mr-3">{label}</span>}
-    </button>
-  );
+
 
   return (
     <aside className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 p-6 flex flex-col h-full shrink-0 relative`}>
@@ -47,16 +59,17 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
       </div>
 
       <nav className="space-y-2 flex-1">
-        <SidebarItem icon={Calendar} label="التوفر" id="availability" />
-        <SidebarItem icon={Home} label="الشقق" id="apartments" />
-        <SidebarItem icon={Users} label="سجل النزلاء" id="residents" />
+        <SidebarItem icon={Calendar} label="التوفر" id="availability" view={view} setView={setView} isCollapsed={isCollapsed} />
+        <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
+        <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
+        <SidebarItem icon={Users} label="سجل النزلاء" id="residents" view={view} setView={setView} isCollapsed={isCollapsed} />
 
         {(user?.role === 'admin' || user?.permissions?.canViewAnalytics) && (
-          <SidebarItem icon={BarChart3} label="التحليلات" id="analytics" />
+          <SidebarItem icon={BarChart3} label="التحليلات" id="analytics" view={view} setView={setView} isCollapsed={isCollapsed} />
         )}
 
         {(user?.role === 'admin' || user?.permissions?.canViewSettings) && (
-          <SidebarItem icon={Settings} label="الإعدادات" id="settings" />
+          <SidebarItem icon={Settings} label="الإعدادات" id="settings" view={view} setView={setView} isCollapsed={isCollapsed} />
         )}
       </nav>
 
