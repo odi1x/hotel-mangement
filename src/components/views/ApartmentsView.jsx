@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy } from 'lucide-react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 import { useData } from '../../context/DataContext';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
 export default function ApartmentsView() {
-  const { apartments, addApartment, updateApartment, deleteApartment, licenses } = useData();
+  const { apartments, addApartment, updateApartment, deleteApartment, licenses, refreshData } = useData();
   const { user } = useAuth();
-
   const customTypes = user?.apartmentTypes ? user.apartmentTypes.split(',').map(t => t.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة', 'استوديو', 'شقة'];
   const defaultType = customTypes.length > 0 ? customTypes[0] : 'استوديو';
-
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [activeApartmentForPhotos, setActiveApartmentForPhotos] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showAdvancedFinancials, setShowAdvancedFinancials] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -21,27 +25,25 @@ export default function ApartmentsView() {
       otherExpenseLabel: '', otherExpenseAmount: '', licenseId: ''
   });
 
-
   const handleOpenPhotoModal = (apt) => {
     setActiveApartmentForPhotos(apt);
     setShowPhotoModal(true);
   };
-
   const handleSavePhotos = async (photoData) => {
     try {
+      // eslint-disable-next-line no-unused-vars
       const response = await axios.put('/api/apartments', {
         ...activeApartmentForPhotos,
         images: photoData.images,
         coverPhoto: photoData.coverPhoto
       });
-      fetchApartments();
+      refreshData();
       setShowPhotoModal(false);
       toast.success('تم تحديث الصور بنجاح');
     } catch (error) {
       toast.error('حدث خطأ أثناء حفظ الصور');
     }
   };
-
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -51,7 +53,6 @@ export default function ApartmentsView() {
     try {
       const authRes = await axios.get('/api/auth?action=imagekit-auth');
       const { token, expire, signature } = authRes.data;
-
       const fd = new FormData();
       fd.append('file', file);
       fd.append('fileName', file.name);
@@ -60,7 +61,6 @@ export default function ApartmentsView() {
       fd.append('expire', expire);
       fd.append('token', token);
       fd.append('folder', '/apartments');
-
       const uploadRes = await axios.post('https://upload.imagekit.io/api/v1/files/upload', fd);
       const imageUrl = uploadRes.data.url;
 
@@ -78,7 +78,6 @@ export default function ApartmentsView() {
       setIsUploading(false);
     }
   };
-
   const removeImage = (url) => {
     const newImages = formData.images.filter(img => img !== url);
     setFormData(prev => ({
@@ -87,8 +86,6 @@ export default function ApartmentsView() {
       coverPhoto: prev.coverPhoto === url ? (newImages[0] || null) : prev.coverPhoto
     }));
   };
-
-
   const handleOpenModal = (apt = null) => {
     if (apt) {
       setFormData({
@@ -110,7 +107,6 @@ export default function ApartmentsView() {
     }
     setIsModalOpen(true);
   };
-
   const handleSave = (e) => {
     e.preventDefault();
     if (editingId) {
@@ -120,15 +116,12 @@ export default function ApartmentsView() {
     }
     setIsModalOpen(false);
   };
-
   const handleDelete = (id) => {
     if(confirm('هل أنت متأكد من حذف هذه الشقة وجميع حجوزاتها؟')) {
       deleteApartment(id);
     }
   };
-
   const { bookings } = useData();
-
   const isApartmentCurrentlyBooked = (apartmentId) => {
     const today = new Date().setHours(0,0,0,0);
     return bookings.some(b => {
@@ -138,47 +131,38 @@ export default function ApartmentsView() {
       return today >= start && today <= end;
     });
   };
-
   const hasBookingEndedNeedsCleaning = (apt) => {
     const today = new Date().setHours(0,0,0,0);
     const lastCleaned = new Date(apt.lastCleanedAt || 0).setHours(0,0,0,0);
-
     return bookings.some(b => {
       if (b.apartmentId !== apt.id) return false;
       const end = new Date(b.endDate).setHours(0,0,0,0);
       return today > end && end >= lastCleaned;
     });
   };
-
   useEffect(() => {
     apartments.forEach(apt => {
         const isCurrentlyBooked = isApartmentCurrentlyBooked(apt.id);
         const needsCleaningAuto = hasBookingEndedNeedsCleaning(apt) && !isCurrentlyBooked;
-
         if (needsCleaningAuto && !apt.needsCleaning) {
             updateApartment({ ...apt, needsCleaning: true });
         }
     });
   }, [apartments, bookings, updateApartment]);
-
   const handleToggleCleaningStatus = async (apt) => {
     await updateApartment({ ...apt, needsCleaning: !apt.needsCleaning });
   };
-
-
   const totalPages = Math.ceil(apartments.length / itemsPerPage);
   const paginatedApartments = apartments.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
         {paginatedApartments.map((apt) => {
           const isNotClean = apt.needsCleaning;
-
           return (
           <div key={apt.id} className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border ${isNotClean ? 'border-gray-100 dark:border-slate-800 border-r-4 border-r-amber-500' : 'border-gray-100 dark:border-slate-800'} flex flex-col h-full relative group transition-all hover:shadow-md overflow-hidden`}>
             {/* Top Half: Photo */}
@@ -196,7 +180,6 @@ export default function ApartmentsView() {
                       </div>
                     )}
                   </>
-
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
                         <ImageIcon size={32} className="mb-2 opacity-50" />
@@ -232,7 +215,6 @@ export default function ApartmentsView() {
                     </div>
                 )}
             </div>
-
             {/* Bottom Half: Meta */}
             <div className="p-4 flex flex-col flex-1">
               <div className="flex justify-between items-start mb-2">
@@ -242,7 +224,6 @@ export default function ApartmentsView() {
                 </div>
               </div>
             <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 mt-1 font-medium line-clamp-1">{apt.type} • {apt.description}</p>
-
             <div className="mt-auto flex items-end justify-between pt-3 border-t border-gray-50 dark:border-slate-800">
               <div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">السعر الأساسي</p>
@@ -261,7 +242,6 @@ export default function ApartmentsView() {
             </div>
         );
         })}
-
         {(user?.role === 'admin' || user?.permissions?.canEdit) && (
           <button
             onClick={() => handleOpenModal()}
@@ -271,9 +251,7 @@ export default function ApartmentsView() {
             <span className="font-bold">إضافة وحدة جديدة</span>
           </button>
         )}
-
       </div>
-
       {totalPages > 1 && (
         <div className="flex justify-center items-center py-4 border-t border-gray-100 dark:border-slate-800 shrink-0">
           <div className="flex space-x-reverse space-x-2">
@@ -297,7 +275,6 @@ export default function ApartmentsView() {
           </div>
         </div>
       )}
-
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
@@ -309,7 +286,6 @@ export default function ApartmentsView() {
             </div>
             <div className="overflow-y-auto p-6">
               <form onSubmit={handleSave} className="space-y-6">
-
               <div className="space-y-4">
                 <h3 className="font-bold text-gray-800 dark:text-slate-100 border-b pb-2">المعلومات الأساسية</h3>
                 <div>
@@ -334,7 +310,6 @@ export default function ApartmentsView() {
                   <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ملاحظات/وصف</label>
                   <textarea className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-28 bg-white dark:bg-slate-800 dark:text-slate-100 resize-none transition-all" placeholder="وصف الشقة أو ملاحظات داخلية..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})}></textarea>
                 </div>
-
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ترخيص السياحة (اختياري)</label>
                     <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.licenseId} onChange={(e) => setFormData({...formData, licenseId: e.target.value})}>
@@ -345,7 +320,6 @@ export default function ApartmentsView() {
                     </select>
                 </div>
               </div>
-
               {/* Financials & Costs Section */}
 
               {/* Premium Image Upload Section */}
@@ -370,7 +344,6 @@ export default function ApartmentsView() {
                     </div>
                   </div>
                 </div>
-
                 {/* Image Previews */}
                 {formData.images && formData.images.length > 0 && (
                   <div className="flex gap-3 overflow-x-auto pb-2">
@@ -403,7 +376,6 @@ export default function ApartmentsView() {
                   </div>
                 )}
               </div>
-
               {/* Collapsible Financial Section */}
               <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
                 <button
@@ -414,10 +386,8 @@ export default function ApartmentsView() {
                   <span>التكاليف والمالية (إعدادات متقدمة)</span>
                   <span className="text-gray-400">{showAdvancedFinancials ? '🔼' : '🔽'}</span>
                 </button>
-
                 <div className={`transition-all duration-300 overflow-hidden ${showAdvancedFinancials ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   <div className="space-y-4 pt-2">
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">تكلفة الإيجار</label>
@@ -455,7 +425,6 @@ export default function ApartmentsView() {
                     )}
                   </div>
                 </div>
-
                                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">عمولات المنصات (لكل حجز)</label>
@@ -478,7 +447,6 @@ export default function ApartmentsView() {
                   </div>
                 </div>
               </div>
-
               <button type="submit" className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95 mt-4">
                 {editingId ? 'تحديث البيانات' : 'حفظ الوحدة'}
               </button>
