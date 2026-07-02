@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useData } from '../../context/DataContext';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 export default function ApartmentsView() {
   const { apartments, addApartment, updateApartment, deleteApartment, licenses, refreshData } = useData();
@@ -17,6 +17,7 @@ export default function ApartmentsView() {
   const [showAdvancedFinancials, setShowAdvancedFinancials] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isCopied, setIsCopied] = useState(false);
   const itemsPerPage = 6;
   const [formData, setFormData] = useState({
       name: '', type: defaultType, description: '', basePrice: '',
@@ -24,6 +25,14 @@ export default function ApartmentsView() {
       platformFeeType: 'percentage', platformFee: '',
       otherExpenseLabel: '', otherExpenseAmount: '', licenseId: ''
   });
+
+  const shareableLink = `${window.location.origin}/book/${user?.adminId || user?.id}`;
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareableLink);
+    setIsCopied(true);
+    toast.success('تم نسخ الرابط!');
+    setTimeout(() => setIsCopied(false), 2000);
+  };
 
   const handleOpenPhotoModal = (apt) => {
     setActiveApartmentForPhotos(apt);
