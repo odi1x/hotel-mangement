@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import Datepicker from "react-tailwindcss-datepicker";
+import toast from 'react-hot-toast';
 
 export default function BookingForm({ onClose, initialData }) {
   const { apartments, bookings, addBooking, updateBooking, updateApartment } = useData();
@@ -124,6 +125,7 @@ export default function BookingForm({ onClose, initialData }) {
             endDate: dateValue.endDate
           });
       }
+      toast.success('تم الحفظ بنجاح');
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء الحجز');
