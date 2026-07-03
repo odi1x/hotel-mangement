@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       const bookings = await prisma.booking.findMany({
         where: {
           apartmentId: { in: apartmentIds },
-          status: { in: ['pending', 'confirmed'] }, // only these block availability
+          status: { in: ['pending', 'active'] }, // only these block availability
           endDate: { gte: new Date() } // only future/current bookings
         },
         select: {
