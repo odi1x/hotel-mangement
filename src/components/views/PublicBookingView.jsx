@@ -8,6 +8,19 @@ import { ChevronRight, Calendar, User, Phone, CheckCircle, Image as ImageIcon, M
 
 export default function PublicBookingView() {
   const { adminId } = useParams();
+
+  const formatDateForRender = (dateVal) => {
+    if (!dateVal) return '';
+    if (typeof dateVal === 'string') return dateVal;
+    if (typeof dateVal === 'object' && dateVal instanceof Date) {
+      if (isNaN(dateVal.getTime())) return '';
+      return dateVal.toLocaleDateString('ar-SA');
+    }
+    // Sometimes moment or dayjs objects are returned, but datepicker uses Date.
+    // However, react-tailwindcss-datepicker often returns a string like "2024-01-01".
+    return String(dateVal);
+  };
+
   const [step, setStep] = useState(1);
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const [apartments, setApartments] = useState([]);
@@ -163,7 +176,7 @@ export default function PublicBookingView() {
             <div className="flex justify-between items-end mb-8">
               <div>
                 <h2 className="text-2xl font-black text-gray-900 mb-1">الوحدات المتاحة</h2>
-                <p className="text-gray-500 text-sm">من {dateRange.startDate} إلى {dateRange.endDate}</p>
+                <p className="text-gray-500 text-sm">من {formatDateForRender(dateRange.startDate)} إلى {formatDateForRender(dateRange.endDate)}</p>
               </div>
               <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">{availableApartments.length} وحدات</span>
             </div>

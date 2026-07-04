@@ -379,10 +379,17 @@ export default function AvailabilityView({ openBookingForm }) {
                 <div className="font-black text-green-700 dark:text-green-300">{selectedBookingDetails.pricePerNight} ر.س</div>
               </div>
 
+              {selectedBookingDetails.customerRequest && selectedBookingDetails.customerRequest.trim() !== '' && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl border border-yellow-100 dark:border-yellow-900/30 mb-4">
+                  <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> طلب النزيل الإضافي</div>
+                  <div className="text-sm font-bold text-yellow-800 dark:text-yellow-300">{selectedBookingDetails.customerRequest}</div>
+                </div>
+              )}
+
               {selectedBookingDetails.notes && selectedBookingDetails.notes.trim() !== '' && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl border border-yellow-100 dark:border-yellow-900/30">
-                  <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> ملاحظات النزيل</div>
-                  <div className="text-sm font-bold text-yellow-800 dark:text-yellow-300">{selectedBookingDetails.notes}</div>
+                <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> ملاحظات داخلية (للموظفين)</div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedBookingDetails.notes}</div>
                 </div>
               )}
 

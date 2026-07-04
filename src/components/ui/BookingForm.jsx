@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import Datepicker from "react-tailwindcss-datepicker";
+import toast from 'react-hot-toast';
 
 export default function BookingForm({ onClose, initialData }) {
   const { apartments, bookings, addBooking, updateBooking, updateApartment } = useData();
@@ -28,9 +29,11 @@ export default function BookingForm({ onClose, initialData }) {
     residentId: initialData?.residentId || '',
     phone: initialData?.phone || '',
     address: initialData?.address || '',
-    pricePerNight: initialData?.pricePerNight || '',
+    pricePerNight: initialData?.pricePerNight ?? '',
     source: initialData?.source || 'زيارة مباشرة',
-    notes: initialData?.notes || ''
+    notes: initialData?.notes || '',
+    customerRequest: initialData?.customerRequest || '',
+    status: initialData?.status || undefined
   });
 
   const [retrievedNotes, setRetrievedNotes] = useState(null);
@@ -116,7 +119,7 @@ export default function BookingForm({ onClose, initialData }) {
             ...formData,
             startDate: dateValue.startDate,
             endDate: dateValue.endDate
-          });
+          , status: formData.status === 'pending' ? 'active' : formData.status});
       } else {
           await addBooking({
             ...formData,
@@ -124,6 +127,7 @@ export default function BookingForm({ onClose, initialData }) {
             endDate: dateValue.endDate
           });
       }
+      toast.success('تم الحفظ بنجاح');
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء الحجز');
@@ -178,6 +182,13 @@ export default function BookingForm({ onClose, initialData }) {
                 <input required type="tel" placeholder="05XXXXXXXX" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 dark:bg-slate-800 dark:text-slate-100" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
               </div>
 
+              {initialData?.customerRequest && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-3 flex flex-col gap-1">
+                    <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">طلب النزيل الإضافي</p>
+                    <p className="text-xs text-amber-900 dark:text-amber-200">{initialData.customerRequest}</p>
+                </div>
+              )}
+
               {retrievedNotes && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 flex flex-col gap-2">
                     <p className="text-xs text-yellow-800 dark:text-yellow-400 font-bold">يوجد ملاحظة سابقة لهذا النزيل:</p>
@@ -205,7 +216,15 @@ export default function BookingForm({ onClose, initialData }) {
               <h4 className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-800 pb-2">تفاصيل الإقامة</h4>
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">الشقة</label>
-                <select required className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.apartmentId} onChange={(e) => setFormData({...formData, apartmentId: e.target.value})}>
+                <select required className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.apartmentId} onChange={(e) => {
+                  const selectedAptId = e.target.value;
+                  const apt = apartments.find(a => a.id === selectedAptId);
+                  setFormData({
+                    ...formData,
+                    apartmentId: selectedAptId,
+                    pricePerNight: apt ? apt.basePrice : formData.pricePerNight
+                  });
+                }}>
                   <option value="">اختر الشقة...</option>
                   {apartments.map(a => <option key={a.id} value={a.id}>{a.name} ({a.basePrice} ر.س)</option>)}
                 </select>
