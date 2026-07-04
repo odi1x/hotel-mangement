@@ -170,24 +170,24 @@ export default function ResidentsView({ openBookingForm }) {
 
   return (
     <>
-      <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col min-h-0">
-        <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex justify-between items-center">
-          <h3 className="font-bold text-gray-800 dark:text-slate-100">سجلات الحجز الكاملة</h3>
+      <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-hairline-soft dark:border-slate-800 overflow-hidden flex flex-col min-h-0">
+        <div className="p-5 border-b border-hairline-soft dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex justify-between items-center">
+          <h3 className="font-bold text-ink font-zain dark:text-slate-100">سجلات الحجز الكاملة</h3>
           <div className="relative w-64">
             <input
               type="text"
               placeholder="البحث بالاسم أو رقم الجوال..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-hairline dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm"
             />
-            <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-2.5 text-muted-soft font-zain" />
           </div>
         </div>
         <div className="overflow-x-auto overflow-y-auto flex-1 h-full min-h-0">
           <table className="w-full text-right">
             <thead>
-              <tr className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50">
+              <tr className="text-xs font-bold text-muted font-zain dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50">
                 <th className="px-6 py-4">معلومات النزيل</th>
                 <th className="px-6 py-4">الاتصال والهوية</th>
                 <th className="px-6 py-4">الوحدة / السعر</th>
@@ -199,7 +199,7 @@ export default function ResidentsView({ openBookingForm }) {
             <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50 flex-1">
               {isLoading ? (
                 Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
-                  <tr key={`skeleton-${idx}`} className="animate-pulse border-b border-gray-100 dark:border-slate-800">
+                  <tr key={`skeleton-${idx}`} className="animate-pulse border-b border-hairline-soft dark:border-slate-800">
                     <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-24"></div></td>
                     <td className="px-6 py-4">
                       <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-32 mb-2"></div>
@@ -221,36 +221,36 @@ export default function ResidentsView({ openBookingForm }) {
                 return (
                   <tr key={booking.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900 dark:text-slate-100 flex items-center">
+                      <div className="font-bold text-ink font-zain dark:text-slate-100 flex items-center">
                         {booking.residentName}
 
                       </div>
-                      <div className="text-[10px] text-gray-400 font-medium mt-0.5">عبر: {booking.source}</div>
+                      <div className="text-[10px] text-muted-soft font-zain font-medium mt-0.5">عبر: {booking.source}</div>
                       {booking.creatorName && (
                         <div className="text-[10px] text-blue-500 font-medium mt-0.5">بواسطة: {booking.creatorName}</div>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium flex items-center text-gray-700 dark:text-slate-300"><Phone size={14} className="ml-1.5 text-gray-400"/> {booking.phone}</div>
-                      <div className="text-xs text-gray-500 dark:text-slate-500 mt-1">هوية: {booking.residentId}</div>
+                      <div className="text-sm font-medium flex items-center text-body font-zain dark:text-slate-300"><Phone size={14} className="ml-1.5 text-muted-soft font-zain"/> {booking.phone}</div>
+                      <div className="text-xs text-muted font-zain dark:text-slate-500 mt-1">هوية: {booking.residentId}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-bold text-gray-800 dark:text-slate-200">{apt?.name || 'وحدة محذوفة'}</div>
+                      <div className="text-sm font-bold text-ink font-zain dark:text-slate-200">{apt?.name || 'وحدة محذوفة'}</div>
                       <div className="text-xs text-green-600 dark:text-green-500 font-black mt-1">{booking.pricePerNight} ر.س / ليلة</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-xs font-medium text-gray-600 dark:text-slate-400">{formatDate(booking.startDate)} <span className="mx-1 text-gray-300">←</span> {formatDate(booking.endDate)}</div>
-                      <div className="text-[10px] text-gray-400 font-bold uppercase mt-1 bg-gray-100 dark:bg-slate-800 inline-block px-2 py-0.5 rounded">{calculateNights(booking.startDate, booking.endDate)} ليالي</div>
+                      <div className="text-xs font-medium text-muted font-zain dark:text-slate-400">{formatDate(booking.startDate)} <span className="mx-1 text-gray-300">←</span> {formatDate(booking.endDate)}</div>
+                      <div className="text-[10px] text-muted-soft font-zain font-bold uppercase mt-1 bg-gray-100 dark:bg-slate-800 inline-block px-2 py-0.5 rounded">{calculateNights(booking.startDate, booking.endDate)} ليالي</div>
                     </td>
                     <td className="px-6 py-4">
                       {booking.status === 'checked_out_early' ? (
                           <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50">خروج مبكر</span>
                       ) : isCurrent ? (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-black bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800/50">مقيم حالياً</span>
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-black bg-surface-card text-ink rounded-full">مقيم حالياً</span>
                       ) : isFuture ? (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50">متوقع وصوله</span>
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-surface-card text-ink rounded-full">متوقع وصوله</span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400 border border-gray-200 dark:border-slate-700">مغادر</span>
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-gray-100 text-muted font-zain dark:bg-slate-800 dark:text-slate-400 border border-hairline dark:border-slate-700">مغادر</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -278,7 +278,7 @@ export default function ResidentsView({ openBookingForm }) {
                             className={`p-2 rounded-lg transition-colors ${
                               booking.notes && booking.notes.trim() !== ''
                                 ? 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
-                                : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
+                                : 'text-muted-soft font-zain hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30'
                             }`}
                             title="ملاحظات النزيل"
                           >
@@ -311,7 +311,7 @@ export default function ResidentsView({ openBookingForm }) {
               ))}
               {!isLoading && currentBookings.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">لا توجد حجوزات مطابقة</td>
+                  <td colSpan="6" className="px-6 py-10 text-center text-muted-soft font-zain font-medium">لا توجد حجوزات مطابقة</td>
                 </tr>
               )}
             </tbody>
@@ -320,15 +320,15 @@ export default function ResidentsView({ openBookingForm }) {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 mt-auto shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-t border-hairline-soft dark:border-slate-800 bg-gray-50 dark:bg-slate-900 mt-auto shrink-0">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm font-bold text-ink bg-canvas border border-hairline rounded-md hover:bg-surface-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               السابق
             </button>
-            <div className="flex space-x-reverse space-x-1">
+            <div className="flex space-x-reverse space-x-1 bg-surface-soft p-1.5 rounded-full">
               {(() => {
                 const pages = [];
                 const maxVisible = 5;
@@ -348,13 +348,7 @@ export default function ResidentsView({ openBookingForm }) {
                     key={`${page}-${index}`}
                     onClick={() => typeof page === 'number' && setCurrentPage(page)}
                     disabled={page === '...'}
-                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : page === '...'
-                        ? 'text-gray-400 cursor-default'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                    }`}
+                    className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold transition-colors ${currentPage === page ? "bg-canvas text-ink shadow-sm" : page === "..." ? "text-muted-soft cursor-default" : "text-muted hover:text-ink"}`}
                   >
                     {page}
                   </button>
@@ -364,7 +358,7 @@ export default function ResidentsView({ openBookingForm }) {
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm font-bold text-ink bg-canvas border border-hairline rounded-md hover:bg-surface-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               التالي
             </button>
@@ -378,9 +372,9 @@ export default function ResidentsView({ openBookingForm }) {
 
       {editingNoteId && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
-              <h2 className="text-xl font-black text-gray-800 dark:text-slate-100 flex items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-hairline-soft dark:border-slate-800 overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-hairline-soft dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
+              <h2 className="text-xl font-black text-ink font-zain dark:text-slate-100 flex items-center">
                 <MessageSquare className="ml-2 text-yellow-500" size={20} />
                 ملاحظات النزيل
               </h2>
@@ -391,11 +385,11 @@ export default function ResidentsView({ openBookingForm }) {
                 value={noteContent}
                 onChange={(e) => setNoteContent(e.target.value)}
                 placeholder="أضف ملاحظات تخص هذا النزيل..."
-                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500 h-32 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 resize-none transition-all"
+                className="w-full px-4 py-3 border border-hairline dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500 h-32 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 resize-none transition-all"
               ></textarea>
             </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex space-x-reverse space-x-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-slate-800 bg-gray-50 dark:bg-slate-900 flex space-x-reverse space-x-3">
               <button
                 onClick={handleSaveNote}
                 className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-yellow-200 dark:shadow-none"
@@ -404,7 +398,7 @@ export default function ResidentsView({ openBookingForm }) {
               </button>
               <button
                 onClick={() => setEditingNoteId(null)}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-800 dark:text-slate-200 py-2.5 rounded-xl font-bold transition-all"
+                className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-ink font-zain dark:text-slate-200 py-2.5 rounded-xl font-bold transition-all"
               >
                 إلغاء
               </button>
@@ -423,7 +417,7 @@ export default function ResidentsView({ openBookingForm }) {
                 <LogOut size={20} />
                 تأكيد مغادرة مبكرة
               </h3>
-              <button onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
+              <button onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }} className="text-muted-soft font-zain hover:text-muted font-zain dark:hover:text-white">
                 <X size={20} />
               </button>
             </div>
@@ -434,9 +428,9 @@ export default function ResidentsView({ openBookingForm }) {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-3">خيارات احتساب المبلغ:</label>
+                <label className="block text-sm font-bold text-body font-zain dark:text-slate-300 mb-3">خيارات احتساب المبلغ:</label>
                 <div className="space-y-3">
-                  <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                  <label className="flex items-center gap-3 p-3 border border-hairline dark:border-slate-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                     <input
                       type="radio"
                       name="financialOption"
@@ -445,9 +439,9 @@ export default function ResidentsView({ openBookingForm }) {
                       onChange={() => setCheckoutData({...checkoutData, option: 'keep'})}
                       className="w-4 h-4 text-red-600"
                     />
-                    <span className="text-sm font-bold text-gray-800 dark:text-white">الاحتفاظ بالمبلغ كامل (القيمة الأصلية)</span>
+                    <span className="text-sm font-bold text-ink font-zain dark:text-white">الاحتفاظ بالمبلغ كامل (القيمة الأصلية)</span>
                   </label>
-                  <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                  <label className="flex items-center gap-3 p-3 border border-hairline dark:border-slate-700 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                     <input
                       type="radio"
                       name="financialOption"
@@ -456,40 +450,40 @@ export default function ResidentsView({ openBookingForm }) {
                       onChange={() => setCheckoutData({...checkoutData, option: 'recalculate'})}
                       className="w-4 h-4 text-red-600"
                     />
-                    <span className="text-sm font-bold text-gray-800 dark:text-white">تعديل المبلغ بناءً على الأيام</span>
+                    <span className="text-sm font-bold text-ink font-zain dark:text-white">تعديل المبلغ بناءً على الأيام</span>
                   </label>
                 </div>
               </div>
 
               {checkoutData.option === 'recalculate' && (
                 <div className="animate-fade-in">
-                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">عدد الأيام الفعلية:</label>
+                  <label className="block text-xs font-bold text-body font-zain dark:text-slate-300 mb-2">عدد الأيام الفعلية:</label>
                   <input
                     type="number"
                     value={checkoutData.days}
                     onChange={(e) => setCheckoutData({...checkoutData, days: e.target.value})}
-                    className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500"
+                    className="w-full border border-hairline dark:border-slate-600 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-ink font-zain dark:text-white focus:ring-2 focus:ring-red-500"
                   />
-                  <p className="text-[11px] text-gray-500 mt-2">السعر الإجمالي الجديد سيكون: {Number(checkoutData.days || 0) * Number(checkoutData.booking.pricePerNight)} ر.س</p>
+                  <p className="text-[11px] text-muted font-zain mt-2">السعر الإجمالي الجديد سيكون: {Number(checkoutData.days || 0) * Number(checkoutData.booking.pricePerNight)} ر.س</p>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">سبب المغادرة المبكرة:</label>
+                <label className="block text-xs font-bold text-body font-zain dark:text-slate-300 mb-2">سبب المغادرة المبكرة:</label>
                 <textarea
                   value={checkoutData.notes}
                   onChange={(e) => setCheckoutData({...checkoutData, notes: e.target.value})}
                   rows="3"
                   placeholder="اكتب سبب الخروج هنا... سيتم حفظه في ملاحظات النزيل"
-                  className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 text-sm"
+                  className="w-full border border-hairline dark:border-slate-600 rounded-xl px-4 py-3 bg-gray-50 dark:bg-slate-800 text-ink font-zain dark:text-white focus:ring-2 focus:ring-red-500 text-sm"
                 ></textarea>
               </div>
             </div>
 
-            <div className="p-4 bg-gray-50 dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-3">
+            <div className="p-4 bg-gray-50 dark:bg-slate-800 border-t border-hairline-soft dark:border-slate-700 flex justify-end gap-3">
               <button
                 onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }}
-                className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                className="px-5 py-2.5 text-sm font-bold text-muted font-zain dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 إلغاء
               </button>
@@ -513,10 +507,10 @@ export default function ResidentsView({ openBookingForm }) {
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-5">
                 <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-500" />
               </div>
-              <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+              <h3 className="text-xl font-black text-ink font-zain dark:text-white mb-2">
                 تأكيد الحذف
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+              <p className="text-sm text-muted font-zain dark:text-muted-soft font-zain font-medium">
                 هل أنت متأكد من حذف هذا النزيل؟ لا يمكن التراجع عن هذا الإجراء.
               </p>
             </div>
@@ -529,7 +523,7 @@ export default function ResidentsView({ openBookingForm }) {
               </button>
               <button
                 onClick={() => setDeleteConfirmId(null)}
-                className="flex-1 bg-transparent hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl font-bold transition-all border border-gray-300 dark:border-slate-600"
+                className="flex-1 bg-transparent hover:bg-gray-200 dark:hover:bg-slate-700 text-body font-zain dark:text-gray-300 py-2.5 rounded-xl font-bold transition-all border border-gray-300 dark:border-slate-600"
               >
                 إلغاء
               </button>
@@ -542,13 +536,13 @@ export default function ResidentsView({ openBookingForm }) {
       {printSelectorBooking && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setPrintSelectorBooking(null)}></div>
-          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-slate-800 transform transition-all">
-            <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
-              <h3 className="font-black text-gray-900 dark:text-white text-lg flex items-center gap-2">
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-hairline-soft dark:border-slate-800 transform transition-all">
+            <div className="px-6 py-5 border-b border-hairline-soft dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+              <h3 className="font-black text-ink font-zain dark:text-white text-lg flex items-center gap-2">
                 <Printer size={20} className="text-blue-600 dark:text-blue-500" />
                 خيارات الطباعة
               </h3>
-              <button onClick={() => setPrintSelectorBooking(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
+              <button onClick={() => setPrintSelectorBooking(null)} className="text-muted-soft font-zain hover:text-muted font-zain dark:hover:text-gray-200 transition-colors p-1.5 hover:bg-canvas text-ink dark:hover:bg-slate-700 rounded-lg">
                 <X size={20} />
               </button>
             </div>
