@@ -29,7 +29,7 @@ export default function BookingForm({ onClose, initialData }) {
     residentId: initialData?.residentId || '',
     phone: initialData?.phone || '',
     address: initialData?.address || '',
-    pricePerNight: initialData?.pricePerNight || '',
+    pricePerNight: initialData?.pricePerNight ?? '',
     source: initialData?.source || 'زيارة مباشرة',
     notes: initialData?.notes || '',
     customerRequest: initialData?.customerRequest || '',
@@ -216,7 +216,15 @@ export default function BookingForm({ onClose, initialData }) {
               <h4 className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-800 pb-2">تفاصيل الإقامة</h4>
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">الشقة</label>
-                <select required className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.apartmentId} onChange={(e) => setFormData({...formData, apartmentId: e.target.value})}>
+                <select required className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.apartmentId} onChange={(e) => {
+                  const selectedAptId = e.target.value;
+                  const apt = apartments.find(a => a.id === selectedAptId);
+                  setFormData({
+                    ...formData,
+                    apartmentId: selectedAptId,
+                    pricePerNight: apt ? apt.basePrice : formData.pricePerNight
+                  });
+                }}>
                   <option value="">اختر الشقة...</option>
                   {apartments.map(a => <option key={a.id} value={a.id}>{a.name} ({a.basePrice} ر.س)</option>)}
                 </select>

@@ -99,7 +99,7 @@ export default async function handler(req, res) {
           residentId: 'NA', // public booking placeholder
           phone: customerPhone || 'NA',
           customerRequest: notes, // Save public notes here
-          pricePerNight: 0,
+          pricePerNight: apt ? apt.basePrice : 0,
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           status: 'pending',
