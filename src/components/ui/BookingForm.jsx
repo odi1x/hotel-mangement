@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import Datepicker from "react-tailwindcss-datepicker";
+import InlineCalendar from "./InlineCalendar";
 import toast from 'react-hot-toast';
 
 export default function BookingForm({ onClose, initialData }) {
@@ -232,29 +232,10 @@ export default function BookingForm({ onClose, initialData }) {
               <div>
                 <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">تاريخ الحجز (الدخول والمغادرة)</label>
                 <div className="border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 relative z-50" dir="ltr">
-                  <Datepicker
-                    i18n={"ar"}
-                    configs={{
-                      shortcuts: {
-                        today: "اليوم",
-                        yesterday: "أمس",
-                        past: (period) => `آخر ${period} يوم`,
-                        currentMonth: "هذا الشهر",
-                        pastMonth: "الشهر الماضي",
-                      },
-                    }}
-
-                    value={dateValue}
-                    onChange={newValue => setDateValue(newValue)}
-                    showShortcuts={true}
-                    primaryColor="blue"
-                    inputClassName="w-full pl-4 pr-12 py-2.5 outline-none bg-transparent text-gray-900 dark:text-slate-100 placeholder-gray-400 text-right"
-                    placeholder="اختر تواريخ الحجز"
-                    displayFormat="YYYY-MM-DD"
-                    useRange={true}
-                    popoverDirection="down"
-                    containerClassName="relative" popoverClassName="rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden"
-                  />
+                  <InlineCalendar
+                  value={dateValue}
+                  onChange={newValue => setDateValue(newValue)}
+                />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

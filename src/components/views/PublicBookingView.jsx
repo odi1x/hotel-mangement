@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import Datepicker from 'react-tailwindcss-datepicker';
+import InlineCalendar from "../ui/InlineCalendar";
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ChevronRight, Calendar, User, Phone, CheckCircle, Image as ImageIcon, MapPin, X } from 'lucide-react';
 
@@ -145,15 +145,10 @@ export default function PublicBookingView() {
             <div className="w-full bg-white p-6 rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 mb-6">
               <label className="block text-sm font-bold text-gray-700 mb-3">تاريخ الوصول والمغادرة</label>
               <div className="relative" dir="ltr">
-                <Datepicker
+                <InlineCalendar
                   value={dateRange}
                   onChange={handleDateChange}
-                  showShortcuts={true}
-                  primaryColor="blue"
-                  displayFormat="YYYY/MM/DD"
                   minDate={new Date()}
-                  placeholder="اختر التواريخ من التقويم"
-                  inputClassName="w-full text-right pr-12 pl-4 py-4 border-2 border-gray-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-medium text-lg"
                 />
               </div>
             </div>

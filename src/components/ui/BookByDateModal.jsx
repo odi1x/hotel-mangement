@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { X, Calendar, Search, Home } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import Datepicker from "react-tailwindcss-datepicker";
+import InlineCalendar from "./InlineCalendar";
 
 export default function BookByDateModal({ onClose, onSelectApartment }) {
   const { apartments, bookings, updateApartment } = useData();
@@ -66,31 +66,13 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
             <div className="mb-4 relative z-50">
               <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">تاريخ الحجز</label>
               <div className="border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 relative z-50" dir="ltr">
-                <Datepicker
-                  i18n="ar"
-                  configs={{
-                    shortcuts: {
-                      today: "اليوم",
-                      yesterday: "أمس",
-                      past: (period) => `آخر ${period} يوم`,
-                      currentMonth: "هذا الشهر",
-                      pastMonth: "الشهر الماضي",
-                    },
-                  }}
-                  primaryColor="blue"
+                <InlineCalendar
                   value={dateValue}
                   onChange={(newValue) => {
                     setDateValue(newValue);
                     setHasSearched(false);
                   }}
-                  showShortcuts={true}
-                  displayFormat="YYYY-MM-DD"
-                  placeholder="اختر فترة الحجز"
-                  useRange={true}
-                  popoverDirection="down"
-                  inputClassName="w-full pl-4 pr-12 py-2.5 outline-none bg-transparent text-gray-900 dark:text-slate-100 placeholder-gray-400 text-right"
-                  containerClassName="relative"
-                  popoverClassName="rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 overflow-hidden"
+                  minDate={new Date()}
                 />
               </div>
             </div>
