@@ -191,13 +191,13 @@ export default function SettingsView() {
     <div className="h-full overflow-hidden flex flex-col w-full max-w-6xl mx-auto">
 
       {user?.role === 'admin' && (
-        <div className="flex gap-2 border-b border-gray-200 dark:border-slate-800 pb-px">
+        <div className="flex gap-6 border-b border-hairline-soft mb-6">
           <button
             onClick={() => setActiveTab('general')}
-            className={`px-6 py-3 font-bold text-sm rounded-t-xl transition-colors flex items-center gap-2 ${
+            className={`py-2 font-bold text-sm  transition-colors flex items-center gap-2 ${
               activeTab === 'general'
-                ? 'bg-blue-50 text-blue-700 dark:bg-slate-800 dark:text-blue-400 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'text-ink border-b-2 border-ink font-bold pb-2'
+                : 'text-muted hover:text-ink font-medium pb-2'
             }`}
           >
             <Settings size={18} />
@@ -205,10 +205,10 @@ export default function SettingsView() {
           </button>
           <button
             onClick={() => setActiveTab('staff')}
-            className={`px-6 py-3 font-bold text-sm rounded-t-xl transition-colors flex items-center gap-2 ${
+            className={`py-2 font-bold text-sm  transition-colors flex items-center gap-2 ${
               activeTab === 'staff'
-                ? 'bg-blue-50 text-blue-700 dark:bg-slate-800 dark:text-blue-400 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'text-ink border-b-2 border-ink font-bold pb-2'
+                : 'text-muted hover:text-ink font-medium pb-2'
             }`}
           >
             <Shield size={18} />
@@ -220,47 +220,47 @@ export default function SettingsView() {
       {activeTab === 'staff' && user?.role === 'admin' ? (
         <StaffManagement />
       ) : (
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="bg-canvas flex flex-col flex-1 min-h-0 overflow-hidden">
 
         {/* Sub-Navigation for General Settings */}
         <div className="p-6 md:p-8 pb-0 shrink-0">
-          <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-4">
+          <div className="flex flex-wrap items-center bg-surface-soft p-1.5 rounded-full inline-flex w-fit mb-8">
             <button
               onClick={() => setFacilityTab('identity')}
-              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
+              className={`px-4 py-2 font-bold text-sm transition-colors rounded-full ${
                 facilityTab === 'identity'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'bg-canvas text-ink shadow-sm rounded-full'
+                  : 'text-muted hover:text-ink bg-transparent rounded-full'
               }`}
             >
               الهوية والمعلومات
             </button>
             <button
               onClick={() => setFacilityTab('legal')}
-              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
+              className={`px-4 py-2 font-bold text-sm transition-colors rounded-full ${
                 facilityTab === 'legal'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'bg-canvas text-ink shadow-sm rounded-full'
+                  : 'text-muted hover:text-ink bg-transparent rounded-full'
               }`}
             >
               التراخيص والعقود
             </button>
             <button
               onClick={() => setFacilityTab('finance')}
-              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
+              className={`px-4 py-2 font-bold text-sm transition-colors rounded-full ${
                 facilityTab === 'finance'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'bg-canvas text-ink shadow-sm rounded-full'
+                  : 'text-muted hover:text-ink bg-transparent rounded-full'
               }`}
             >
               المصروفات والتشغيل
             </button>
             <button
               onClick={() => setFacilityTab('system')}
-              className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors ${
+              className={`px-4 py-2 font-bold text-sm transition-colors rounded-full ${
                 facilityTab === 'system'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'bg-canvas text-ink shadow-sm rounded-full'
+                  : 'text-muted hover:text-ink bg-transparent rounded-full'
               }`}
             >
               خيارات النظام
@@ -281,22 +281,22 @@ export default function SettingsView() {
           {facilityTab === 'identity' && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">اسم المنشأة / العقار</label>
+                  <label className="block text-sm font-bold text-ink dark:text-slate-300 mb-2">اسم المنشأة / العقار</label>
                   <input
                     type="text"
                     name="businessName"
                     value={formData.businessName}
                     onChange={handleChange}
-                    className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full border border-hairline dark:border-slate-700 rounded-md px-4 py-3 bg-canvas/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-blue-500 transition-colors"
                     placeholder="مثال: فنادق السعادة"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">شعار المنشأة (للطباعة)</label>
-                    <label className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-800 transition cursor-pointer">
-                      <UploadCloud size={24} className="text-gray-400 mb-2" />
-                      <span className="text-sm font-medium text-gray-500 dark:text-slate-400">اضغط هنا لرفع الشعار</span>
+                    <label className="block text-sm font-bold text-ink dark:text-slate-300 mb-2">شعار المنشأة (للطباعة)</label>
+                    <label className="border-2 border-dashed border-hairline dark:border-slate-700 rounded-lg p-4 flex flex-col items-center justify-center bg-surface-card transition cursor-pointer">
+                      <UploadCloud size={24} className="text-muted-soft mb-2" />
+                      <span className="text-sm font-medium text-muted dark:text-slate-400">اضغط هنا لرفع الشعار</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -308,10 +308,10 @@ export default function SettingsView() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">الختم / التوقيع (للطباعة)</label>
-                    <label className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-50 dark:hover:bg-slate-800 transition cursor-pointer">
-                      <UploadCloud size={24} className="text-gray-400 mb-2" />
-                      <span className="text-sm font-medium text-gray-500 dark:text-slate-400">اضغط هنا لرفع الختم</span>
+                    <label className="block text-sm font-bold text-ink dark:text-slate-300 mb-2">الختم / التوقيع (للطباعة)</label>
+                    <label className="border-2 border-dashed border-hairline dark:border-slate-700 rounded-lg p-4 flex flex-col items-center justify-center bg-surface-card transition cursor-pointer">
+                      <UploadCloud size={24} className="text-muted-soft mb-2" />
+                      <span className="text-sm font-medium text-muted dark:text-slate-400">اضغط هنا لرفع الختم</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -329,35 +329,35 @@ export default function SettingsView() {
           {facilityTab === 'legal' && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">أرقام التراخيص (تراخيص السياحة)</label>
+                  <label className="block text-sm font-bold text-ink dark:text-slate-300 mb-2">أرقام التراخيص (تراخيص السياحة)</label>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
                       value={newLicenseNumber}
                       onChange={(e) => setNewLicenseNumber(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLicense())}
-                      className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="flex-1 border border-hairline dark:border-slate-700 rounded-md px-4 py-2.5 bg-canvas/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-blue-500"
                       placeholder="أضف رقم ترخيص جديد"
                     />
                     <input
                       type="date"
                       value={newLicenseExpiration}
                       onChange={(e) => setNewLicenseExpiration(e.target.value)}
-                      className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="flex-1 border border-hairline dark:border-slate-700 rounded-md px-4 py-2.5 bg-canvas/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-blue-500"
                       title="تاريخ الانتهاء"
                     />
                     <button
                       type="button"
                       onClick={handleAddLicense}
-                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center"
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-md font-bold transition-colors flex items-center justify-center"
                     >
                       <Plus size={20} />
                     </button>
                   </div>
                   <div className="flex flex-col gap-2">
                     {licenses.map((license) => (
-                      <div key={license.id} className="flex justify-between items-center bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 px-4 py-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
-                        <div className="flex flex-col"><span className="text-sm font-bold">{license.licenseNumber}</span>{license.expirationDate && <span className="text-xs text-gray-500">ينتهي في: {new Date(license.expirationDate).toLocaleDateString('ar-SA')}</span>}</div>
+                      <div key={license.id} className="flex justify-between items-center bg-canvas dark:bg-slate-900 text-gray-800 dark:text-slate-200 px-4 py-3 rounded-md border border-gray-100 dark:border-slate-700 shadow-sm">
+                        <div className="flex flex-col"><span className="text-sm font-bold">{license.licenseNumber}</span>{license.expirationDate && <span className="text-xs text-muted">ينتهي في: {new Date(license.expirationDate).toLocaleDateString('ar-SA')}</span>}</div>
                         <button
                           type="button"
                           onClick={() => {
@@ -365,17 +365,17 @@ export default function SettingsView() {
                               deleteLicense(license.id);
                             }
                           }}
-                          className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                          className="text-muted-soft hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
                           <Trash2 size={16} />
                         </button>
                       </div>
                     ))}
-                    {licenses.length === 0 && <span className="text-sm text-gray-500 p-4 bg-gray-50 dark:bg-slate-800 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 text-center">لا توجد تراخيص مضافة</span>}
+                    {licenses.length === 0 && <span className="text-sm text-muted p-4 bg-canvas dark:bg-slate-800 rounded-md border border-dashed border-hairline dark:border-slate-700 text-center">لا توجد تراخيص مضافة</span>}
                   </div>
                 </div>
 
-                <div className="border border-gray-200 dark:border-slate-700 rounded-xl p-5 bg-gray-50/50 dark:bg-slate-800/50">
+                <div className="border border-hairline dark:border-slate-700 rounded-md p-5 bg-canvas/50 dark:bg-slate-800/50">
                   <div className="flex items-center mb-4">
                     <input
                       type="checkbox"
@@ -383,14 +383,14 @@ export default function SettingsView() {
                       id="taxEnabled"
                       checked={formData.taxEnabled}
                       onChange={handleChange}
-                      className="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-slate-700 dark:border-gray-600 ml-3"
+                      className="w-5 h-5 text-blue-600 bg-canvas border-hairline rounded focus:ring-primary dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-slate-700 dark:border-gray-600 ml-3"
                     />
-                    <label htmlFor="taxEnabled" className="text-sm font-bold text-gray-700 dark:text-slate-300 cursor-pointer">تفعيل ضريبة القيمة المضافة / رسوم البلدية</label>
+                    <label htmlFor="taxEnabled" className="text-sm font-bold text-ink dark:text-slate-300 cursor-pointer">تفعيل ضريبة القيمة المضافة / رسوم البلدية</label>
                   </div>
 
                   {formData.taxEnabled && (
                     <div className="w-1/2">
-                      <label className="block text-xs font-bold text-gray-500 dark:text-slate-400 mb-2">النسبة المئوية (%)</label>
+                      <label className="block text-xs font-bold text-muted dark:text-slate-400 mb-2">النسبة المئوية (%)</label>
                       <input
                         type="number"
                         name="taxPercentage"
@@ -398,7 +398,7 @@ export default function SettingsView() {
                         onChange={handleChange}
                         min="0"
                         max="100"
-                        className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-hairline dark:border-slate-700 rounded-md px-4 py-2.5 bg-canvas dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary"
                         placeholder="15"
                       />
                     </div>
@@ -406,13 +406,13 @@ export default function SettingsView() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">الشروط والأحكام المخصصة (تظهر في العقد)</label>
+                  <label className="block text-sm font-bold text-ink dark:text-slate-300 mb-2">الشروط والأحكام المخصصة (تظهر في العقد)</label>
                   <textarea
                     name="customTerms"
                     value={formData.customTerms}
                     onChange={handleChange}
                     rows="5"
-                    className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors leading-relaxed"
+                    className="w-full border border-hairline dark:border-slate-700 rounded-md px-4 py-3 bg-canvas/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-blue-500 transition-colors leading-relaxed"
                     placeholder="أدخل الشروط والأحكام الخاصة بمنشأتك هنا..."
                   ></textarea>
                 </div>
@@ -422,27 +422,27 @@ export default function SettingsView() {
           {/* Finance Tab */}
           {facilityTab === 'finance' && (
               <div className="space-y-6 animate-in fade-in duration-300 flex flex-col min-h-[400px]">
-                <div className="bg-gray-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-gray-100 dark:border-slate-700">
-                  <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 mb-6 flex items-center border-b border-gray-200 dark:border-slate-700 pb-3">التكاليف والمصروفات التشغيلية الثابتة (شهرياً)</h3>
+                <div className="bg-canvas/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-gray-100 dark:border-slate-700">
+                  <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 mb-6 flex items-center border-b border-hairline dark:border-slate-700 pb-3">التكاليف والمصروفات التشغيلية الثابتة (شهرياً)</h3>
 
                   <div className="flex flex-col gap-6 mb-6">
                                         {/* Staff Expenses Management */}
                     <div className="mt-8 border-t border-gray-100 dark:border-slate-800 pt-8">
                       <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6">الرواتب والموظفين</h3>
 
-                      <div className="mb-6 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+                      <div className="mb-6 rounded-md border border-hairline dark:border-slate-700 overflow-hidden">
                         <table className="w-full text-right">
-                          <thead className="bg-gray-50 dark:bg-slate-800/80 border-b border-gray-200 dark:border-slate-700">
+                          <thead className="bg-canvas dark:bg-slate-800/80 border-b border-hairline dark:border-slate-700">
                             <tr>
-                              <th className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-300">الاسم / المسمى</th>
-                              <th className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-300">الراتب الشهري</th>
-                              <th className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-300">النطاق</th>
-                              <th className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-300">إجراء</th>
+                              <th className="px-4 py-3 text-sm font-bold text-ink dark:text-slate-300">الاسم / المسمى</th>
+                              <th className="px-4 py-3 text-sm font-bold text-ink dark:text-slate-300">الراتب الشهري</th>
+                              <th className="px-4 py-3 text-sm font-bold text-ink dark:text-slate-300">النطاق</th>
+                              <th className="px-4 py-3 text-sm font-bold text-ink dark:text-slate-300">إجراء</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50 bg-white dark:bg-slate-900">
+                          <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50 bg-canvas dark:bg-slate-900">
                             {staffExpenses?.map(staff => (
-                              <tr key={staff.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                              <tr key={staff.id} className="hover:bg-canvas/50 dark:hover:bg-slate-800/30 transition-colors">
                                 <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{staff.name}</td>
                                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-slate-400">{staff.monthlySalary} ر.س</td>
                                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-slate-400">{staff.scope === 'all' ? 'جميع الوحدات' : staff.scope?.split(',').length + ' وحدات'}</td>
@@ -457,7 +457,7 @@ export default function SettingsView() {
                                         toast.error('حدث خطأ');
                                       }
                                     }}
-                                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-lg transition-colors"
+                                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 transition-colors rounded-full"
                                   >
                                     <Trash2 size={16} />
                                   </button>
@@ -466,15 +466,15 @@ export default function SettingsView() {
                             ))}
                             {(!staffExpenses || staffExpenses.length === 0) && (
                               <tr>
-                                <td colSpan="4" className="px-4 py-6 text-center text-sm text-gray-500 dark:text-slate-400">لا يوجد موظفين مضافين</td>
+                                <td colSpan="4" className="px-4 py-6 text-center text-sm text-muted dark:text-slate-400">لا يوجد موظفين مضافين</td>
                               </tr>
                             )}
                           </tbody>
                         </table>
                       </div>
 
-                      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-gray-200 dark:border-slate-700 space-y-4">
-                        <h4 className="text-sm font-bold text-gray-700 dark:text-slate-300">إضافة مصروف راتب +</h4>
+                      <div className="bg-canvas dark:bg-slate-900 p-4 rounded-md border border-hairline dark:border-slate-700 space-y-4">
+                        <h4 className="text-sm font-bold text-ink dark:text-slate-300">إضافة مصروف راتب +</h4>
                         <div className="flex flex-col md:flex-row gap-4">
                           <div className="flex-grow">
                             <input
@@ -482,7 +482,7 @@ export default function SettingsView() {
                               value={newStaff.name}
                               onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
                               placeholder="المسمى الوظيفي / الاسم"
-                              className="w-full h-11 border border-gray-200 dark:border-slate-600 rounded-xl px-4 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                              className="w-full h-11 border border-hairline dark:border-slate-600 rounded-md px-4 bg-canvas dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary"
                             />
                           </div>
                           <div className="w-full md:w-40 shrink-0">
@@ -491,12 +491,12 @@ export default function SettingsView() {
                               value={newStaff.monthlySalary}
                               onChange={(e) => setNewStaff({...newStaff, monthlySalary: e.target.value})}
                               placeholder="الراتب (ر.س)"
-                              className="w-full h-11 border border-gray-200 dark:border-slate-600 rounded-xl px-4 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+                              className="w-full h-11 border border-hairline dark:border-slate-600 rounded-md px-4 bg-canvas dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary"
                             />
                           </div>
                           <div className="w-full md:w-56 shrink-0 relative">
                             <select
-                                className="w-full h-11 border border-gray-200 dark:border-slate-600 rounded-xl px-4 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-bold focus:ring-2 focus:ring-blue-500"
+                                className="w-full h-11 border border-hairline dark:border-slate-600 rounded-md px-4 bg-canvas dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-bold focus:ring-2 focus:ring-primary"
                                 onChange={(e) => {
                                     const val = e.target.value;
                                     if (val === '') {
@@ -536,7 +536,7 @@ export default function SettingsView() {
                                 toast.success('تم الإضافة بنجاح');
                               } catch(e) { toast.error('حدث خطأ'); }
                             }}
-                            className="h-11 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-colors shrink-0"
+                            className="h-11 px-6 bg-slate-900 hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-md text-sm font-bold transition-colors shrink-0"
                           >
                             إضافة +
                           </button>
@@ -559,23 +559,23 @@ export default function SettingsView() {
 
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-2">مصروفات عامة أخرى (إيجارات، كهرباء، ماء، إنترنت)</label>
+                    <label className="block text-xs font-bold text-ink dark:text-slate-300 mb-2">مصروفات عامة أخرى (إيجارات، كهرباء، ماء، إنترنت)</label>
                     <div className="relative md:w-1/2">
                       <input
                         type="number"
                         name="generalExpenses"
                         value={formData.generalExpenses}
                         onChange={handleChange}
-                        className="w-full border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors font-bold"
+                        className="w-full border border-hairline dark:border-slate-600 rounded-md px-4 py-3 bg-canvas dark:bg-slate-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary transition-colors font-bold"
                         placeholder="إجمالي المصروفات الثابتة"
                       />
-                      <span className="absolute left-4 top-3 text-xs font-bold text-gray-400">ر.س / شهر</span>
+                      <span className="absolute left-4 top-3 text-xs font-bold text-muted-soft">ر.س / شهر</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-auto pt-6 text-xs text-blue-700 dark:text-blue-300">
-                    <p className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl leading-relaxed border border-blue-100 dark:border-blue-800/30">
+                    <p className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md leading-relaxed border border-blue-100 dark:border-blue-800/30">
                         <span className="font-bold block mb-1">كيفية الحساب:</span>
                         يقوم النظام تلقائياً بتجزئة المصروفات الشهرية الثابتة وتحويلها إلى تكلفة يومية تضاف على الحجوزات بشكل دقيق. يتم تقسيم المصروفات العامة على جميع الوحدات بالتساوي، بينما يتم تخصيص رواتب الموظفين للوحدات المحددة في نطاق عملهم فقط.
                     </p>
@@ -588,13 +588,13 @@ export default function SettingsView() {
               <div className="space-y-8 animate-in fade-in duration-300">
 
                   {/* Push Notifications Toggle */}
-                  <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 flex justify-between items-center mb-6">
+                  <div className="bg-canvas dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 flex justify-between items-center mb-6">
                     <div>
                       <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
                         <BellRing size={18} className="text-blue-500" />
                         إشعارات المتصفح
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">تلقي تنبيهات فورية حتى عند إغلاق التطبيق</p>
+                      <p className="text-xs text-muted dark:text-slate-400 mt-1">تلقي تنبيهات فورية حتى عند إغلاق التطبيق</p>
                     </div>
                     <button
                       type="button"
@@ -607,7 +607,7 @@ export default function SettingsView() {
                       }`}
                     >
                       <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+                        className={`inline-block h-5 w-5 transform rounded-full bg-canvas shadow-sm transition-transform ${
                           pushStatus === 'granted' ? '-translate-x-6' : '-translate-x-1'
                         }`}
                       />
@@ -615,20 +615,20 @@ export default function SettingsView() {
                   </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-3">أنواع الوحدات المتاحة</label>
+                  <label className="block text-sm font-bold text-ink dark:text-slate-300 mb-3">أنواع الوحدات المتاحة</label>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
                       value={newApartmentType}
                       onChange={(e) => setNewApartmentType(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddApartmentType())}
-                      className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="flex-1 border border-hairline dark:border-slate-700 rounded-md px-4 py-2.5 bg-canvas/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-blue-500"
                       placeholder="أضف نوع وحدة جديد (مثال: جناح ملكي)"
                     />
                     <button
                       type="button"
                       onClick={handleAddApartmentType}
-                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center"
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-md font-bold transition-colors flex items-center justify-center"
                     >
                       <Plus size={20} />
                     </button>
@@ -640,31 +640,31 @@ export default function SettingsView() {
                         <button
                           type="button"
                           onClick={() => handleRemoveApartmentType(type)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          className="text-muted-soft hover:text-red-500 transition-colors"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
                     ))}
-                    {apartmentTypesList.length === 0 && <span className="text-sm text-gray-500">لا توجد أنواع مضافة</span>}
+                    {apartmentTypesList.length === 0 && <span className="text-sm text-muted">لا توجد أنواع مضافة</span>}
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
-                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-3">مصادر الحجوزات</label>
+                  <label className="block text-sm font-bold text-ink dark:text-slate-300 mb-3">مصادر الحجوزات</label>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
                       value={newBookingSource}
                       onChange={(e) => setNewBookingSource(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddBookingSource())}
-                      className="flex-1 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-2.5 bg-gray-50/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="flex-1 border border-hairline dark:border-slate-700 rounded-md px-4 py-2.5 bg-canvas/50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-blue-500"
                       placeholder="أضف مصدر حجز جديد (مثال: Agoda)"
                     />
                     <button
                       type="button"
                       onClick={handleAddBookingSource}
-                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center"
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 px-5 py-2.5 rounded-md font-bold transition-colors flex items-center justify-center"
                     >
                       <Plus size={20} />
                     </button>
@@ -676,13 +676,13 @@ export default function SettingsView() {
                         <button
                           type="button"
                           onClick={() => handleRemoveBookingSource(source)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          className="text-muted-soft hover:text-red-500 transition-colors"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
                     ))}
-                    {bookingSourcesList.length === 0 && <span className="text-sm text-gray-500">لا توجد مصادر مضافة</span>}
+                    {bookingSourcesList.length === 0 && <span className="text-sm text-muted">لا توجد مصادر مضافة</span>}
                   </div>
                 </div>
               </div>
@@ -690,11 +690,11 @@ export default function SettingsView() {
 
             </div>
           </div>
-          <div className="shrink-0 p-6 md:p-8 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex justify-start">
+          <div className="shrink-0 p-6 md:p-8 border-t border-gray-100 dark:border-slate-800 bg-canvas/50 dark:bg-slate-900/50 flex justify-start">
             <button
               type="submit"
             disabled={loading}
-            className="flex items-center space-x-reverse space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
+            className="flex items-center space-x-reverse space-x-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-bold transition-all shadow-md"
           >
             <Save size={18} />
               <span className="mr-2">{loading ? 'جاري الحفظ...' : 'حفظ الإعدادات'}</span>
