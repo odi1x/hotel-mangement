@@ -31,7 +31,8 @@ export default function BookingForm({ onClose, initialData }) {
     address: initialData?.address || '',
     pricePerNight: initialData?.pricePerNight || '',
     source: initialData?.source || 'زيارة مباشرة',
-    notes: initialData?.notes || ''
+    notes: initialData?.notes || '',
+    status: initialData?.status || undefined
   });
 
   const [retrievedNotes, setRetrievedNotes] = useState(null);
