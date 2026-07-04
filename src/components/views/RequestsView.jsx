@@ -96,9 +96,10 @@ export default function RequestsView({ openBookingForm }) {
                        </div>
                     </div>
 
-                    {request.notes && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-xl italic">
-                        "{request.notes}"
+                    {request.customerRequest && (
+                      <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-xl flex flex-col gap-1">
+                        <span className="text-xs font-bold text-gray-500">ملاحظات إضافية من النزيل:</span>
+                        <span className="italic">"{request.customerRequest}"</span>
                       </div>
                     )}
                   </div>

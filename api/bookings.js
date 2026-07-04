@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'POST') {
-      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, status } = req.body;
+      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, customerRequest, status } = req.body;
 
       // Validate dates
       const startStr = (startDate.split && startDate.split('T')[0]) || new Date(startDate).toISOString().split('T')[0];
@@ -112,6 +112,7 @@ export default async function handler(req, res) {
           endDate: end,
           status: status || 'active',
           notes,
+          customerRequest,
           creatorName: user.name || user.username
         },
       });
@@ -223,7 +224,7 @@ export default async function handler(req, res) {
         return res.status(200).json(booking);
       }
 
-      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, status } = updateDataObj;
+      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, customerRequest, status } = updateDataObj;
 
       // Validate dates
       const startStr = (startDate.split && startDate.split('T')[0]) || new Date(startDate).toISOString().split('T')[0];
@@ -276,7 +277,8 @@ export default async function handler(req, res) {
           startDate: start,
           endDate: end,
           status: status || existing.status,
-          notes
+          notes,
+          customerRequest
         },
       });
       return res.status(200).json(booking);

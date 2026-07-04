@@ -100,9 +100,10 @@ model Booking {
   source        String    @default("زيارة مباشرة")
   startDate     DateTime
   endDate       DateTime
-  status        String    @default("active") // "active", "completed", "checked_out_early"
-  notes         String?
-  creatorName   String?
+  status          String    @default("active") // "active", "completed", "checked_out_early"
+  notes           String?
+  customerRequest String?
+  creatorName     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

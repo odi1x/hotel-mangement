@@ -32,6 +32,7 @@ export default function BookingForm({ onClose, initialData }) {
     pricePerNight: initialData?.pricePerNight || '',
     source: initialData?.source || 'زيارة مباشرة',
     notes: initialData?.notes || '',
+    customerRequest: initialData?.customerRequest || '',
     status: initialData?.status || undefined
   });
 
@@ -180,6 +181,13 @@ export default function BookingForm({ onClose, initialData }) {
                 <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">رقم الهاتف</label>
                 <input required type="tel" placeholder="05XXXXXXXX" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 dark:bg-slate-800 dark:text-slate-100" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
               </div>
+
+              {initialData?.customerRequest && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-3 flex flex-col gap-1">
+                    <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">طلب النزيل الإضافي</p>
+                    <p className="text-xs text-amber-900 dark:text-amber-200">{initialData.customerRequest}</p>
+                </div>
+              )}
 
               {retrievedNotes && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 flex flex-col gap-2">
