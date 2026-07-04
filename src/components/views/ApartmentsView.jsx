@@ -241,7 +241,7 @@ export default function ApartmentsView() {
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><Home size={18} /></div>
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100">{apt.name}</h3>
+                  <h3 className="text-lg font-bold text-ink font-zain dark:text-slate-100">{apt.name}</h3>
                 </div>
               </div>
             <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 mt-1 font-medium line-clamp-1">{apt.type} • {apt.description}</p>
@@ -283,7 +283,7 @@ export default function ApartmentsView() {
             >
               <ChevronRight size={20} />
             </button>
-            <span className="px-4 py-2 text-sm font-bold text-gray-700 dark:text-slate-300">
+            <span className="px-4 py-2 text-sm font-bold text-ink font-zain dark:text-slate-300">
               صفحة {currentPage} من {totalPages}
             </span>
             <button
@@ -300,7 +300,7 @@ export default function ApartmentsView() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
           <div className="bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 shrink-0">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100">
+              <h2 className="text-xl font-bold text-ink font-zain dark:text-slate-100">
                 {editingId ? 'تعديل بيانات الوحدة' : 'إضافة وحدة جديدة'}
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors"><X size={20}/></button>
@@ -308,14 +308,14 @@ export default function ApartmentsView() {
             <div className="overflow-y-auto p-6">
               <form onSubmit={handleSave} className="space-y-6">
               <div className="space-y-4">
-                <h3 className="font-bold text-gray-800 dark:text-slate-100 border-b pb-2">المعلومات الأساسية</h3>
+                <h3 className="font-bold text-ink font-zain dark:text-slate-100 border-b pb-2">المعلومات الأساسية</h3>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">اسم/رقم الوحدة</label>
+                  <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">اسم/رقم الوحدة</label>
                 <input required type="text" placeholder="مثال: شقة 101" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">النوع</label>
+                      <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">النوع</label>
                       <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
                           {customTypes.map((t, idx) => (
                             <option key={idx} value={t}>{t}</option>
@@ -323,16 +323,16 @@ export default function ApartmentsView() {
                       </select>
                   </div>
                   <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">السعر الافتراضي</label>
+                      <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">السعر الافتراضي</label>
                       <input required type="number" placeholder="200" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.basePrice} onChange={(e) => setFormData({...formData, basePrice: e.target.value})} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ملاحظات/وصف</label>
+                  <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">ملاحظات/وصف</label>
                   <textarea className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 h-28 bg-white dark:bg-slate-800 dark:text-slate-100 resize-none transition-all" placeholder="وصف الشقة أو ملاحظات داخلية..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})}></textarea>
                 </div>
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ترخيص السياحة (اختياري)</label>
+                    <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">ترخيص السياحة (اختياري)</label>
                     <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.licenseId} onChange={(e) => setFormData({...formData, licenseId: e.target.value})}>
                         <option value="">بدون ترخيص محدد</option>
                         {licenses.map(l => (
@@ -345,8 +345,8 @@ export default function ApartmentsView() {
 
               {/* Premium Image Upload Section */}
               <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
-                <h3 className="font-bold text-gray-800 dark:text-slate-100 pb-2">صور الوحدة</h3>
-                <div className="border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-md p-6 text-center hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors relative">
+                <h3 className="font-bold text-ink font-zain dark:text-slate-100 pb-2">صور الوحدة</h3>
+                <div className="border-2 border-dashed border-hairline bg-surface-card rounded-lg p-6 text-center hover:bg-surface-soft transition-colors relative">
                   <input
                     type="file"
                     accept="image/*"
@@ -355,11 +355,11 @@ export default function ApartmentsView() {
                     disabled={isUploading}
                   />
                   <div className="flex flex-col items-center justify-center space-y-2">
-                    <div className={`p-3 rounded-full ${isUploading ? 'bg-blue-100 animate-pulse' : 'bg-blue-50 dark:bg-slate-800'}`}>
-                      <ImageIcon size={24} className={`${isUploading ? 'text-blue-600' : 'text-blue-500'}`} />
+                    <div className={`p-3 rounded-full ${isUploading ? "bg-canvas animate-pulse" : "bg-canvas"}`}>
+                      <ImageIcon size={24} className={`text-ink`} />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-700 dark:text-slate-300 text-sm">
+                      <p className="font-semibold text-ink font-zain dark:text-slate-300 text-sm">
                         {isUploading ? 'جاري الرفع...' : 'اسحب الصور هنا أو اضغط للتصفح'}
                       </p>
                     </div>
@@ -402,7 +402,7 @@ export default function ApartmentsView() {
                 <button
                   type="button"
                   onClick={() => setShowAdvancedFinancials(!showAdvancedFinancials)}
-                  className="w-full flex justify-between items-center font-bold text-gray-800 dark:text-slate-100 pb-2"
+                  className="w-full flex justify-between items-center font-semibold text-ink pb-2 font-zain"
                 >
                   <span>التكاليف والمالية (إعدادات متقدمة)</span>
                   <span className="text-gray-400">{showAdvancedFinancials ? <ChevronLeft className="-rotate-90 transition-transform" /> : <ChevronLeft className="transition-transform" />}</span>
@@ -411,7 +411,7 @@ export default function ApartmentsView() {
                   <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">تكلفة الإيجار</label>
+                    <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">تكلفة الإيجار</label>
                     <div className="flex space-x-reverse space-x-2">
                         <input type="number" placeholder="المبلغ" className="w-2/3 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.rentCost} onChange={(e) => setFormData({...formData, rentCost: e.target.value})} />
                         <select className="w-1/3 px-2 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.rentPeriod} onChange={(e) => setFormData({...formData, rentPeriod: e.target.value})}>
@@ -421,19 +421,19 @@ export default function ApartmentsView() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">نوع النظافة والتكلفة</label>
+                    <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">نوع النظافة والتكلفة</label>
                     <div className="flex gap-2 mb-3 bg-gray-50 dark:bg-slate-800 p-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
                         <button
                           type="button"
                           onClick={() => setFormData({...formData, cleaningType: 'salaried'})}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${formData.cleaningType === 'salaried' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${formData.cleaningType === 'salaried' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-500 hover:text-ink font-zain dark:hover:text-gray-300'}`}
                         >
                           موظف براتب
                         </button>
                         <button
                           type="button"
                           onClick={() => setFormData({...formData, cleaningType: 'per_booking'})}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${formData.cleaningType === 'per_booking' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${formData.cleaningType === 'per_booking' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-500 hover:text-ink font-zain dark:hover:text-gray-300'}`}
                         >
                           رسوم لكل حجز
                         </button>
@@ -448,7 +448,7 @@ export default function ApartmentsView() {
                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">عمولات المنصات (لكل حجز)</label>
+                    <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">عمولات المنصات (لكل حجز)</label>
                     <div className="flex space-x-reverse space-x-2">
                         <input type="number" placeholder="العمولة" className="w-2/3 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.platformFee} onChange={(e) => setFormData({...formData, platformFee: e.target.value})} />
                         <select className="w-1/3 px-2 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.platformFeeType} onChange={(e) => setFormData({...formData, platformFeeType: e.target.value})}>
@@ -458,7 +458,7 @@ export default function ApartmentsView() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">مصاريف أخرى (لكل حجز)</label>
+                    <label className="block text-sm font-semibold text-ink font-zain dark:text-slate-300 mb-1.5">مصاريف أخرى (لكل حجز)</label>
                     <div className="flex space-x-reverse space-x-2">
                         <input type="text" placeholder="الاسم (مثال: ضيافة)" className="w-1/2 px-3 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.otherExpenseLabel} onChange={(e) => setFormData({...formData, otherExpenseLabel: e.target.value})} />
                         <input type="number" placeholder="المبلغ" className="w-1/2 px-3 py-2.5 border border-gray-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.otherExpenseAmount} onChange={(e) => setFormData({...formData, otherExpenseAmount: e.target.value})} />
@@ -468,7 +468,7 @@ export default function ApartmentsView() {
                   </div>
                 </div>
               </div>
-              <button type="submit" className="w-full bg-blue-600 text-white py-3.5 rounded-md font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95 mt-4">
+              <button type="submit" className="w-full bg-primary text-on-primary py-3.5 rounded-md font-bold hover:bg-primary-active transition-all active:scale-95 mt-4 shadow-sm">
                 {editingId ? 'تحديث البيانات' : 'حفظ الوحدة'}
               </button>
             </form>
