@@ -78,7 +78,7 @@ export default function Layout() {
             <div className="flex items-center space-x-reverse space-x-3">
 
               {view === 'apartments' && (
-                <div className="bg-canvas dark:bg-slate-800 p-1.5 rounded-md border border-hairline dark:border-slate-700 shadow-sm flex items-center gap-2 max-w-[300px]">
+                <div className="bg-canvas p-1.5 rounded-md border border-hairline flex items-center gap-2 max-w-[300px]">
                   <div className="bg-surface-card dark:bg-blue-900/30 p-1.5 rounded-md text-ink dark:text-blue-400">
                     <Share2 size={16} />
                   </div>
@@ -94,7 +94,7 @@ export default function Layout() {
                   </div>
                   <button
                     onClick={handleCopyLink}
-                    className={`p-1.5 rounded-md font-bold flex items-center gap-1 transition-all ${isCopied ? 'bg-green-500 text-white' : 'bg-canvas text-white hover:bg-surface-soft'}`}
+                    className={`p-1.5 rounded-md font-bold flex items-center gap-1 transition-all ${isCopied ? 'bg-success text-on-primary' : 'bg-canvas text-ink border border-hairline hover:bg-surface-soft'}`}
                     title="نسخ الرابط"
                   >
                     {isCopied ? <Check size={14} /> : <Copy size={14} />}
