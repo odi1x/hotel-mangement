@@ -1,5 +1,5 @@
-import {  useState, useMemo , useRef, useLayoutEffect, Fragment } from 'react';
-import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare } from 'lucide-react';
+import {  useState, useMemo , useRef, useLayoutEffect, useEffect, Fragment } from 'react';
+import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare, Filter, Check } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -123,6 +123,14 @@ export default function AvailabilityView({ openBookingForm }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
   const [viewMode, setViewMode] = useState('month');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(new Date());
+  const [unitFilter, setUnitFilter] = useState([]); // [] = all units
+  const [dragSel, setDragSel] = useState(null);      // { aptId, startIdx, curIdx }
+  const filterRef = useRef(null);
+  const dragRef = useRef(null);
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const fmtDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
   // Stable apartment → palette-slot mapping (by position in the list)
   const unitIndex = useMemo(() => {
@@ -227,6 +235,39 @@ export default function AvailabilityView({ openBookingForm }) {
     ? `${monthNames[rangeStart.getMonth()]} ${rangeStart.getFullYear()}`
     : `${rangeStart.getDate()} ${monthNames[rangeStart.getMonth()]} – ${rangeEnd.getDate()} ${monthNames[rangeEnd.getMonth()]}`;
 
+  useEffect(() => { dragRef.current = dragSel; }, [dragSel]);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const h = (e) => { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [filterOpen]);
+
+  useEffect(() => {
+    const up = () => {
+      const cur = dragRef.current;
+      if (cur) {
+        const lo = Math.min(cur.startIdx, cur.curIdx);
+        const hi = Math.max(cur.startIdx, cur.curIdx);
+        const sd = range[lo], ed = range[hi];
+        if (sd) openBookingForm({ apartmentId: cur.aptId, startDate: fmtDate(sd), ...(hi > lo ? { endDate: fmtDate(ed) } : {}) });
+      }
+      setDragSel(null);
+    };
+    window.addEventListener('mouseup', up);
+    return () => window.removeEventListener('mouseup', up);
+  }, [range]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleUnit = (id, checked) => {
+    setUnitFilter(prev => {
+      const base = prev.length === 0 ? apartments.map(a => a.id) : prev;
+      const next = checked ? Array.from(new Set([...base, id])) : base.filter(x => x !== id);
+      return next.length === apartments.length ? [] : next;
+    });
+  };
+  const unitFilterLabel = unitFilter.length === 0 ? 'كل الوحدات' : `${unitFilter.length} وحدات`;
+
   const formatDateAr = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('ar-EG', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -253,19 +294,80 @@ export default function AvailabilityView({ openBookingForm }) {
           </div>
         </div>
         <div className="flex items-center space-x-reverse space-x-4">
-          <p className="badge-pill text-muted dark:text-[#a1a1aa]">
-            اضغط على خلية فارغة لإضافة حجز
+          <p className="badge-pill text-muted dark:text-[#a1a1aa] hidden lg:inline-flex">
+            اسحب على الخلايا الفارغة لإنشاء حجز
           </p>
-          <select
-            className="text-xs text-ink dark:text-white font-medium bg-canvas dark:bg-surface-dark-elevated px-3 py-1.5 rounded-md border border-hairline dark:border-[#2e2e2e] outline-none focus:border-ink dark:focus:border-white transition-colors cursor-pointer"
-            value={selectedApartmentFilter}
-            onChange={(e) => setSelectedApartmentFilter(e.target.value)}
-          >
-            <option value="all">جميع الوحدات</option>
-            {apartments.map(apt => (
-              <option key={apt.id} value={apt.id}>{apt.name}</option>
-            ))}
-          </select>
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => { setPickerMonth(new Date(currentDate)); setFilterOpen(o => !o); }}
+              className={`btn-secondary h-9 px-3 text-xs ${filterOpen ? 'border-ink dark:border-white' : ''}`}
+            >
+              <Filter size={15} />
+              <span>{unitFilterLabel}</span>
+            </button>
+
+            {filterOpen && (
+              <div className="absolute left-0 mt-2 w-72 bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] rounded-xl shadow-soft z-50 p-4">
+                {/* mini calendar — jump to date */}
+                <div className="text-xs font-semibold text-muted mb-2">الانتقال إلى تاريخ</div>
+                {(() => {
+                  const py = pickerMonth.getFullYear(), pm = pickerMonth.getMonth();
+                  const firstDow = new Date(py, pm, 1).getDay();
+                  const dim = new Date(py, pm + 1, 0).getDate();
+                  const todayStr = new Date().toDateString();
+                  const selStr = new Date(currentDate).toDateString();
+                  const cells = [];
+                  for (let i = 0; i < firstDow; i++) cells.push(null);
+                  for (let d = 1; d <= dim; d++) cells.push(d);
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <button onClick={() => setPickerMonth(new Date(py, pm - 1, 1))} className="icon-action p-1"><ChevronRight size={16} /></button>
+                        <span className="text-sm font-semibold text-ink dark:text-white">{monthNames[pm]} {py}</span>
+                        <button onClick={() => setPickerMonth(new Date(py, pm + 1, 1))} className="icon-action p-1"><ChevronLeft size={16} /></button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-0.5 text-center">
+                        {['أ','ن','ث','ر','خ','ج','س'].map((w, i) => <div key={i} className="text-[10px] text-muted-soft py-1">{w}</div>)}
+                        {cells.map((d, i) => {
+                          if (d === null) return <div key={`e${i}`}></div>;
+                          const dt = new Date(py, pm, d);
+                          const isToday = dt.toDateString() === todayStr;
+                          const isSel = dt.toDateString() === selStr;
+                          return (
+                            <button key={i} onClick={() => { setCurrentDate(dt); setFilterOpen(false); }}
+                              className={`text-xs w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSel ? 'bg-accent text-white font-semibold' : isToday ? 'text-accent font-bold' : 'text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-surface-dark-elevated'}`}>
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* unit filter — MUI-style resources */}
+                <div className="border-t border-hairline-soft dark:border-[#242424] mt-3 pt-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-muted">الوحدات</span>
+                    {unitFilter.length > 0 && <button onClick={() => setUnitFilter([])} className="text-[11px] link-accent">عرض الكل</button>}
+                  </div>
+                  <div className="max-h-44 overflow-y-auto space-y-0.5 pl-0.5">
+                    {apartments.map(a => {
+                      const pal = UNIT_PALETTE[(unitIndex[a.id] ?? 0) % UNIT_PALETTE.length];
+                      const checked = unitFilter.length === 0 || unitFilter.includes(a.id);
+                      return (
+                        <label key={a.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-surface-soft dark:hover:bg-surface-dark-elevated cursor-pointer">
+                          <input type="checkbox" checked={checked} onChange={(e) => toggleUnit(a.id, e.target.checked)} className="w-4 h-4 accent-black rounded" />
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: darkMode ? pal.dtx : pal.tx }}></span>
+                          <span className="text-sm text-ink dark:text-white truncate">{a.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -273,7 +375,7 @@ export default function AvailabilityView({ openBookingForm }) {
         const wd = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
         const N = range.length;
         const canBook = user?.role === 'admin' || user?.permissions?.canBook;
-        const visibleUnits = apartments.filter(a => selectedApartmentFilter === 'all' || a.id === selectedApartmentFilter);
+        const visibleUnits = unitFilter.length === 0 ? apartments : apartments.filter(a => unitFilter.includes(a.id));
         const pad = n => String(n).padStart(2, '0');
         const minCol = viewMode === 'week' ? 90 : viewMode === 'half' ? 60 : 40;
         const rowH = 46;
@@ -295,7 +397,7 @@ export default function AvailabilityView({ openBookingForm }) {
         const neutralBorder = darkMode ? '#33302c' : '#e5e7eb';
 
         return (
-          <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark">
+          <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none">
             <div style={{ display: 'grid', gridTemplateColumns: `150px repeat(${N}, minmax(${minCol}px, 1fr))`, minWidth: 'min-content' }}>
               {/* corner */}
               <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center justify-center text-xs font-semibold text-muted dark:text-[#a1a1aa]" style={{ gridColumn: 1, gridRow: 1, height: 46, ...frozenShadow }}>
@@ -326,17 +428,19 @@ export default function AvailabilityView({ openBookingForm }) {
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: unitColor }}></span>
                       <span className="text-sm font-semibold text-ink dark:text-white truncate">{apt.name}</span>
                     </div>
-                    {/* empty day cells (clickable to book) */}
+                    {/* empty day cells — click or drag to create */}
                     {range.map((dt, i) => {
                       const isToday = floorDay(dt) === todayN;
                       const wknd = isWknd(dt);
+                      const inDrag = dragSel && dragSel.aptId === apt.id && i >= Math.min(dragSel.startIdx, dragSel.curIdx) && i <= Math.max(dragSel.startIdx, dragSel.curIdx);
                       return (
                         <div
                           key={`c${apt.id}-${i}`}
-                          onClick={canBook ? () => openBookingForm({ apartmentId: apt.id, startDate: `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}` }) : undefined}
+                          onMouseDown={canBook ? (ev) => { ev.preventDefault(); setDragSel({ aptId: apt.id, startIdx: i, curIdx: i }); } : undefined}
+                          onMouseEnter={canBook ? () => setDragSel(prev => (prev && prev.aptId === apt.id) ? { ...prev, curIdx: i } : prev) : undefined}
                           className={`border-b border-l border-gray-100 dark:border-[#242424] transition-colors ${canBook ? 'cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60' : ''}`}
-                          style={{ gridColumn: 2 + i, gridRow: row, height: rowH, backgroundColor: cellBg(isToday, wknd, r), ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}
-                          title={canBook ? 'إضافة حجز' : ''}
+                          style={{ gridColumn: 2 + i, gridRow: row, height: rowH, backgroundColor: inDrag ? 'rgba(15,118,110,0.14)' : cellBg(isToday, wknd, r), ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}
+                          title={canBook ? 'اسحب لإنشاء حجز' : ''}
                         ></div>
                       );
                     })}
@@ -374,11 +478,15 @@ export default function AvailabilityView({ openBookingForm }) {
                           : { backgroundColor: fill, color: txt, border: `1px solid ${brd}`,
                               borderRight: contStart ? `1px solid ${brd}` : `4px solid ${isCurrent ? '#0f766e' : unitColor}` }),
                       };
+                      const nights = Math.max(1, be - bs);
+                      const statusTxt = isPending ? 'طلب معلّق' : isCurrent ? 'مقيم حالياً' : isPast ? 'مغادر' : 'قادم';
+                      const tip = `${apt.name} — ${b.residentName}\n${new Date(b.startDate).toLocaleDateString('ar-EG')} ← ${new Date(b.endDate).toLocaleDateString('ar-EG')} · ${nights} ليالٍ\n${b.pricePerNight} ر.س/ليلة · ${statusTxt}`;
                       return (
                         <div
                           key={b.id}
                           onClick={(ev) => { ev.stopPropagation(); setSelectedBookingDetails(b); }}
-                          title={`${apt.name} — ${b.residentName}${isPending ? ' (طلب معلّق)' : ''}`}
+                          onMouseDown={(ev) => ev.stopPropagation()}
+                          title={tip}
                           className={`self-center flex items-center gap-1 pr-2.5 pl-2 h-[32px] text-[12px] font-semibold cursor-pointer transition-all hover:brightness-95 ${isPending ? 'bg-transparent text-muted border border-dashed border-hairline dark:text-[#a1a1aa] dark:border-[#4a463f]' : ''}`}
                           style={style}
                         >
