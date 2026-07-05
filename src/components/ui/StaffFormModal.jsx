@@ -59,17 +59,25 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" dir="rtl">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+  const permissions = [
+    { name: 'canBook', title: 'إضافة حجوزات', desc: 'يسمح للموظف بإنشاء حجوزات جديدة' },
+    { name: 'canEdit', title: 'تعديل البيانات', desc: 'تعديل الشقق وتفاصيل الحجوزات القائمة' },
+    { name: 'canDelete', title: 'حذف البيانات', desc: 'حذف الحجوزات والشقق والنزلاء' },
+    { name: 'canViewAnalytics', title: 'عرض الإحصائيات', desc: 'الوصول إلى تقارير الأداء المالي والتحليلات' },
+    { name: 'canViewSettings', title: 'إدارة الإعدادات', desc: 'الوصول لإعدادات النظام العامة (باستثناء الموظفين)' },
+  ];
 
-        <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
+      <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-2xl shadow-soft border border-hairline dark:border-[#2e2e2e] overflow-hidden flex flex-col max-h-[90vh]">
+
+        <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+          <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">
             {isEditing ? 'تعديل بيانات الموظف' : 'إضافة موظف جديد'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            className="icon-action"
           >
             <X size={20} />
           </button>
@@ -79,7 +87,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
           <form id="staff-form" onSubmit={handleSubmit} className="space-y-6">
 
             <div className="flex flex-col items-center mb-6">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3">صورة الموظف (اختياري)</label>
+              <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-3">صورة الموظف (اختياري)</label>
               <ImageUpload
                 onUploadSuccess={url => setFormData(prev => ({ ...prev, profilePicture: url }))}
                 currentImage={formData.profilePicture}
@@ -88,34 +96,34 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">الاسم الكامل *</label>
+                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">الاسم الكامل *</label>
                 <input
                   required
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
+                  className="input-field"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">اسم المستخدم * (للدخول)</label>
+                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">اسم المستخدم * (للدخول)</label>
                 <input
                   required
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
+                  className="input-field"
                   dir="ltr"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">
-                  كلمة المرور {isEditing && <span className="text-gray-400 font-normal">(اتركها فارغة إذا لم ترد تغييرها)</span>}
-                  {!isEditing && <span className="text-red-500">*</span>}
+                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">
+                  كلمة المرور {isEditing && <span className="text-muted-soft font-normal">(اتركها فارغة إذا لم ترد تغييرها)</span>}
+                  {!isEditing && <span className="text-ink dark:text-white">*</span>}
                 </label>
                 <div className="relative">
                   <input
@@ -124,13 +132,13 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
                     value={formData.password}
                     onChange={handleChange}
                     required={!isEditing}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-colors"
+                    className="input-field pl-10"
                     dir="ltr"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -138,90 +146,36 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
               </div>
             </div>
 
-            <div className="mt-8 border-t border-gray-200 dark:border-slate-800 pt-6">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-slate-200 mb-4">صلاحيات الموظف</h3>
+            <div className="mt-8 border-t border-hairline dark:border-[#242424] pt-6">
+              <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white mb-4">صلاحيات الموظف</h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="flex items-center p-3 rounded-lg border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    name="canBook"
-                    checked={formData.canBook}
-                    onChange={handleChange}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 ml-3"
-                  />
-                  <div>
-                    <div className="font-bold text-gray-800 dark:text-slate-200">إضافة حجوزات</div>
-                    <div className="text-xs text-gray-500">يسمح للموظف بإنشاء حجوزات جديدة</div>
-                  </div>
-                </label>
-
-                <label className="flex items-center p-3 rounded-lg border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    name="canEdit"
-                    checked={formData.canEdit}
-                    onChange={handleChange}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 ml-3"
-                  />
-                  <div>
-                    <div className="font-bold text-gray-800 dark:text-slate-200">تعديل البيانات</div>
-                    <div className="text-xs text-gray-500">تعديل الشقق وتفاصيل الحجوزات القائمة</div>
-                  </div>
-                </label>
-
-                <label className="flex items-center p-3 rounded-lg border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    name="canDelete"
-                    checked={formData.canDelete}
-                    onChange={handleChange}
-                    className="w-5 h-5 text-red-600 rounded focus:ring-red-500 ml-3"
-                  />
-                  <div>
-                    <div className="font-bold text-gray-800 dark:text-slate-200">حذف البيانات</div>
-                    <div className="text-xs text-gray-500">حذف الحجوزات والشقق والنزلاء</div>
-                  </div>
-                </label>
-
-                <label className="flex items-center p-3 rounded-lg border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    name="canViewAnalytics"
-                    checked={formData.canViewAnalytics}
-                    onChange={handleChange}
-                    className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 ml-3"
-                  />
-                  <div>
-                    <div className="font-bold text-gray-800 dark:text-slate-200">عرض الإحصائيات</div>
-                    <div className="text-xs text-gray-500">الوصول إلى تقارير الأداء المالي والتحليلات</div>
-                  </div>
-                </label>
-
-                <label className="flex items-center p-3 rounded-lg border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    name="canViewSettings"
-                    checked={formData.canViewSettings}
-                    onChange={handleChange}
-                    className="w-5 h-5 text-gray-600 rounded focus:ring-gray-500 ml-3"
-                  />
-                  <div>
-                    <div className="font-bold text-gray-800 dark:text-slate-200">إدارة الإعدادات</div>
-                    <div className="text-xs text-gray-500">الوصول لإعدادات النظام العامة (باستثناء الموظفين)</div>
-                  </div>
-                </label>
+                {permissions.map(perm => (
+                  <label key={perm.name} className="flex items-center p-3 rounded-md border border-hairline dark:border-[#2e2e2e] cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
+                    <input
+                      type="checkbox"
+                      name={perm.name}
+                      checked={formData[perm.name]}
+                      onChange={handleChange}
+                      className="w-5 h-5 accent-black rounded ml-3"
+                    />
+                    <div>
+                      <div className="font-semibold text-ink dark:text-white">{perm.title}</div>
+                      <div className="text-xs text-muted dark:text-[#a1a1aa]">{perm.desc}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
           </form>
         </div>
 
-        <div className="p-5 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 flex justify-end gap-3">
+        <div className="p-5 border-t border-hairline-soft dark:border-[#242424] flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl font-bold text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+            className="btn-secondary"
           >
             إلغاء
           </button>
@@ -229,7 +183,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
             type="submit"
             form="staff-form"
             disabled={loading}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+            className="btn-primary"
           >
             <Save size={18} />
             <span>{loading ? 'جاري الحفظ...' : 'حفظ'}</span>

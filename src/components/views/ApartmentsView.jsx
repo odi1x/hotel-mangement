@@ -185,34 +185,34 @@ export default function ApartmentsView() {
         {paginatedApartments.map((apt) => {
           const isNotClean = apt.needsCleaning;
           return (
-          <div key={apt.id} className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border ${isNotClean ? 'border-gray-100 dark:border-slate-800 border-r-4 border-r-amber-500' : 'border-gray-100 dark:border-slate-800'} flex flex-col h-full relative group transition-all hover:shadow-md overflow-hidden`}>
+          <div key={apt.id} className="bg-surface-card dark:bg-surface-dark-elevated rounded-lg flex flex-col h-full relative group transition-colors overflow-hidden">
             {/* Top Half: Photo */}
             <div
-                className="w-full h-40 bg-gray-200 dark:bg-slate-800 relative cursor-pointer group-hover:brightness-95 transition-all"
+                className="w-full h-40 bg-surface-strong dark:bg-[#242424] relative cursor-pointer group-hover:brightness-95 transition-all"
                 onClick={() => handleOpenPhotoModal(apt)}
             >
                 {apt.coverPhoto ? (
                     <>
                     <img src={apt.coverPhoto} alt={apt.name} className="w-full h-full object-cover" />
                     {apt.images && apt.images.length > 1 && (
-                      <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-sm flex items-center gap-1">
+                      <div className="absolute bottom-2 left-2 bg-ink/70 text-white text-[10px] font-semibold px-2 py-1 rounded-md backdrop-blur-sm flex items-center gap-1">
                         <ImageIcon size={12} />
                         <span dir="ltr">+{apt.images.length - 1}</span>
                       </div>
                     )}
                   </>
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-soft">
                         <ImageIcon size={32} className="mb-2 opacity-50" />
-                        <span className="text-xs font-bold">أضف صورة</span>
+                        <span className="text-xs font-semibold">أضف صورة</span>
                     </div>
                 )}
                 {/* Overlay actions */}
-                <div className="absolute top-2 right-2 flex space-x-reverse space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-900/90 rounded-lg p-1 backdrop-blur-sm">
+                <div className="absolute top-2 right-2 flex space-x-reverse space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-canvas/95 dark:bg-surface-dark/95 rounded-md p-1 border border-hairline dark:border-[#2e2e2e] backdrop-blur-sm">
                     {(user?.role === 'admin' || user?.permissions?.canEdit) && (
                     <button
                         onClick={(e) => { e.stopPropagation(); handleOpenModal(apt); }}
-                        className="text-gray-600 dark:text-gray-300 hover:text-blue-600 p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                        className="icon-action p-1.5"
                         title="تعديل"
                     >
                         <Edit3 size={16} />
@@ -221,7 +221,7 @@ export default function ApartmentsView() {
                     {(user?.role === 'admin' || user?.permissions?.canDelete) && (
                     <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(apt.id); }}
-                        className="text-gray-600 dark:text-gray-300 hover:text-red-500 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                        className="icon-action p-1.5"
                         title="حذف"
                     >
                         <Trash2 size={16} />
@@ -230,7 +230,7 @@ export default function ApartmentsView() {
                 </div>
                 {isNotClean && (
                     <div className="absolute bottom-2 right-2">
-                        <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                        <span className="badge-pill bg-canvas/95 text-ink border border-hairline backdrop-blur-sm text-[11px]">
                             تحتاج لتنظيف
                         </span>
                     </div>
@@ -240,20 +240,20 @@ export default function ApartmentsView() {
             <div className="p-4 flex flex-col flex-1">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><Home size={18} /></div>
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100">{apt.name}</h3>
+                  <div className="p-2 rounded-md bg-canvas dark:bg-surface-dark text-ink dark:text-white border border-hairline-soft dark:border-[#2e2e2e]"><Home size={18} /></div>
+                  <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white">{apt.name}</h3>
                 </div>
               </div>
-            <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 mt-1 font-medium line-clamp-1">{apt.type} • {apt.description}</p>
-            <div className="mt-auto flex items-end justify-between pt-3 border-t border-gray-50 dark:border-slate-800">
+            <p className="text-xs text-muted dark:text-[#a1a1aa] mb-3 mt-1 line-clamp-1">{apt.type} • {apt.description}</p>
+            <div className="mt-auto flex items-end justify-between pt-3 border-t border-hairline dark:border-[#2e2e2e]">
               <div>
-                <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">السعر الأساسي</p>
-                <p className="text-xl font-black text-green-600 dark:text-green-400">{apt.basePrice} <span className="text-xs text-gray-400 font-bold">ر.س / ليلة</span></p>
+                <p className="text-[10px] text-muted-soft font-semibold mb-0.5">السعر الأساسي</p>
+                <p className="text-xl font-semibold tracking-tight text-ink dark:text-white">{apt.basePrice} <span className="text-xs text-muted font-semibold">ر.س / ليلة</span></p>
               </div>
               {isNotClean && (
                 <button
                   onClick={() => handleToggleCleaningStatus(apt)}
-                  className="text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg transition-colors"
+                  className="text-xs font-semibold text-ink dark:text-white bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] hover:bg-surface-soft dark:hover:bg-[#242424] px-3 py-1.5 rounded-md transition-colors"
                 >
                   تم التنظيف
                 </button>
@@ -266,74 +266,74 @@ export default function ApartmentsView() {
         {(user?.role === 'admin' || user?.permissions?.canEdit) && (
           <button
             onClick={() => handleOpenModal()}
-            className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-600 dark:hover:bg-slate-800 transition-all cursor-pointer bg-transparent min-h-[200px]"
+            className="border border-dashed border-hairline dark:border-[#2e2e2e] rounded-lg p-6 flex flex-col items-center justify-center text-muted hover:border-ink hover:text-ink dark:hover:border-white dark:hover:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors cursor-pointer bg-transparent min-h-[200px]"
           >
-            <div className="p-3 rounded-full bg-gray-50 dark:bg-slate-800 mb-3"><Plus size={24} /></div>
-            <span className="font-bold">إضافة وحدة جديدة</span>
+            <div className="p-3 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-3"><Plus size={24} /></div>
+            <span className="font-semibold">إضافة وحدة جديدة</span>
           </button>
         )}
       </div>
       {totalPages > 1 && (
-        <div className="flex justify-center items-center py-4 border-t border-gray-100 dark:border-slate-800 shrink-0">
-          <div className="flex space-x-reverse space-x-2">
+        <div className="flex justify-center items-center py-4 border-t border-hairline-soft dark:border-[#242424] shrink-0">
+          <div className="nav-pill-group">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="nav-pill disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={18} />
             </button>
-            <span className="px-4 py-2 text-sm font-bold text-gray-700 dark:text-slate-300">
+            <span className="nav-pill nav-pill-active text-sm font-semibold">
               صفحة {currentPage} من {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="nav-pill disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={18} />
             </button>
           </div>
         </div>
       )}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900 shrink-0">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
+          <div className="bg-canvas dark:bg-surface-dark rounded-xl shadow-soft border border-hairline dark:border-[#2e2e2e] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
+              <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">
                 {editingId ? 'تعديل بيانات الوحدة' : 'إضافة وحدة جديدة'}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors"><X size={20}/></button>
+              <button onClick={() => setIsModalOpen(false)} className="icon-action"><X size={20}/></button>
             </div>
             <div className="overflow-y-auto p-6">
               <form onSubmit={handleSave} className="space-y-6">
               <div className="space-y-4">
-                <h3 className="font-bold text-gray-800 dark:text-slate-100 border-b pb-2">المعلومات الأساسية</h3>
+                <h3 className="font-semibold text-ink dark:text-white border-b border-hairline-soft dark:border-[#242424] pb-2">المعلومات الأساسية</h3>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">اسم/رقم الوحدة</label>
-                <input required type="text" placeholder="مثال: شقة 101" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">اسم/رقم الوحدة</label>
+                <input required type="text" placeholder="مثال: شقة 101" className="input-field" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">النوع</label>
-                      <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                      <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">النوع</label>
+                      <select className="input-field" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
                           {customTypes.map((t, idx) => (
                             <option key={idx} value={t}>{t}</option>
                           ))}
                       </select>
                   </div>
                   <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">السعر الافتراضي</label>
-                      <input required type="number" placeholder="200" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.basePrice} onChange={(e) => setFormData({...formData, basePrice: e.target.value})} />
+                      <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">السعر الافتراضي</label>
+                      <input required type="number" placeholder="200" className="input-field" value={formData.basePrice} onChange={(e) => setFormData({...formData, basePrice: e.target.value})} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ملاحظات/وصف</label>
-                  <textarea className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-28 bg-white dark:bg-slate-800 dark:text-slate-100 resize-none transition-all" placeholder="وصف الشقة أو ملاحظات داخلية..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})}></textarea>
+                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">ملاحظات/وصف</label>
+                  <textarea className="input-field h-28 resize-none" placeholder="وصف الشقة أو ملاحظات داخلية..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})}></textarea>
                 </div>
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">ترخيص السياحة (اختياري)</label>
-                    <select className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.licenseId} onChange={(e) => setFormData({...formData, licenseId: e.target.value})}>
+                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">ترخيص السياحة (اختياري)</label>
+                    <select className="input-field" value={formData.licenseId} onChange={(e) => setFormData({...formData, licenseId: e.target.value})}>
                         <option value="">بدون ترخيص محدد</option>
                         {licenses.map(l => (
                           <option key={l.id} value={l.id}>{l.licenseNumber}</option>
@@ -344,9 +344,9 @@ export default function ApartmentsView() {
               {/* Financials & Costs Section */}
 
               {/* Premium Image Upload Section */}
-              <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
-                <h3 className="font-bold text-gray-800 dark:text-slate-100 pb-2">صور الوحدة</h3>
-                <div className="border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-6 text-center hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors relative">
+              <div className="space-y-4 pt-4 border-t border-hairline-soft dark:border-[#242424]">
+                <h3 className="font-semibold text-ink dark:text-white pb-2">صور الوحدة</h3>
+                <div className="border border-dashed border-hairline dark:border-[#2e2e2e] rounded-md p-6 text-center hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors relative">
                   <input
                     type="file"
                     accept="image/*"
@@ -355,11 +355,11 @@ export default function ApartmentsView() {
                     disabled={isUploading}
                   />
                   <div className="flex flex-col items-center justify-center space-y-2">
-                    <div className={`p-3 rounded-full ${isUploading ? 'bg-blue-100 animate-pulse' : 'bg-blue-50 dark:bg-slate-800'}`}>
-                      <ImageIcon size={24} className={`${isUploading ? 'text-blue-600' : 'text-blue-500'}`} />
+                    <div className={`p-3 rounded-full bg-surface-card dark:bg-surface-dark-elevated ${isUploading ? 'animate-pulse' : ''}`}>
+                      <ImageIcon size={24} className="text-muted" />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-700 dark:text-slate-300 text-sm">
+                      <p className="font-semibold text-body dark:text-[#a1a1aa] text-sm">
                         {isUploading ? 'جاري الرفع...' : 'اسحب الصور هنا أو اضغط للتصفح'}
                       </p>
                     </div>
@@ -369,12 +369,12 @@ export default function ApartmentsView() {
                 {formData.images && formData.images.length > 0 && (
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     {formData.images.map((url, idx) => (
-                      <div key={idx} className={`relative shrink-0 w-24 h-24 rounded-lg overflow-hidden border-2 ${formData.coverPhoto === url ? 'border-blue-500 shadow-md' : 'border-transparent'}`}>
+                      <div key={idx} className={`relative shrink-0 w-24 h-24 rounded-md overflow-hidden border ${formData.coverPhoto === url ? 'border-ink dark:border-white' : 'border-hairline dark:border-[#2e2e2e]'}`}>
                         <img src={url} className="w-full h-full object-cover" alt="preview" />
                         <button
                           type="button"
                           onClick={() => removeImage(url)}
-                          className="absolute top-1 right-1 bg-red-500/90 text-white p-1 rounded-md hover:bg-red-600 transition-colors"
+                          className="absolute top-1 right-1 bg-ink/80 text-white p-1 rounded-md hover:bg-ink transition-colors"
                         >
                           <X size={12} />
                         </button>
@@ -382,13 +382,13 @@ export default function ApartmentsView() {
                           <button
                             type="button"
                             onClick={() => setFormData({...formData, coverPhoto: url})}
-                            className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-[10px] py-1 rounded text-center hover:bg-black/80"
+                            className="absolute bottom-1 left-1 right-1 bg-ink/70 text-white text-[10px] py-1 rounded text-center hover:bg-ink/90"
                           >
                             تعيين غلاف
                           </button>
                         )}
                         {formData.coverPhoto === url && (
-                          <div className="absolute bottom-1 left-1 right-1 bg-blue-500 text-white text-[10px] py-1 rounded text-center">
+                          <div className="absolute bottom-1 left-1 right-1 bg-ink text-white text-[10px] py-1 rounded text-center">
                             الصورة الرئيسية
                           </div>
                         )}
@@ -398,77 +398,77 @@ export default function ApartmentsView() {
                 )}
               </div>
               {/* Collapsible Financial Section */}
-              <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
+              <div className="space-y-4 pt-4 border-t border-hairline-soft dark:border-[#242424]">
                 <button
                   type="button"
                   onClick={() => setShowAdvancedFinancials(!showAdvancedFinancials)}
-                  className="w-full flex justify-between items-center font-bold text-gray-800 dark:text-slate-100 pb-2"
+                  className="w-full flex justify-between items-center font-semibold text-ink dark:text-white pb-2"
                 >
                   <span>التكاليف والمالية (إعدادات متقدمة)</span>
-                  <span className="text-gray-400">{showAdvancedFinancials ? <ChevronLeft className="-rotate-90 transition-transform" /> : <ChevronLeft className="transition-transform" />}</span>
+                  <span className="text-muted">{showAdvancedFinancials ? <ChevronLeft className="-rotate-90 transition-transform" /> : <ChevronLeft className="transition-transform" />}</span>
                 </button>
                 <div className={`transition-all duration-300 overflow-hidden ${showAdvancedFinancials ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">تكلفة الإيجار</label>
+                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">تكلفة الإيجار</label>
                     <div className="flex space-x-reverse space-x-2">
-                        <input type="number" placeholder="المبلغ" className="w-2/3 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.rentCost} onChange={(e) => setFormData({...formData, rentCost: e.target.value})} />
-                        <select className="w-1/3 px-2 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.rentPeriod} onChange={(e) => setFormData({...formData, rentPeriod: e.target.value})}>
+                        <input type="number" placeholder="المبلغ" className="input-field w-2/3" value={formData.rentCost} onChange={(e) => setFormData({...formData, rentCost: e.target.value})} />
+                        <select className="input-field w-1/3 px-2" value={formData.rentPeriod} onChange={(e) => setFormData({...formData, rentPeriod: e.target.value})}>
                             <option value="monthly">شهري</option>
                             <option value="yearly">سنوي</option>
                         </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">نوع النظافة والتكلفة</label>
-                    <div className="flex gap-2 mb-3 bg-gray-50 dark:bg-slate-800 p-1.5 rounded-lg border border-gray-200 dark:border-slate-700">
+                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">نوع النظافة والتكلفة</label>
+                    <div className="nav-pill-group w-full mb-3">
                         <button
                           type="button"
                           onClick={() => setFormData({...formData, cleaningType: 'salaried'})}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${formData.cleaningType === 'salaried' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                          className={`nav-pill flex-1 text-xs font-semibold ${formData.cleaningType === 'salaried' ? 'nav-pill-active' : ''}`}
                         >
                           موظف براتب
                         </button>
                         <button
                           type="button"
                           onClick={() => setFormData({...formData, cleaningType: 'per_booking'})}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${formData.cleaningType === 'per_booking' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                          className={`nav-pill flex-1 text-xs font-semibold ${formData.cleaningType === 'per_booking' ? 'nav-pill-active' : ''}`}
                         >
                           رسوم لكل حجز
                         </button>
                     </div>
                     {formData.cleaningType === 'per_booking' && (
-                        <input type="number" placeholder="تكلفة التنظيف للحجز الواحد (مثال: 50)" className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.cleaningCost} onChange={(e) => setFormData({...formData, cleaningCost: e.target.value})} />
+                        <input type="number" placeholder="تكلفة التنظيف للحجز الواحد (مثال: 50)" className="input-field" value={formData.cleaningCost} onChange={(e) => setFormData({...formData, cleaningCost: e.target.value})} />
                     )}
                     {formData.cleaningType === 'salaried' && (
-                        <p className="text-[10px] text-gray-400">سيتم حساب التكلفة من راتب النظافة الشهري في الإعدادات العامة ولن يتم خصم رسوم تنظيف إضافية لهذه الوحدة عند الحجز.</p>
+                        <p className="text-[10px] text-muted-soft">سيتم حساب التكلفة من راتب النظافة الشهري في الإعدادات العامة ولن يتم خصم رسوم تنظيف إضافية لهذه الوحدة عند الحجز.</p>
                     )}
                   </div>
                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">عمولات المنصات (لكل حجز)</label>
+                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">عمولات المنصات (لكل حجز)</label>
                     <div className="flex space-x-reverse space-x-2">
-                        <input type="number" placeholder="العمولة" className="w-2/3 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.platformFee} onChange={(e) => setFormData({...formData, platformFee: e.target.value})} />
-                        <select className="w-1/3 px-2 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.platformFeeType} onChange={(e) => setFormData({...formData, platformFeeType: e.target.value})}>
+                        <input type="number" placeholder="العمولة" className="input-field w-2/3" value={formData.platformFee} onChange={(e) => setFormData({...formData, platformFee: e.target.value})} />
+                        <select className="input-field w-1/3 px-2" value={formData.platformFeeType} onChange={(e) => setFormData({...formData, platformFeeType: e.target.value})}>
                             <option value="percentage">نسبة %</option>
                             <option value="fixed">مبلغ ثابت</option>
                         </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">مصاريف أخرى (لكل حجز)</label>
+                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">مصاريف أخرى (لكل حجز)</label>
                     <div className="flex space-x-reverse space-x-2">
-                        <input type="text" placeholder="الاسم (مثال: ضيافة)" className="w-1/2 px-3 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all text-sm" value={formData.otherExpenseLabel} onChange={(e) => setFormData({...formData, otherExpenseLabel: e.target.value})} />
-                        <input type="number" placeholder="المبلغ" className="w-1/2 px-3 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-slate-100 transition-all" value={formData.otherExpenseAmount} onChange={(e) => setFormData({...formData, otherExpenseAmount: e.target.value})} />
+                        <input type="text" placeholder="الاسم (مثال: ضيافة)" className="input-field w-1/2 px-3" value={formData.otherExpenseLabel} onChange={(e) => setFormData({...formData, otherExpenseLabel: e.target.value})} />
+                        <input type="number" placeholder="المبلغ" className="input-field w-1/2 px-3" value={formData.otherExpenseAmount} onChange={(e) => setFormData({...formData, otherExpenseAmount: e.target.value})} />
                     </div>
                   </div>
                 </div>
                   </div>
                 </div>
               </div>
-              <button type="submit" className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95 mt-4">
+              <button type="submit" className="btn-primary w-full h-11 text-base mt-4">
                 {editingId ? 'تحديث البيانات' : 'حفظ الوحدة'}
               </button>
             </form>

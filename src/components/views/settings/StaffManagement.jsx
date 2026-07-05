@@ -59,24 +59,24 @@ export default function StaffManagement() {
 
 
   if (loading) {
-    return <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+    return <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-ink dark:text-white" /></div>;
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-sm">
-      <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/30">
+    <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] overflow-hidden">
+      <div className="p-6 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-            <Shield className="text-blue-600 dark:text-blue-400" />
+          <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white flex items-center gap-2">
+            <Shield className="text-ink dark:text-white" />
             <span>إدارة الموظفين والصلاحيات</span>
           </h2>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted dark:text-[#a1a1aa] mt-1">
             أضف موظفين جدد وحدد صلاحيات وصولهم للنظام
           </p>
         </div>
         <button
           onClick={handleOpenAddModal}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold transition-all active:scale-95 shadow-md shadow-blue-200 dark:shadow-none"
+          className="btn-primary"
         >
           <Plus size={18} />
           <span>إضافة موظف</span>
@@ -86,7 +86,7 @@ export default function StaffManagement() {
       <div className="overflow-x-auto">
         <table className="w-full text-right">
           <thead>
-            <tr className="bg-gray-50 dark:bg-slate-800/80 text-gray-600 dark:text-slate-400 text-sm">
+            <tr className="text-muted dark:text-[#a1a1aa] text-sm border-b border-gray-100 dark:border-[#242424]">
               <th className="p-4 font-semibold">الموظف</th>
               <th className="p-4 font-semibold">اسم المستخدم</th>
               <th className="p-4 font-semibold">تاريخ الإضافة</th>
@@ -94,51 +94,51 @@ export default function StaffManagement() {
               <th className="p-4 font-semibold w-24">إجراءات</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-gray-100 dark:divide-[#242424]">
             {staff.map((s) => (
-              <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+              <tr key={s.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
                 <td className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center overflow-hidden border border-blue-200 dark:border-blue-800">
+                    <div className="w-10 h-10 rounded-full bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center overflow-hidden">
                       {s.profilePicture ? (
                         <img src={s.profilePicture} alt={s.name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">
+                        <span className="text-ink dark:text-white font-semibold text-sm">
                           {s.name ? s.name.charAt(0) : s.username.charAt(0)}
                         </span>
                       )}
                     </div>
-                    <span className="font-bold text-gray-800 dark:text-slate-200">{s.name || 'بدون اسم'}</span>
+                    <span className="font-semibold text-ink dark:text-white">{s.name || 'بدون اسم'}</span>
                   </div>
                 </td>
-                <td className="p-4 text-gray-600 dark:text-slate-300" dir="ltr">{s.username}</td>
-                <td className="p-4 text-gray-500 dark:text-slate-400 text-sm">
+                <td className="p-4 text-body dark:text-[#a1a1aa]" dir="ltr">{s.username}</td>
+                <td className="p-4 text-muted dark:text-[#a1a1aa] text-sm">
                   {new Date(s.createdAt).toLocaleDateString('ar-SA')}
                 </td>
                 <td className="p-4">
                   <div className="flex flex-wrap gap-1">
-                    {s.canBook && <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs rounded-md">حجز</span>}
-                    {s.canEdit && <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs rounded-md">تعديل</span>}
-                    {s.canDelete && <span className="px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs rounded-md">حذف</span>}
-                    {s.canViewAnalytics && <span className="px-2 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-xs rounded-md">إحصائيات</span>}
-                    {s.canViewSettings && <span className="px-2 py-1 bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-slate-300 text-xs rounded-md">إعدادات</span>}
+                    {s.canBook && <span className="badge-pill text-xs">حجز</span>}
+                    {s.canEdit && <span className="badge-pill text-xs">تعديل</span>}
+                    {s.canDelete && <span className="badge-pill text-xs">حذف</span>}
+                    {s.canViewAnalytics && <span className="badge-pill text-xs">إحصائيات</span>}
+                    {s.canViewSettings && <span className="badge-pill text-xs">إعدادات</span>}
                     {!s.canBook && !s.canEdit && !s.canDelete && !s.canViewAnalytics && !s.canViewSettings && (
-                      <span className="text-xs text-gray-400">لا توجد صلاحيات</span>
+                      <span className="text-xs text-muted-soft">لا توجد صلاحيات</span>
                     )}
                   </div>
                 </td>
                 <td className="p-4">
-                  <div className="flex gap-2">
+                  <div className="flex gap-1">
                     <button
                       onClick={() => handleOpenEditModal(s)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                      className="icon-action"
                       title="تعديل الموظف"
                     >
                       <Edit2 size={18} />
                     </button>
                     <button
                       onClick={() => confirmDelete(s.id)}
-                      className="p-1.5 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      className="icon-action"
                       title="حذف الموظف"
                     >
                       <Trash2 size={18} />
@@ -149,7 +149,7 @@ export default function StaffManagement() {
             ))}
             {staff.length === 0 && (
               <tr>
-                <td colSpan="5" className="p-8 text-center text-gray-500 dark:text-slate-400">
+                <td colSpan="5" className="p-8 text-center text-muted dark:text-[#a1a1aa]">
                   لا يوجد موظفين مضافين حالياً. انقر على "إضافة موظف" للبدء.
                 </td>
               </tr>
@@ -171,27 +171,27 @@ export default function StaffManagement() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
-          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-red-100 dark:border-red-900/30">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-[#2e2e2e]">
             <div className="p-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4 text-red-600 dark:text-red-400">
+              <div className="w-16 h-16 rounded-full bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center mx-auto mb-4 text-ink dark:text-white">
                 <Trash2 size={32} />
               </div>
-              <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-2">تأكيد الحذف</h3>
-              <p className="text-gray-500 dark:text-slate-400 text-sm">هل أنت متأكد من حذف هذا الموظف؟ لن يمكن التراجع عن هذا الإجراء.</p>
+              <h3 className="font-semibold tracking-tight text-ink dark:text-white text-xl mb-2">تأكيد الحذف</h3>
+              <p className="text-muted dark:text-[#a1a1aa] text-sm">هل أنت متأكد من حذف هذا الموظف؟ لن يمكن التراجع عن هذا الإجراء.</p>
             </div>
 
-            <div className="p-4 bg-gray-50 dark:bg-slate-800 flex gap-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex gap-3">
               <button
                 onClick={() => setDeleteConfirmId(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+                className="btn-secondary flex-1"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleDeleteStaff}
-                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all"
+                className="btn-primary flex-1"
               >
                 حذف الموظف
               </button>

@@ -48,13 +48,13 @@ export default function ImageUpload({ onUploadSuccess, currentImage, className =
     >
       <div className={`relative inline-block ${className}`}>
         <div
-          className="relative w-24 h-24 rounded-full border-2 border-gray-200 dark:border-slate-700 overflow-hidden bg-gray-100 dark:bg-slate-800 flex items-center justify-center cursor-pointer group"
+          className="relative w-24 h-24 rounded-full border border-hairline dark:border-[#2e2e2e] overflow-hidden bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center cursor-pointer group"
           onClick={() => ikUploadRef.current?.click()}
         >
           {currentImage ? (
             <img src={currentImage} alt="Profile" className="w-full h-full object-cover" />
           ) : (
-            <Camera className="w-8 h-8 text-gray-400 group-hover:text-blue-500 transition-colors" />
+            <Camera className="w-8 h-8 text-muted-soft group-hover:text-ink dark:group-hover:text-white transition-colors" />
           )}
 
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -62,8 +62,8 @@ export default function ImageUpload({ onUploadSuccess, currentImage, className =
           </div>
 
           {uploading && (
-            <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            <div className="absolute inset-0 bg-canvas/80 dark:bg-surface-dark/80 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-ink dark:text-white" />
             </div>
           )}
         </div>
