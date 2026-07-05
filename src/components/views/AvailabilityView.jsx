@@ -25,7 +25,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
       const headerSpace = 30; // Reduced to allow more items
       const availableHeight = cellHeight - headerSpace;
 
-      const itemHeight = 22; // Booking item height + gap
+      const itemHeight = 26; // Booking item height + gap
 
       if (availableHeight < itemHeight) {
          setMaxVisible(dayBookings.length > 0 ? 1 : 0);
@@ -67,7 +67,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
   return (
     <div
       ref={cellRef}
-      className={`flex flex-col min-h-0 h-full p-2 border-b border-l border-[1px] border-gray-100 dark:border-[#242424] last:border-l-0 relative group transition-colors overflow-hidden
+      className={`flex flex-col min-h-0 h-full p-2.5 border-b border-l border-[1px] border-gray-100 dark:border-[#242424] last:border-l-0 relative group transition-colors overflow-hidden
         ${!dayObj.isCurrentMonth ? 'bg-surface-soft/60 dark:bg-surface-dark-elevated/40' : 'bg-canvas dark:bg-surface-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60'}
       `}
       onClick={() => setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings })}
@@ -81,7 +81,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
         {isToday && <span className="text-[10px] font-semibold text-accent">اليوم</span>}
       </div>
 
-      <div className="w-full flex flex-col gap-1 overflow-hidden relative">
+      <div className="w-full flex flex-col gap-[3px] overflow-hidden relative">
         {visibleBookings.map(booking => {
           const apt = apartments.find(a => a.id === booking.apartmentId);
           if (!apt) return null;
@@ -90,7 +90,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
           const isEnd = new Date(booking.endDate).toDateString() === dateStr;
           return (
             <div key={booking.id} title={`${apt.name} - ${booking.residentName}`}
-              className={`text-[10px] px-1.5 py-0.5 rounded flex items-center h-5 font-semibold truncate cursor-pointer transition-opacity hover:opacity-70 shrink-0 w-full
+              className={`text-[11px] px-2 py-0.5 rounded-md flex items-center h-[22px] font-semibold truncate cursor-pointer transition-opacity hover:opacity-70 shrink-0 w-full
                 ${isPending
                   ? 'bg-surface-soft text-muted border border-dashed border-hairline dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#3a3a3a]'
                   : 'bg-surface-card text-ink border border-hairline-soft dark:bg-surface-dark-elevated dark:text-white dark:border-[#2e2e2e]'}

@@ -191,7 +191,7 @@ export default function AnalyticsView() {
 
         <div className="flex-1 min-h-0 w-full overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
           {/* Top Performers and Pie Chart Skeleton */}
-          <div className="lg:col-span-1 flex flex-col gap-4 h-full min-h-0">
+          <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
             <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col">
                <div className="h-5 w-24 bg-surface-strong dark:bg-[#242424] rounded mb-2"></div>
                <div className="h-3 w-32 bg-surface-strong/60 dark:bg-[#242424] rounded mb-4"></div>
@@ -231,7 +231,7 @@ export default function AnalyticsView() {
   }
 
   return (
-    <div className="h-full overflow-hidden flex flex-col space-y-4">
+    <div className="h-full overflow-hidden flex flex-col space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
         <div className="flex gap-2">
           <button
@@ -335,7 +335,7 @@ export default function AnalyticsView() {
       </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 shrink-0">
         <div
           onClick={() => fetchBreakdown('revenue')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
@@ -371,9 +371,9 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 w-full overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
-        <div className="lg:col-span-1 flex flex-col gap-4 h-full min-h-0">
-            <div className="card-surface p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 w-full overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-5 pb-2">
+        <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
+            <div className="card-surface p-5 flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="shrink-0">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
                 <Star size={18} className="ml-2 text-muted" /> الأعلى أداءً
@@ -402,7 +402,7 @@ export default function AnalyticsView() {
             </div>
           </div>
 
-            <div className="card-surface p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="card-surface p-5 flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="shrink-0">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center"><Globe size={18} className="ml-2 text-muted" /> مصادر التسويق</h4>
               <p className="text-xs text-muted mb-2">توزيع الحجوزات حسب المنصات</p>

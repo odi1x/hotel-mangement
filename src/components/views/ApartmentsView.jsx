@@ -181,95 +181,101 @@ export default function ApartmentsView() {
 
 
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-4">
         {paginatedApartments.map((apt) => {
           const isNotClean = apt.needsCleaning;
+          const isBooked = isApartmentCurrentlyBooked(apt.id);
           return (
-          <div key={apt.id} className="card-surface flex flex-col h-full relative group transition-all hover:shadow-soft overflow-hidden">
-            {/* Top Half: Photo */}
+          <div key={apt.id} className="card-surface flex flex-col h-full relative group transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 overflow-hidden">
+            {/* Image band — compact, supporting (this is an admin tool, not a listing) */}
             <div
-                className="w-full h-40 bg-surface-strong dark:bg-[#242424] relative cursor-pointer group-hover:brightness-95 transition-all"
+                className="w-full h-32 bg-surface-card dark:bg-surface-dark relative cursor-pointer overflow-hidden"
                 onClick={() => handleOpenPhotoModal(apt)}
             >
                 {apt.coverPhoto ? (
                     <>
-                    <img src={apt.coverPhoto} alt={apt.name} className="w-full h-full object-cover" />
+                    <img src={apt.coverPhoto} alt={apt.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
                     {apt.images && apt.images.length > 1 && (
-                      <div className="absolute bottom-2 left-2 bg-ink/70 text-white text-[10px] font-semibold px-2 py-1 rounded-md backdrop-blur-sm flex items-center gap-1">
+                      <div className="absolute bottom-3 left-3 bg-ink/70 text-white text-[10px] font-semibold px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
                         <ImageIcon size={12} />
                         <span dir="ltr">+{apt.images.length - 1}</span>
                       </div>
                     )}
-                  </>
+                    </>
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-soft">
-                        <ImageIcon size={32} className="mb-2 opacity-50" />
-                        <span className="text-xs font-semibold">أضف صورة</span>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-soft gap-1.5">
+                        <ImageIcon size={20} className="opacity-40" />
+                        <span className="text-[11px] font-medium">أضف صورة</span>
                     </div>
                 )}
-                {/* Overlay actions */}
-                <div className="absolute top-2 right-2 flex space-x-reverse space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-canvas/95 dark:bg-surface-dark/95 rounded-md p-1 border border-hairline dark:border-[#2e2e2e] backdrop-blur-sm">
+
+                {/* Operational status — leading edge (RTL: top-right) */}
+                <div className="absolute top-3 right-3">
+                  {isNotClean ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-canvas/90 text-ink border border-dashed border-muted-soft backdrop-blur-sm">تحتاج تنظيف</span>
+                  ) : isBooked ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-ink/90 text-white backdrop-blur-sm">مشغولة</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-canvas/90 text-ink border border-hairline backdrop-blur-sm"><span className="w-1.5 h-1.5 rounded-full bg-accent"></span>متاحة</span>
+                  )}
+                </div>
+
+                {/* Edit / delete — trailing edge, on hover */}
+                <div className="absolute top-3 left-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {(user?.role === 'admin' || user?.permissions?.canEdit) && (
                     <button
                         onClick={(e) => { e.stopPropagation(); handleOpenModal(apt); }}
-                        className="icon-action p-1.5"
+                        className="p-1.5 rounded-md bg-canvas/95 text-muted hover:text-ink border border-hairline backdrop-blur-sm transition-colors"
                         title="تعديل"
                     >
-                        <Edit3 size={16} />
+                        <Edit3 size={15} />
                     </button>
                     )}
                     {(user?.role === 'admin' || user?.permissions?.canDelete) && (
                     <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(apt.id); }}
-                        className="icon-action p-1.5"
+                        className="p-1.5 rounded-md bg-canvas/95 text-muted hover:text-ink border border-hairline backdrop-blur-sm transition-colors"
                         title="حذف"
                     >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                     </button>
                     )}
                 </div>
-                {isNotClean && (
-                    <div className="absolute bottom-2 right-2">
-                        <span className="badge-pill bg-canvas/95 text-ink border border-hairline backdrop-blur-sm text-[11px]">
-                            تحتاج لتنظيف
-                        </span>
-                    </div>
-                )}
             </div>
-            {/* Bottom Half: Meta */}
-            <div className="p-4 flex flex-col flex-1">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-md bg-surface-card dark:bg-surface-dark text-ink dark:text-white"><Home size={18} /></div>
-                  <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white">{apt.name}</h3>
-                </div>
-              </div>
-            <p className="text-xs text-muted dark:text-[#a1a1aa] mb-3 mt-1 line-clamp-1">{apt.type} • {apt.description}</p>
-            <div className="mt-auto flex items-end justify-between pt-3 border-t border-hairline dark:border-[#2e2e2e]">
-              <div>
-                <p className="text-[10px] text-muted-soft font-semibold mb-0.5">السعر الأساسي</p>
-                <p className="text-xl font-semibold tracking-tight text-ink dark:text-white">{apt.basePrice} <span className="text-xs text-muted font-semibold">ر.س / ليلة</span></p>
-              </div>
-              {isNotClean && (
-                <button
-                  onClick={() => handleToggleCleaningStatus(apt)}
-                  className="text-xs font-semibold text-ink dark:text-white bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] hover:bg-surface-soft dark:hover:bg-[#242424] px-3 py-1.5 rounded-md transition-colors"
-                >
-                  تم التنظيف
-                </button>
+
+            {/* Body — name & price lead; type is a quiet eyebrow */}
+            <div className="p-5 flex flex-col flex-1">
+              <p className="text-[11px] font-semibold text-muted-soft mb-1">{apt.type}</p>
+              <h3 className="text-lg font-bold tracking-tight text-ink dark:text-white leading-tight">{apt.name}</h3>
+              {apt.description && (
+                <p className="text-xs text-muted dark:text-[#a1a1aa] mt-1 line-clamp-1">{apt.description}</p>
               )}
+
+              <div className="mt-auto pt-4 flex items-end justify-between border-t border-hairline-soft dark:border-[#2a2825]">
+                <div>
+                  <p className="text-[10px] text-muted-soft font-semibold mb-1">السعر الأساسي</p>
+                  <p className="text-2xl font-bold tracking-tightest text-ink dark:text-white leading-none">{apt.basePrice} <span className="text-xs text-muted font-semibold">ر.س / ليلة</span></p>
+                </div>
+                {isNotClean && (
+                  <button
+                    onClick={() => handleToggleCleaningStatus(apt)}
+                    className="text-xs font-semibold text-ink dark:text-white bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] hover:bg-surface-soft dark:hover:bg-[#242424] px-3 py-1.5 rounded-md transition-colors shrink-0"
+                  >
+                    تم التنظيف
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-            </div>
         );
         })}
         {(user?.role === 'admin' || user?.permissions?.canEdit) && (
           <button
             onClick={() => handleOpenModal()}
-            className="border border-dashed border-hairline dark:border-[#2e2e2e] rounded-lg p-6 flex flex-col items-center justify-center text-muted hover:border-ink hover:text-ink dark:hover:border-white dark:hover:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors cursor-pointer bg-transparent min-h-[200px]"
+            className="group/add border border-dashed border-hairline dark:border-[#2e2e2e] rounded-lg flex flex-col items-center justify-center gap-3 text-muted hover:border-ink hover:text-ink dark:hover:border-white dark:hover:text-white transition-colors cursor-pointer bg-transparent min-h-[240px] h-full"
           >
-            <div className="p-3 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-3"><Plus size={24} /></div>
-            <span className="font-semibold">إضافة وحدة جديدة</span>
+            <div className="w-12 h-12 rounded-full bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center transition-colors group-hover/add:bg-accent group-hover/add:text-white"><Plus size={22} /></div>
+            <span className="font-semibold text-sm">إضافة وحدة جديدة</span>
           </button>
         )}
       </div>

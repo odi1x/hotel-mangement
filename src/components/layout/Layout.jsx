@@ -67,9 +67,9 @@ export default function Layout() {
         <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} />
 
         <main className="flex-1 overflow-hidden p-6 pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-end mb-6">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-ink dark:text-white mb-1">
+            <h1 className="text-3xl font-bold tracking-tightest text-ink dark:text-white mb-1.5 leading-none">
               {getViewTitle()}
             </h1>
             <p className="text-sm text-muted dark:text-[#a1a1aa]">إدارة التأجير اليومي والأسبوعي والشهري بدقة.</p>

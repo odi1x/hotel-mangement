@@ -14,7 +14,7 @@
   html {
     height: 100%;
     width: 100%;
-    background-color: #f7f5f2;
+    background-color: #ffffff;
   }
 
   body {
@@ -23,8 +23,8 @@
     height: 100%;
     width: 100%;
     font-family: 'Zain', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: #1c1917;
-    background-color: #f7f5f2;
+    color: #111111;
+    background-color: #ffffff;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -35,10 +35,10 @@
 
   /* Display headlines carry the drama that color usually would:
      larger, tighter, confident. Zain synthesizes 600 from 700. */
-  h1 { font-weight: 700; letter-spacing: -0.03em; color: #1c1917; line-height: 1.1; }
-  h2, h3 { font-weight: 600; letter-spacing: -0.02em; color: #1c1917; line-height: 1.2; }
+  h1 { font-weight: 700; letter-spacing: -0.03em; color: #111111; line-height: 1.1; }
+  h2, h3 { font-weight: 600; letter-spacing: -0.02em; color: #111111; line-height: 1.2; }
 
-  ::placeholder { color: #a8a29e; }
+  ::placeholder { color: #898989; }
 
   /* Accent focus ring — quiet but present */
   *:focus-visible {
@@ -130,11 +130,11 @@
   padding-right: 2px;
   font-size: 12px;
   font-weight: 600;
-  color: #78716c;
+  color: #6b7280;
 }
 
 .dp-shell .grid.grid-cols-7.border-b {
-  border-color: #f0ebe4 !important;
+  border-color: #f3f4f6 !important;
   padding-top: 6px;
   padding-bottom: 6px;
 }
@@ -142,7 +142,7 @@
 .dp-shell [role="presentation"] > div,
 .dp-shell .shadow-sm {
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(28, 25, 23, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 /* Kill the library's residual blue (its runtime classes get purged, so it
@@ -153,4 +153,4 @@
 .dp-shell [class*="text-blue-"] { color: #0f766e !important; }
 .dp-shell [class*="bg-blue-100"],
 .dp-shell [class*="bg-blue-50"] { background-color: #0f766e1f !important; }
-.dp-shell input { caret-color: #1c1917; }
+.dp-shell input { caret-color: #111111; }

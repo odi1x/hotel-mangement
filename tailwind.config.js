@@ -14,37 +14,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        // ---- Warm monochrome base (SSOT: DESIGN-cal.md, warmed) ----
-        // Depth model: `page` is a faint warm tint, cards sit on `canvas`
-        // (pure white) lifted by a hairline + micro shadow. Cards are now
-        // LIGHTER than the page, which is what reads as premium.
-        page: '#f7f5f2',            // main scroll area — warm off-white
-        canvas: '#ffffff',          // elevated white surfaces: cards, inputs, modals, rails
-        ink: '#1c1917',             // warm near-black — headlines & primary
-        body: '#44403c',            // warm running text (stone-700)
-        muted: '#78716c',           // secondary text (stone-500)
-        'muted-soft': '#a8a29e',    // tertiary / captions (stone-400)
-        hairline: '#e7e2da',        // warm 1px border
-        'hairline-soft': '#f0ebe4', // barely-there divider
+        // ---- Original monochrome base (SSOT: DESIGN-cal.md) restored ----
+        // Background reverted to clean white per request; accent retained.
+        page: '#ffffff',            // main scroll area — back to white
+        canvas: '#ffffff',          // elevated white surfaces
+        ink: '#111111',             // headlines & primary
+        body: '#374151',            // running text
+        muted: '#6b7280',           // secondary text
+        'muted-soft': '#898989',    // tertiary / captions
+        hairline: '#e5e7eb',        // 1px border
+        'hairline-soft': '#f3f4f6', // barely-there divider
         surface: {
-          soft: '#f5f2ee',          // nav-pill track, soft fills
-          card: '#f2efe9',          // chips, badges, hover, inner boxes
-          strong: '#e7e2da',        // image placeholders, disabled
-          dark: '#0f0e0d',          // dark-mode floor
-          'dark-elevated': '#1a1917',
+          soft: '#f8f9fa',          // nav-pill track, soft fills
+          card: '#f5f5f5',          // chips, badges, hover, inner boxes
+          strong: '#e5e7eb',        // image placeholders, disabled
+          dark: '#101010',          // dark-mode floor
+          'dark-elevated': '#1a1a1a',
         },
         primary: {
-          DEFAULT: '#1c1917',       // near-black CTA
-          active: '#332f2b',
-          disabled: '#e7e2da',
+          DEFAULT: '#111111',       // near-black CTA
+          active: '#242424',
+          disabled: '#e5e7eb',
         },
-        // ---- The single scarce accent. Swap THIS value to rebrand. ----
-        // Deep emerald = "money / positive," pairs with warm stone.
+        // ---- The single scarce accent (kept). Swap DEFAULT to rebrand. ----
+        // Deep emerald = "money / positive."
         // Alternatives: academy red #b91c1c · navy #1e3a5f · clay #b45309
         accent: {
           DEFAULT: '#0f766e',
-          soft: '#0f766e14',        // 8% tint for gentle fills
-          strong: '#0b5d56',        // pressed
+          soft: '#0f766e14',
+          strong: '#0b5d56',
         },
       },
       fontFamily: {
@@ -57,10 +55,10 @@ export default {
       },
       boxShadow: {
         // Layered, low-alpha — depth without heaviness
-        micro: '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)',
-        soft: '0 4px 16px rgba(28,25,23,0.08), 0 1px 3px rgba(28,25,23,0.04)',
-        pill: '0 1px 2px rgba(28,25,23,0.08)',
-        lift: '0 8px 28px rgba(28,25,23,0.10)',
+        micro: '0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)',
+        soft: '0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
+        pill: '0 1px 2px rgba(0,0,0,0.08)',
+        lift: '0 8px 28px rgba(0,0,0,0.10)',
       },
       letterSpacing: {
         tightest: '-0.03em',
