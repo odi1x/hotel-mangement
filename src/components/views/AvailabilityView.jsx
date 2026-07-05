@@ -250,22 +250,31 @@ export default function AvailabilityView({ openBookingForm }) {
         const monthStart = new Date(year, month, 1);
         const monthEnd = new Date(year, month, daysInMonth);
         const pad = n => String(n).padStart(2, '0');
+        const isWknd = (dt) => { const g = dt.getDay(); return g === 5 || g === 6; };
+        const cellBg = (today, wknd, r) => {
+          if (today) return darkMode ? 'rgba(15,118,110,0.13)' : 'rgba(15,118,110,0.06)';
+          if (wknd)  return darkMode ? 'rgba(255,255,255,0.035)' : 'rgba(17,17,17,0.028)';
+          if (r % 2 === 1) return darkMode ? 'rgba(255,255,255,0.018)' : 'rgba(17,17,17,0.014)';
+          return undefined;
+        };
+        const frozenShadow = { boxShadow: '-6px 0 10px -8px rgba(0,0,0,0.12)' };
 
         return (
           <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark">
             <div style={{ display: 'grid', gridTemplateColumns: `150px repeat(${daysInMonth}, ${dayW}px)`, minWidth: 'max-content' }}>
               {/* corner */}
-              <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center justify-center text-xs font-semibold text-muted dark:text-[#a1a1aa]" style={{ gridColumn: 1, gridRow: 1, height: 48 }}>
-                الوحدة \ اليوم
+              <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center justify-center text-xs font-semibold text-muted dark:text-[#a1a1aa]" style={{ gridColumn: 1, gridRow: 1, height: 48, ...frozenShadow }}>
+                الوحدة
               </div>
               {/* day headers */}
               {days.map((d, i) => {
                 const dt = new Date(year, month, d);
                 const isToday = dt.toDateString() === todayStr;
+                const wknd = isWknd(dt);
                 return (
-                  <div key={`h${d}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 48 }}>
-                    <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-accent text-white' : 'text-body dark:text-[#a1a1aa]'}`}>{d}</span>
-                    <span className="text-[10px] text-muted-soft mt-0.5">{wd[dt.getDay()]}</span>
+                  <div key={`h${d}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 48, ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}>
+                    <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-accent text-white' : wknd ? 'text-muted-soft' : 'text-body dark:text-[#a1a1aa]'}`}>{d}</span>
+                    <span className={`text-[10px] mt-0.5 ${wknd ? 'text-muted-soft' : 'text-muted-soft'}`}>{wd[dt.getDay()]}</span>
                   </div>
                 );
               })}
@@ -278,7 +287,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 return (
                   <Fragment key={apt.id}>
                     {/* sticky unit label */}
-                    <div className="sticky right-0 z-20 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center gap-2 px-3" style={{ gridColumn: 1, gridRow: row, height: 48 }}>
+                    <div className="sticky right-0 z-20 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center gap-2 px-3" style={{ gridColumn: 1, gridRow: row, height: 48, ...frozenShadow, backgroundColor: r % 2 === 1 ? (darkMode ? '#161514' : '#fcfcfb') : undefined }}>
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: darkMode ? pal.dtx : pal.tx }}></span>
                       <span className="text-sm font-semibold text-ink dark:text-white truncate">{apt.name}</span>
                     </div>
@@ -286,12 +295,13 @@ export default function AvailabilityView({ openBookingForm }) {
                     {days.map((d, i) => {
                       const dt = new Date(year, month, d);
                       const isToday = dt.toDateString() === todayStr;
+                      const wknd = isWknd(dt);
                       return (
                         <div
                           key={`c${apt.id}-${d}`}
                           onClick={canBook ? () => openBookingForm({ apartmentId: apt.id, startDate: `${year}-${pad(month + 1)}-${pad(d)}` }) : undefined}
                           className={`border-b border-l border-gray-100 dark:border-[#242424] transition-colors ${canBook ? 'cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60' : ''}`}
-                          style={{ gridColumn: 2 + i, gridRow: row, height: 48, backgroundColor: isToday ? 'rgba(15,118,110,0.05)' : undefined }}
+                          style={{ gridColumn: 2 + i, gridRow: row, height: 48, backgroundColor: cellBg(isToday, wknd, r), ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}
                           title={canBook ? 'إضافة حجز' : ''}
                         ></div>
                       );
