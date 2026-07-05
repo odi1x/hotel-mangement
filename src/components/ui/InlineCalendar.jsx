@@ -124,9 +124,9 @@ export default function InlineCalendar({ value, onChange, minDate }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-y-4 gap-x-1 text-center">
+        <div className="grid grid-cols-7 gap-y-4 gap-x-2 text-center">
           {dayNames.map(d => (
-            <div key={d} className="text-sm text-muted font-semibold mb-2">{d}</div>
+            <div key={d} className="text-xs sm:text-sm text-muted font-semibold mb-2 truncate">{d}</div>
           ))}
 
           {daysInMonth.map((day, idx) => {
