@@ -74,11 +74,11 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
     >
       <div className="flex justify-between items-start mb-1 shrink-0">
         <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full
-          ${isToday ? 'bg-ink text-white dark:bg-white dark:text-ink' :
+          ${isToday ? 'bg-accent text-white' :
             !dayObj.isCurrentMonth ? 'text-muted-soft dark:text-[#555]' : 'text-body dark:text-[#a1a1aa]'
           }
         `}>{dayObj.date.getDate()}</span>
-        {isToday && <span className="text-[10px] font-semibold text-ink dark:text-white">اليوم</span>}
+        {isToday && <span className="text-[10px] font-semibold text-accent">اليوم</span>}
       </div>
 
       <div className="w-full flex flex-col gap-1 overflow-hidden relative">

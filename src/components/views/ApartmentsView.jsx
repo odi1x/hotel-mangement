@@ -185,7 +185,7 @@ export default function ApartmentsView() {
         {paginatedApartments.map((apt) => {
           const isNotClean = apt.needsCleaning;
           return (
-          <div key={apt.id} className="bg-surface-card dark:bg-surface-dark-elevated rounded-lg flex flex-col h-full relative group transition-colors overflow-hidden">
+          <div key={apt.id} className="card-surface flex flex-col h-full relative group transition-all hover:shadow-soft overflow-hidden">
             {/* Top Half: Photo */}
             <div
                 className="w-full h-40 bg-surface-strong dark:bg-[#242424] relative cursor-pointer group-hover:brightness-95 transition-all"
@@ -240,7 +240,7 @@ export default function ApartmentsView() {
             <div className="p-4 flex flex-col flex-1">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-md bg-canvas dark:bg-surface-dark text-ink dark:text-white border border-hairline-soft dark:border-[#2e2e2e]"><Home size={18} /></div>
+                  <div className="p-2 rounded-md bg-surface-card dark:bg-surface-dark text-ink dark:text-white"><Home size={18} /></div>
                   <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white">{apt.name}</h3>
                 </div>
               </div>

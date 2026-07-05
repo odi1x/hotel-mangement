@@ -14,7 +14,10 @@ const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isColla
     }`}
     title={isCollapsed ? label : ''}
   >
-    <Icon size={20} strokeWidth={view === id ? 2.25 : 2} />
+    {view === id && !isCollapsed && (
+      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-accent"></span>
+    )}
+    <Icon size={20} strokeWidth={view === id ? 2.25 : 2} className={view === id ? 'text-accent' : ''} />
     {!isCollapsed && <span className="text-sm mr-3 flex-1 text-right">{label}</span>}
     {!isCollapsed && badgeCount > 0 && (
       <span className="bg-ink text-white text-[10px] font-semibold px-2 py-0.5 rounded-full dark:bg-white dark:text-ink">

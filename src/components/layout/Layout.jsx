@@ -60,13 +60,13 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex h-screen bg-canvas dark:bg-surface-dark font-sans text-ink dark:text-white overflow-hidden" dir="rtl">
+    <div className="flex h-screen bg-page dark:bg-surface-dark font-sans text-ink dark:text-white overflow-hidden" dir="rtl">
       <Sidebar view={view} setView={setView} isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} />
 
-        <main className="flex-1 overflow-hidden p-6 pb-6 bg-canvas dark:bg-surface-dark flex flex-col min-h-0">
+        <main className="flex-1 overflow-hidden p-6 pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-ink dark:text-white mb-1">

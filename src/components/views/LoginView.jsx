@@ -36,8 +36,8 @@ export default function LoginView() {
     <div className="min-h-screen flex items-center justify-center bg-canvas dark:bg-surface-dark p-4" dir="rtl">
       <div className="bg-canvas dark:bg-surface-dark-elevated p-8 rounded-xl shadow-soft w-full max-w-md border border-hairline dark:border-[#2e2e2e]">
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-ink dark:bg-white p-3 rounded-md mb-4">
-            <Home className="text-white dark:text-ink" size={32} />
+          <div className="bg-accent p-3 rounded-md mb-4 shadow-soft">
+            <Home className="text-white" size={32} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink dark:text-white">رنت فلو</h1>
           <p className="text-muted dark:text-[#a1a1aa] text-sm mt-2">نظام إدارة الضيافة</p>
@@ -100,7 +100,7 @@ export default function LoginView() {
         <div className="mt-6 text-center">
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-sm text-ink dark:text-white hover:underline font-semibold"
+            className="text-sm link-accent hover:underline"
           >
             {isLogin ? 'ليس لديك حساب؟ إنشاء حساب جديد' : 'لديك حساب بالفعل؟ تسجيل الدخول'}
           </button>

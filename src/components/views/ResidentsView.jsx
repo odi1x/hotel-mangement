@@ -244,13 +244,13 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       {booking.status === 'checked_out_early' ? (
-                          <span className="badge-pill text-[11px] font-semibold text-muted">خروج مبكر</span>
+                          <span className="badge-pill badge-dashed text-[11px] font-semibold">خروج مبكر</span>
                       ) : isCurrent ? (
-                        <span className="badge-pill text-[11px] font-semibold bg-ink text-white dark:bg-white dark:text-ink">مقيم حالياً</span>
+                        <span className="badge-pill badge-solid text-[11px] font-semibold">مقيم حالياً</span>
                       ) : isFuture ? (
-                        <span className="badge-pill text-[11px] font-semibold">متوقع وصوله</span>
+                        <span className="badge-pill badge-outline text-[11px] font-semibold">متوقع وصوله</span>
                       ) : (
-                        <span className="badge-pill text-[11px] font-semibold bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated">مغادر</span>
+                        <span className="badge-pill badge-ghost text-[11px] font-semibold">مغادر</span>
                       )}
                     </td>
                     <td className="px-6 py-4">

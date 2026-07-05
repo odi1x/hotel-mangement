@@ -1,7 +1,7 @@
 /* ============================================================
-   Rent Flow — Design System (SSOT: DESIGN-cal.md)
-   Monochrome purity: white canvas, #f5f5f5 surfaces,
-   #111111 ink & primary actions, 1px hairline boundaries.
+   Rent Flow — Design System (SSOT: DESIGN-cal.md, warmed)
+   Warm monochrome: tinted page, white elevated cards, layered
+   shadows, one scarce emerald accent (semantic = revenue/money).
    Typeface: "Zain" across every text node (RTL-first).
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Zain:wght@200;300;400;700;800;900&display=swap');
@@ -14,7 +14,7 @@
   html {
     height: 100%;
     width: 100%;
-    background-color: #ffffff;
+    background-color: #f7f5f2;
   }
 
   body {
@@ -23,63 +23,75 @@
     height: 100%;
     width: 100%;
     font-family: 'Zain', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: #111111;
-    background-color: #ffffff;
+    color: #1c1917;
+    background-color: #f7f5f2;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* Every text item inherits the Zain stack — inputs and buttons
-     do not inherit font-family by default, force them. */
   input, select, textarea, button {
     font-family: inherit;
   }
 
-  /* Display headlines: weight 600 (Zain synthesizes from 700),
-     compact tracking per the design spec. */
-  h1, h2, h3 {
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: #111111;
-  }
+  /* Display headlines carry the drama that color usually would:
+     larger, tighter, confident. Zain synthesizes 600 from 700. */
+  h1 { font-weight: 700; letter-spacing: -0.03em; color: #1c1917; line-height: 1.1; }
+  h2, h3 { font-weight: 600; letter-spacing: -0.02em; color: #1c1917; line-height: 1.2; }
 
-  ::placeholder {
-    color: #898989;
+  ::placeholder { color: #a8a29e; }
+
+  /* Accent focus ring — quiet but present */
+  *:focus-visible {
+    outline: 2px solid #0f766e;
+    outline-offset: 2px;
+    border-radius: 6px;
   }
 }
 
 @layer components {
-  /* --- button-primary: flat near-black, white copy, 8px corners --- */
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 bg-primary text-white
-           font-semibold text-sm rounded-md px-5 h-10
-           transition-colors hover:bg-primary-active
-           disabled:bg-primary-disabled disabled:text-muted disabled:cursor-not-allowed;
+  /* ---- Elevated card: white on the warm page, lifted by hairline + shadow ---- */
+  .card-surface {
+    @apply bg-canvas border border-hairline rounded-lg shadow-micro
+           dark:bg-surface-dark-elevated dark:border-[#2a2825] dark:shadow-none;
   }
 
-  /* --- button-secondary: white canvas, hairline outline --- */
+  /* ---- button-primary: flat near-black ---- */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-primary text-white
+           font-semibold text-sm rounded-md px-5 h-10 shadow-micro
+           transition-colors hover:bg-primary-active
+           disabled:bg-primary-disabled disabled:text-muted disabled:cursor-not-allowed disabled:shadow-none;
+  }
+
+  /* ---- button-secondary: white, hairline outline ---- */
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 bg-canvas text-ink
            font-semibold text-sm rounded-md px-5 h-10
-           border border-hairline transition-colors hover:bg-surface-soft
-           dark:bg-surface-dark-elevated dark:text-white dark:border-[#2e2e2e] dark:hover:bg-[#242424];
+           border border-hairline shadow-micro transition-colors hover:bg-surface-soft
+           dark:bg-surface-dark-elevated dark:text-white dark:border-[#2a2825] dark:hover:bg-[#242220];
   }
 
-  /* --- text-input: white field, hairline outline, ink focus --- */
+  /* ---- text-input: white field, hairline outline, ink focus ---- */
   .input-field {
     @apply w-full bg-canvas text-ink text-sm rounded-md border border-hairline
            px-3.5 py-2.5 outline-none transition-colors
            focus:border-ink focus:ring-0
-           dark:bg-surface-dark-elevated dark:text-white dark:border-[#2e2e2e] dark:focus:border-white;
+           dark:bg-surface-dark-elevated dark:text-white dark:border-[#2a2825] dark:focus:border-white;
   }
 
-  /* --- badge-pill: muted capsule tag --- */
+  /* ---- badge-pill: neutral capsule tag ---- */
   .badge-pill {
     @apply inline-flex items-center gap-1 rounded-full bg-surface-card text-ink
            text-[13px] font-medium px-3 py-0.5
            dark:bg-surface-dark-elevated dark:text-white;
   }
+  /* status variants — distinguished by TREATMENT, not colour */
+  .badge-solid   { @apply bg-ink text-white dark:bg-white dark:text-ink; }      /* current */
+  .badge-outline { @apply bg-transparent text-ink border border-hairline dark:text-white dark:border-[#3a3733]; } /* arriving */
+  .badge-ghost   { @apply bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated; }  /* departed */
+  .badge-dashed  { @apply bg-transparent text-muted border border-dashed border-muted-soft; } /* early checkout */
 
-  /* --- nav-pill-group: capsule track with white active pill --- */
+  /* ---- nav-pill-group: capsule track, white active pill ---- */
   .nav-pill-group {
     @apply inline-flex items-center gap-1 rounded-full bg-surface-soft p-1.5
            dark:bg-surface-dark-elevated;
@@ -89,27 +101,28 @@
            transition-colors hover:text-ink dark:hover:text-white;
   }
   .nav-pill-active {
-    @apply bg-canvas text-ink shadow-pill dark:bg-[#2e2e2e] dark:text-white;
+    @apply bg-canvas text-ink shadow-pill dark:bg-[#2e2b28] dark:text-white;
   }
 
-  /* --- monochrome icon action (tables, cards) --- */
+  /* ---- monochrome icon action ---- */
   .icon-action {
-    @apply p-2 rounded-md text-muted opacity-70 transition-all
+    @apply p-2 rounded-md text-muted opacity-80 transition-all
            hover:opacity-100 hover:text-ink hover:bg-surface-soft
            dark:hover:text-white dark:hover:bg-surface-dark-elevated;
+  }
+
+  /* ---- accent text link ---- */
+  .link-accent {
+    @apply text-accent font-semibold hover:text-accent-strong transition-colors;
   }
 }
 
 /* ============================================================
-   react-tailwindcss-datepicker — monochrome + RTL repairs
+   react-tailwindcss-datepicker — warm monochrome + RTL repairs
    ============================================================ */
 
-/* The library renders the weekday heading row as
-   `.grid.grid-cols-7.border-b` with `tracking-wide` cells.
-   Positive letter-spacing breaks connected Arabic script and
-   makes the day names ("أحد إثنين ثلاثاء...") collide/overlap.
-   Reset tracking, forbid wrapping, give each column breathing
-   padding so characters flow natively in RTL. */
+/* Weekday heading row: reset tracking so connected Arabic script
+   ("أحد إثنين ثلاثاء…") doesn't overlap in RTL. */
 .dp-shell .grid.grid-cols-7 > div {
   letter-spacing: 0 !important;
   white-space: nowrap;
@@ -117,19 +130,27 @@
   padding-right: 2px;
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: #78716c;
 }
 
-/* Hairline instead of heavy separators inside the calendar */
 .dp-shell .grid.grid-cols-7.border-b {
-  border-color: #f3f4f6 !important;
+  border-color: #f0ebe4 !important;
   padding-top: 6px;
   padding-bottom: 6px;
 }
 
-/* Popover card: 12px corners, hairline outline, soft elevation */
 .dp-shell [role="presentation"] > div,
 .dp-shell .shadow-sm {
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 16px rgba(28, 25, 23, 0.08);
 }
+
+/* Kill the library's residual blue (its runtime classes get purged, so it
+   falls back to blue). Force selection / today / hover to the accent + ink. */
+.dp-shell .bg-blue-500,
+.dp-shell [class*="bg-blue-"] { background-color: #0f766e !important; }
+.dp-shell .text-blue-500,
+.dp-shell [class*="text-blue-"] { color: #0f766e !important; }
+.dp-shell [class*="bg-blue-100"],
+.dp-shell [class*="bg-blue-50"] { background-color: #0f766e1f !important; }
+.dp-shell input { caret-color: #1c1917; }

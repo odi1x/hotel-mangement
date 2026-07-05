@@ -338,42 +338,42 @@ export default function AnalyticsView() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
         <div
           onClick={() => fetchBreakdown('revenue')}
-          className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg group cursor-pointer transition-colors hover:bg-surface-strong/50 dark:hover:bg-[#242424]"
+          className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
           <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">إجمالي الإيرادات</p>
-          <h3 className="text-3xl font-semibold text-ink dark:text-white tracking-tight">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-semibold text-muted">ر.س</span></h3>
+          <h3 className="text-3xl font-bold text-accent tracking-tightest">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-semibold text-muted-soft">ر.س</span></h3>
         </div>
 
         <div
           onClick={() => fetchBreakdown('profit')}
-          className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg group cursor-pointer transition-colors hover:bg-surface-strong/50 dark:hover:bg-[#242424]"
+          className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
           <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">صافي الأرباح</p>
-          <h3 className="text-3xl font-semibold text-ink dark:text-white tracking-tight">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-semibold text-muted">ر.س</span></h3>
+          <h3 className="text-3xl font-bold text-accent tracking-tightest">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-semibold text-muted-soft">ر.س</span></h3>
         </div>
 
         <div
           onClick={() => fetchBreakdown('occupancy')}
-          className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg group cursor-pointer transition-colors hover:bg-surface-strong/50 dark:hover:bg-[#242424]"
+          className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
           <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">معدل الإشغال</p>
-          <h3 className="text-3xl font-semibold text-ink dark:text-white tracking-tight">{Math.round(analytics.occupancyRate)}<span className="text-sm font-semibold text-muted">%</span></h3>
+          <h3 className="text-3xl font-bold text-ink dark:text-white tracking-tightest">{Math.round(analytics.occupancyRate)}<span className="text-sm font-semibold text-muted">%</span></h3>
           <p className="text-xs text-muted-soft mt-2 font-medium">من إجمالي الأيام المتاحة</p>
         </div>
 
         <div
           onClick={() => fetchBreakdown('nights')}
-          className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg group cursor-pointer transition-colors hover:bg-surface-strong/50 dark:hover:bg-[#242424]"
+          className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
           <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">الليالي المؤجرة</p>
-          <h3 className="text-3xl font-semibold text-ink dark:text-white tracking-tight">{analytics.totalNights} <span className="text-sm font-semibold text-muted">ليلة</span></h3>
+          <h3 className="text-3xl font-bold text-ink dark:text-white tracking-tightest">{analytics.totalNights} <span className="text-sm font-semibold text-muted">ليلة</span></h3>
           <p className="text-xs text-muted-soft mt-2 font-medium">عبر {analytics.count} حجز</p>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 w-full overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
         <div className="lg:col-span-1 flex flex-col gap-4 h-full min-h-0">
-            <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="card-surface p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="shrink-0">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
                 <Star size={18} className="ml-2 text-muted" /> الأعلى أداءً
@@ -385,7 +385,7 @@ export default function AnalyticsView() {
                 {topUnits.length > 0 ? topUnits.map((unit, idx) => (
                     <div key={unit.id} className="flex items-center justify-between p-2 rounded-md hover:bg-canvas dark:hover:bg-[#242424] transition-colors">
                         <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${idx === 0 ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-canvas text-ink border border-hairline dark:bg-surface-dark dark:text-white dark:border-[#2e2e2e]'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${idx === 0 ? 'bg-accent text-white' : 'bg-surface-card text-ink dark:bg-surface-dark dark:text-white'}`}>
                                 #{idx + 1}
                             </div>
                             <div>
@@ -402,7 +402,7 @@ export default function AnalyticsView() {
             </div>
           </div>
 
-            <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="card-surface p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="shrink-0">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center"><Globe size={18} className="ml-2 text-muted" /> مصادر التسويق</h4>
               <p className="text-xs text-muted mb-2">توزيع الحجوزات حسب المنصات</p>
@@ -442,7 +442,7 @@ export default function AnalyticsView() {
           </div>
         </div>
 
-        <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg lg:col-span-2 flex flex-col h-full min-h-0">
+        <div className="card-surface p-5 lg:col-span-2 flex flex-col h-full min-h-0">
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
             <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">
@@ -470,7 +470,7 @@ export default function AnalyticsView() {
           <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-[#242424] pb-4">
             <div>
               <p className="text-[10px] font-semibold text-muted-soft mb-1">إجمالي الإيرادات</p>
-              <p className="font-semibold text-ink dark:text-white">{chartKPIs.revenue.toLocaleString()} <span className="text-[10px] text-muted">ر.س</span></p>
+              <p className="font-bold text-accent">{chartKPIs.revenue.toLocaleString()} <span className="text-[10px] text-muted-soft">ر.س</span></p>
             </div>
             <div>
               <p className="text-[10px] font-semibold text-muted-soft mb-1">إجمالي المصروفات</p>
@@ -478,7 +478,7 @@ export default function AnalyticsView() {
             </div>
             <div>
               <p className="text-[10px] font-semibold text-muted-soft mb-1">صافي الأرباح</p>
-              <p className="text-lg font-semibold tracking-tight text-ink dark:text-white leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-[10px] text-muted">ر.س</span></p>
+              <p className="text-lg font-bold tracking-tight text-accent leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-[10px] text-muted-soft">ر.س</span></p>
             </div>
           </div>
 
@@ -488,8 +488,8 @@ export default function AnalyticsView() {
                 <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#111111" stopOpacity={0.12}/>
-                      <stop offset="95%" stopColor="#111111" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#0f766e" stopOpacity={0.16}/>
+                      <stop offset="95%" stopColor="#0f766e" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.12}/>
@@ -504,7 +504,7 @@ export default function AnalyticsView() {
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontFamily: 'inherit' }}
                     labelStyle={{ fontWeight: '600', color: '#111111', marginBottom: '8px' }}
                   />
-                                    <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#111111" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
+                                    <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#0f766e" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
                   <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#9ca3af" strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#colorExpenses)" />
                 </AreaChart>
               </ResponsiveContainer>
