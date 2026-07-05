@@ -228,7 +228,7 @@ export default function AvailabilityView({ openBookingForm }) {
             اضغط على أي يوم لإضافة حجز او عرض جميع الحجوزات
           </p>
           <select
-            className="text-xs text-ink font-zain bg-canvas px-3 py-1.5 rounded-md border border-hairline outline-none transition-all cursor-pointer"
+            className="text-xs text-ink font-zain bg-canvas px-3 py-1.5 rounded-md border border-hairline outline-none transition-all cursor-pointer shadow-sm hover:bg-surface-soft"
             value={selectedApartmentFilter}
             onChange={(e) => setSelectedApartmentFilter(e.target.value)}
           >
@@ -323,8 +323,7 @@ export default function AvailabilityView({ openBookingForm }) {
                   }}
                   className="flex items-center space-x-reverse space-x-2 bg-primary hover:bg-primary-active text-white px-4 py-2 rounded-lg font-bold transition-all text-sm"
                 >
-                  <Plus size={16} />
-                  <span className="mr-1">إضافة حجز جديد في هذا اليوم</span>
+                  <span className="mx-1">إضافة حجز جديد في هذا اليوم</span>
                 </button>
               </div>
             )}

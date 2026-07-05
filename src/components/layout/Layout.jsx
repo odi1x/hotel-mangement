@@ -107,15 +107,13 @@ export default function Layout() {
                 onClick={() => setIsBookingByDate(true)}
                 className="flex items-center space-x-reverse space-x-2 bg-canvas text-ink border border-hairline hover:bg-surface-soft px-5 py-2.5 rounded-md font-bold transition-all active:scale-95"
               >
-                <CalendarSearch size={18} />
-                <span className="mr-2">حجز بالتاريخ</span>
+                <span className="mx-2">حجز بالتاريخ</span>
               </button>
               <button
                 onClick={() => handleOpenBookingForm()}
                 className="flex items-center space-x-reverse space-x-2 bg-primary hover:bg-primary-active text-on-primary px-5 py-2.5 rounded-md font-bold transition-all shadow-sm active:scale-95"
               >
-                <Plus size={18} />
-                <span className="mr-2">حجز جديد</span>
+                <span className="mx-2">حجز جديد</span>
               </button>
             </div>
           )}
