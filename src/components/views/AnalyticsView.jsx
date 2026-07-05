@@ -5,7 +5,7 @@ import InlineCalendar from "../ui/InlineCalendar";
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
+const COLORS = ['#111111', '#374151', '#F59E0B', '#6b7280', '#8B5CF6', '#EC4899', '#14B8A6'];
 
 export default function AnalyticsView() {
   const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter, isAnalyticsLoading } = useData();
@@ -235,7 +235,7 @@ export default function AnalyticsView() {
         <div className="flex gap-2">
           <button
             onClick={() => exportToExcel(false)}
-            className="flex items-center space-x-reverse space-x-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-md font-bold text-sm shadow-lg shadow-green-200 dark:shadow-none transition-all active:scale-95"
+            className="flex items-center space-x-reverse space-x-2 bg-primary hover:bg-primary-active text-on-primary px-5 py-2.5 rounded-md font-zain font-semibold transition-all active:scale-95"
           >
             <Download size={18} />
             <span className="mr-2">تحميل التقرير الشامل (Excel)</span>
@@ -244,7 +244,7 @@ export default function AnalyticsView() {
           {hasActiveFilters && (
             <button
               onClick={() => exportToExcel(true)}
-              className="flex items-center space-x-reverse space-x-2 bg-canvas dark:bg-slate-800 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-900/50 hover:bg-green-50 dark:hover:bg-slate-700 px-5 py-2.5 rounded-md font-bold text-sm transition-all active:scale-95"
+              className="flex items-center space-x-reverse space-x-2 bg-canvas text-ink border border-hairline hover:bg-surface-soft px-5 py-2.5 rounded-md font-bold font-zain text-sm transition-all active:scale-95"
             >
               <Download size={18} />
               <span className="mr-2">تحميل التقرير المصفى</span>
@@ -257,7 +257,7 @@ export default function AnalyticsView() {
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`flex items-center space-x-reverse space-x-2 px-4 py-2.5 rounded-md font-bold text-sm border transition-all ${
               (analyticsFilter.apartmentIds?.length > 0 || analyticsFilter.startDate)
-                ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400'
+                ? 'bg-surface-card border-hairline text-ink font-zain'
                 : 'bg-canvas border-hairline text-body font-zain dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 hover:bg-surface-card dark:hover:bg-slate-800'
             }`}
           >
@@ -295,7 +295,7 @@ export default function AnalyticsView() {
                                           : currentIds.filter(id => id !== a.id);
                                       setTempFilter({...tempFilter, apartmentIds: newIds});
                                   }}
-                                  className="rounded border-gray-300 text-primary focus:ring-blue-500 w-4 h-4"
+                                  className="rounded border-gray-300 text-ink focus:ring-blue-500 w-4 h-4"
                               />
                               <span>{a.name}</span>
                           </label>
@@ -324,39 +324,39 @@ export default function AnalyticsView() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
         <div
           onClick={() => fetchBreakdown('revenue')}
-          className="bg-canvas dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-hairline-soft dark:border-slate-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+          className="bg-surface-card p-5 rounded-lg border border-hairline relative overflow-hidden cursor-pointer hover:bg-surface-soft transition-colors"
         >
-          <div className="absolute top-0 left-0 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
+
           <p className="text-sm text-muted font-zain dark:text-slate-400 font-bold mb-2 relative z-10">إجمالي الإيرادات</p>
-          <h3 className="text-3xl font-black text-primary dark:text-blue-400 relative z-10 tracking-tight">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-bold text-muted-soft font-zain">ر.س</span></h3>
+          <h3 className="text-3xl font-semibold font-zain text-ink dark:text-blue-400 relative z-10 tracking-tight">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-bold text-muted-soft font-zain">ر.س</span></h3>
         </div>
 
         <div
           onClick={() => fetchBreakdown('profit')}
-          className="bg-canvas dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-hairline-soft dark:border-slate-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+          className="bg-surface-card p-5 rounded-lg border border-hairline relative overflow-hidden cursor-pointer hover:bg-surface-soft transition-colors"
         >
-          <div className="absolute top-0 left-0 w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
+
           <p className="text-sm text-muted font-zain dark:text-slate-400 font-bold mb-2 relative z-10">صافي الأرباح</p>
-          <h3 className="text-3xl font-black text-green-600 dark:text-green-400 relative z-10 tracking-tight">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-muted-soft font-zain">ر.س</span></h3>
+          <h3 className="text-3xl font-semibold font-zain text-ink dark:text-green-400 relative z-10 tracking-tight">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-bold text-muted-soft font-zain">ر.س</span></h3>
         </div>
 
         <div
           onClick={() => fetchBreakdown('occupancy')}
-          className="bg-canvas dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-hairline-soft dark:border-slate-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+          className="bg-surface-card p-5 rounded-lg border border-hairline relative overflow-hidden cursor-pointer hover:bg-surface-soft transition-colors"
         >
-          <div className="absolute top-0 left-0 w-16 h-16 bg-orange-50 dark:bg-orange-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
+
           <p className="text-sm text-muted font-zain dark:text-slate-400 font-bold mb-2 relative z-10">معدل الإشغال</p>
-          <h3 className="text-3xl font-black text-orange-500 relative z-10 tracking-tight">{Math.round(analytics.occupancyRate)}<span className="text-sm font-bold text-muted-soft font-zain">%</span></h3>
+          <h3 className="text-3xl font-semibold font-zain text-ink relative z-10 tracking-tight">{Math.round(analytics.occupancyRate)}<span className="text-sm font-bold text-muted-soft font-zain">%</span></h3>
           <p className="text-xs text-muted-soft font-zain mt-2 font-medium relative z-10">من إجمالي الأيام المتاحة</p>
         </div>
 
         <div
           onClick={() => fetchBreakdown('nights')}
-          className="bg-canvas dark:bg-slate-900 p-4 rounded-lg shadow-sm border border-hairline-soft dark:border-slate-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+          className="bg-surface-card p-5 rounded-lg border border-hairline relative overflow-hidden cursor-pointer hover:bg-surface-soft transition-colors"
         >
-          <div className="absolute top-0 left-0 w-16 h-16 bg-purple-50 dark:bg-purple-900/20 rounded-br-[100%] transition-transform group-hover:scale-110 z-0"></div>
+
           <p className="text-sm text-muted font-zain dark:text-slate-400 font-bold mb-2 relative z-10">الليالي المؤجرة</p>
-          <h3 className="text-3xl font-black text-purple-600 relative z-10 tracking-tight">{analytics.totalNights} <span className="text-sm font-bold text-muted-soft font-zain">ليلة</span></h3>
+          <h3 className="text-3xl font-semibold font-zain text-ink relative z-10 tracking-tight">{analytics.totalNights} <span className="text-sm font-bold text-muted-soft font-zain">ليلة</span></h3>
           <p className="text-xs text-muted-soft font-zain mt-2 font-medium relative z-10">عبر {analytics.count} حجز</p>
         </div>
       </div>
@@ -375,7 +375,7 @@ export default function AnalyticsView() {
                 {topUnits.length > 0 ? topUnits.map((unit, idx) => (
                     <div key={unit.id} className="flex items-center justify-between p-2 rounded-md hover:bg-surface-card dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-hairline-soft dark:hover:border-slate-700">
                         <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-gray-200 text-body font-zain' : idx === 2 ? 'bg-orange-100 text-orange-800' : 'bg-blue-50 text-primary'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : idx === 1 ? 'bg-gray-200 text-body font-zain' : idx === 2 ? 'bg-orange-100 text-orange-800' : 'bg-blue-50 text-ink'}`}>
                                 #{idx + 1}
                             </div>
                             <div>
@@ -384,7 +384,7 @@ export default function AnalyticsView() {
                             </div>
                         </div>
                         <div className="text-left">
-                            <p className="text-lg font-black text-green-600 dark:text-green-400 leading-none">{unit.revenue.toLocaleString()}</p>
+                            <p className="text-lg font-semibold font-zain text-ink dark:text-green-400 leading-none">{unit.revenue.toLocaleString()}</p>
                             <p className="text-[10px] text-muted-soft font-zain mt-0.5">ر.س</p>
                         </div>
                     </div>
@@ -401,7 +401,7 @@ export default function AnalyticsView() {
             <div className="flex-1 min-h-0 w-full relative overflow-hidden" dir="ltr">
               {sourceChartData.length > 0 ? (
                 <div className="absolute inset-0 pb-2">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" style={{ fontFamily: "Zain" }}>
                     <PieChart>
                       <Pie
                         data={sourceChartData}
@@ -448,7 +448,7 @@ export default function AnalyticsView() {
                 <button
                   key={opt.id}
                   onClick={() => setChartFilter(opt.id)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${chartFilter === opt.id ? 'bg-canvas dark:bg-slate-700 text-primary dark:text-blue-400 shadow-sm' : 'text-muted font-zain hover:text-body font-zain dark:text-slate-400 dark:hover:text-slate-200'}`}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${chartFilter === opt.id ? 'bg-canvas dark:bg-slate-700 text-ink dark:text-blue-400 shadow-sm' : 'text-muted font-zain hover:text-body font-zain dark:text-slate-400 dark:hover:text-slate-200'}`}
                 >
                   {opt.label}
                 </button>
@@ -459,30 +459,30 @@ export default function AnalyticsView() {
           <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline-soft dark:border-slate-800 pb-4">
             <div>
               <p className="text-[10px] font-bold text-muted-soft font-zain uppercase mb-1">إجمالي الإيرادات</p>
-              <p className="font-black text-primary dark:text-blue-400">{chartKPIs.revenue.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
+              <p className="font-semibold font-zain text-ink dark:text-blue-400">{chartKPIs.revenue.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
             </div>
             <div>
               <p className="text-[10px] font-bold text-muted-soft font-zain uppercase mb-1">إجمالي المصروفات</p>
-              <p className="font-black text-red-500">{chartKPIs.expenses.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
+              <p className="font-semibold font-zain text-ink">{chartKPIs.expenses.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
             </div>
             <div>
               <p className="text-[10px] font-bold text-muted-soft font-zain uppercase mb-1">صافي الأرباح</p>
-              <p className="text-lg font-black text-green-600 dark:text-green-400 leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
+              <p className="text-lg font-semibold font-zain text-ink dark:text-green-400 leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
             </div>
           </div>
 
           <div className="flex-1 w-full min-h-[250px] lg:min-h-0 relative overflow-hidden" dir="ltr">
             <div className="absolute inset-0 pb-8 pr-4">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" style={{ fontFamily: "Zain" }}>
                 <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#111111" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#111111" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#6b7280" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#6b7280" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
@@ -493,8 +493,8 @@ export default function AnalyticsView() {
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontFamily: 'inherit' }}
                     labelStyle={{ fontWeight: 'bold', color: '#374151', marginBottom: '8px' }}
                   />
-                                    <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                  <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
+                                    <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#111111" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                  <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#6b7280" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -508,7 +508,7 @@ export default function AnalyticsView() {
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline-soft dark:border-slate-800 ">
             <div className="px-6 py-4 border-b border-hairline-soft dark:border-slate-800 flex justify-between items-center bg-surface-card/50 dark:bg-slate-800/50">
-              <h3 className="font-black text-ink font-zain font-semibold dark:text-white text-lg flex items-center gap-2">
+              <h3 className="font-semibold font-zain text-ink font-zain font-semibold dark:text-white text-lg flex items-center gap-2">
                 {breakdownModal === 'revenue' && 'تفصيل الإيرادات حسب الوحدة'}
                 {breakdownModal === 'profit' && 'سجل المصروفات والأرباح'}
                 {(breakdownModal === 'occupancy' || breakdownModal === 'nights') && 'تفصيل الإشغال حسب الوحدة'}
@@ -538,15 +538,15 @@ export default function AnalyticsView() {
                         <tbody>
                           {breakdownData.map((item, idx) => (
                             <tr key={idx} className="hover:bg-surface-card dark:hover:bg-slate-800/50 transition-colors border-t border-hairline-soft dark:border-slate-800/50">
-                              <td className={`py-3 font-bold ${item.type === 'income' ? 'text-primary dark:text-blue-400' : 'text-ink font-zain dark:text-slate-200'}`}>{item.category}</td>
-                              <td className={`py-3 font-black ${item.type === 'income' ? 'text-primary dark:text-blue-400' : 'text-red-500'}`}>
+                              <td className={`py-3 font-bold ${item.type === 'income' ? 'text-ink dark:text-blue-400' : 'text-ink font-zain dark:text-slate-200'}`}>{item.category}</td>
+                              <td className={`py-3 font-semibold font-zain ${item.type === 'income' ? 'text-ink dark:text-blue-400' : 'text-ink'}`}>
                                 {item.type === 'expense' ? '- ' : ''}{item.amount.toLocaleString()}
                               </td>
                             </tr>
                           ))}
                           <tr className="bg-surface-card dark:bg-slate-800">
-                            <td className="py-4 px-2 font-black text-ink font-zain font-semibold dark:text-white rounded-r-xl">الصافي</td>
-                            <td className="py-4 px-2 font-black text-green-600 dark:text-green-400 rounded-l-xl">
+                            <td className="py-4 px-2 font-semibold font-zain text-ink font-zain font-semibold dark:text-white rounded-r-xl">الصافي</td>
+                            <td className="py-4 px-2 font-semibold font-zain text-ink dark:text-green-400 rounded-l-xl">
                               {breakdownData.reduce((acc, curr) => curr.type === 'income' ? acc + curr.amount : acc - curr.amount, 0).toLocaleString()}
                             </td>
                           </tr>
@@ -580,7 +580,7 @@ export default function AnalyticsView() {
 
                             {breakdownModal === 'revenue' && (
                               <>
-                                <td className="py-3 font-black text-green-600 dark:text-green-400">{item.revenue.toLocaleString()}</td>
+                                <td className="py-3 font-semibold font-zain text-ink dark:text-green-400">{item.revenue.toLocaleString()}</td>
                                 <td className="py-3 font-bold text-gray-600 dark:text-gray-300">{item.percentage}%</td>
                                 <td className="py-3 font-bold text-gray-600 dark:text-gray-300">{item.count}</td>
                               </>
@@ -588,9 +588,9 @@ export default function AnalyticsView() {
 
                             {(breakdownModal === 'occupancy' || breakdownModal === 'nights') && (
                               <>
-                                <td className="py-3 font-black text-purple-600 dark:text-purple-400">{item.nights}</td>
+                                <td className="py-3 font-semibold font-zain text-ink dark:text-purple-400">{item.nights}</td>
                                 <td className="py-3 font-bold text-gray-600 dark:text-muted-soft font-zain">{item.availableNights}</td>
-                                <td className="py-3 font-black text-orange-500">{item.occupancy}%</td>
+                                <td className="py-3 font-semibold font-zain text-ink">{item.occupancy}%</td>
                               </>
                             )}
                           </tr>
