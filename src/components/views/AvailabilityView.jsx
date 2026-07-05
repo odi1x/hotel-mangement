@@ -2,8 +2,24 @@ import {  useState, useMemo , useRef, useLayoutEffect } from 'react';
 import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
-const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelectedDayBookings, setSelectedBookingDetails }) => {
+// Curated soft per-unit palette — muted pastels, calm not neon.
+// Green is deliberately excluded so it never collides with the emerald
+// accent (which stays reserved for "today" + money). Each unit maps
+// deterministically by its index in the apartments list.
+const UNIT_PALETTE = [
+  { bg:'#eff6ff', tx:'#1e40af', bd:'#dbeafe', dbg:'rgba(59,130,246,0.16)',  dtx:'#93c5fd', dbd:'rgba(59,130,246,0.32)' },
+  { bg:'#f5f3ff', tx:'#5b21b6', bd:'#ede9fe', dbg:'rgba(139,92,246,0.16)',  dtx:'#c4b5fd', dbd:'rgba(139,92,246,0.32)' },
+  { bg:'#fff7ed', tx:'#9a3412', bd:'#ffedd5', dbg:'rgba(249,115,22,0.16)',  dtx:'#fdba74', dbd:'rgba(249,115,22,0.32)' },
+  { bg:'#fff1f2', tx:'#9f1239', bd:'#ffe4e6', dbg:'rgba(244,63,94,0.16)',   dtx:'#fda4af', dbd:'rgba(244,63,94,0.32)' },
+  { bg:'#ecfeff', tx:'#155e75', bd:'#cffafe', dbg:'rgba(6,182,212,0.16)',   dtx:'#67e8f9', dbd:'rgba(6,182,212,0.32)' },
+  { bg:'#eef2ff', tx:'#3730a3', bd:'#e0e7ff', dbg:'rgba(99,102,241,0.16)',  dtx:'#a5b4fc', dbd:'rgba(99,102,241,0.32)' },
+  { bg:'#fdf4ff', tx:'#86198f', bd:'#fae8ff', dbg:'rgba(217,70,239,0.16)',  dtx:'#f0abfc', dbd:'rgba(217,70,239,0.32)' },
+  { bg:'#fffbeb', tx:'#92400e', bd:'#fef3c7', dbg:'rgba(245,158,11,0.16)',  dtx:'#fcd34d', dbd:'rgba(245,158,11,0.32)' },
+];
+
+const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex, darkMode, setSelectedDayBookings, setSelectedBookingDetails }) => {
   const cellRef = useRef(null);
   const [maxVisible, setMaxVisible] = useState(Math.min(dayBookings.length, 3));
 
@@ -13,35 +29,24 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
     let timeoutId = null;
 
     const calculateVisibleItems = () => {
-      // Measure the full height of the outer cell
       const cellHeight = cellRef.current.clientHeight;
-
-      // Early return if DOM hasn't fully painted
       if (cellHeight === 0) return;
 
-      // Approximate heights:
-      // cell padding: 16px (p-2 is 8px top+bottom)
-      // header (day number): ~28px + 8px mb-2 = 36px
-      const headerSpace = 30; // Reduced to allow more items
-      const availableHeight = cellHeight - headerSpace;
+      // Real geometry: chip 22px + 3px gap = 25px stride. The day-number
+      // header + cell padding eats ~48px. When there's overflow we must
+      // reserve a line (~20px) for the "+N" counter so it never collides.
+      const STRIDE = 25;
+      const HEADER = 48;
+      const BADGE = 20;
+      const total = dayBookings.length;
 
-      const itemHeight = 26; // Booking item height + gap
-
-      if (availableHeight < itemHeight) {
-         setMaxVisible(dayBookings.length > 0 ? 1 : 0);
-         return;
+      const avail = cellHeight - HEADER;
+      let fit = Math.floor((avail + 3) / STRIDE);        // +3: last chip has no trailing gap
+      if (fit < total) {
+        fit = Math.floor((avail - BADGE + 3) / STRIDE);  // reserve the counter line
       }
-
-      let fitCount = Math.floor(availableHeight / itemHeight);
-
-      // Since the "+X" label floats, we don't need to subtract its height
-
-      // Force a minimum of 1 visible item if there are bookings
-      if (fitCount <= 0 && dayBookings.length > 0) {
-        fitCount = 1;
-      }
-
-      setMaxVisible(Math.max(0, fitCount));
+      fit = Math.max(total > 0 ? 1 : 0, Math.min(fit, total));
+      setMaxVisible(fit);
     };
 
     const debouncedCalculate = () => {
@@ -51,8 +56,6 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
 
     const observer = new ResizeObserver(debouncedCalculate);
     observer.observe(cellRef.current);
-
-    // Initial calculation immediately (without debounce)
     calculateVisibleItems();
 
     return () => {
@@ -81,30 +84,34 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
         {isToday && <span className="text-[10px] font-semibold text-accent">اليوم</span>}
       </div>
 
-      <div className="w-full flex flex-col gap-[3px] overflow-hidden relative">
+      <div className="flex-1 min-h-0 w-full flex flex-col gap-[3px] overflow-hidden">
         {visibleBookings.map(booking => {
           const apt = apartments.find(a => a.id === booking.apartmentId);
           if (!apt) return null;
           const isPending = booking.status === 'pending';
-          const isStart = new Date(booking.startDate).toDateString() === dateStr;
-          const isEnd = new Date(booking.endDate).toDateString() === dateStr;
+          const pal = UNIT_PALETTE[(unitIndex[booking.apartmentId] ?? 0) % UNIT_PALETTE.length];
+          const style = isPending
+            ? undefined
+            : (darkMode
+                ? { backgroundColor: pal.dbg, color: pal.dtx, borderColor: pal.dbd }
+                : { backgroundColor: pal.bg, color: pal.tx, borderColor: pal.bd });
           return (
             <div key={booking.id} title={`${apt.name} - ${booking.residentName}`}
-              className={`text-[11px] px-2 py-0.5 rounded-md flex items-center h-[22px] font-semibold truncate cursor-pointer transition-opacity hover:opacity-70 shrink-0 w-full
+              style={style}
+              className={`text-[11px] px-2 rounded-md flex items-center h-[22px] font-semibold truncate cursor-pointer transition-opacity hover:opacity-80 shrink-0 w-full border
                 ${isPending
-                  ? 'bg-surface-soft text-muted border border-dashed border-hairline dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#3a3a3a]'
-                  : 'bg-surface-card text-ink border border-hairline-soft dark:bg-surface-dark-elevated dark:text-white dark:border-[#2e2e2e]'}
-                ${isStart ? 'rounded-r-md ml-0.5' : ''} ${isEnd ? 'rounded-l-md mr-0.5' : ''}`}
+                  ? 'bg-surface-soft text-muted border-dashed border-hairline dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#3a3a3a]'
+                  : 'border-solid'}`}
               onClick={(e) => { e.stopPropagation(); setSelectedBookingDetails(booking); }}
-            ><span className="opacity-60 ml-1 truncate">{apt.name}:</span><span className="truncate">{booking.residentName}</span></div>
+            ><span className="opacity-70 ml-1 truncate">{apt.name}:</span><span className="truncate">{booking.residentName}</span></div>
           );
         })}
+        {hiddenCount > 0 && (
+          <div className="shrink-0 mt-auto text-[10px] font-semibold text-muted dark:text-[#a1a1aa] px-1.5 py-0.5">
+            +{hiddenCount} أخرى
+          </div>
+        )}
       </div>
-      {hiddenCount > 0 && (
-        <div className="flex items-center text-[10px] font-semibold text-muted dark:text-[#a1a1aa] absolute bottom-1 left-1 bg-canvas/95 dark:bg-surface-dark-elevated/95 rounded-full px-1.5 py-0.5 z-10 border border-hairline dark:border-[#2e2e2e] backdrop-blur-sm">
-          +{hiddenCount}
-        </div>
-      )}
     </div>
   );
 };
@@ -112,8 +119,16 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, setSelecte
 export default function AvailabilityView({ openBookingForm }) {
   const { apartments, bookings, deleteBooking } = useData();
   const { user } = useAuth();
+  const { darkMode } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
+
+  // Stable apartment → palette-slot mapping (by position in the list)
+  const unitIndex = useMemo(() => {
+    const m = {};
+    apartments.forEach((a, i) => { m[a.id] = i % UNIT_PALETTE.length; });
+    return m;
+  }, [apartments]);
 
   // Modals state
   const [selectedDayBookings, setSelectedDayBookings] = useState(null); // { date, bookings }
@@ -247,6 +262,8 @@ export default function AvailabilityView({ openBookingForm }) {
                 dateStr={dateStr}
                 dayBookings={dayBookings}
                 apartments={apartments}
+                unitIndex={unitIndex}
+                darkMode={darkMode}
                 setSelectedDayBookings={setSelectedDayBookings}
                 setSelectedBookingDetails={setSelectedBookingDetails}
               />
@@ -278,7 +295,10 @@ export default function AvailabilityView({ openBookingForm }) {
                         className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg cursor-pointer hover:bg-surface-strong/60 dark:hover:bg-[#242424] transition-colors group"
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-semibold text-ink dark:text-white">{apt?.name || 'وحدة غير معروفة'}</span>
+                          <span className="font-semibold text-ink dark:text-white flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: UNIT_PALETTE[(unitIndex[booking.apartmentId] ?? 0) % UNIT_PALETTE.length].tx }}></span>
+                            {apt?.name || 'وحدة غير معروفة'}
+                          </span>
                           {booking.status === 'pending' ? (
                             <span className="badge-pill text-muted border border-dashed border-hairline dark:border-[#3a3a3a]">طلب معلق</span>
                           ) : (
