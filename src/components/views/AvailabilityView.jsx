@@ -1,4 +1,4 @@
-import {  useState, useMemo , useRef, useLayoutEffect } from 'react';
+import {  useState, useMemo , useRef, useLayoutEffect, Fragment } from 'react';
 import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -240,37 +240,109 @@ export default function AvailabilityView({ openBookingForm }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col bg-canvas dark:bg-surface-dark">
-        <div className="grid grid-cols-7 border-b border-[1px] border-gray-100 dark:border-[#242424] bg-canvas dark:bg-surface-dark sticky top-0 z-10">
-          {['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map((day) => (
-            <div key={day} className="py-3 px-1 text-center text-xs font-semibold text-muted dark:text-[#a1a1aa] whitespace-nowrap border-l border-gray-100 dark:border-[#242424] last:border-l-0">
-              {day}
-            </div>
-          ))}
-        </div>
+      {(() => {
+        const dayW = 46;
+        const wd = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
+        const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+        const todayStr = new Date().toDateString();
+        const canBook = user?.role === 'admin' || user?.permissions?.canBook;
+        const visibleUnits = apartments.filter(a => selectedApartmentFilter === 'all' || a.id === selectedApartmentFilter);
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month, daysInMonth);
+        const pad = n => String(n).padStart(2, '0');
 
-        <div className="grid grid-cols-7 flex-1 min-h-0" style={{ gridTemplateRows: `repeat(${calendarDays.length / 7}, minmax(0, 1fr))` }}>
-          {calendarDays.map((dayObj, i) => {
-            const dateStr = dayObj.date.toDateString();
-            const isToday = dateStr === new Date().toDateString();
-            const dayBookings = getBookingsForDate(dayObj.date);
-            return (
-              <DayCell
-                key={i}
-                dayObj={dayObj}
-                isToday={isToday}
-                dateStr={dateStr}
-                dayBookings={dayBookings}
-                apartments={apartments}
-                unitIndex={unitIndex}
-                darkMode={darkMode}
-                setSelectedDayBookings={setSelectedDayBookings}
-                setSelectedBookingDetails={setSelectedBookingDetails}
-              />
-            );
-          })}
-        </div>
-      </div>
+        return (
+          <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark">
+            <div style={{ display: 'grid', gridTemplateColumns: `150px repeat(${daysInMonth}, ${dayW}px)`, minWidth: 'max-content' }}>
+              {/* corner */}
+              <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center justify-center text-xs font-semibold text-muted dark:text-[#a1a1aa]" style={{ gridColumn: 1, gridRow: 1, height: 48 }}>
+                الوحدة \ اليوم
+              </div>
+              {/* day headers */}
+              {days.map((d, i) => {
+                const dt = new Date(year, month, d);
+                const isToday = dt.toDateString() === todayStr;
+                return (
+                  <div key={`h${d}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 48 }}>
+                    <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-accent text-white' : 'text-body dark:text-[#a1a1aa]'}`}>{d}</span>
+                    <span className="text-[10px] text-muted-soft mt-0.5">{wd[dt.getDay()]}</span>
+                  </div>
+                );
+              })}
+
+              {/* unit rows */}
+              {visibleUnits.map((apt, r) => {
+                const row = r + 2;
+                const pal = UNIT_PALETTE[(unitIndex[apt.id] ?? 0) % UNIT_PALETTE.length];
+                const aptBookings = bookings.filter(b => b.apartmentId === apt.id);
+                return (
+                  <Fragment key={apt.id}>
+                    {/* sticky unit label */}
+                    <div className="sticky right-0 z-20 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center gap-2 px-3" style={{ gridColumn: 1, gridRow: row, height: 48 }}>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: darkMode ? pal.dtx : pal.tx }}></span>
+                      <span className="text-sm font-semibold text-ink dark:text-white truncate">{apt.name}</span>
+                    </div>
+                    {/* empty day cells (clickable to book) */}
+                    {days.map((d, i) => {
+                      const dt = new Date(year, month, d);
+                      const isToday = dt.toDateString() === todayStr;
+                      return (
+                        <div
+                          key={`c${apt.id}-${d}`}
+                          onClick={canBook ? () => openBookingForm({ apartmentId: apt.id, startDate: `${year}-${pad(month + 1)}-${pad(d)}` }) : undefined}
+                          className={`border-b border-l border-gray-100 dark:border-[#242424] transition-colors ${canBook ? 'cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60' : ''}`}
+                          style={{ gridColumn: 2 + i, gridRow: row, height: 48, backgroundColor: isToday ? 'rgba(15,118,110,0.05)' : undefined }}
+                          title={canBook ? 'إضافة حجز' : ''}
+                        ></div>
+                      );
+                    })}
+                    {/* booking bars */}
+                    {aptBookings.map(b => {
+                      const s = new Date(b.startDate); const e = new Date(b.endDate);
+                      if (e < monthStart || s > monthEnd) return null;
+                      const startIdx = s <= monthStart ? 0 : s.getDate() - 1;
+                      const endIdx = e >= monthEnd ? daysInMonth - 1 : e.getDate() - 1;
+                      const span = Math.max(1, endIdx - startIdx + 1);
+                      const contStart = s < monthStart;
+                      const contEnd = e > monthEnd;
+                      const isPending = b.status === 'pending';
+                      const style = {
+                        gridColumn: `${2 + startIdx} / span ${span}`,
+                        gridRow: row,
+                        zIndex: 1,
+                        margin: '7px 3px',
+                        borderTopLeftRadius: contStart ? 0 : 7,
+                        borderBottomLeftRadius: contStart ? 0 : 7,
+                        borderTopRightRadius: contEnd ? 0 : 7,
+                        borderBottomRightRadius: contEnd ? 0 : 7,
+                        ...(isPending ? {} : (darkMode
+                          ? { backgroundColor: pal.dbg, color: pal.dtx, border: `1px solid ${pal.dbd}` }
+                          : { backgroundColor: pal.bg, color: pal.tx, border: `1px solid ${pal.bd}` })),
+                      };
+                      return (
+                        <div
+                          key={b.id}
+                          onClick={(ev) => { ev.stopPropagation(); setSelectedBookingDetails(b); }}
+                          title={`${apt.name} — ${b.residentName}`}
+                          className={`self-center flex items-center px-2 h-[34px] text-[12px] font-semibold truncate cursor-pointer transition-opacity hover:opacity-80 ${isPending ? 'bg-surface-soft text-muted border border-dashed border-hairline dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#3a3a3a]' : ''}`}
+                          style={style}
+                        >
+                          <span className="truncate">{b.residentName}</span>
+                          {isPending && <span className="text-[10px] mr-1 opacity-70">(معلّق)</span>}
+                        </div>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
+            </div>
+
+            {visibleUnits.length === 0 && (
+              <div className="text-center py-16 text-muted font-medium">لا توجد وحدات لعرضها</div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* First Modal: List of bookings for the selected day */}
       {selectedDayBookings && !selectedBookingDetails && (
