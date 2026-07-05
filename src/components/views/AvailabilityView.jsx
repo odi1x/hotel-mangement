@@ -122,6 +122,7 @@ export default function AvailabilityView({ openBookingForm }) {
   const { darkMode } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
+  const [viewMode, setViewMode] = useState('month');
 
   // Stable apartment → palette-slot mapping (by position in the list)
   const unitIndex = useMemo(() => {
@@ -190,18 +191,41 @@ export default function AvailabilityView({ openBookingForm }) {
 
   const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
-  };
+  // ---- View mode: week / half-month / month ----
+  const range = useMemo(() => {
+    const d = new Date(currentDate);
+    const mk = (yy, mm, dd) => new Date(yy, mm, dd);
+    if (viewMode === 'week') {
+      const start = new Date(d); start.setDate(d.getDate() - d.getDay());
+      return Array.from({ length: 7 }, (_, i) => mk(start.getFullYear(), start.getMonth(), start.getDate() + i));
+    }
+    if (viewMode === 'half') {
+      const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      const first = d.getDate() <= 15;
+      const s = first ? 1 : 16, e = first ? 15 : dim;
+      return Array.from({ length: e - s + 1 }, (_, i) => mk(d.getFullYear(), d.getMonth(), s + i));
+    }
+    const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return Array.from({ length: dim }, (_, i) => mk(d.getFullYear(), d.getMonth(), i + 1));
+  }, [currentDate, viewMode]);
 
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
-  };
+  const rangeStart = range[0];
+  const rangeEnd = range[range.length - 1];
 
-  const handleToday = () => {
-    setCurrentDate(new Date());
+  const shiftRange = (dir) => {
+    const d = new Date(currentDate);
+    if (viewMode === 'week') d.setDate(d.getDate() + dir * 7);
+    else if (viewMode === 'half') d.setDate(d.getDate() + dir * 15);
+    else d.setMonth(d.getMonth() + dir, 1);
+    setCurrentDate(d);
   };
+  const handlePrevMonth = () => shiftRange(1);   // RTL: chevron-right = forward
+  const handleNextMonth = () => shiftRange(-1);
+  const handleToday = () => setCurrentDate(new Date());
 
+  const rangeLabel = viewMode === 'month'
+    ? `${monthNames[rangeStart.getMonth()]} ${rangeStart.getFullYear()}`
+    : `${rangeStart.getDate()} ${monthNames[rangeStart.getMonth()]} – ${rangeEnd.getDate()} ${monthNames[rangeEnd.getMonth()]}`;
 
   const formatDateAr = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('ar-EG', {
@@ -215,17 +239,22 @@ export default function AvailabilityView({ openBookingForm }) {
         <div className="flex items-center space-x-reverse space-x-4">
           <h3 className="font-semibold text-ink dark:text-white flex items-center text-lg tracking-tight">
             <Calendar size={20} className="ml-2 text-ink dark:text-white" />
-            {monthNames[month]} {year}
+            {rangeLabel}
           </h3>
           <div className="flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-[#2e2e2e] rounded-md p-1 mr-4">
             <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-[#242424] rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={18} /></button>
             <button onClick={handleToday} className="px-4 text-xs font-semibold text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-[#242424] hover:text-ink dark:hover:text-white rounded py-1 transition-colors">اليوم</button>
             <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-[#242424] rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={18} /></button>
           </div>
+          <div className="nav-pill-group">
+            {[{ id: 'week', t: 'أسبوع' }, { id: 'half', t: 'نصف شهر' }, { id: 'month', t: 'شهر' }].map(v => (
+              <button key={v.id} onClick={() => setViewMode(v.id)} className={`nav-pill text-xs ${viewMode === v.id ? 'nav-pill-active' : ''}`}>{v.t}</button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center space-x-reverse space-x-4">
           <p className="badge-pill text-muted dark:text-[#a1a1aa]">
-            اضغط على أي يوم لإضافة حجز او عرض جميع الحجوزات
+            اضغط على خلية فارغة لإضافة حجز
           </p>
           <select
             className="text-xs text-ink dark:text-white font-medium bg-canvas dark:bg-surface-dark-elevated px-3 py-1.5 rounded-md border border-hairline dark:border-[#2e2e2e] outline-none focus:border-ink dark:focus:border-white transition-colors cursor-pointer"
@@ -241,15 +270,19 @@ export default function AvailabilityView({ openBookingForm }) {
       </div>
 
       {(() => {
-        const dayW = 46;
         const wd = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
-        const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-        const todayStr = new Date().toDateString();
+        const N = range.length;
         const canBook = user?.role === 'admin' || user?.permissions?.canBook;
         const visibleUnits = apartments.filter(a => selectedApartmentFilter === 'all' || a.id === selectedApartmentFilter);
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month, daysInMonth);
         const pad = n => String(n).padStart(2, '0');
+        const minCol = viewMode === 'week' ? 90 : viewMode === 'half' ? 60 : 40;
+        const rowH = 46;
+
+        const dayMs = 86400000;
+        const floorDay = dt => Math.floor(new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime() / dayMs);
+        const d0 = floorDay(rangeStart);
+        const dEnd = floorDay(rangeEnd);
+        const todayN = floorDay(new Date());
         const isWknd = (dt) => { const g = dt.getDay(); return g === 5 || g === 6; };
         const cellBg = (today, wknd, r) => {
           if (today) return darkMode ? 'rgba(15,118,110,0.13)' : 'rgba(15,118,110,0.06)';
@@ -258,23 +291,24 @@ export default function AvailabilityView({ openBookingForm }) {
           return undefined;
         };
         const frozenShadow = { boxShadow: '-6px 0 10px -8px rgba(0,0,0,0.12)' };
+        const neutralFill = darkMode ? '#201e1c' : '#ffffff';
+        const neutralBorder = darkMode ? '#33302c' : '#e5e7eb';
 
         return (
           <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark">
-            <div style={{ display: 'grid', gridTemplateColumns: `150px repeat(${daysInMonth}, ${dayW}px)`, minWidth: 'max-content' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `150px repeat(${N}, minmax(${minCol}px, 1fr))`, minWidth: 'min-content' }}>
               {/* corner */}
-              <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center justify-center text-xs font-semibold text-muted dark:text-[#a1a1aa]" style={{ gridColumn: 1, gridRow: 1, height: 48, ...frozenShadow }}>
+              <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center justify-center text-xs font-semibold text-muted dark:text-[#a1a1aa]" style={{ gridColumn: 1, gridRow: 1, height: 46, ...frozenShadow }}>
                 الوحدة
               </div>
               {/* day headers */}
-              {days.map((d, i) => {
-                const dt = new Date(year, month, d);
-                const isToday = dt.toDateString() === todayStr;
+              {range.map((dt, i) => {
+                const isToday = floorDay(dt) === todayN;
                 const wknd = isWknd(dt);
                 return (
-                  <div key={`h${d}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 48, ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}>
-                    <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-accent text-white' : wknd ? 'text-muted-soft' : 'text-body dark:text-[#a1a1aa]'}`}>{d}</span>
-                    <span className={`text-[10px] mt-0.5 ${wknd ? 'text-muted-soft' : 'text-muted-soft'}`}>{wd[dt.getDay()]}</span>
+                  <div key={`h${i}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 46, ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}>
+                    <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-accent text-white' : wknd ? 'text-muted-soft' : 'text-body dark:text-[#a1a1aa]'}`}>{dt.getDate()}</span>
+                    <span className="text-[10px] mt-0.5 text-muted-soft">{wd[dt.getDay()]}</span>
                   </div>
                 );
               })}
@@ -283,62 +317,74 @@ export default function AvailabilityView({ openBookingForm }) {
               {visibleUnits.map((apt, r) => {
                 const row = r + 2;
                 const pal = UNIT_PALETTE[(unitIndex[apt.id] ?? 0) % UNIT_PALETTE.length];
+                const unitColor = darkMode ? pal.dtx : pal.tx;
                 const aptBookings = bookings.filter(b => b.apartmentId === apt.id);
                 return (
                   <Fragment key={apt.id}>
                     {/* sticky unit label */}
-                    <div className="sticky right-0 z-20 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center gap-2 px-3" style={{ gridColumn: 1, gridRow: row, height: 48, ...frozenShadow, backgroundColor: r % 2 === 1 ? (darkMode ? '#161514' : '#fcfcfb') : undefined }}>
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: darkMode ? pal.dtx : pal.tx }}></span>
+                    <div className="sticky right-0 z-20 border-b border-l border-gray-100 dark:border-[#242424] flex items-center gap-2 px-3" style={{ gridColumn: 1, gridRow: row, height: rowH, ...frozenShadow, backgroundColor: r % 2 === 1 ? (darkMode ? '#161514' : '#fcfcfb') : (darkMode ? '#101010' : '#ffffff') }}>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: unitColor }}></span>
                       <span className="text-sm font-semibold text-ink dark:text-white truncate">{apt.name}</span>
                     </div>
                     {/* empty day cells (clickable to book) */}
-                    {days.map((d, i) => {
-                      const dt = new Date(year, month, d);
-                      const isToday = dt.toDateString() === todayStr;
+                    {range.map((dt, i) => {
+                      const isToday = floorDay(dt) === todayN;
                       const wknd = isWknd(dt);
                       return (
                         <div
-                          key={`c${apt.id}-${d}`}
-                          onClick={canBook ? () => openBookingForm({ apartmentId: apt.id, startDate: `${year}-${pad(month + 1)}-${pad(d)}` }) : undefined}
+                          key={`c${apt.id}-${i}`}
+                          onClick={canBook ? () => openBookingForm({ apartmentId: apt.id, startDate: `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}` }) : undefined}
                           className={`border-b border-l border-gray-100 dark:border-[#242424] transition-colors ${canBook ? 'cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60' : ''}`}
-                          style={{ gridColumn: 2 + i, gridRow: row, height: 48, backgroundColor: cellBg(isToday, wknd, r), ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}
+                          style={{ gridColumn: 2 + i, gridRow: row, height: rowH, backgroundColor: cellBg(isToday, wknd, r), ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}
                           title={canBook ? 'إضافة حجز' : ''}
                         ></div>
                       );
                     })}
                     {/* booking bars */}
                     {aptBookings.map(b => {
-                      const s = new Date(b.startDate); const e = new Date(b.endDate);
-                      if (e < monthStart || s > monthEnd) return null;
-                      const startIdx = s <= monthStart ? 0 : s.getDate() - 1;
-                      const endIdx = e >= monthEnd ? daysInMonth - 1 : e.getDate() - 1;
+                      const bs = floorDay(new Date(b.startDate));
+                      const be = floorDay(new Date(b.endDate));
+                      if (be < d0 || bs > dEnd) return null;
+                      const startIdx = Math.max(0, bs - d0);
+                      const endIdx = Math.min(N - 1, be - d0);
                       const span = Math.max(1, endIdx - startIdx + 1);
-                      const contStart = s < monthStart;
-                      const contEnd = e > monthEnd;
+                      const contStart = bs < d0;
+                      const contEnd = be > dEnd;
                       const isPending = b.status === 'pending';
+                      const isCurrent = !isPending && bs <= todayN && be >= todayN;
+                      const isPast = !isPending && be < todayN;
+
+                      let fill = neutralFill, brd = neutralBorder, txt = darkMode ? '#e7e5e4' : '#1c1917';
+                      if (isCurrent) { fill = darkMode ? 'rgba(15,118,110,0.22)' : '#e3f5f1'; brd = '#0f766e'; txt = darkMode ? '#5eead4' : '#0b5d56'; }
+
                       const style = {
                         gridColumn: `${2 + startIdx} / span ${span}`,
                         gridRow: row,
                         zIndex: 1,
-                        margin: '7px 3px',
-                        borderTopLeftRadius: contStart ? 0 : 7,
-                        borderBottomLeftRadius: contStart ? 0 : 7,
-                        borderTopRightRadius: contEnd ? 0 : 7,
-                        borderBottomRightRadius: contEnd ? 0 : 7,
-                        ...(isPending ? {} : (darkMode
-                          ? { backgroundColor: pal.dbg, color: pal.dtx, border: `1px solid ${pal.dbd}` }
-                          : { backgroundColor: pal.bg, color: pal.tx, border: `1px solid ${pal.bd}` })),
+                        margin: '7px 2px',
+                        overflow: 'hidden',
+                        borderRadius: 7,
+                        borderTopRightRadius: contStart ? 0 : 7,
+                        borderBottomRightRadius: contStart ? 0 : 7,
+                        borderTopLeftRadius: contEnd ? 0 : 7,
+                        borderBottomLeftRadius: contEnd ? 0 : 7,
+                        opacity: isPast ? 0.5 : 1,
+                        ...(isPending
+                          ? {}
+                          : { backgroundColor: fill, color: txt, border: `1px solid ${brd}`,
+                              borderRight: contStart ? `1px solid ${brd}` : `4px solid ${isCurrent ? '#0f766e' : unitColor}` }),
                       };
                       return (
                         <div
                           key={b.id}
                           onClick={(ev) => { ev.stopPropagation(); setSelectedBookingDetails(b); }}
-                          title={`${apt.name} — ${b.residentName}`}
-                          className={`self-center flex items-center px-2 h-[34px] text-[12px] font-semibold truncate cursor-pointer transition-opacity hover:opacity-80 ${isPending ? 'bg-surface-soft text-muted border border-dashed border-hairline dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#3a3a3a]' : ''}`}
+                          title={`${apt.name} — ${b.residentName}${isPending ? ' (طلب معلّق)' : ''}`}
+                          className={`self-center flex items-center gap-1 pr-2.5 pl-2 h-[32px] text-[12px] font-semibold cursor-pointer transition-all hover:brightness-95 ${isPending ? 'bg-transparent text-muted border border-dashed border-hairline dark:text-[#a1a1aa] dark:border-[#4a463f]' : ''}`}
                           style={style}
                         >
+                          {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" title="مقيم حالياً"></span>}
                           <span className="truncate">{b.residentName}</span>
-                          {isPending && <span className="text-[10px] mr-1 opacity-70">(معلّق)</span>}
+                          {isPending && <span className="text-[10px] opacity-70 shrink-0">(معلّق)</span>}
                         </div>
                       );
                     })}
