@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, Star, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-import Datepicker from 'react-tailwindcss-datepicker';
+import DatePickerCal from '../ui/DatePickerCal';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
@@ -271,25 +271,10 @@ export default function AnalyticsView() {
             <div className="absolute top-full left-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] rounded-lg shadow-soft z-50 p-4">
               <div className="mb-4">
                 <span className="block text-sm font-semibold text-muted dark:text-[#a1a1aa] mb-2">الفترة الزمنية:</span>
-                <div dir="ltr" className="dp-shell">
-                   <Datepicker
-                      primaryColor="gray"
-                      value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
-                      onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
-                      inputClassName="w-full pl-4 pr-12 py-2 border border-hairline dark:border-[#2e2e2e] rounded-md outline-none focus:border-ink dark:focus:border-white bg-canvas dark:bg-surface-dark-elevated dark:text-white text-right transition-colors text-sm font-semibold"
-                      displayFormat="DD/MM/YYYY"
-                      placeholder="اختر فترة التقرير"
-                      configs={{
-                          shortcuts: {
-                              today: 'اليوم',
-                              yesterday: 'الأمس',
-                              past: p => `آخر ${p} يوم`,
-                              currentMonth: 'الشهر الحالي',
-                              pastMonth: 'الشهر الماضي',
-                          }
-                      }}
-                  />
-                </div>
+                <DatePickerCal
+                  value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
+                  onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
+                />
               </div>
 
               <div className="mb-4">

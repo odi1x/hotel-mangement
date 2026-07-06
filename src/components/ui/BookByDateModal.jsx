@@ -62,21 +62,21 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                     return (
                       <div
                         key={apt.id}
-                        className={`relative bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg border ${isNotClean ? 'border-dashed border-hairline dark:border-[#3a3a3a]' : 'border-transparent'} flex flex-col justify-between`}
+                        className="card-surface p-4 flex flex-col justify-between"
                       >
-                        {isNotClean && (
-                          <div className="absolute top-0 left-0 w-full bg-ink text-white text-[10px] font-semibold text-center py-0.5 rounded-t-lg">
-                            تحتاج تنظيف
-                          </div>
-                        )}
-                        <div className={isNotClean ? 'mt-3' : ''}>
-                          <div className="flex items-center space-x-reverse space-x-2 mb-2">
-                            <Home size={18} className="text-ink dark:text-white" />
-                            <span className="font-semibold text-ink dark:text-white">{apt.name}</span>
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-md bg-surface-card dark:bg-surface-dark text-ink dark:text-white"><Home size={16} /></div>
+                              <span className="font-semibold text-ink dark:text-white">{apt.name}</span>
+                            </div>
+                            {isNotClean && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-canvas dark:bg-surface-dark text-ink dark:text-white border border-dashed border-muted-soft">تحتاج تنظيف</span>
+                            )}
                           </div>
                           <p className="text-xs text-muted dark:text-[#a1a1aa] mb-2">{apt.type}</p>
-                          <p className="text-sm font-semibold text-ink dark:text-white mb-4">
-                            {apt.basePrice} ر.س / ليلة
+                          <p className="text-lg font-semibold tracking-tight text-ink dark:text-white mb-4">
+                            {apt.basePrice} <span className="text-xs text-muted font-semibold">ر.س / ليلة</span>
                           </p>
                         </div>
 
@@ -89,14 +89,14 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                               تحديد كـ "تم التنظيف"
                             </button>
                           ) : (
-                            <div className="w-full bg-canvas dark:bg-surface-dark text-muted dark:text-[#a1a1aa] py-2 rounded-md font-semibold text-sm text-center border border-hairline dark:border-[#2e2e2e]">
+                            <div className="w-full bg-surface-card dark:bg-surface-dark text-muted dark:text-[#a1a1aa] py-2 rounded-md font-semibold text-sm text-center">
                               الوحدة تحتاج لتنظيف
                             </div>
                           )
                         ) : (
                           <button
                             onClick={() => onSelectApartment(apt.id, dateValue.startDate, dateValue.endDate)}
-                            className="btn-primary w-full h-9 text-sm"
+                            className="btn-accent w-full h-9 text-sm"
                           >
                             حجز هذه الوحدة
                           </button>

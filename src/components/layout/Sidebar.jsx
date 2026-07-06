@@ -20,12 +20,12 @@ const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isColla
     <Icon size={20} strokeWidth={view === id ? 2.25 : 2} className={view === id ? 'text-accent' : ''} />
     {!isCollapsed && <span className="text-sm mr-3 flex-1 text-right">{label}</span>}
     {!isCollapsed && badgeCount > 0 && (
-      <span className="bg-ink text-white text-[10px] font-semibold px-2 py-0.5 rounded-full dark:bg-white dark:text-ink">
+      <span className="bg-accent text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
         {badgeCount}
       </span>
     )}
     {isCollapsed && badgeCount > 0 && (
-      <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-ink rounded-full border-2 border-white dark:bg-white dark:border-surface-dark"></span>
+      <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-accent rounded-full border-2 border-white dark:border-surface-dark"></span>
     )}
   </button>
 );

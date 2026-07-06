@@ -105,7 +105,7 @@ export default function Layout() {
 
               <button
                 onClick={() => setIsBookingByDate(true)}
-                className="btn-primary"
+                className="btn-accent"
               >
                 <Plus size={18} />
                 <span>حجز جديد</span>
