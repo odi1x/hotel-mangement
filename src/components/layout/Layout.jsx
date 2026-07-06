@@ -105,13 +105,6 @@ export default function Layout() {
 
               <button
                 onClick={() => setIsBookingByDate(true)}
-                className="btn-secondary"
-              >
-                <CalendarSearch size={18} />
-                <span>حجز بالتاريخ</span>
-              </button>
-              <button
-                onClick={() => handleOpenBookingForm()}
                 className="btn-primary"
               >
                 <Plus size={18} />
