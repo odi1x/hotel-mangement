@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud } from 'lucide-react';
+import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud, Check } from 'lucide-react';
+import { ACCENTS, applyAccent, getAccentId } from '../../lib/accent';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
@@ -16,6 +17,7 @@ export default function SettingsView() {
   const { apartments, licenses, addLicense, deleteLicense, staffExpenses, fetchStaffExpenses } = useData();
   const [newStaff, setNewStaff] = useState({ name: '', monthlySalary: '', scope: [] });
   const [activeTab, setActiveTab] = useState('general');
+  const [accentId, setAccentId] = useState(getAccentId());
   const [facilityTab, setFacilityTab] = useState('identity');
 
   const [formData, setFormData] = useState({
@@ -592,6 +594,29 @@ export default function SettingsView() {
                         }`}
                       />
                     </button>
+                  </div>
+
+                  {/* Accent color theme */}
+                  <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg mb-6">
+                    <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2 mb-1">
+                      <span className="w-4 h-4 rounded-full bg-accent inline-block"></span>
+                      لون النظام
+                    </h3>
+                    <p className="text-xs text-muted dark:text-[#a1a1aa] mb-4">يُطبَّق فوراً على الأزرار والتقويم والتنبيهات وشريط التمرير.</p>
+                    <div className="flex flex-wrap gap-3">
+                      {ACCENTS.map(a => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => { applyAccent(a.id); setAccentId(a.id); }}
+                          title={a.name}
+                          className={`w-9 h-9 rounded-full transition-transform hover:scale-110 flex items-center justify-center ${accentId === a.id ? 'ring-2 ring-offset-2 ring-offset-surface-card dark:ring-offset-surface-dark-elevated' : ''}`}
+                          style={{ backgroundColor: a.hex, boxShadow: accentId === a.id ? `0 0 0 2px ${a.hex}` : 'none' }}
+                        >
+                          {accentId === a.id && <Check size={16} className="text-white" />}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                 <div>

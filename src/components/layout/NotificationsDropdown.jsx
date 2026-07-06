@@ -130,7 +130,7 @@ export default function NotificationsDropdown({ onNavigate }) {
                     className={`group px-4 py-3.5 cursor-pointer transition-colors border-r-2 ${
                       notif.isRead
                         ? 'border-transparent bg-canvas dark:bg-surface-dark-elevated hover:bg-surface-soft dark:hover:bg-[#242424]'
-                        : 'border-accent bg-accent-soft/60 hover:bg-accent-soft dark:bg-[#242424] dark:hover:bg-[#2e2e2e]'
+                        : 'border-accent bg-accent-soft hover:bg-accent-soft dark:bg-[#242424] dark:hover:bg-[#2e2e2e]'
                     }`}
                   >
                     <div className="flex gap-3 items-start">

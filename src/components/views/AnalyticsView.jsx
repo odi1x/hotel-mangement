@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, Star, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import DatePickerCal from '../ui/DatePickerCal';
+import { getAccent } from '../../lib/accent';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
@@ -9,6 +10,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 const COLORS = ['#111111', '#374151', '#6b7280', '#9ca3af', '#c4c9d0', '#d1d5db', '#e5e7eb'];
 
 export default function AnalyticsView() {
+  const accentHex = getAccent().hex;
   const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter, isAnalyticsLoading } = useData();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [tempFilter, setTempFilter] = useState({ ...analyticsFilter });
@@ -485,8 +487,8 @@ export default function AnalyticsView() {
                 <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0f766e" stopOpacity={0.16}/>
-                      <stop offset="95%" stopColor="#0f766e" stopOpacity={0}/>
+                      <stop offset="5%" stopColor={accentHex} stopOpacity={0.16}/>
+                      <stop offset="95%" stopColor={accentHex} stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.12}/>
@@ -501,7 +503,7 @@ export default function AnalyticsView() {
                     contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontFamily: 'inherit' }}
                     labelStyle={{ fontWeight: '600', color: '#111111', marginBottom: '8px' }}
                   />
-                                    <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke="#0f766e" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
+                                    <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke={accentHex} strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
                   <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#9ca3af" strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#colorExpenses)" />
                 </AreaChart>
               </ResponsiveContainer>

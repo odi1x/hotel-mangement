@@ -387,7 +387,7 @@ export default function AvailabilityView({ openBookingForm }) {
         const todayN = floorDay(new Date());
         const isWknd = (dt) => { const g = dt.getDay(); return g === 5 || g === 6; };
         const cellBg = (today, wknd, r) => {
-          if (today) return darkMode ? 'rgba(15,118,110,0.13)' : 'rgba(15,118,110,0.06)';
+          if (today) return darkMode ? 'rgb(var(--accent-rgb) / 0.13)' : 'rgb(var(--accent-rgb) / 0.06)';
           if (wknd)  return darkMode ? 'rgba(255,255,255,0.035)' : 'rgba(17,17,17,0.028)';
           if (r % 2 === 1) return darkMode ? 'rgba(255,255,255,0.018)' : 'rgba(17,17,17,0.014)';
           return undefined;
@@ -408,7 +408,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 const isToday = floorDay(dt) === todayN;
                 const wknd = isWknd(dt);
                 return (
-                  <div key={`h${i}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 46, ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}>
+                  <div key={`h${i}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 46, ...(isToday ? { borderLeft: '2px solid rgb(var(--accent-rgb))' } : {}) }}>
                     <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-accent text-white' : wknd ? 'text-muted-soft' : 'text-body dark:text-[#a1a1aa]'}`}>{dt.getDate()}</span>
                     <span className="text-[10px] mt-0.5 text-muted-soft">{wd[dt.getDay()]}</span>
                   </div>
@@ -439,7 +439,7 @@ export default function AvailabilityView({ openBookingForm }) {
                           onMouseDown={canBook ? (ev) => { ev.preventDefault(); setDragSel({ aptId: apt.id, startIdx: i, curIdx: i }); } : undefined}
                           onMouseEnter={canBook ? () => setDragSel(prev => (prev && prev.aptId === apt.id) ? { ...prev, curIdx: i } : prev) : undefined}
                           className={`border-b border-l border-gray-100 dark:border-[#242424] transition-colors ${canBook ? 'cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60' : ''}`}
-                          style={{ gridColumn: 2 + i, gridRow: row, height: rowH, backgroundColor: inDrag ? 'rgba(15,118,110,0.14)' : cellBg(isToday, wknd, r), ...(isToday ? { borderLeft: '2px solid #0f766e' } : {}) }}
+                          style={{ gridColumn: 2 + i, gridRow: row, height: rowH, backgroundColor: inDrag ? 'rgb(var(--accent-rgb) / 0.14)' : cellBg(isToday, wknd, r), ...(isToday ? { borderLeft: '2px solid rgb(var(--accent-rgb))' } : {}) }}
                           title={canBook ? 'اسحب لإنشاء حجز' : ''}
                         ></div>
                       );
@@ -459,7 +459,7 @@ export default function AvailabilityView({ openBookingForm }) {
                       const isPast = !isPending && be < todayN;
 
                       let fill = neutralFill, brd = neutralBorder, txt = darkMode ? '#e7e5e4' : '#1c1917';
-                      if (isCurrent) { fill = darkMode ? 'rgba(15,118,110,0.22)' : '#e3f5f1'; brd = '#0f766e'; txt = darkMode ? '#5eead4' : '#0b5d56'; }
+                      if (isCurrent) { fill = darkMode ? 'rgb(var(--accent-rgb) / 0.24)' : 'rgb(var(--accent-rgb) / 0.12)'; brd = 'rgb(var(--accent-rgb))'; txt = darkMode ? '#ffffff' : 'var(--accent-strong)'; }
 
                       const style = {
                         gridColumn: `${2 + startIdx} / span ${span}`,
@@ -476,7 +476,7 @@ export default function AvailabilityView({ openBookingForm }) {
                         ...(isPending
                           ? {}
                           : { backgroundColor: fill, color: txt, border: `1px solid ${brd}`,
-                              borderRight: contStart ? `1px solid ${brd}` : `4px solid ${isCurrent ? '#0f766e' : unitColor}` }),
+                              borderRight: contStart ? `1px solid ${brd}` : `4px solid ${isCurrent ? 'rgb(var(--accent-rgb))' : unitColor}` }),
                       };
                       const nights = Math.max(1, be - bs);
                       const statusTxt = isPending ? 'طلب معلّق' : isCurrent ? 'مقيم حالياً' : isPast ? 'مغادر' : 'قادم';

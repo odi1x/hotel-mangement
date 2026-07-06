@@ -36,13 +36,12 @@ export default {
           active: '#242424',
           disabled: '#e5e7eb',
         },
-        // ---- The single scarce accent (kept). Swap DEFAULT to rebrand. ----
-        // Deep emerald = "money / positive."
-        // Alternatives: academy red #b91c1c · navy #1e3a5f · clay #b45309
+        // ---- The single scarce accent (kept). Now runtime-themeable via CSS vars. ----
+        // Change the active theme in Settings; these read --accent-rgb / --accent-strong.
         accent: {
-          DEFAULT: '#0f766e',
-          soft: '#0f766e14',
-          strong: '#0b5d56',
+          DEFAULT: 'rgb(var(--accent-rgb) / <alpha-value>)',
+          soft: 'rgb(var(--accent-rgb) / 0.08)',
+          strong: 'var(--accent-strong)',
         },
       },
       fontFamily: {
