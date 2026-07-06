@@ -1,11 +1,40 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, Calendar } from 'lucide-react';
+import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, Calendar, ChevronLeft } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 
-export default function NotificationsDropdown() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
+export default function NotificationsDropdown({ onNavigate }) {
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, fetchNotifications } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Map a notification to the page it should open
+  const targetFor = (n) => {
+    if (n.link) return n.link;
+    switch (n.type) {
+      case 'booking':
+      case 'warning':
+        return 'requests';
+      case 'success':
+        return 'residents';
+      default:
+        return null;
+    }
+  };
+
+  const handleNotifClick = (n) => {
+    if (!n.isRead) markAsRead(n.id);
+    const t = targetFor(n);
+    if (t && onNavigate) {
+      onNavigate(t);
+      setIsOpen(false);
+    }
+  };
+
+  const toggleOpen = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    if (next) fetchNotifications(); // always show fresh on open
+  };
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -46,7 +75,7 @@ export default function NotificationsDropdown() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         className="relative p-2 rounded-md text-muted hover:bg-surface-soft hover:text-ink dark:text-[#a1a1aa] dark:hover:bg-surface-dark-elevated dark:hover:text-white transition-colors focus:outline-none"
       >
         <Bell className="w-6 h-6" />
@@ -60,23 +89,28 @@ export default function NotificationsDropdown() {
       {isOpen && (
         <div className="absolute left-0 mt-2 w-80 sm:w-96 bg-canvas dark:bg-surface-dark-elevated rounded-lg shadow-soft border border-hairline dark:border-[#2e2e2e] overflow-hidden z-50 transform origin-top-left transition-all">
           <div className="px-4 py-3 border-b border-hairline-soft dark:border-[#2e2e2e] flex justify-between items-center">
-            <h3 className="font-semibold text-ink dark:text-white">الإشعارات</h3>
-            <div className="flex gap-2">
-              <button
-                onClick={markAllAsRead}
-                className="text-xs text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white font-medium flex items-center gap-1 p-1 transition-colors"
-                title="تحديد الكل كمقروء"
-              >
-                <Check className="w-3.5 h-3.5" />
-                تحديد الكل كمقروء
-              </button>
+            <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2">
+              الإشعارات
+              {unreadCount > 0 && <span className="text-[10px] font-semibold text-white bg-accent rounded-full px-2 py-0.5">{unreadCount}</span>}
+            </h3>
+            <div className="flex gap-1">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white font-medium flex items-center gap-1 p-1.5 rounded-md hover:bg-surface-soft dark:hover:bg-[#242424] transition-colors"
+                  title="تحديد الكل كمقروء"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  تحديد الكل كمقروء
+                </button>
+              )}
               <button
                 onClick={clearAll}
-                className="text-xs text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white font-medium flex items-center gap-1 p-1 transition-colors"
-                title="مسح الكل"
+                className="text-xs text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white font-medium flex items-center gap-1 p-1.5 rounded-md hover:bg-surface-soft dark:hover:bg-[#242424] transition-colors"
+                title="مسح المقروءة"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                مسح الكل
+                مسح المقروءة
               </button>
             </div>
           </div>
@@ -92,11 +126,11 @@ export default function NotificationsDropdown() {
                 {notifications.map((notif) => (
                   <li
                     key={notif.id}
-                    onClick={() => !notif.isRead && markAsRead(notif.id)}
-                    className={`p-4 cursor-pointer transition-colors ${
+                    onClick={() => handleNotifClick(notif)}
+                    className={`group px-4 py-3.5 cursor-pointer transition-colors border-r-2 ${
                       notif.isRead
-                        ? 'bg-canvas dark:bg-surface-dark-elevated hover:bg-surface-soft dark:hover:bg-[#242424]'
-                        : 'bg-surface-soft dark:bg-[#242424] hover:bg-surface-card dark:hover:bg-[#2e2e2e]'
+                        ? 'border-transparent bg-canvas dark:bg-surface-dark-elevated hover:bg-surface-soft dark:hover:bg-[#242424]'
+                        : 'border-accent bg-accent-soft/60 hover:bg-accent-soft dark:bg-[#242424] dark:hover:bg-[#2e2e2e]'
                     }`}
                   >
                     <div className="flex gap-3 items-start">
@@ -115,9 +149,14 @@ export default function NotificationsDropdown() {
                         <p className={`text-xs leading-relaxed ${notif.isRead ? 'text-muted dark:text-[#a1a1aa]' : 'text-body dark:text-[#a1a1aa] font-medium'}`}>
                           {notif.message}
                         </p>
+                        {targetFor(notif) && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            عرض التفاصيل <ChevronLeft className="w-3 h-3" />
+                          </span>
+                        )}
                       </div>
                       {!notif.isRead && (
-                        <div className="w-2 h-2 rounded-full bg-ink dark:bg-white shrink-0 mt-1.5" />
+                        <div className="w-2 h-2 rounded-full bg-accent shrink-0 mt-1.5" />
                       )}
                     </div>
                   </li>

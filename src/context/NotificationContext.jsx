@@ -27,13 +27,18 @@ export const NotificationProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
-
-    if (token) {
-      const interval = setInterval(fetchNotifications, 60000); // Poll every 60 seconds
-      return () => clearInterval(interval);
-    }
+    if (!token) return;
+    const interval = setInterval(fetchNotifications, 20000); // poll every 20s
+    const onFocus = () => fetchNotifications();
+    const onVisible = () => { if (!document.hidden) fetchNotifications(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 

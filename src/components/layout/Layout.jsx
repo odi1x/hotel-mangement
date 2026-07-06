@@ -64,7 +64,7 @@ export default function Layout() {
       <Sidebar view={view} setView={setView} isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} />
+        <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} onNavigate={setView} />
 
         <main className="flex-1 overflow-hidden p-6 pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
           <div className="flex justify-between items-end mb-6">

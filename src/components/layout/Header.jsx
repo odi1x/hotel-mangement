@@ -5,7 +5,7 @@ import NotificationsDropdown from './NotificationsDropdown';
 import ImageUpload from '../ui/ImageUpload';
 import toast from 'react-hot-toast';
 
-export default function Header({ openStaffSettings }) {
+export default function Header({ openStaffSettings, onNavigate }) {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -27,7 +27,7 @@ export default function Header({ openStaffSettings }) {
 
   return (
     <header className="bg-canvas dark:bg-surface-dark border-b border-hairline dark:border-[#242424] py-3 px-8 flex justify-end items-center gap-4 relative z-20">
-      <NotificationsDropdown />
+      <NotificationsDropdown onNavigate={onNavigate} />
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen(!dropdownOpen)}

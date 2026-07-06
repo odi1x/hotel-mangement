@@ -62,9 +62,11 @@ export default function AnalyticsView() {
 
   // Extract top performing units directly from backend analytics payload
   const topUnits = useMemo(() => {
-    // Rely on the heavily optimized api/analytics.js aggregation
-    return analytics.topUnits || [];
-  }, [analytics.topUnits]);
+    return (analytics.topUnits || []).map(u => ({
+      ...u,
+      name: u.name || apartments.find(a => a.id === (u.id || u.apartmentId))?.name || 'وحدة'
+    }));
+  }, [analytics.topUnits, apartments]);
 
 
   // Transform data for line chart
@@ -253,7 +255,7 @@ export default function AnalyticsView() {
           )}
         </div>
 
-        <div className="relative">
+        <div className="relative flex items-center gap-2">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`btn-secondary text-sm ${
@@ -266,6 +268,16 @@ export default function AnalyticsView() {
             <span>تصفية التحليلات</span>
             <ChevronDown size={16} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
+
+          {hasActiveFilters && (
+            <button
+              onClick={() => { const empty = { apartmentIds: [], startDate: null, endDate: null }; setAnalyticsFilter(empty); setTempFilter(empty); setIsFilterOpen(false); }}
+              className="icon-action opacity-100"
+              title="إلغاء التصفية"
+            >
+              <X size={16} />
+            </button>
+          )}
 
           {isFilterOpen && (
             <div className="absolute top-full left-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] rounded-lg shadow-soft z-50 p-4">
