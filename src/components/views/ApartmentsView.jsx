@@ -18,7 +18,7 @@ export default function ApartmentsView() {
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const itemsPerPage = 6;
+  const itemsPerPage = 11;
   const [formData, setFormData] = useState({
       name: '', type: defaultType, description: '', basePrice: '',
       rentCost: '', rentPeriod: 'monthly', cleaningType: 'salaried', cleaningCost: '',
@@ -181,7 +181,7 @@ export default function ApartmentsView() {
 
 
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-4">
         {paginatedApartments.map((apt) => {
           const isNotClean = apt.needsCleaning;
           const isBooked = isApartmentCurrentlyBooked(apt.id);
@@ -189,7 +189,7 @@ export default function ApartmentsView() {
           <div key={apt.id} className="card-surface flex flex-col h-full relative group transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 overflow-hidden">
             {/* Image band — compact, supporting (this is an admin tool, not a listing) */}
             <div
-                className="w-full h-32 bg-surface-card dark:bg-surface-dark relative cursor-pointer overflow-hidden"
+                className="w-full aspect-[4/3] bg-surface-card dark:bg-surface-dark relative cursor-pointer overflow-hidden"
                 onClick={() => handleOpenPhotoModal(apt)}
             >
                 {apt.coverPhoto ? (
@@ -304,182 +304,157 @@ export default function ApartmentsView() {
       )}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" dir="rtl">
-          <div className="bg-canvas dark:bg-surface-dark rounded-xl shadow-soft border border-hairline dark:border-[#2e2e2e] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
-              <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">
-                {editingId ? 'تعديل بيانات الوحدة' : 'إضافة وحدة جديدة'}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="icon-action"><X size={20}/></button>
-            </div>
-            <div className="overflow-y-auto p-6">
-              <form onSubmit={handleSave} className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-ink dark:text-white border-b border-hairline-soft dark:border-[#242424] pb-2">المعلومات الأساسية</h3>
+          <form onSubmit={handleSave} className="bg-canvas dark:bg-surface-dark rounded-xl shadow-soft border border-hairline dark:border-[#2e2e2e] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            {/* header */}
+            <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-accent-soft text-accent flex items-center justify-center"><Home size={20} /></div>
                 <div>
-                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">اسم/رقم الوحدة</label>
-                <input required type="text" placeholder="مثال: شقة 101" className="input-field" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                  <h2 className="text-lg font-semibold tracking-tight text-ink dark:text-white leading-none mb-1">{editingId ? 'تعديل بيانات الوحدة' : 'إضافة وحدة جديدة'}</h2>
+                  <p className="text-xs text-muted dark:text-[#a1a1aa]">المعلومات، الصور، والتكاليف التشغيلية.</p>
+                </div>
               </div>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="icon-action"><X size={20} /></button>
+            </div>
+
+            {/* scrollable body */}
+            <div className="overflow-y-auto p-6 space-y-8 flex-1">
+              {/* Basic info */}
+              <section className="space-y-4">
+                <h3 className="text-[11px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-widest border-b border-hairline-soft dark:border-[#242424] pb-2">المعلومات الأساسية</h3>
+                <div>
+                  <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">اسم / رقم الوحدة</label>
+                  <input required type="text" placeholder="مثال: شقة 101" className="input-field" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                      <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">النوع</label>
-                      <select className="input-field" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                          {customTypes.map((t, idx) => (
-                            <option key={idx} value={t}>{t}</option>
-                          ))}
-                      </select>
+                    <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">النوع</label>
+                    <select className="input-field" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
+                      {customTypes.map((t, idx) => (<option key={idx} value={t}>{t}</option>))}
+                    </select>
                   </div>
                   <div>
-                      <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">السعر الافتراضي</label>
-                      <input required type="number" placeholder="200" className="input-field" value={formData.basePrice} onChange={(e) => setFormData({...formData, basePrice: e.target.value})} />
+                    <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">السعر الأساسي</label>
+                    <div className="relative">
+                      <input required type="number" placeholder="200" className="input-field font-semibold pl-12" value={formData.basePrice} onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })} />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-soft font-medium pointer-events-none">ر.س</span>
+                    </div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">ملاحظات/وصف</label>
-                  <textarea className="input-field h-28 resize-none" placeholder="وصف الشقة أو ملاحظات داخلية..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})}></textarea>
+                  <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">ملاحظات / وصف</label>
+                  <textarea className="input-field h-24 resize-none" placeholder="وصف الشقة أو ملاحظات داخلية..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })}></textarea>
                 </div>
                 <div>
-                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">ترخيص السياحة (اختياري)</label>
-                    <select className="input-field" value={formData.licenseId} onChange={(e) => setFormData({...formData, licenseId: e.target.value})}>
-                        <option value="">بدون ترخيص محدد</option>
-                        {licenses.map(l => (
-                          <option key={l.id} value={l.id}>{l.licenseNumber}</option>
-                        ))}
-                    </select>
+                  <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">ترخيص السياحة (اختياري)</label>
+                  <select className="input-field" value={formData.licenseId} onChange={(e) => setFormData({ ...formData, licenseId: e.target.value })}>
+                    <option value="">بدون ترخيص محدد</option>
+                    {licenses.map(l => (<option key={l.id} value={l.id}>{l.licenseNumber}</option>))}
+                  </select>
                 </div>
-              </div>
-              {/* Financials & Costs Section */}
+              </section>
 
-              {/* Premium Image Upload Section */}
-              <div className="space-y-4 pt-4 border-t border-hairline-soft dark:border-[#242424]">
-                <h3 className="font-semibold text-ink dark:text-white pb-2">صور الوحدة</h3>
-                <div className="border border-dashed border-hairline dark:border-[#2e2e2e] rounded-md p-6 text-center hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                  />
-                  <div className="flex flex-col items-center justify-center space-y-2">
-                    <div className={`p-3 rounded-full bg-surface-card dark:bg-surface-dark-elevated ${isUploading ? 'animate-pulse' : ''}`}>
-                      <ImageIcon size={24} className="text-muted" />
+              {/* Images */}
+              <section className="space-y-4">
+                <h3 className="text-[11px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-widest border-b border-hairline-soft dark:border-[#242424] pb-2">صور الوحدة</h3>
+                <div className="border border-dashed border-hairline dark:border-[#2e2e2e] rounded-lg p-6 text-center hover:bg-surface-soft dark:hover:bg-surface-dark-elevated hover:border-accent transition-colors relative">
+                  <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={isUploading} />
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <div className={`w-11 h-11 rounded-full bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center ${isUploading ? 'animate-pulse' : ''}`}>
+                      <ImageIcon size={22} className="text-muted" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-body dark:text-[#a1a1aa] text-sm">
-                        {isUploading ? 'جاري الرفع...' : 'اسحب الصور هنا أو اضغط للتصفح'}
-                      </p>
-                    </div>
+                    <p className="font-semibold text-body dark:text-[#a1a1aa] text-sm">{isUploading ? 'جاري الرفع...' : 'اسحب الصور هنا أو اضغط للتصفح'}</p>
+                    <p className="text-[11px] text-muted-soft">أول صورة تصبح الغلاف تلقائياً — يمكنك تغييرها بالمرور على أي صورة.</p>
                   </div>
                 </div>
-                {/* Image Previews */}
                 {formData.images && formData.images.length > 0 && (
-                  <div className="flex gap-3 overflow-x-auto pb-2">
-                    {formData.images.map((url, idx) => (
-                      <div key={idx} className={`relative shrink-0 w-24 h-24 rounded-md overflow-hidden border ${formData.coverPhoto === url ? 'border-ink dark:border-white' : 'border-hairline dark:border-[#2e2e2e]'}`}>
-                        <img src={url} className="w-full h-full object-cover" alt="preview" />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(url)}
-                          className="absolute top-1 right-1 bg-ink/80 text-white p-1 rounded-md hover:bg-ink transition-colors"
-                        >
-                          <X size={12} />
-                        </button>
-                        {formData.coverPhoto !== url && (
-                          <button
-                            type="button"
-                            onClick={() => setFormData({...formData, coverPhoto: url})}
-                            className="absolute bottom-1 left-1 right-1 bg-ink/70 text-white text-[10px] py-1 rounded text-center hover:bg-ink/90"
-                          >
-                            تعيين غلاف
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                    {formData.images.map((url, idx) => {
+                      const isCover = formData.coverPhoto === url;
+                      return (
+                        <div key={idx} className={`group/img relative aspect-square rounded-lg overflow-hidden ${isCover ? 'ring-2 ring-accent' : 'ring-1 ring-hairline dark:ring-[#2e2e2e]'}`}>
+                          <img src={url} className="w-full h-full object-cover" alt="preview" />
+                          <button type="button" onClick={() => removeImage(url)} className="absolute top-1 right-1 bg-black/60 text-white p-1 rounded-md opacity-0 group-hover/img:opacity-100 transition-opacity hover:bg-black/80">
+                            <X size={12} />
                           </button>
-                        )}
-                        {formData.coverPhoto === url && (
-                          <div className="absolute bottom-1 left-1 right-1 bg-ink text-white text-[10px] py-1 rounded text-center">
-                            الصورة الرئيسية
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          {isCover ? (
+                            <div className="absolute bottom-0 inset-x-0 bg-accent text-white text-[10px] font-semibold py-1 text-center">الغلاف</div>
+                          ) : (
+                            <button type="button" onClick={() => setFormData({ ...formData, coverPhoto: url })} className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] py-1 text-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+                              تعيين كغلاف
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-              </div>
-              {/* Collapsible Financial Section */}
-              <div className="space-y-4 pt-4 border-t border-hairline-soft dark:border-[#242424]">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvancedFinancials(!showAdvancedFinancials)}
-                  className="w-full flex justify-between items-center font-semibold text-ink dark:text-white pb-2"
-                >
+              </section>
+
+              {/* Financials (collapsible) */}
+              <section>
+                <button type="button" onClick={() => setShowAdvancedFinancials(!showAdvancedFinancials)}
+                  className="w-full flex justify-between items-center text-[11px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-widest border-b border-hairline-soft dark:border-[#242424] pb-2">
                   <span>التكاليف والمالية (إعدادات متقدمة)</span>
-                  <span className="text-muted">{showAdvancedFinancials ? <ChevronLeft className="-rotate-90 transition-transform" /> : <ChevronLeft className="transition-transform" />}</span>
+                  <ChevronLeft size={16} className={`transition-transform ${showAdvancedFinancials ? '-rotate-90' : ''}`} />
                 </button>
-                <div className={`transition-all duration-300 overflow-hidden ${showAdvancedFinancials ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">تكلفة الإيجار</label>
-                    <div className="flex space-x-reverse space-x-2">
-                        <input type="number" placeholder="المبلغ" className="input-field w-2/3" value={formData.rentCost} onChange={(e) => setFormData({...formData, rentCost: e.target.value})} />
-                        <select className="input-field w-1/3 px-2" value={formData.rentPeriod} onChange={(e) => setFormData({...formData, rentPeriod: e.target.value})}>
+                <div className={`transition-all duration-300 overflow-hidden ${showAdvancedFinancials ? 'max-h-[1000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                  <div className="space-y-4 bg-surface-soft dark:bg-surface-dark-elevated/50 border border-hairline-soft dark:border-[#242424] rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">تكلفة الإيجار</label>
+                        <div className="flex space-x-reverse space-x-2">
+                          <input type="number" placeholder="المبلغ" className="input-field w-2/3" value={formData.rentCost} onChange={(e) => setFormData({ ...formData, rentCost: e.target.value })} />
+                          <select className="input-field w-1/3 px-2" value={formData.rentPeriod} onChange={(e) => setFormData({ ...formData, rentPeriod: e.target.value })}>
                             <option value="monthly">شهري</option>
                             <option value="yearly">سنوي</option>
-                        </select>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">نوع النظافة والتكلفة</label>
+                        <div className="nav-pill-group w-full mb-3">
+                          <button type="button" onClick={() => setFormData({ ...formData, cleaningType: 'salaried' })} className={`nav-pill flex-1 text-xs font-semibold ${formData.cleaningType === 'salaried' ? 'nav-pill-active' : ''}`}>موظف براتب</button>
+                          <button type="button" onClick={() => setFormData({ ...formData, cleaningType: 'per_booking' })} className={`nav-pill flex-1 text-xs font-semibold ${formData.cleaningType === 'per_booking' ? 'nav-pill-active' : ''}`}>رسوم لكل حجز</button>
+                        </div>
+                        {formData.cleaningType === 'per_booking' && (
+                          <input type="number" placeholder="تكلفة التنظيف للحجز (مثال: 50)" className="input-field" value={formData.cleaningCost} onChange={(e) => setFormData({ ...formData, cleaningCost: e.target.value })} />
+                        )}
+                        {formData.cleaningType === 'salaried' && (
+                          <p className="text-[10px] text-muted-soft leading-relaxed">تُحتسب التكلفة من راتب النظافة الشهري في الإعدادات العامة، ولن تُخصم رسوم تنظيف إضافية لهذه الوحدة عند الحجز.</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">نوع النظافة والتكلفة</label>
-                    <div className="nav-pill-group w-full mb-3">
-                        <button
-                          type="button"
-                          onClick={() => setFormData({...formData, cleaningType: 'salaried'})}
-                          className={`nav-pill flex-1 text-xs font-semibold ${formData.cleaningType === 'salaried' ? 'nav-pill-active' : ''}`}
-                        >
-                          موظف براتب
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormData({...formData, cleaningType: 'per_booking'})}
-                          className={`nav-pill flex-1 text-xs font-semibold ${formData.cleaningType === 'per_booking' ? 'nav-pill-active' : ''}`}
-                        >
-                          رسوم لكل حجز
-                        </button>
-                    </div>
-                    {formData.cleaningType === 'per_booking' && (
-                        <input type="number" placeholder="تكلفة التنظيف للحجز الواحد (مثال: 50)" className="input-field" value={formData.cleaningCost} onChange={(e) => setFormData({...formData, cleaningCost: e.target.value})} />
-                    )}
-                    {formData.cleaningType === 'salaried' && (
-                        <p className="text-[10px] text-muted-soft">سيتم حساب التكلفة من راتب النظافة الشهري في الإعدادات العامة ولن يتم خصم رسوم تنظيف إضافية لهذه الوحدة عند الحجز.</p>
-                    )}
-                  </div>
-                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">عمولات المنصات (لكل حجز)</label>
-                    <div className="flex space-x-reverse space-x-2">
-                        <input type="number" placeholder="العمولة" className="input-field w-2/3" value={formData.platformFee} onChange={(e) => setFormData({...formData, platformFee: e.target.value})} />
-                        <select className="input-field w-1/3 px-2" value={formData.platformFeeType} onChange={(e) => setFormData({...formData, platformFeeType: e.target.value})}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">عمولات المنصات (لكل حجز)</label>
+                        <div className="flex space-x-reverse space-x-2">
+                          <input type="number" placeholder="العمولة" className="input-field w-2/3" value={formData.platformFee} onChange={(e) => setFormData({ ...formData, platformFee: e.target.value })} />
+                          <select className="input-field w-1/3 px-2" value={formData.platformFeeType} onChange={(e) => setFormData({ ...formData, platformFeeType: e.target.value })}>
                             <option value="percentage">نسبة %</option>
                             <option value="fixed">مبلغ ثابت</option>
-                        </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">مصاريف أخرى (لكل حجز)</label>
-                    <div className="flex space-x-reverse space-x-2">
-                        <input type="text" placeholder="الاسم (مثال: ضيافة)" className="input-field w-1/2 px-3" value={formData.otherExpenseLabel} onChange={(e) => setFormData({...formData, otherExpenseLabel: e.target.value})} />
-                        <input type="number" placeholder="المبلغ" className="input-field w-1/2 px-3" value={formData.otherExpenseAmount} onChange={(e) => setFormData({...formData, otherExpenseAmount: e.target.value})} />
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5">مصاريف أخرى (لكل حجز)</label>
+                        <div className="flex space-x-reverse space-x-2">
+                          <input type="text" placeholder="الاسم (مثال: ضيافة)" className="input-field w-1/2 px-3" value={formData.otherExpenseLabel} onChange={(e) => setFormData({ ...formData, otherExpenseLabel: e.target.value })} />
+                          <input type="number" placeholder="المبلغ" className="input-field w-1/2 px-3" value={formData.otherExpenseAmount} onChange={(e) => setFormData({ ...formData, otherExpenseAmount: e.target.value })} />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                  </div>
-                </div>
-              </div>
-              <button type="submit" className="btn-primary w-full h-11 text-base mt-4">
-                {editingId ? 'تحديث البيانات' : 'حفظ الوحدة'}
-              </button>
-            </form>
+              </section>
             </div>
-          </div>
+
+            {/* sticky footer */}
+            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] shrink-0 flex gap-3">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary h-11 px-6">إلغاء</button>
+              <button type="submit" className="btn-primary flex-1 h-11 text-base">{editingId ? 'تحديث البيانات' : 'حفظ الوحدة'}</button>
+            </div>
+          </form>
         </div>
       )}
     </div>

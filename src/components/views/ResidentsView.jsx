@@ -13,7 +13,7 @@ export default function ResidentsView({ openBookingForm }) {
   const [printSelectorBooking, setPrintSelectorBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 8;
+  const ITEMS_PER_PAGE = 18;
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteContent, setNoteContent] = useState('');
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -236,7 +236,7 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-ink dark:text-white">{apt?.name || 'وحدة محذوفة'}</div>
-                      <div className="text-xs text-ink dark:text-white font-semibold mt-1">{booking.pricePerNight} ر.س / ليلة</div>
+                      <div className="text-xs text-accent font-semibold mt-1">{booking.pricePerNight} ر.س / ليلة</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs font-medium text-body dark:text-[#a1a1aa]">{formatDate(booking.startDate)} <span className="mx-1 text-muted-soft">←</span> {formatDate(booking.endDate)}</div>
@@ -258,7 +258,7 @@ export default function ResidentsView({ openBookingForm }) {
                         {isCurrent && booking.status !== 'checked_out_early' && (
                           <button
                             onClick={() => handleCheckout(booking)}
-                            className="icon-action"
+                            className="icon-action hover:text-accent"
                             title="تسجيل خروج مبكر"
                           >
                             <LogOut size={18} />
@@ -267,7 +267,7 @@ export default function ResidentsView({ openBookingForm }) {
 
                         <button
                           onClick={() => setPrintSelectorBooking(booking)}
-                          className="icon-action"
+                          className="icon-action hover:text-accent"
                           title="طباعة العقد"
                         >
                           <Printer size={18} />
@@ -275,7 +275,7 @@ export default function ResidentsView({ openBookingForm }) {
                         {(user?.role === 'admin' || user?.permissions?.canEdit) && (
                           <button
                             onClick={() => openNoteModal(booking)}
-                            className={`icon-action ${booking.notes && booking.notes.trim() !== '' ? 'opacity-100 text-ink dark:text-white' : ''}`}
+                            className={`icon-action hover:text-accent ${booking.notes && booking.notes.trim() !== '' ? 'opacity-100 text-accent' : ''}`}
                             title="ملاحظات النزيل"
                           >
                             <MessageSquare size={18} />
@@ -284,14 +284,14 @@ export default function ResidentsView({ openBookingForm }) {
                         {(user?.role === 'admin' || user?.permissions?.canEdit) && (
                           <button
                             onClick={() => openBookingForm(booking)}
-                            className="icon-action"
+                            className="icon-action hover:text-accent"
                             title="تعديل الحجز"
                           >
                             <Edit2 size={18} />
                           </button>
                         )}
                         {(user?.role === 'admin' || user?.permissions?.canDelete) && (
-                          <button onClick={() => handleDelete(booking.id)} className="icon-action" title="حذف الحجز">
+                          <button onClick={() => handleDelete(booking.id)} className="icon-action hover:text-accent" title="حذف الحجز">
                             <Trash2 size={18} />
                           </button>
                         )}
@@ -419,7 +419,7 @@ export default function ResidentsView({ openBookingForm }) {
                 <LogOut size={20} />
                 تأكيد مغادرة مبكرة
               </h3>
-              <button onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }} className="icon-action">
+              <button onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }} className="icon-action hover:text-accent">
                 <X size={20} />
               </button>
             </div>
@@ -544,7 +544,7 @@ export default function ResidentsView({ openBookingForm }) {
                 <Printer size={20} className="text-ink dark:text-white" />
                 خيارات الطباعة
               </h3>
-              <button onClick={() => setPrintSelectorBooking(null)} className="icon-action">
+              <button onClick={() => setPrintSelectorBooking(null)} className="icon-action hover:text-accent">
                 <X size={20} />
               </button>
             </div>
