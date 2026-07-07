@@ -66,7 +66,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
         <div className="space-y-8 text-gray-800">
             <section>
-                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-blue-600">أولاً: أطراف العقد</h3>
+                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-accent">أولاً: أطراف العقد</h3>
                 <div className="grid grid-cols-2 gap-8">
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المؤجر / المدير</p>
@@ -83,7 +83,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
             </section>
 
             <section>
-                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-blue-600">ثانياً: العقار ومدة الإيجار</h3>
+                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-accent">ثانياً: العقار ومدة الإيجار</h3>
                 <div className="grid grid-cols-2 gap-8">
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">بيانات الوحدة</p>
@@ -93,13 +93,13 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">فترة الإيجار</p>
                         <p className="font-bold text-gray-900">{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</p>
-                        <p className="text-sm font-black text-blue-600 mt-1">{nights} ليلة إجمالية</p>
+                        <p className="text-sm font-black text-accent mt-1">{nights} ليلة إجمالية</p>
                     </div>
                 </div>
             </section>
 
             <section>
-                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-blue-600">ثالثاً: الشروط المالية</h3>
+                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-accent">ثالثاً: الشروط المالية</h3>
                 <div className="grid grid-cols-4 gap-6">
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">سعر الليلة</p>
@@ -117,7 +117,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                     </div>
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">الإجمالي الشامل</p>
-                        <p className="text-xl font-black text-gray-900">{total.toFixed(2)} ر.س</p>
+                        <p className="text-xl font-black text-accent">{total.toFixed(2)} ر.س</p>
                     </div>
                 </div>
             </section>
@@ -151,7 +151,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
       <div className="mt-8 flex space-x-reverse space-x-4 print:hidden">
         <button
             onClick={handlePrint}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold flex items-center space-x-reverse space-x-2 shadow-lg shadow-blue-200 transition-all active:scale-95"
+            className="bg-accent hover:bg-accent-strong text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95"
         >
             <Printer size={20}/>
             <span className="mr-2">طباعة المستند</span>

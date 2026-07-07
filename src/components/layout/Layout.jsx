@@ -60,41 +60,41 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-slate-950 font-sans text-gray-900 dark:text-slate-100 overflow-hidden" dir="rtl">
+    <div className="flex h-screen bg-page dark:bg-surface-dark font-sans text-ink dark:text-white overflow-hidden" dir="rtl">
       <Sidebar view={view} setView={setView} isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} />
+        <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} onNavigate={setView} />
 
-        <main className="flex-1 overflow-hidden p-6 pb-6 bg-gray-50 dark:bg-slate-950 flex flex-col min-h-0">
-          <div className="flex justify-between items-center mb-4">
+        <main className="flex-1 overflow-hidden p-6 pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
+          <div className="flex justify-between items-end mb-6">
           <div>
-            <h1 className="text-3xl font-black text-gray-800 dark:text-slate-100 mb-1">
+            <h1 className="text-3xl font-bold tracking-tightest text-ink dark:text-white mb-1.5 leading-none">
               {getViewTitle()}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">إدارة التأجير اليومي والأسبوعي والشهري بدقة.</p>
+            <p className="text-sm text-muted dark:text-[#a1a1aa]">إدارة التأجير اليومي والأسبوعي والشهري بدقة.</p>
           </div>
           {(user?.role === 'admin' || user?.permissions?.canBook) && (
             <div className="flex items-center space-x-reverse space-x-3">
 
               {view === 'apartments' && (
-                <div className="bg-white dark:bg-slate-800 p-1.5 rounded-xl border border-blue-200 dark:border-slate-700 shadow-sm flex items-center gap-2 max-w-[300px]">
-                  <div className="bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-lg text-blue-600 dark:text-blue-400">
+                <div className="bg-canvas dark:bg-surface-dark-elevated p-1.5 rounded-md border border-hairline dark:border-[#2e2e2e] flex items-center gap-2 max-w-[300px]">
+                  <div className="bg-surface-card dark:bg-[#242424] p-1.5 rounded-md text-ink dark:text-white">
                     <Share2 size={16} />
                   </div>
                   <div className="flex-1 overflow-hidden hidden md:block">
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-0.5 truncate">رابط الحجز المباشر للعملاء</p>
+                    <p className="text-[10px] text-muted dark:text-[#a1a1aa] mb-0.5 truncate">رابط الحجز المباشر للعملاء</p>
                     <input
                       type="text"
                       readOnly
                       value={shareableLink}
-                      className="w-full text-xs bg-transparent border-none outline-none text-gray-700 dark:text-gray-200 text-left truncate"
+                      className="w-full text-xs bg-transparent border-none outline-none text-body dark:text-[#a1a1aa] text-left truncate"
                       dir="ltr"
                     />
                   </div>
                   <button
                     onClick={handleCopyLink}
-                    className={`p-1.5 rounded-lg font-bold flex items-center gap-1 transition-all ${isCopied ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                    className={`p-1.5 rounded-md font-semibold flex items-center gap-1 transition-colors ${isCopied ? 'bg-primary-active text-white' : 'bg-primary text-white hover:bg-primary-active'}`}
                     title="نسخ الرابط"
                   >
                     {isCopied ? <Check size={14} /> : <Copy size={14} />}
@@ -105,17 +105,10 @@ export default function Layout() {
 
               <button
                 onClick={() => setIsBookingByDate(true)}
-                className="flex items-center space-x-reverse space-x-2 bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700 px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95"
-              >
-                <CalendarSearch size={18} />
-                <span className="mr-2">حجز بالتاريخ</span>
-              </button>
-              <button
-                onClick={() => handleOpenBookingForm()}
-                className="flex items-center space-x-reverse space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-blue-200 dark:shadow-none active:scale-95"
+                className="btn-accent"
               >
                 <Plus size={18} />
-                <span className="mr-2">حجز جديد</span>
+                <span>حجز جديد</span>
               </button>
             </div>
           )}

@@ -7,22 +7,25 @@ import { useData } from '../../context/DataContext';
 const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isCollapsed }) => (
   <button
     onClick={() => setView(id)}
-    className={`w-full flex items-center space-x-reverse ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-3 rounded-lg transition-colors ${
+    className={`w-full flex items-center space-x-reverse ${isCollapsed ? 'justify-center px-0' : 'space-x-3 px-4'} py-2.5 rounded-md transition-colors relative ${
       view === id
-      ? 'bg-blue-600 text-white shadow-md'
-      : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
+      ? 'bg-surface-card text-ink font-semibold dark:bg-surface-dark-elevated dark:text-white'
+      : 'text-muted hover:bg-surface-soft hover:text-ink dark:text-[#a1a1aa] dark:hover:bg-surface-dark-elevated dark:hover:text-white'
     }`}
     title={isCollapsed ? label : ''}
   >
-    <Icon size={20} />
-    {!isCollapsed && <span className="font-medium mr-3 flex-1 text-right">{label}</span>}
+    {view === id && !isCollapsed && (
+      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-accent"></span>
+    )}
+    <Icon size={20} strokeWidth={view === id ? 2.25 : 2} className={view === id ? 'text-accent' : ''} />
+    {!isCollapsed && <span className="text-sm mr-3 flex-1 text-right">{label}</span>}
     {!isCollapsed && badgeCount > 0 && (
-      <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+      <span className="bg-accent text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
         {badgeCount}
       </span>
     )}
     {isCollapsed && badgeCount > 0 && (
-      <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+      <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-accent rounded-full border-2 border-white dark:border-surface-dark"></span>
     )}
   </button>
 );
@@ -43,22 +46,22 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
 
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 p-6 flex flex-col h-full shrink-0 relative`}>
+    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-canvas dark:bg-surface-dark border-l border-hairline dark:border-[#242424] p-6 flex flex-col h-full shrink-0 relative`}>
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className={`absolute top-6 text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200 z-10 ${isCollapsed ? 'right-6' : 'left-6'}`}
+        className={`absolute top-6 text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white z-10 transition-colors ${isCollapsed ? 'right-6' : 'left-6'}`}
       >
         {isCollapsed ? <PanelRightOpen size={20} /> : <PanelRightClose size={20} />}
       </button>
 
       <div className={`flex items-center space-x-reverse space-x-2 mb-10 ${isCollapsed ? 'justify-center mt-10 px-0' : 'px-2'} cursor-pointer`} onClick={() => setView('availability')}>
-        <div className="bg-blue-600 p-2 rounded-lg shadow-md shadow-blue-200 dark:shadow-none">
-          <Home className="text-white" size={24} />
+        <div className="bg-ink p-2 rounded-md dark:bg-white">
+          <Home className="text-white dark:text-ink" size={24} />
         </div>
-        {!isCollapsed && <span className="text-xl font-black tracking-tight text-blue-900 dark:text-white mr-2">رنت فلو</span>}
+        {!isCollapsed && <span className="text-xl font-semibold tracking-tight text-ink dark:text-white mr-2">رنت فلو</span>}
       </div>
 
-      <nav className="space-y-2 flex-1">
+      <nav className="space-y-1 flex-1">
         <SidebarItem icon={Calendar} label="التوفر" id="availability" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
@@ -76,23 +79,23 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
       <div className="mt-auto space-y-4">
         <button
           onClick={toggleDarkMode}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-3' : 'justify-between px-4 py-2'} rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-gray-700 dark:text-slate-300`}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-3' : 'justify-between px-4 py-2'} rounded-md border border-hairline dark:border-[#2e2e2e] hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors text-body dark:text-[#a1a1aa]`}
           title={darkMode ? 'الوضع المضيء' : 'الوضع الليلي'}
         >
           {!isCollapsed && <span className="text-sm font-medium">{darkMode ? 'الوضع المضيء' : 'الوضع الليلي'}</span>}
-          {darkMode ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-blue-600" />}
+          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         {!isCollapsed && (
-          <div className="bg-blue-50 dark:bg-slate-800/50 p-4 rounded-xl border border-blue-100 dark:border-slate-700">
-            <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-3">معلومات مباشرة</p>
+          <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
+            <p className="text-xs font-semibold text-muted dark:text-[#a1a1aa] mb-3">معلومات مباشرة</p>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-600 dark:text-slate-400 font-medium">إجمالي الوحدات</span>
-              <span className="text-sm font-black text-gray-800 dark:text-slate-200">{apartments.length}</span>
+              <span className="text-sm text-muted dark:text-[#a1a1aa]">إجمالي الوحدات</span>
+              <span className="text-sm font-semibold text-ink dark:text-white">{apartments.length}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-slate-400 font-medium">النزلاء الحاليين</span>
-              <span className="text-sm font-black text-gray-800 dark:text-slate-200">
+              <span className="text-sm text-muted dark:text-[#a1a1aa]">النزلاء الحاليين</span>
+              <span className="text-sm font-semibold text-ink dark:text-white">
                 {bookings.filter(b => isDateBetween(new Date(), b.startDate, b.endDate)).length}
               </span>
             </div>
@@ -101,7 +104,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
 
         <button
           onClick={logout}
-          className={`w-full flex items-center justify-center space-x-reverse ${isCollapsed ? 'px-0 py-3 space-x-0' : 'space-x-2 px-4 py-2'} rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors`}
+          className={`w-full flex items-center justify-center space-x-reverse ${isCollapsed ? 'px-0 py-3 space-x-0' : 'space-x-2 px-4 py-2'} rounded-md text-muted hover:text-ink hover:bg-surface-soft dark:text-[#a1a1aa] dark:hover:text-white dark:hover:bg-surface-dark-elevated transition-colors`}
           title={isCollapsed ? "تسجيل الخروج" : ""}
         >
           <LogOut size={16} />
