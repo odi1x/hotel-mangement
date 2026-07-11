@@ -192,7 +192,45 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  /* ------------------------------------------------------------------ */
+  /*  Payments                                                          */
+  /* ------------------------------------------------------------------ */
 
+  // Add a payment against a booking. On success, splice the new payment into
+  // the corresponding booking's `payments` array so any UI reading from
+  // context (badges, dues view, ledger modal) updates immediately.
+  const addPayment = async (bookingId, paymentData) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/payments`, { bookingId, ...paymentData });
+      setBookings(prev => prev.map(b => (
+        b.id === bookingId
+          ? { ...b, payments: [res.data, ...(b.payments || [])] }
+          : b
+      )));
+      toast.success('تم تسجيل الدفعة');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء تسجيل الدفعة');
+      throw err;
+    }
+  };
+
+  const deletePayment = async (bookingId, paymentId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/payments?id=${paymentId}`);
+      setBookings(prev => prev.map(b => (
+        b.id === bookingId
+          ? { ...b, payments: (b.payments || []).filter(p => p.id !== paymentId) }
+          : b
+      )));
+      toast.success('تم حذف الدفعة');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء الحذف');
+      throw err;
+    }
+  };
 
   return (
     <DataContext.Provider value={{
@@ -215,6 +253,8 @@ export const DataProvider = ({ children }) => {
       fetchApartments,
       staffExpenses,
       fetchStaffExpenses,
+      addPayment,
+      deletePayment,
       loading,
       isAnalyticsLoading
     }}>

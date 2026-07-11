@@ -109,6 +109,29 @@ model Booking {
 
   apartment     Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+}
+
+/// A single money movement against a booking.
+/// Refunds are stored as negative-amount entries (type = "refund") so the
+/// running total is always sum(amount). No edits to preserve ledger integrity;
+/// mistakes are corrected by adding a compensating entry.
+model Payment {
+  id          String    @id @default(uuid())
+  bookingId   String
+  userId      String    // owner (admin) userId — scopes queries and enforces ownership
+  amount      Decimal   // positive for payments/deposits, negative for refunds
+  date        DateTime  @default(now())
+  method      String    @default("cash")     // "cash" | "bank_transfer" | "stc_pay" | "mada"
+  type        String    @default("payment")  // "payment" | "deposit" | "refund"
+  notes       String?
+  collectedBy String?   // staff name who recorded the entry
+  createdAt   DateTime  @default(now())
+
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([userId])
 }
 
 model StaffExpense {

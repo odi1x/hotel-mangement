@@ -8,6 +8,7 @@ import ResidentsView from '../views/ResidentsView';
 import AnalyticsView from '../views/AnalyticsView';
 import SettingsView from '../views/SettingsView';
 import RequestsView from '../views/RequestsView';
+import BalancesView from '../views/BalancesView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
@@ -52,10 +53,18 @@ export default function Layout() {
       case 'availability': return 'جدول التوفر';
       case 'apartments': return 'إدارة الشقق';
       case 'residents': return 'سجل النزلاء';
+      case 'balances': return 'المستحقات المالية';
       case 'analytics': return 'تحليلات الأداء';
       case 'settings': return 'الإعدادات';
       case 'requests': return 'طلبات الحجز';
       default: return '';
+    }
+  };
+
+  const getViewSubtitle = () => {
+    switch (view) {
+      case 'balances': return 'تتبّع الدفعات والأرصدة المتبقية على الحجوزات.';
+      default: return 'إدارة التأجير اليومي والأسبوعي والشهري بدقة.';
     }
   };
 
@@ -72,7 +81,7 @@ export default function Layout() {
             <h1 className="text-3xl font-bold tracking-tightest text-ink dark:text-white mb-1.5 leading-none">
               {getViewTitle()}
             </h1>
-            <p className="text-sm text-muted dark:text-[#a1a1aa]">إدارة التأجير اليومي والأسبوعي والشهري بدقة.</p>
+            <p className="text-sm text-muted dark:text-[#a1a1aa]">{getViewSubtitle()}</p>
           </div>
           {(user?.role === 'admin' || user?.permissions?.canBook) && (
             <div className="flex items-center space-x-reverse space-x-3">
@@ -103,13 +112,15 @@ export default function Layout() {
                 </div>
               )}
 
-              <button
-                onClick={() => setIsBookingByDate(true)}
-                className="btn-accent"
-              >
-                <Plus size={18} />
-                <span>حجز جديد</span>
-              </button>
+              {view !== 'balances' && (
+                <button
+                  onClick={() => setIsBookingByDate(true)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>حجز جديد</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -119,6 +130,7 @@ export default function Layout() {
             {view === 'requests' && <RequestsView openBookingForm={handleOpenBookingForm} />}
             {view === 'apartments' && <ApartmentsView />}
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
+            {view === 'balances' && <BalancesView />}
             {view === 'analytics' && <AnalyticsView />}
             {view === 'settings' && <SettingsView />}
           </div>

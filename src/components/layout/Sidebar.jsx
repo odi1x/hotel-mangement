@@ -1,7 +1,8 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing, Wallet } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { computeBookingTotals } from '../../lib/paymentUtils';
 
 
 const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isCollapsed }) => (
@@ -36,6 +37,12 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
   const { apartments, bookings } = useData();
   const pendingCount = (bookings || []).filter(b => b.status === 'pending').length;
 
+  // Count bookings with outstanding balance — feeds the Balances tab badge.
+  const duesCount = (bookings || []).reduce((n, b) => {
+    const { balanceDue } = computeBookingTotals(b);
+    return balanceDue > 0.01 ? n + 1 : n;
+  }, 0);
+
   const isDateBetween = (date, start, end) => {
     const d = new Date(date).setHours(0,0,0,0);
     const s = new Date(start).setHours(0,0,0,0);
@@ -66,6 +73,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Users} label="سجل النزلاء" id="residents" view={view} setView={setView} isCollapsed={isCollapsed} />
+        <SidebarItem icon={Wallet} label="المستحقات" id="balances" badgeCount={duesCount} view={view} setView={setView} isCollapsed={isCollapsed} />
 
         {(user?.role === 'admin' || user?.permissions?.canViewAnalytics) && (
           <SidebarItem icon={BarChart3} label="التحليلات" id="analytics" view={view} setView={setView} isCollapsed={isCollapsed} />

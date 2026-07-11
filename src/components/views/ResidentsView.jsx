@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
+import PaymentStatusBadge from '../ui/PaymentStatusBadge';
+import PaymentLedgerModal from '../ui/PaymentLedgerModal';
+import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
@@ -11,6 +14,7 @@ export default function ResidentsView({ openBookingForm }) {
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [printSelectorBooking, setPrintSelectorBooking] = useState(null);
+  const [ledgerBooking, setLedgerBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 18;
@@ -192,6 +196,7 @@ export default function ResidentsView({ openBookingForm }) {
                 <th className="px-6 py-4">الاتصال والهوية</th>
                 <th className="px-6 py-4">الوحدة / السعر</th>
                 <th className="px-6 py-4">الفترة</th>
+                <th className="px-6 py-4">المدفوع</th>
                 <th className="px-6 py-4">الحالة</th>
                 <th className="px-6 py-4 text-center">الإجراءات</th>
               </tr>
@@ -210,6 +215,10 @@ export default function ResidentsView({ openBookingForm }) {
                       <div className="h-4 bg-surface-card dark:bg-surface-dark-elevated rounded w-24 mb-2"></div>
                       <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-16"></div>
                     </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-surface-card dark:bg-surface-dark-elevated rounded w-20 mb-2"></div>
+                      <div className="h-5 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-24"></div>
+                    </td>
                     <td className="px-6 py-4"><div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-20"></div></td>
                     <td className="px-6 py-4"><div className="h-8 bg-surface-card dark:bg-surface-dark-elevated rounded-md w-24"></div></td>
                   </tr>
@@ -218,6 +227,7 @@ export default function ResidentsView({ openBookingForm }) {
                 const apt = apartments.find(a => a.id === booking.apartmentId);
                 const isCurrent = isDateBetween(new Date(), booking.startDate, booking.endDate);
                 const isFuture = isFutureBooking(booking.startDate);
+                const totals = computeBookingTotals(booking);
                 return (
                   <tr key={booking.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
                     <td className="px-6 py-4">
@@ -243,6 +253,19 @@ export default function ResidentsView({ openBookingForm }) {
                       <div className="badge-pill text-[10px] font-semibold mt-1">{calculateNights(booking.startDate, booking.endDate)} ليالي</div>
                     </td>
                     <td className="px-6 py-4">
+                      <div
+                        className="text-sm font-semibold text-ink dark:text-white"
+                        style={{ fontVariantNumeric: 'tabular-nums' }}
+                      >
+                        {formatSAR(totals.totalReceived)}
+                        <span className="text-muted-soft mx-1">/</span>
+                        <span className="text-muted">{formatSAR(totals.totalDue)}</span>
+                      </div>
+                      <div className="mt-1.5">
+                        <PaymentStatusBadge status={totals.status} />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       {booking.status === 'checked_out_early' ? (
                           <span className="badge-pill badge-dashed text-[11px] font-semibold">خروج مبكر</span>
                       ) : isCurrent ? (
@@ -255,6 +278,16 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center space-x-reverse space-x-1">
+                        <button
+                          onClick={() => setLedgerBooking(booking)}
+                          className={`icon-action hover:text-accent ${
+                            totals.status === 'partial' || totals.status === 'unpaid' ? 'text-accent-strong opacity-100' : ''
+                          }`}
+                          title="سجل المدفوعات"
+                        >
+                          <Wallet size={18} />
+                        </button>
+
                         {isCurrent && booking.status !== 'checked_out_early' && (
                           <button
                             onClick={() => handleCheckout(booking)}
@@ -307,7 +340,7 @@ export default function ResidentsView({ openBookingForm }) {
               ))}
               {!isLoading && currentBookings.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-muted font-medium">لا توجد حجوزات مطابقة</td>
+                  <td colSpan="7" className="px-6 py-10 text-center text-muted font-medium">لا توجد حجوزات مطابقة</td>
                 </tr>
               )}
             </tbody>
@@ -370,6 +403,14 @@ export default function ResidentsView({ openBookingForm }) {
 
       {printBooking && (
         <PrintAgreement booking={printBooking.booking} documentType={printBooking.type} onClose={() => setPrintBooking(null)} />
+      )}
+
+      {ledgerBooking && (
+        <PaymentLedgerModal
+          booking={ledgerBooking}
+          apartment={apartments.find(a => a.id === ledgerBooking.apartmentId)}
+          onClose={() => setLedgerBooking(null)}
+        />
       )}
 
       {editingNoteId && (
