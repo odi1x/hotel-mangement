@@ -53,14 +53,14 @@ export const DataProvider = ({ children }) => {
 
   const fetchMaintenance = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/maintenance`);
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=maintenance`);
       setMaintenanceIssues(res.data);
     } catch (err) { console.error(err); }
   };
 
   const fetchPricingRules = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/pricing-rules`);
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=pricing-rules`);
       setPricingRules(res.data);
     } catch (err) { console.error(err); }
   };
@@ -209,7 +209,7 @@ export const DataProvider = ({ children }) => {
 
   const addMaintenanceIssue = async (data) => {
     try {
-      const res = await axios.post(`${API_BASE_URL}/maintenance`, data);
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=maintenance`, data);
       setMaintenanceIssues(prev => [res.data, ...prev]);
       toast.success('تم إضافة البلاغ');
       return res.data;
@@ -222,7 +222,7 @@ export const DataProvider = ({ children }) => {
 
   const updateMaintenanceIssue = async (data) => {
     try {
-      const res = await axios.put(`${API_BASE_URL}/maintenance`, data);
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=maintenance`, data);
       setMaintenanceIssues(prev => prev.map(i => i.id === data.id ? res.data : i));
       toast.success('تم تحديث البلاغ');
       return res.data;
@@ -235,7 +235,7 @@ export const DataProvider = ({ children }) => {
 
   const deleteMaintenanceIssue = async (id) => {
     try {
-      await axios.delete(`${API_BASE_URL}/maintenance?id=${id}`);
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=maintenance&id=${id}`);
       setMaintenanceIssues(prev => prev.filter(i => i.id !== id));
       toast.success('تم حذف البلاغ');
     } catch (err) {
@@ -251,7 +251,7 @@ export const DataProvider = ({ children }) => {
 
   const addPricingRule = async (data) => {
     try {
-      const res = await axios.post(`${API_BASE_URL}/pricing-rules`, data);
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=pricing-rules`, data);
       setPricingRules(prev => [...prev, res.data].sort((a, b) => new Date(a.startDate) - new Date(b.startDate)));
       toast.success('تم إنشاء القاعدة السعرية');
       return res.data;
@@ -264,7 +264,7 @@ export const DataProvider = ({ children }) => {
 
   const updatePricingRule = async (data) => {
     try {
-      const res = await axios.put(`${API_BASE_URL}/pricing-rules`, data);
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=pricing-rules`, data);
       setPricingRules(prev => prev.map(r => r.id === data.id ? res.data : r));
       toast.success('تم حفظ التعديلات');
       return res.data;
@@ -277,7 +277,7 @@ export const DataProvider = ({ children }) => {
 
   const deletePricingRule = async (id) => {
     try {
-      await axios.delete(`${API_BASE_URL}/pricing-rules?id=${id}`);
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=pricing-rules&id=${id}`);
       setPricingRules(prev => prev.filter(r => r.id !== id));
       toast.success('تم حذف القاعدة');
     } catch (err) {
