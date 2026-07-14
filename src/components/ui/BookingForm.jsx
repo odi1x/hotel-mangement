@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
-import { X, Calendar, Pencil } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, Calendar, Pencil, AlertTriangle, TagsIcon, Wrench } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import DatePickerCal from './DatePickerCal';
+import { computeStayTotal, summarizeBreakdown } from '../../lib/pricingUtils';
 import toast from 'react-hot-toast';
 
 export default function BookingForm({ onClose, initialData }) {
-  const { apartments, bookings, addBooking, updateBooking, updateApartment } = useData();
+  const { apartments, bookings, addBooking, updateBooking, updateApartment, pricingRules, maintenanceIssues } = useData();
   const { user } = useAuth();
 
   const [bookingSources, setBookingSources] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
@@ -36,6 +37,10 @@ export default function BookingForm({ onClose, initialData }) {
     customerRequest: initialData?.customerRequest || '',
     status: initialData?.status || undefined
   });
+
+  // Track whether the user manually edited pricePerNight — if so, we stop
+  // auto-overwriting it from the rules (they're overriding on purpose).
+  const [priceManuallyEdited, setPriceManuallyEdited] = useState(!!initialData?.id);
 
   const [retrievedNotes, setRetrievedNotes] = useState(null);
 
@@ -77,8 +82,49 @@ export default function BookingForm({ onClose, initialData }) {
   const nights = (dateValue.startDate && dateValue.endDate)
     ? Math.max(1, Math.round((new Date(dateValue.endDate) - new Date(dateValue.startDate)) / 86400000))
     : 0;
-  const total = nights > 0 && formData.pricePerNight ? nights * Number(formData.pricePerNight) : 0;
+
+  // Resolve seasonal pricing for the selected apartment + date range
+  const selectedApt = apartments.find(a => a.id === formData.apartmentId);
+
+  const stayCalc = useMemo(() => {
+    if (!selectedApt || !dateValue.startDate || !dateValue.endDate) return null;
+    return computeStayTotal(pricingRules, selectedApt, dateValue.startDate, dateValue.endDate);
+  }, [selectedApt, dateValue.startDate, dateValue.endDate, pricingRules]);
+
+  // Auto-fill price when apartment / dates change (unless user manually edited)
+  useEffect(() => {
+    if (priceManuallyEdited || !stayCalc || stayCalc.nights === 0) return;
+    const avg = Math.round(stayCalc.averagePerNight * 100) / 100;
+    if (avg !== Number(formData.pricePerNight)) {
+      setFormData(prev => ({ ...prev, pricePerNight: String(avg) }));
+    }
+  }, [stayCalc, priceManuallyEdited]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const breakdownSummary = useMemo(() => {
+    if (!stayCalc) return [];
+    return summarizeBreakdown(stayCalc.breakdown);
+  }, [stayCalc]);
+
+  const hasSeasonalPricing = breakdownSummary.some(g => g.ruleId);
+
+  // The estimated total: use the seasonal-priced total when available (no
+  // manual override), otherwise fall back to nightly-price × nights.
+  const total = useMemo(() => {
+    if (!priceManuallyEdited && stayCalc && stayCalc.nights > 0) return stayCalc.total;
+    return nights > 0 && formData.pricePerNight ? nights * Number(formData.pricePerNight) : 0;
+  }, [priceManuallyEdited, stayCalc, nights, formData.pricePerNight]);
+
   const fmtShort = (d) => d ? new Date(d).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' }) : '';
+
+  // Warn about urgent open maintenance on the selected unit (warn-only, doesn't block)
+  const urgentOpenIssues = useMemo(() => {
+    if (!formData.apartmentId) return [];
+    return (maintenanceIssues || []).filter(i =>
+      i.apartmentId === formData.apartmentId &&
+      i.status !== 'resolved' &&
+      i.severity === 'urgent'
+    );
+  }, [maintenanceIssues, formData.apartmentId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -91,10 +137,12 @@ export default function BookingForm({ onClose, initialData }) {
     const selectedApt = apartments.find(a => a.id === formData.apartmentId);
     if (selectedApt && selectedApt.needsCleaning) { setError('لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.'); return; }
     try {
+      // Send the seasonally-computed total when the user hasn't overridden
+      const totalPrice = total || undefined;
       if (formData.id) {
-        await updateBooking({ ...formData, startDate: dateValue.startDate, endDate: dateValue.endDate, status: formData.status === 'pending' ? 'active' : formData.status });
+        await updateBooking({ ...formData, totalPrice, startDate: dateValue.startDate, endDate: dateValue.endDate, status: formData.status === 'pending' ? 'active' : formData.status });
       } else {
-        await addBooking({ ...formData, startDate: dateValue.startDate, endDate: dateValue.endDate });
+        await addBooking({ ...formData, totalPrice, startDate: dateValue.startDate, endDate: dateValue.endDate });
       }
       toast.success('تم الحفظ بنجاح');
       onClose();
@@ -138,7 +186,33 @@ export default function BookingForm({ onClose, initialData }) {
             </div>
           )}
 
-          {/* Dates — the spine of the booking, given prominence */}
+          {/* Maintenance warn — advisory, doesn't block. Shows when unit has urgent open issues. */}
+          {urgentOpenIssues.length > 0 && (
+            <div className="mb-6 border border-dashed border-accent/60 bg-accent-soft rounded-md p-3 flex items-start gap-3">
+              <div className="p-1.5 rounded-md bg-accent/15 text-accent-strong shrink-0">
+                <AlertTriangle size={14} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-accent-strong mb-0.5">
+                  تنبيه: هذه الوحدة لديها {urgentOpenIssues.length} {urgentOpenIssues.length === 1 ? 'بلاغ صيانة عاجل' : 'بلاغات صيانة عاجلة'} مفتوحة
+                </p>
+                <ul className="text-[11px] text-body dark:text-[#a1a1aa] space-y-0.5 mt-1">
+                  {urgentOpenIssues.slice(0, 3).map(i => (
+                    <li key={i.id} className="flex items-center gap-1.5">
+                      <Wrench size={10} className="text-muted-soft" />
+                      <span>{i.title}</span>
+                    </li>
+                  ))}
+                  {urgentOpenIssues.length > 3 && (
+                    <li className="text-muted-soft">... و {urgentOpenIssues.length - 3} أخرى</li>
+                  )}
+                </ul>
+                <p className="text-[10px] text-muted-soft mt-1.5">يمكنك المتابعة، لكن تأكّد من حل المشكلة قبل الوصول.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Dates */}
           <div className="mb-8">
             <label className={eyebrow}>فترة الإقامة</label>
             {(dateValue.startDate && dateValue.endDate && !showCal) ? (
@@ -217,6 +291,8 @@ export default function BookingForm({ onClose, initialData }) {
                 <label className={eyebrow}>الوحدة</label>
                 <select required className="input-field" value={formData.apartmentId} onChange={(e) => {
                   const selectedAptId = e.target.value;
+                  // Changing unit resets the manual-override flag — a new unit is a fresh price context.
+                  setPriceManuallyEdited(false);
                   const apt = apartments.find(a => a.id === selectedAptId);
                   setFormData({ ...formData, apartmentId: selectedAptId, pricePerNight: apt ? apt.basePrice : formData.pricePerNight });
                 }}>
@@ -226,11 +302,35 @@ export default function BookingForm({ onClose, initialData }) {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={eyebrow}>السعر / الليلة</label>
+                  <label className={eyebrow}>
+                    السعر / الليلة
+                    {hasSeasonalPricing && !priceManuallyEdited && (
+                      <span className="text-accent-strong mr-1 normal-case">· متوسط موسمي</span>
+                    )}
+                  </label>
                   <div className="relative">
-                    <input required type="number" placeholder="0" className="input-field font-semibold pl-12" value={formData.pricePerNight} onChange={(e) => setFormData({ ...formData, pricePerNight: e.target.value })} />
+                    <input
+                      required
+                      type="number"
+                      placeholder="0"
+                      className="input-field font-semibold pl-12"
+                      value={formData.pricePerNight}
+                      onChange={(e) => {
+                        setPriceManuallyEdited(true);
+                        setFormData({ ...formData, pricePerNight: e.target.value });
+                      }}
+                    />
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-soft font-medium pointer-events-none">ر.س</span>
                   </div>
+                  {hasSeasonalPricing && priceManuallyEdited && (
+                    <button
+                      type="button"
+                      onClick={() => setPriceManuallyEdited(false)}
+                      className="text-[10px] text-accent-strong hover:underline mt-1 font-semibold"
+                    >
+                      إعادة حساب السعر تلقائياً حسب القواعد الموسمية
+                    </button>
+                  )}
                 </div>
                 <div>
                   <label className={eyebrow}>مصدر الوصول</label>
@@ -240,10 +340,43 @@ export default function BookingForm({ onClose, initialData }) {
                 </div>
               </div>
 
-              {/* running total */}
+              {/* Seasonal pricing breakdown — shows which rules applied */}
+              {hasSeasonalPricing && !priceManuallyEdited && breakdownSummary.length > 0 && (
+                <div className="border border-dashed border-accent/40 rounded-md p-3 bg-accent-soft/40">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <TagsIcon size={11} className="text-accent-strong" />
+                    <span className="text-[10px] font-semibold text-accent-strong uppercase tracking-wider">
+                      تسعير موسمي
+                    </span>
+                  </div>
+                  <ul className="space-y-1">
+                    {breakdownSummary.map((g, i) => (
+                      <li key={i} className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          {g.ruleColor && (
+                            <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: g.ruleColor }}></div>
+                          )}
+                          <span className="text-body dark:text-[#a1a1aa] truncate">
+                            {g.ruleLabel || 'السعر الأساسي'}
+                          </span>
+                        </div>
+                        <span className="text-ink dark:text-white font-semibold shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {g.count} × {g.price} = {g.subtotal} ر.س
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Running total */}
               <div className="flex items-center justify-between bg-surface-card dark:bg-surface-dark-elevated rounded-lg px-4 py-3 mt-2">
-                <span className="text-sm text-muted dark:text-[#a1a1aa]">الإجمالي التقديري{nights > 0 ? ` (${nights} ليالٍ)` : ''}</span>
-                <span className="text-lg font-bold tracking-tight text-accent">{total ? total.toLocaleString() : '—'} <span className="text-xs text-muted-soft font-semibold">ر.س</span></span>
+                <span className="text-sm text-muted dark:text-[#a1a1aa]">
+                  الإجمالي التقديري{nights > 0 ? ` (${nights} ليالٍ)` : ''}
+                </span>
+                <span className="text-lg font-bold tracking-tight text-accent" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {total ? total.toLocaleString() : '—'} <span className="text-xs text-muted-soft font-semibold">ر.س</span>
+                </span>
               </div>
             </div>
           </div>

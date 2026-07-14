@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing, Wallet } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing, Wallet, Wrench, TagsIcon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -34,14 +34,19 @@ const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isColla
 export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) {
   const { darkMode, toggleDarkMode } = useTheme();
   const { user, logout } = useAuth();
-  const { apartments, bookings } = useData();
+  const { apartments, bookings, maintenanceIssues } = useData();
   const pendingCount = (bookings || []).filter(b => b.status === 'pending').length;
 
-  // Count bookings with outstanding balance — feeds the Balances tab badge.
   const duesCount = (bookings || []).reduce((n, b) => {
     const { balanceDue } = computeBookingTotals(b);
     return balanceDue > 0.01 ? n + 1 : n;
   }, 0);
+
+  // Sidebar badge: urgent open maintenance issues — the things that literally
+  // shouldn't be forgotten.
+  const urgentMaintenanceCount = (maintenanceIssues || []).filter(i =>
+    i.status !== 'resolved' && i.severity === 'urgent'
+  ).length;
 
   const isDateBetween = (date, start, end) => {
     const d = new Date(date).setHours(0,0,0,0);
@@ -49,8 +54,6 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
     const e = new Date(end).setHours(0,0,0,0);
     return d >= s && d <= e;
   };
-
-
 
   return (
     <aside className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-canvas dark:bg-surface-dark border-l border-hairline dark:border-[#242424] p-6 flex flex-col h-full shrink-0 relative`}>
@@ -74,6 +77,8 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Users} label="سجل النزلاء" id="residents" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Wallet} label="المستحقات" id="balances" badgeCount={duesCount} view={view} setView={setView} isCollapsed={isCollapsed} />
+        <SidebarItem icon={Wrench} label="الصيانة" id="maintenance" badgeCount={urgentMaintenanceCount} view={view} setView={setView} isCollapsed={isCollapsed} />
+        <SidebarItem icon={TagsIcon} label="الأسعار الموسمية" id="pricing" view={view} setView={setView} isCollapsed={isCollapsed} />
 
         {(user?.role === 'admin' || user?.permissions?.canViewAnalytics) && (
           <SidebarItem icon={BarChart3} label="التحليلات" id="analytics" view={view} setView={setView} isCollapsed={isCollapsed} />

@@ -9,6 +9,8 @@ import AnalyticsView from '../views/AnalyticsView';
 import SettingsView from '../views/SettingsView';
 import RequestsView from '../views/RequestsView';
 import BalancesView from '../views/BalancesView';
+import MaintenanceView from '../views/MaintenanceView';
+import PricingView from '../views/PricingView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
@@ -54,6 +56,8 @@ export default function Layout() {
       case 'apartments': return 'إدارة الشقق';
       case 'residents': return 'سجل النزلاء';
       case 'balances': return 'المستحقات المالية';
+      case 'maintenance': return 'سجل الصيانة';
+      case 'pricing': return 'الأسعار الموسمية';
       case 'analytics': return 'تحليلات الأداء';
       case 'settings': return 'الإعدادات';
       case 'requests': return 'طلبات الحجز';
@@ -63,8 +67,10 @@ export default function Layout() {
 
   const getViewSubtitle = () => {
     switch (view) {
-      case 'balances': return 'تتبّع الدفعات والأرصدة المتبقية على الحجوزات.';
-      default: return 'إدارة التأجير اليومي والأسبوعي والشهري بدقة.';
+      case 'balances':    return 'تتبّع الدفعات والأرصدة المتبقية على الحجوزات.';
+      case 'maintenance': return 'وثّق بلاغات الصيانة وتتبّع حالتها حتى الحل.';
+      case 'pricing':     return 'اضبط أسعار المواسم والفترات الخاصة تلقائياً.';
+      default:            return 'إدارة التأجير اليومي والأسبوعي والشهري بدقة.';
     }
   };
 
@@ -112,7 +118,7 @@ export default function Layout() {
                 </div>
               )}
 
-              {view !== 'balances' && (
+              {view !== 'balances' && view !== 'maintenance' && view !== 'pricing' && (
                 <button
                   onClick={() => setIsBookingByDate(true)}
                   className="btn-accent"
@@ -131,6 +137,8 @@ export default function Layout() {
             {view === 'apartments' && <ApartmentsView />}
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
             {view === 'balances' && <BalancesView />}
+            {view === 'maintenance' && <MaintenanceView />}
+            {view === 'pricing' && <PricingView />}
             {view === 'analytics' && <AnalyticsView />}
             {view === 'settings' && <SettingsView />}
           </div>
