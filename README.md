@@ -1,68 +1,61 @@
-# Rent Flow — Fix Pack #1
+# Rent Flow — Fix Pack #2
 
-Follow-up patch on top of `rentflow-maintenance-pricing-patch.zip`. Addresses your UX feedback and the "maintenance not counted in analytics" bug.
+Three changes:
 
-## What's fixed
+1. **Early checkout auto-refund** — connects the checkout modal to the payments ledger
+2. **Enhanced checkout modal** — shows paid amount, nights stayed, live refund preview
+3. **White line at top of page** — killed by making the header transparent
 
-### 1. Priority is no longer a scary 0–100 number
-Replaced the "الأولوية (0-100)" input with three clear buttons: **منخفضة / عادية / عالية**. Same underlying values (25 / 50 / 75) — you don't need to think in numbers anymore. When two rules overlap, higher importance wins.
+## 1. Early checkout ↔ refund payment
 
-### 2. Weekend pricing now actually works
-Rules now have an "أيام تطبيق القاعدة" (days of week) section. Three quick presets:
-- **كل الأيام** (default) — rule applies every day in the date range
-- **عطلة نهاية الأسبوع (الجمعة + السبت)** — Saudi weekend only
-- **أيام العمل (الأحد – الخميس)** — workweek only
+Before:
+- User picks "تعديل المبلغ بناءً على الأيام" → totalPrice reduces → balance goes negative if guest overpaid → user has to manually go to payments tab and create an استرداد entry. Easy to forget.
 
-Plus 7 individual day toggles if you need something custom (e.g., "Thursday nights only").
+After:
+- Same action, but on the backend, `api/bookings.js` checks if the guest's paid amount now exceeds the new total. If yes, it auto-creates a `Payment` record with `type='refund'` and `amount = paid − newTotal`, notes it as "استرداد تلقائي عند المغادرة المبكرة". Ledger stays clean, no manual step.
 
-**How to set up a weekend surcharge**: create a rule named "عطلة نهاية الأسبوع"، pick a long date range (like today → end of 2027 — it'll just recur every weekend), click the "عطلة نهاية الأسبوع" preset, set value to ×1.3, save. Done.
+Only fires on the "تعديل" option — "الاحتفاظ بالمبلغ كامل" is unchanged (guest keeps owing what they owed, or nothing changes if fully paid).
 
-### 3. No more ugly browser date picker
-Replaced the native `<input type="date">` with the same `DatePickerCal` component the booking form uses. One range picker, styled to match the rest of the app.
+## 2. Enhanced checkout modal
 
-### 4. Maintenance costs now count in analytics
-When a maintenance issue is resolved with a cost logged, that cost:
-- Gets added to **totalExpenses** in the analytics summary
-- Shows as a separate line item **"تكاليف الصيانة"** in the profit breakdown modal (the one you screenshotted)
-- Feeds into the monthly expenses trend chart on the correct month
+The modal now shows three stat tiles right at the top so the operator has context before choosing:
+- **مدفوع حتى الآن** — total paid across all payment records
+- **ليالٍ مقضية** — nights from check-in to today (a smart default for the day count)
+- **إجمالي الحجز** — original booking total
 
-Filters apply naturally — filter by apartment or date range and only maintenance costs in scope get counted.
+When "تعديل المبلغ بناءً على الأيام" is selected:
+- The day-count input has a shortcut button `استخدم N` that auto-fills with `nights stayed`
+- Below the input, a preview shows either:
+  - **"سيتم إنشاء استرداد تلقائي"** with the exact refund amount, when the guest overpaid, OR
+  - **"لا استرداد. النزيل لا يزال مديناً بـ X"** when the guest still owes, OR
+  - Nothing when it's exact
 
-### 5. Overlap conflict warning in the rule form
-When you're creating/editing a rule, if it overlaps with any existing rule (same dates + same days + same scope), a warning box appears at the bottom listing the overlapping rules and their importance levels. Makes it obvious when priority actually matters.
+The operator sees the financial outcome of the action before pressing confirm.
 
-## About the "white line in the analytics page"
+## 3. White line at the top
 
-I looked at the analytics view code and didn't spot anything obviously wrong at the top. Can you send another screenshot with the profit modal **closed** and the white line clearly visible? It could be:
-- A border rendering thick on some resolutions
-- A gap between two card components
-- Something specific to your browser zoom or theme
+Root cause identified via your DevTools screenshots: the `<header>` component had `bg-canvas` (pure white) and `border-b border-hairline`. The main content below uses `bg-page` (near-white). Combined, that created a visible horizontal band of pure white above every page — most visible on the analytics view where the content sits below empty space.
 
-Once I see it clearly I can fix it in one shot.
+Fix: header now uses `bg-page` (matching the main below it) and no bottom border. Also tightened `py-3` → `py-2` for a slightly more compact top strip. Same layout, no color break.
 
-## How to install
+## Install
 
 ```bash
-unzip -o rentflow-pricing-fixpack-1.zip -d .
-cp -r patch/prisma/schema.prisma          prisma/schema.prisma
-cp -r patch/api/*                         api/
-cp -r patch/src/lib/*                     src/lib/
-cp -r patch/src/components/ui/*           src/components/ui/
-cp -r patch/src/components/views/*        src/components/views/
-rm -rf patch rentflow-pricing-fixpack-1.zip
+unzip -o rentflow-fixpack-2.zip -d .
+cp -r patch/api/*                    api/
+cp -r patch/src/components/layout/*  src/components/layout/
+cp -r patch/src/components/views/*   src/components/views/
+rm -rf patch rentflow-fixpack-2.zip
 
 git add -A
-git commit -m "fix: pricing UX + maintenance in analytics"
-git push origin design-md-changes    # or main, wherever you're deploying
+git commit -m "feat: early checkout auto-refund + checkout modal polish; fix: header white line"
+git push origin design-md-changes
 ```
 
-Prisma will `db push` on Vercel and add the `daysOfWeek` column to `PricingRule` automatically. No manual migration needed. Since no rules use daysOfWeek yet, existing rules will default to `[]` (= apply every day, no change in behavior).
+No schema changes, so Vercel's `prisma db push` won't touch the DB. Deploy is safe.
 
 ## Files changed
 
-- `prisma/schema.prisma` — added `daysOfWeek Int[]` to `PricingRule`
-- `api/admin-resources.js` — accepts + validates daysOfWeek in create/update
-- `api/analytics.js` — maintenance costs added to totalExpenses, trend map, and profit breakdown line item
-- `src/lib/pricingUtils.js` — day-of-week filtering in `ruleActiveOnDate`; new helpers (DAYS_OF_WEEK, WEEKEND_DAYS, WORKWEEK_DAYS, PRIORITY_LEVELS, summarizeDaysOfWeek)
-- `src/components/ui/PricingRuleForm.jsx` — rewritten with DatePickerCal, 3-button priority, day-of-week picker, live overlap conflict warning
-- `src/components/views/PricingView.jsx` — rule list now shows day-of-week summary
+- `api/bookings.js` — auto-create refund `Payment` on early checkout overpayment
+- `src/components/views/ResidentsView.jsx` — enhanced checkout modal with paid/nights/refund preview + imports for computeBookingTotals
+- `src/components/layout/Header.jsx` — bg transparent, tightened padding, cleaned unused imports

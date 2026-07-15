@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
-import PaymentStatusBadge from '../ui/PaymentStatusBadge';
-import PaymentLedgerModal from '../ui/PaymentLedgerModal';
-import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
+import { computeBookingTotals } from '../../lib/paymentUtils';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
@@ -14,7 +12,6 @@ export default function ResidentsView({ openBookingForm }) {
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [printSelectorBooking, setPrintSelectorBooking] = useState(null);
-  const [ledgerBooking, setLedgerBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 18;
@@ -196,7 +193,6 @@ export default function ResidentsView({ openBookingForm }) {
                 <th className="px-6 py-4">الاتصال والهوية</th>
                 <th className="px-6 py-4">الوحدة / السعر</th>
                 <th className="px-6 py-4">الفترة</th>
-                <th className="px-6 py-4">المدفوع</th>
                 <th className="px-6 py-4">الحالة</th>
                 <th className="px-6 py-4 text-center">الإجراءات</th>
               </tr>
@@ -215,10 +211,6 @@ export default function ResidentsView({ openBookingForm }) {
                       <div className="h-4 bg-surface-card dark:bg-surface-dark-elevated rounded w-24 mb-2"></div>
                       <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-16"></div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-surface-card dark:bg-surface-dark-elevated rounded w-20 mb-2"></div>
-                      <div className="h-5 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-24"></div>
-                    </td>
                     <td className="px-6 py-4"><div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-20"></div></td>
                     <td className="px-6 py-4"><div className="h-8 bg-surface-card dark:bg-surface-dark-elevated rounded-md w-24"></div></td>
                   </tr>
@@ -227,7 +219,6 @@ export default function ResidentsView({ openBookingForm }) {
                 const apt = apartments.find(a => a.id === booking.apartmentId);
                 const isCurrent = isDateBetween(new Date(), booking.startDate, booking.endDate);
                 const isFuture = isFutureBooking(booking.startDate);
-                const totals = computeBookingTotals(booking);
                 return (
                   <tr key={booking.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
                     <td className="px-6 py-4">
@@ -253,19 +244,6 @@ export default function ResidentsView({ openBookingForm }) {
                       <div className="badge-pill text-[10px] font-semibold mt-1">{calculateNights(booking.startDate, booking.endDate)} ليالي</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div
-                        className="text-sm font-semibold text-ink dark:text-white"
-                        style={{ fontVariantNumeric: 'tabular-nums' }}
-                      >
-                        {formatSAR(totals.totalReceived)}
-                        <span className="text-muted-soft mx-1">/</span>
-                        <span className="text-muted">{formatSAR(totals.totalDue)}</span>
-                      </div>
-                      <div className="mt-1.5">
-                        <PaymentStatusBadge status={totals.status} />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
                       {booking.status === 'checked_out_early' ? (
                           <span className="badge-pill badge-dashed text-[11px] font-semibold">خروج مبكر</span>
                       ) : isCurrent ? (
@@ -278,16 +256,6 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center space-x-reverse space-x-1">
-                        <button
-                          onClick={() => setLedgerBooking(booking)}
-                          className={`icon-action hover:text-accent ${
-                            totals.status === 'partial' || totals.status === 'unpaid' ? 'text-accent-strong opacity-100' : ''
-                          }`}
-                          title="سجل المدفوعات"
-                        >
-                          <Wallet size={18} />
-                        </button>
-
                         {isCurrent && booking.status !== 'checked_out_early' && (
                           <button
                             onClick={() => handleCheckout(booking)}
@@ -340,7 +308,7 @@ export default function ResidentsView({ openBookingForm }) {
               ))}
               {!isLoading && currentBookings.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="px-6 py-10 text-center text-muted font-medium">لا توجد حجوزات مطابقة</td>
+                  <td colSpan="6" className="px-6 py-10 text-center text-muted font-medium">لا توجد حجوزات مطابقة</td>
                 </tr>
               )}
             </tbody>
@@ -405,14 +373,6 @@ export default function ResidentsView({ openBookingForm }) {
         <PrintAgreement booking={printBooking.booking} documentType={printBooking.type} onClose={() => setPrintBooking(null)} />
       )}
 
-      {ledgerBooking && (
-        <PaymentLedgerModal
-          booking={ledgerBooking}
-          apartment={apartments.find(a => a.id === ledgerBooking.apartmentId)}
-          onClose={() => setLedgerBooking(null)}
-        />
-      )}
-
       {editingNoteId && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-[#2e2e2e] overflow-hidden flex flex-col">
@@ -451,11 +411,33 @@ export default function ResidentsView({ openBookingForm }) {
       )}
 
       {/* Checkout Modal */}
-      {checkoutModalOpen && checkoutData.booking && (
+      {checkoutModalOpen && checkoutData.booking && (() => {
+        // Live math for the modal — computed on each render so the preview
+        // updates instantly as the user changes the day count.
+        const bk = checkoutData.booking;
+        const { paid, totalOwed } = computeBookingTotals(bk);
+        const startDate = new Date(bk.startDate);
+        const now = new Date();
+        const nightsStayedActual = Math.max(1, Math.ceil((now - startDate) / (1000 * 60 * 60 * 24)));
+
+        const newTotal = checkoutData.option === 'recalculate'
+          ? Number(checkoutData.days || 0) * Number(bk.pricePerNight)
+          : totalOwed;
+
+        // If the guest already paid more than the new total, we'll auto-refund the difference.
+        const refundAmount = checkoutData.option === 'recalculate' && paid > newTotal
+          ? paid - newTotal
+          : 0;
+
+        // If the new total is less than what they've paid, they overpaid.
+        // If greater, guest still owes.
+        const remainingAfter = newTotal - paid;
+
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-lg overflow-hidden border border-hairline dark:border-[#2e2e2e]">
-            <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-lg overflow-hidden border border-hairline dark:border-[#2e2e2e] max-h-[92vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
                 <LogOut size={20} />
                 تأكيد مغادرة مبكرة
@@ -465,9 +447,40 @@ export default function ResidentsView({ openBookingForm }) {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-5 overflow-y-auto min-h-0">
               <div className="bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-lg text-sm font-medium">
                 أنت على وشك تسجيل خروج للنزيل ({checkoutData.booking.residentName}) قبل موعده. هذا الإجراء سيقوم بإتاحة الشقة فوراً.
+              </div>
+
+              {/* Financial context — the operator needs this to make an informed choice */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-surface-soft/60 dark:bg-surface-dark-elevated rounded-md p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-soft mb-1 flex items-center gap-1">
+                    <Wallet size={10} />
+                    مدفوع حتى الآن
+                  </p>
+                  <p className="text-sm font-bold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {paid.toLocaleString()} <span className="text-[10px] text-muted-soft font-medium">ر.س</span>
+                  </p>
+                </div>
+                <div className="bg-surface-soft/60 dark:bg-surface-dark-elevated rounded-md p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-soft mb-1 flex items-center gap-1">
+                    <CalendarDays size={10} />
+                    ليالٍ مقضية
+                  </p>
+                  <p className="text-sm font-bold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {nightsStayedActual}
+                  </p>
+                </div>
+                <div className="bg-surface-soft/60 dark:bg-surface-dark-elevated rounded-md p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-soft mb-1 flex items-center gap-1">
+                    <ArrowLeftRight size={10} />
+                    إجمالي الحجز
+                  </p>
+                  <p className="text-sm font-bold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {Number(totalOwed).toLocaleString()} <span className="text-[10px] text-muted-soft font-medium">ر.س</span>
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -499,15 +512,68 @@ export default function ResidentsView({ openBookingForm }) {
               </div>
 
               {checkoutData.option === 'recalculate' && (
-                <div className="animate-fade-in">
-                  <label className="block text-xs font-semibold text-body dark:text-[#a1a1aa] mb-2">عدد الأيام الفعلية:</label>
-                  <input
-                    type="number"
-                    value={checkoutData.days}
-                    onChange={(e) => setCheckoutData({...checkoutData, days: e.target.value})}
-                    className="input-field"
-                  />
-                  <p className="text-[11px] text-muted mt-2">السعر الإجمالي الجديد سيكون: <span className="font-semibold text-ink dark:text-white">{Number(checkoutData.days || 0) * Number(checkoutData.booking.pricePerNight)} ر.س</span></p>
+                <div className="animate-fade-in space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-body dark:text-[#a1a1aa] mb-2">عدد الأيام الفعلية:</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={checkoutData.days}
+                        onChange={(e) => setCheckoutData({...checkoutData, days: e.target.value})}
+                        className="input-field"
+                        min="1"
+                      />
+                      {Number(checkoutData.days) !== nightsStayedActual && (
+                        <button
+                          type="button"
+                          onClick={() => setCheckoutData({...checkoutData, days: String(nightsStayedActual)})}
+                          className="text-[11px] text-accent-strong font-semibold hover:underline whitespace-nowrap"
+                          title="الأيام الفعلية المقضية من تاريخ الوصول حتى اليوم"
+                        >
+                          استخدم {nightsStayedActual}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted mt-2">
+                      السعر الإجمالي الجديد:{' '}
+                      <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {Number(newTotal).toLocaleString()} ر.س
+                      </span>
+                    </p>
+                  </div>
+
+                  {/* Refund / owing summary — the whole point of the enhancement */}
+                  {refundAmount > 0 && (
+                    <div className="border border-dashed border-accent/60 bg-accent-soft rounded-md p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="p-1.5 rounded-md bg-accent/15 text-accent-strong shrink-0 mt-0.5">
+                          <ArrowLeftRight size={12} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-accent-strong mb-0.5">
+                            سيتم إنشاء استرداد تلقائي
+                          </p>
+                          <p className="text-[11px] text-body dark:text-[#a1a1aa]">
+                            المدفوع ({paid.toLocaleString()} ر.س) أكبر من الإجمالي الجديد ({Number(newTotal).toLocaleString()} ر.س).
+                            سيُسجَّل استرداد بمقدار{' '}
+                            <span className="font-bold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              {refundAmount.toLocaleString()} ر.س
+                            </span>{' '}
+                            في سجل المدفوعات.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {refundAmount === 0 && remainingAfter > 0 && (
+                    <div className="border border-hairline dark:border-[#2e2e2e] rounded-md p-3 text-[11px] text-muted dark:text-[#a1a1aa]">
+                      لا استرداد. النزيل لا يزال مديناً بـ{' '}
+                      <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {remainingAfter.toLocaleString()} ر.س
+                      </span>{' '}
+                      بعد المغادرة.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -523,7 +589,7 @@ export default function ResidentsView({ openBookingForm }) {
               </div>
             </div>
 
-            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex justify-end gap-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex justify-end gap-3 shrink-0">
               <button
                 onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }}
                 className="btn-secondary h-10 px-5"
@@ -539,7 +605,8 @@ export default function ResidentsView({ openBookingForm }) {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (

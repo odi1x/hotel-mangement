@@ -28,12 +28,6 @@ export default async function handler(req, res) {
         };
       }
 
-      // Include payments so the UI can render balance/status badges and drive
-      // the Balances (المستحقات) view without a second round-trip per booking.
-      const paymentsInclude = {
-        payments: { orderBy: { date: 'desc' } }
-      };
-
       if (page && limit) {
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
@@ -44,7 +38,6 @@ export default async function handler(req, res) {
             orderBy: { startDate: 'desc' },
             skip: (pageNum - 1) * limitNum,
             take: limitNum,
-            include: paymentsInclude
           }),
           prisma.booking.count({ where: whereClause })
         ]);
@@ -61,8 +54,7 @@ export default async function handler(req, res) {
       } else {
         const bookings = await prisma.booking.findMany({
           where: whereClause,
-          orderBy: { startDate: 'desc' },
-          include: paymentsInclude
+          orderBy: { startDate: 'desc' }
         });
         return res.status(200).json(bookings);
       }
@@ -123,11 +115,10 @@ export default async function handler(req, res) {
           customerRequest,
           creatorName: user.name || user.username
         },
-        include: { payments: true }
       });
 
       // Edge case: If creating a historical booking (endDate < today), instantly flag unit as needing cleaning.
-      // Create notification for new booking
+// Create notification for new booking
       await prisma.notification.create({
         data: {
           userId: targetUserId, // Send to Admin
@@ -221,9 +212,44 @@ export default async function handler(req, res) {
             status: 'checked_out_early',
             totalPrice: newTotalPrice,
             notes: updatedNotes
-          },
-          include: { payments: true }
+          }
         });
+
+        // If the guest already paid more than the new total (because we reduced
+        // it via 'recalculate'), auto-create a refund payment for the difference
+        // so the ledger stays clean. No extra step for the operator.
+        //
+        // Payments are money-movements: a normal payment counts positive toward
+        // "paid so far", and a refund counts negative (see computeBookingTotals).
+        // We store the refund with a positive amount + type='refund'; the ledger
+        // subtracts it when computing paid-so-far.
+        if (financialOption === 'recalculate') {
+          const priorPayments = await prisma.payment.findMany({
+            where: { bookingId: id },
+            select: { amount: true, type: true }
+          });
+          // Match the client-side formula: payments add, refunds subtract.
+          const paidSoFar = priorPayments.reduce((sum, p) => {
+            const amt = Number(p.amount) || 0;
+            return p.type === 'refund' ? sum - amt : sum + amt;
+          }, 0);
+
+          const overpaid = paidSoFar - Number(newTotalPrice);
+          // Only refund if overpaid by a meaningful amount (guard against float dust)
+          if (overpaid > 0.01) {
+            await prisma.payment.create({
+              data: {
+                bookingId: id,
+                userId: targetUserId,
+                amount: overpaid,
+                method: 'cash',
+                type: 'refund',
+                notes: 'استرداد تلقائي عند المغادرة المبكرة',
+                collectedBy: user.name || user.username
+              }
+            });
+          }
+        }
 
         // Also set unit to needs cleaning
         await prisma.apartment.update({
@@ -290,7 +316,6 @@ export default async function handler(req, res) {
           notes,
           customerRequest
         },
-        include: { payments: true }
       });
       return res.status(200).json(booking);
     }

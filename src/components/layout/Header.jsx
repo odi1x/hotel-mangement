@@ -1,9 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { User as UserIcon, Settings, LogOut } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
-import ImageUpload from '../ui/ImageUpload';
-import toast from 'react-hot-toast';
 
 export default function Header({ openStaffSettings, onNavigate }) {
   const { user, logout } = useAuth();
@@ -26,7 +24,7 @@ export default function Header({ openStaffSettings, onNavigate }) {
   };
 
   return (
-    <header className="bg-canvas dark:bg-surface-dark border-b border-hairline dark:border-[#242424] py-3 px-8 flex justify-end items-center gap-4 relative z-20">
+    <header className="bg-page dark:bg-surface-dark py-2 px-8 flex justify-end items-center gap-4 relative z-20">
       <NotificationsDropdown onNavigate={onNavigate} />
       <div className="relative" ref={dropdownRef}>
         <button
