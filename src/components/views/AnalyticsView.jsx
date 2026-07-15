@@ -235,6 +235,7 @@ export default function AnalyticsView() {
   }
 
   return (
+    <>
     <div className="h-full overflow-hidden flex flex-col space-y-5">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
         <div className="flex gap-2">
@@ -512,9 +513,13 @@ export default function AnalyticsView() {
         </div>
       </div>
 
+      {/* End of main content — modal is moved OUTSIDE this wrapper so
+          space-y-5's margin-top selector can't push it down. */}
+      </div>
+
       {/* Breakdown Modal */}
       {breakdownModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm m-0 border-0 outline-none">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-[#2e2e2e]">
             <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
@@ -614,7 +619,7 @@ export default function AnalyticsView() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 
 }
