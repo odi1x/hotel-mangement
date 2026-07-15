@@ -1,61 +1,56 @@
-# Rent Flow — Fix Pack #2
+# Rent Flow — Fix Pack #3 (bugfixes on Fix Pack #2)
 
-Three changes:
+Fixes two bugs I shipped in Fix Pack #2 plus one root-cause fix for the persistent white line.
 
-1. **Early checkout auto-refund** — connects the checkout modal to the payments ledger
-2. **Enhanced checkout modal** — shows paid amount, nights stayed, live refund preview
-3. **White line at top of page** — killed by making the header transparent
+## Bug 1 — Early checkout crash (white page)
 
-## 1. Early checkout ↔ refund payment
+**Root cause**: I destructured `{ paid, totalOwed }` from `computeBookingTotals()` in the checkout modal, but the actual function returns `{ totalDue, totalReceived, balanceDue, status, nights }`. So `paid` was `undefined`, and calling `.toLocaleString()` on it crashed React and blanked the page.
 
-Before:
-- User picks "تعديل المبلغ بناءً على الأيام" → totalPrice reduces → balance goes negative if guest overpaid → user has to manually go to payments tab and create an استرداد entry. Easy to forget.
+**Fix**: destructure the real names and alias them locally:
+```js
+const { totalDue: totalOwed, totalReceived: paid } = computeBookingTotals(bk);
+```
 
-After:
-- Same action, but on the backend, `api/bookings.js` checks if the guest's paid amount now exceeds the new total. If yes, it auto-creates a `Payment` record with `type='refund'` and `amount = paid − newTotal`, notes it as "استرداد تلقائي عند المغادرة المبكرة". Ledger stays clean, no manual step.
+Should have tested the modal after writing it. My bad.
 
-Only fires on the "تعديل" option — "الاحتفاظ بالمبلغ كامل" is unchanged (guest keeps owing what they owed, or nothing changes if fully paid).
+## Bug 2 — Auto-refund used wrong sign convention
 
-## 2. Enhanced checkout modal
+**Root cause**: I stored the auto-created refund with `amount: overpaid` (positive) and my own custom sum formula. But the deployed `api/payments.js` and `computeBookingTotals()` store refunds with **negative** amounts and just sum the values. Two inconsistent conventions coexisting = wrong balance calculations forever after any early-checkout refund fires.
 
-The modal now shows three stat tiles right at the top so the operator has context before choosing:
-- **مدفوع حتى الآن** — total paid across all payment records
-- **ليالٍ مقضية** — nights from check-in to today (a smart default for the day count)
-- **إجمالي الحجز** — original booking total
+**Fix**: match the deployed convention exactly — store amount as `-Math.abs(overpaid)` (negative), and compute `paidSoFar` as a plain sum. Now auto-refunds behave identically to manually-created refunds in the ledger.
 
-When "تعديل المبلغ بناءً على الأيام" is selected:
-- The day-count input has a shortcut button `استخدم N` that auto-fills with `nights stayed`
-- Below the input, a preview shows either:
-  - **"سيتم إنشاء استرداد تلقائي"** with the exact refund amount, when the guest overpaid, OR
-  - **"لا استرداد. النزيل لا يزال مديناً بـ X"** when the guest still owes, OR
-  - Nothing when it's exact
+## Bug 3 — White line still there
 
-The operator sees the financial outcome of the action before pressing confirm.
+**Root cause I identified in the previous pack was incomplete.** Removing the header's `bg-canvas` fixed one thing, but the actual source was upstream: `<html>` and `<body>` in `index.html` are set to `bg-white` (pure white `#FFFFFF`), while the app container uses `bg-page` (near-white). Any subpixel gap between the viewport edge and the app container shows the pure-white body underneath — a visible thin line, especially at the top edge of the viewport.
 
-## 3. White line at the top
-
-Root cause identified via your DevTools screenshots: the `<header>` component had `bg-canvas` (pure white) and `border-b border-hairline`. The main content below uses `bg-page` (near-white). Combined, that created a visible horizontal band of pure white above every page — most visible on the analytics view where the content sits below empty space.
-
-Fix: header now uses `bg-page` (matching the main below it) and no bottom border. Also tightened `py-3` → `py-2` for a slightly more compact top strip. Same layout, no color break.
+**Fix**: change `<html>` and `<body>` classes from `bg-white` → `bg-page` in `index.html`. Now every layer of the DOM stack renders the same background color and there's nothing to see through.
 
 ## Install
 
 ```bash
-unzip -o rentflow-fixpack-2.zip -d .
-cp -r patch/api/*                    api/
-cp -r patch/src/components/layout/*  src/components/layout/
-cp -r patch/src/components/views/*   src/components/views/
-rm -rf patch rentflow-fixpack-2.zip
+unzip -o rentflow-fixpack-3.zip -d .
+cp -r patch/index.html                       index.html
+cp -r patch/api/*                            api/
+cp -r patch/src/components/views/*           src/components/views/
+rm -rf patch rentflow-fixpack-3.zip
 
 git add -A
-git commit -m "feat: early checkout auto-refund + checkout modal polish; fix: header white line"
+git commit -m "fix: early checkout crash + refund sign + html bg-page"
 git push origin design-md-changes
 ```
 
-No schema changes, so Vercel's `prisma db push` won't touch the DB. Deploy is safe.
+No schema changes.
 
 ## Files changed
 
-- `api/bookings.js` — auto-create refund `Payment` on early checkout overpayment
-- `src/components/views/ResidentsView.jsx` — enhanced checkout modal with paid/nights/refund preview + imports for computeBookingTotals
-- `src/components/layout/Header.jsx` — bg transparent, tightened padding, cleaned unused imports
+- `index.html` — html + body use `bg-page` (was `bg-white`)
+- `api/bookings.js` — auto-refund stored with negative amount; paidSoFar computed by plain sum
+- `src/components/views/ResidentsView.jsx` — destructure correct field names from `computeBookingTotals`
+
+## After deploy — verify
+
+1. **Early checkout with overpayment** — do a checkout that would result in a refund. Should complete without crashing. Then open the guest's payment ledger — should show the auto-refund entry as a negative amount, balance = 0.
+
+2. **Top of any page** — the white line should be completely gone now, not just faded.
+
+Sorry for the round trip — the payments convention thing is exactly the kind of consistency bug that only bites at integration time. Shipping the auto-refund end-to-end without opening the ledger to verify was a mistake.

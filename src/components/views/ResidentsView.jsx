@@ -415,14 +415,16 @@ export default function ResidentsView({ openBookingForm }) {
         // Live math for the modal — computed on each render so the preview
         // updates instantly as the user changes the day count.
         const bk = checkoutData.booking;
-        const { paid, totalOwed } = computeBookingTotals(bk);
+        // computeBookingTotals returns { totalDue, totalReceived, balanceDue, status, nights }
+        // Alias locally to the names used in the modal below.
+        const { totalDue: totalOwed, totalReceived: paid } = computeBookingTotals(bk);
         const startDate = new Date(bk.startDate);
         const now = new Date();
         const nightsStayedActual = Math.max(1, Math.ceil((now - startDate) / (1000 * 60 * 60 * 24)));
 
         const newTotal = checkoutData.option === 'recalculate'
           ? Number(checkoutData.days || 0) * Number(bk.pricePerNight)
-          : totalOwed;
+          : Number(totalOwed);
 
         // If the guest already paid more than the new total, we'll auto-refund the difference.
         const refundAmount = checkoutData.option === 'recalculate' && paid > newTotal

@@ -219,20 +219,17 @@ export default async function handler(req, res) {
         // it via 'recalculate'), auto-create a refund payment for the difference
         // so the ledger stays clean. No extra step for the operator.
         //
-        // Payments are money-movements: a normal payment counts positive toward
-        // "paid so far", and a refund counts negative (see computeBookingTotals).
-        // We store the refund with a positive amount + type='refund'; the ledger
-        // subtracts it when computing paid-so-far.
+        // Convention (matches api/payments.js): refund payments are stored with
+        // a NEGATIVE amount in the DB. computeBookingTotals then just sums
+        // amounts and refunds naturally subtract. We use the same convention
+        // here so the auto-refund behaves identically to a manually-created one.
         if (financialOption === 'recalculate') {
           const priorPayments = await prisma.payment.findMany({
             where: { bookingId: id },
-            select: { amount: true, type: true }
+            select: { amount: true }
           });
-          // Match the client-side formula: payments add, refunds subtract.
-          const paidSoFar = priorPayments.reduce((sum, p) => {
-            const amt = Number(p.amount) || 0;
-            return p.type === 'refund' ? sum - amt : sum + amt;
-          }, 0);
+          // Refunds are already stored negative, so a plain sum works.
+          const paidSoFar = priorPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
           const overpaid = paidSoFar - Number(newTotalPrice);
           // Only refund if overpaid by a meaningful amount (guard against float dust)
@@ -241,7 +238,7 @@ export default async function handler(req, res) {
               data: {
                 bookingId: id,
                 userId: targetUserId,
-                amount: overpaid,
+                amount: -Math.abs(overpaid),   // NEGATIVE — see comment above
                 method: 'cash',
                 type: 'refund',
                 notes: 'استرداد تلقائي عند المغادرة المبكرة',
