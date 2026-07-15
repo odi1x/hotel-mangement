@@ -20,7 +20,7 @@
   html {
     height: 100%;
     width: 100%;
-    background-color: #ffffff;
+    background-color: #fafaf9;  /* matches tailwind `page` token */
   }
 
   body {
@@ -30,7 +30,7 @@
     width: 100%;
     font-family: 'Zain', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #111111;
-    background-color: #ffffff;
+    background-color: #fafaf9;  /* matches tailwind `page` token */
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -44,7 +44,7 @@
   h1 { font-weight: 700; letter-spacing: -0.03em; color: #111111; line-height: 1.1; }
   h2, h3 { font-weight: 600; letter-spacing: -0.02em; color: #111111; line-height: 1.2; }
 
-  ::placeholder { color: #898989; }
+  ::placeholder { color: #78716c; }  /* matches tailwind `muted-soft` token */
 
   /* Thin, accent-tinted scrollbar (replaces the chunky default, works in dark too) */
   * {
@@ -77,7 +77,7 @@
   /* ---- Elevated card: white on the warm page, lifted by hairline + shadow ---- */
   .card-surface {
     @apply bg-canvas border border-hairline rounded-lg shadow-micro
-           dark:bg-surface-dark-elevated dark:border-[#2a2825] dark:shadow-none;
+           dark:bg-surface-dark-elevated dark:border-hairline-dark dark:shadow-none;
   }
 
   /* ---- button-primary: flat near-black ---- */
@@ -99,7 +99,7 @@
     @apply inline-flex items-center justify-center gap-2 bg-canvas text-ink
            font-semibold text-sm rounded-md px-5 h-10
            border border-hairline shadow-micro transition-colors hover:bg-surface-soft
-           dark:bg-surface-dark-elevated dark:text-white dark:border-[#2a2825] dark:hover:bg-[#242220];
+           dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark dark:hover:bg-hairline-dark;
   }
 
   /* ---- text-input: white field, hairline outline, ink focus ---- */
@@ -107,7 +107,7 @@
     @apply w-full bg-canvas text-ink text-sm rounded-md border border-hairline
            px-3.5 py-2.5 outline-none transition-colors
            focus:border-ink focus:ring-0
-           dark:bg-surface-dark-elevated dark:text-white dark:border-[#2a2825] dark:focus:border-white;
+           dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark dark:focus:border-white;
   }
 
   /* ---- badge-pill: neutral capsule tag ---- */
@@ -118,7 +118,7 @@
   }
   /* status variants — distinguished by TREATMENT, not colour */
   .badge-solid   { @apply bg-ink text-white dark:bg-white dark:text-ink; }      /* current */
-  .badge-outline { @apply bg-transparent text-ink border border-hairline dark:text-white dark:border-[#3a3733]; } /* arriving */
+  .badge-outline { @apply bg-transparent text-ink border border-hairline dark:text-white dark:border-hairline-dark-soft; } /* arriving */
   .badge-ghost   { @apply bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated; }  /* departed */
   .badge-dashed  { @apply bg-transparent text-muted border border-dashed border-muted-soft; } /* early checkout */
 
@@ -132,7 +132,7 @@
            transition-colors hover:text-ink dark:hover:text-white;
   }
   .nav-pill-active {
-    @apply bg-canvas text-ink shadow-pill dark:bg-[#2e2b28] dark:text-white;
+    @apply bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white;
   }
 
   /* ---- monochrome icon action ---- */
