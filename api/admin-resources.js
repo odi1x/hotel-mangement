@@ -165,7 +165,7 @@ async function pricingRulesHandler(req, res, user) {
     }
 
     if (req.method === 'POST') {
-      const { label, startDate, endDate, priceMode, value, priority, color, apartmentId } = req.body;
+      const { label, startDate, endDate, priceMode, value, priority, color, apartmentId, daysOfWeek } = req.body;
 
       if (!label || !startDate || !endDate || value == null || value === '') {
         return res.status(400).json({ message: 'الاسم والتواريخ والقيمة مطلوبة' });
@@ -187,6 +187,19 @@ async function pricingRulesHandler(req, res, user) {
         return res.status(400).json({ message: 'تاريخ النهاية قبل تاريخ البداية' });
       }
 
+      // Sanitize daysOfWeek — must be array of ints 0-6, unique
+      let dow = [];
+      if (Array.isArray(daysOfWeek)) {
+        const seen = new Set();
+        for (const d of daysOfWeek) {
+          const n = Number(d);
+          if (Number.isInteger(n) && n >= 0 && n <= 6 && !seen.has(n)) {
+            seen.add(n);
+            dow.push(n);
+          }
+        }
+      }
+
       if (apartmentId) {
         const apt = await prisma.apartment.findUnique({ where: { id: apartmentId } });
         if (!apt || apt.userId !== targetUserId) {
@@ -204,6 +217,7 @@ async function pricingRulesHandler(req, res, user) {
           priceMode: mode,
           value: parsedValue,
           priority: priority != null ? Number(priority) : 50,
+          daysOfWeek: dow,
           color: color || '#059669'
         }
       });
@@ -224,6 +238,22 @@ async function pricingRulesHandler(req, res, user) {
       if (data.endDate) data.endDate = new Date(data.endDate);
       if (data.value != null && data.value !== '') data.value = parseFloat(data.value);
       if (data.priority != null) data.priority = Number(data.priority);
+
+      // Sanitize daysOfWeek on update — same rules as POST
+      if ('daysOfWeek' in data) {
+        const dow = [];
+        if (Array.isArray(data.daysOfWeek)) {
+          const seen = new Set();
+          for (const d of data.daysOfWeek) {
+            const n = Number(d);
+            if (Number.isInteger(n) && n >= 0 && n <= 6 && !seen.has(n)) {
+              seen.add(n);
+              dow.push(n);
+            }
+          }
+        }
+        data.daysOfWeek = dow;
+      }
 
       delete data.id;
       delete data.userId;

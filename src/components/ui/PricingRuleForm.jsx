@@ -1,44 +1,57 @@
 import { useState, useMemo } from 'react';
 import { X, TagsIcon, CalendarDays } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-import { PRICE_MODES, RULE_COLORS } from '../../lib/pricingUtils';
+import DatePickerCal from './DatePickerCal';
+import {
+  PRICE_MODES,
+  RULE_COLORS,
+  DAYS_OF_WEEK,
+  WEEKEND_DAYS,
+  WORKWEEK_DAYS,
+  PRIORITY_LEVELS,
+  priorityLevel
+} from '../../lib/pricingUtils';
 
-const isoDate = (d) => {
-  if (!d) return '';
-  return new Date(d).toISOString().split('T')[0];
+// Turn a Date or ISO string into a 'YYYY-MM-DD' string (what DatePickerCal expects)
+const toYmd = (d) => {
+  if (!d) return null;
+  const x = new Date(d);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
 };
 
 /**
  * Create-or-edit form for a pricing rule.
  *
- * The signature detail: a live "preview strip" at the bottom shows what one
- * night would cost for the currently-selected scope, using either the current
- * base price or a picked apartment's base price. Turns abstract numbers into
- * concrete money before you hit save.
+ * Uses the app's DatePickerCal for range selection instead of the browser's
+ * default date input. Priority is exposed as three buckets (low/normal/high)
+ * mapped to 25/50/75 rather than a raw 0–100 number. A day-of-week filter
+ * lets a rule fire only on specific weekdays — the way you'd model a "weekend
+ * surcharge" or a "workweek discount".
  */
 export default function PricingRuleForm({ onClose, initialData }) {
-  const { apartments, addPricingRule, updatePricingRule } = useData();
+  const { apartments, addPricingRule, updatePricingRule, pricingRules } = useData();
   const isEdit = !!initialData?.id;
 
   const [form, setForm] = useState({
     id:          initialData?.id          || null,
     label:       initialData?.label       || '',
-    startDate:   isoDate(initialData?.startDate) || '',
-    endDate:     isoDate(initialData?.endDate)   || '',
+    startDate:   toYmd(initialData?.startDate) || null,
+    endDate:     toYmd(initialData?.endDate)   || null,
     priceMode:   initialData?.priceMode   || 'multiplier',
     value:       initialData?.value       != null ? String(initialData.value) : '1.5',
     priority:    initialData?.priority    != null ? initialData.priority : 50,
     color:       initialData?.color       || RULE_COLORS[0].value,
-    apartmentId: initialData?.apartmentId || ''
+    apartmentId: initialData?.apartmentId || '',
+    daysOfWeek:  Array.isArray(initialData?.daysOfWeek) ? [...initialData.daysOfWeek] : []
   });
   const [submitting, setSubmitting] = useState(false);
 
   const eyebrow = 'block text-[11px] font-semibold text-body dark:text-[#a1a1aa] mb-1.5 uppercase tracking-wider';
 
-  // Preview: what one night would cost with these settings
   const previewApartment = useMemo(() => {
     if (form.apartmentId) return apartments.find(a => a.id === form.apartmentId);
-    return apartments[0]; // any unit for preview when the rule is global
+    return apartments[0];
   }, [form.apartmentId, apartments]);
 
   const previewPrice = useMemo(() => {
@@ -48,6 +61,49 @@ export default function PricingRuleForm({ onClose, initialData }) {
     if (form.priceMode === 'fixed') return v;
     return Number(previewApartment.basePrice) * v;
   }, [form.priceMode, form.value, previewApartment]);
+
+  // Detect overlap conflicts: is there another rule targeting the same scope,
+  // with overlapping dates AND overlapping days of week? If yes, priority
+  // matters and we should surface that clearly. Runs in real time as the user
+  // edits, so they see conflicts before they save.
+  const overlapConflicts = useMemo(() => {
+    if (!form.startDate || !form.endDate) return [];
+    const myStart = new Date(form.startDate).getTime();
+    const myEnd = new Date(form.endDate).getTime();
+    const myDays = form.daysOfWeek.length === 0 ? [0,1,2,3,4,5,6] : form.daysOfWeek;
+
+    return pricingRules.filter(r => {
+      if (r.id === form.id) return false; // don't compare against self
+      // Scope overlap: both target same apartment, or one is global
+      const scopeOverlap = !r.apartmentId || !form.apartmentId || r.apartmentId === form.apartmentId;
+      if (!scopeOverlap) return false;
+      // Date overlap
+      const rStart = new Date(r.startDate).getTime();
+      const rEnd = new Date(r.endDate).getTime();
+      if (rEnd < myStart || rStart > myEnd) return false;
+      // Day-of-week overlap
+      const rDays = !r.daysOfWeek || r.daysOfWeek.length === 0 ? [0,1,2,3,4,5,6] : r.daysOfWeek;
+      const daysOverlap = myDays.some(d => rDays.includes(d));
+      return daysOverlap;
+    });
+  }, [form.startDate, form.endDate, form.daysOfWeek, form.apartmentId, form.id, pricingRules]);
+
+  const toggleDay = (d) => {
+    setForm(prev => ({
+      ...prev,
+      daysOfWeek: prev.daysOfWeek.includes(d)
+        ? prev.daysOfWeek.filter(x => x !== d)
+        : [...prev.daysOfWeek, d].sort((a, b) => a - b)
+    }));
+  };
+
+  const dayScopeSummary = form.daysOfWeek.length === 0
+    ? 'كل الأيام (بلا حصر)'
+    : form.daysOfWeek.length === 7
+      ? 'كل الأيام'
+      : form.daysOfWeek.slice().sort((a, b) => a - b).map(d => DAYS_OF_WEEK.find(x => x.value === d)?.label).filter(Boolean).join('، ');
+
+  const currentPriorityLevel = priorityLevel(form.priority);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,7 +137,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
                 {isEdit ? 'تعديل قاعدة سعرية' : 'قاعدة سعرية جديدة'}
               </h3>
               <p className="text-xs text-muted dark:text-[#a1a1aa] mt-0.5">
-                حدّد فترة موسمية وسعرها الخاص
+                حدّد فترة موسمية أو نمط أسبوعي وسعرها الخاص
               </p>
             </div>
           </div>
@@ -98,33 +154,88 @@ export default function PricingRuleForm({ onClose, initialData }) {
               required
               type="text"
               className="input-field"
-              placeholder="مثال: موسم الحج ١٤٤٧"
+              placeholder="مثال: موسم الحج ١٤٤٧ / رمز نهاية الأسبوع"
               value={form.label}
               onChange={(e) => setForm({ ...form, label: e.target.value })}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={eyebrow}>من تاريخ</label>
-              <input
-                required
-                type="date"
-                className="input-field"
-                value={form.startDate}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+          {/* Date range — using DatePickerCal (same as booking form) */}
+          <div>
+            <label className={eyebrow}>الفترة</label>
+            <div className="border border-hairline dark:border-[#2e2e2e] rounded-md p-3 bg-canvas dark:bg-surface-dark-elevated">
+              <DatePickerCal
+                value={{ startDate: form.startDate, endDate: form.endDate }}
+                onChange={(v) => setForm({ ...form, startDate: v.startDate, endDate: v.endDate })}
               />
             </div>
-            <div>
-              <label className={eyebrow}>إلى تاريخ</label>
-              <input
-                required
-                type="date"
-                className="input-field"
-                value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-              />
+            <p className="text-[10px] text-muted-soft mt-1">
+              للأنماط الأسبوعية (مثل عطلة نهاية الأسبوع)، اختر فترة طويلة تصل لسنة كاملة.
+            </p>
+          </div>
+
+          {/* Day of week — a NEW section that makes weekend/workweek rules possible */}
+          <div>
+            <label className={eyebrow}>أيام تطبيق القاعدة</label>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, daysOfWeek: [] })}
+                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
+                  form.daysOfWeek.length === 0
+                    ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
+                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                }`}
+              >
+                كل الأيام
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, daysOfWeek: [...WEEKEND_DAYS] })}
+                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
+                  form.daysOfWeek.length === 2 && WEEKEND_DAYS.every(d => form.daysOfWeek.includes(d))
+                    ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
+                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                }`}
+              >
+                عطلة نهاية الأسبوع (الجمعة + السبت)
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, daysOfWeek: [...WORKWEEK_DAYS] })}
+                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
+                  form.daysOfWeek.length === 5 && WORKWEEK_DAYS.every(d => form.daysOfWeek.includes(d))
+                    ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
+                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                }`}
+              >
+                أيام العمل (الأحد – الخميس)
+              </button>
             </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {DAYS_OF_WEEK.map(d => {
+                const on = form.daysOfWeek.includes(d.value);
+                return (
+                  <button
+                    key={d.value}
+                    type="button"
+                    onClick={() => toggleDay(d.value)}
+                    className={`h-9 rounded-md text-xs font-semibold transition-colors border ${
+                      on
+                        ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
+                        : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                    }`}
+                  >
+                    {d.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-soft mt-1.5">
+              {dayScopeSummary}
+              {form.daysOfWeek.length === 0 && ' — القاعدة تسري على كل يوم ضمن الفترة'}
+            </p>
           </div>
 
           <div>
@@ -139,9 +250,6 @@ export default function PricingRuleForm({ onClose, initialData }) {
                 <option key={a.id} value={a.id}>{a.name} (السعر الأساسي: {a.basePrice} ر.س)</option>
               ))}
             </select>
-            <p className="text-[10px] text-muted-soft mt-1">
-              قواعد الوحدة المحددة تتفوّق على القواعد العامة عند تساوي الأولوية
-            </p>
           </div>
 
           <div>
@@ -165,35 +273,76 @@ export default function PricingRuleForm({ onClose, initialData }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={eyebrow}>
-                {form.priceMode === 'multiplier' ? 'المضاعف' : 'السعر (ر.س / ليلة)'}
-              </label>
-              <input
-                required
-                type="number"
-                step={form.priceMode === 'multiplier' ? '0.1' : '1'}
-                min="0"
-                className="input-field font-semibold"
-                placeholder={form.priceMode === 'multiplier' ? '1.5' : '500'}
-                value={form.value}
-                onChange={(e) => setForm({ ...form, value: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className={eyebrow}>الأولوية (0–100)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                className="input-field font-semibold"
-                value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value })}
-              />
-              <p className="text-[10px] text-muted-soft mt-1">القيمة الأعلى تفوز عند التداخل</p>
-            </div>
+          <div>
+            <label className={eyebrow}>
+              {form.priceMode === 'multiplier' ? 'المضاعف' : 'السعر (ر.س / ليلة)'}
+            </label>
+            <input
+              required
+              type="number"
+              step={form.priceMode === 'multiplier' ? '0.1' : '1'}
+              min="0"
+              className="input-field font-semibold"
+              placeholder={form.priceMode === 'multiplier' ? '1.5' : '500'}
+              value={form.value}
+              onChange={(e) => setForm({ ...form, value: e.target.value })}
+            />
           </div>
+
+          {/* Priority — the OLD version was a 0-100 number field, which no one
+              understood. Three buttons is much clearer. */}
+          <div>
+            <label className={eyebrow}>الأهمية عند التداخل</label>
+            <div className="grid grid-cols-3 gap-2">
+              {PRIORITY_LEVELS.map(p => {
+                const active = currentPriorityLevel === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, priority: p.value })}
+                    className={`p-3 rounded-md text-center transition-colors border ${
+                      active
+                        ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
+                        : 'bg-canvas text-body border-hairline hover:border-muted dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold mb-0.5">{p.label}</div>
+                    <div className={`text-[10px] ${active ? 'opacity-80' : 'text-muted-soft'}`}>{p.hint}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-soft mt-1.5">
+              عند تداخل قاعدتين على نفس اليوم، تُطبَّق القاعدة الأعلى أهمية.
+            </p>
+          </div>
+
+          {/* Overlap conflict warning — only shows when there ARE overlaps */}
+          {overlapConflicts.length > 0 && (
+            <div className="border border-dashed border-accent/60 bg-accent-soft rounded-md p-3">
+              <p className="text-[11px] font-semibold text-accent-strong mb-1">
+                تتداخل هذه القاعدة مع {overlapConflicts.length} {overlapConflicts.length === 1 ? 'قاعدة أخرى' : 'قواعد أخرى'}:
+              </p>
+              <ul className="text-[11px] text-body dark:text-[#a1a1aa] space-y-0.5">
+                {overlapConflicts.slice(0, 4).map(r => (
+                  <li key={r.id} className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 truncate">
+                      <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: r.color }}></span>
+                      <span className="truncate">{r.label}</span>
+                    </span>
+                    <span className="text-muted-soft shrink-0">أهمية: {PRIORITY_LEVELS.find(p => p.value === priorityLevel(r.priority))?.label}</span>
+                  </li>
+                ))}
+                {overlapConflicts.length > 4 && (
+                  <li className="text-muted-soft">... و {overlapConflicts.length - 4} أخرى</li>
+                )}
+              </ul>
+              <p className="text-[10px] text-muted-soft mt-1.5">
+                ضع أهميتها الأعلى لتسبق، أو الأقل لتتراجع أمامها.
+              </p>
+            </div>
+          )}
 
           <div>
             <label className={eyebrow}>لون التمييز</label>
@@ -226,7 +375,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
                 </span>
               </div>
               <p className="text-sm text-body dark:text-[#a1a1aa] leading-relaxed">
-                خلال هذه الفترة، سعر الليلة على {form.apartmentId ? previewApartment.name : 'كل الوحدات (بمثال)'} سيكون{' '}
+                خلال هذه الفترة (و{form.daysOfWeek.length === 0 ? 'كل الأيام' : dayScopeSummary})، سعر الليلة على {form.apartmentId ? previewApartment.name : 'كل الوحدات (بمثال)'} سيكون{' '}
                 <span className="font-black text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
                   {previewPrice} ر.س
                 </span>

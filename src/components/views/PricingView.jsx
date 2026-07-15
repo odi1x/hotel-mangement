@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Plus, TagsIcon, Pencil, Trash2, AlertTriangle, Calendar, Home, ArrowLeftRight } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-import { formatRuleValue } from '../../lib/pricingUtils';
+import { formatRuleValue, summarizeDaysOfWeek } from '../../lib/pricingUtils';
 import PricingRuleForm from '../ui/PricingRuleForm';
 
 /**
@@ -273,14 +273,18 @@ export default function PricingView() {
                             <span className="badge-pill badge-dashed text-[10px] font-semibold">كل الوحدات</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted dark:text-[#a1a1aa]">
+                        <div className="flex items-center gap-2 text-xs text-muted dark:text-[#a1a1aa] flex-wrap">
                           <span>{dateFormat(rule.startDate)}</span>
                           <ArrowLeftRight size={11} className="text-muted-soft" />
                           <span>{dateFormat(rule.endDate)}</span>
                           <span className="text-muted-soft">·</span>
                           <span>{scopeLabel(rule)}</span>
-                          <span className="text-muted-soft">·</span>
-                          <span>الأولوية {rule.priority}</span>
+                          {rule.daysOfWeek && rule.daysOfWeek.length > 0 && rule.daysOfWeek.length < 7 && (
+                            <>
+                              <span className="text-muted-soft">·</span>
+                              <span>{summarizeDaysOfWeek(rule.daysOfWeek)}</span>
+                            </>
+                          )}
                         </div>
                       </div>
 

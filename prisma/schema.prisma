@@ -181,6 +181,7 @@ model PricingRule {
   priceMode    String    @default("multiplier")  // "fixed" or "multiplier"
   value        Decimal   // if fixed: SAR/night. if multiplier: e.g. 2.5 = 2.5×basePrice
   priority     Int       @default(50)  // 0–100; higher wins on overlap
+  daysOfWeek   Int[]     @default([])  // [] = every day; else 0=Sun..6=Sat, so Saudi weekend = [5,6]
   color        String    @default("#059669")  // hex, for calendar visualization
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

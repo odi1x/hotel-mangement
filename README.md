@@ -1,83 +1,68 @@
-# Rent Flow — Maintenance Log + Seasonal Pricing (Vercel Hobby edition)
+# Rent Flow — Fix Pack #1
 
-Same two features as before — Maintenance and Seasonal Pricing — but the two backend endpoints are merged into a single serverless function to fit Vercel Hobby's 12-function cap.
+Follow-up patch on top of `rentflow-maintenance-pricing-patch.zip`. Addresses your UX feedback and the "maintenance not counted in analytics" bug.
 
-## What changed vs the earlier patch
+## What's fixed
 
-The old separate `api/maintenance.js` + `api/pricing-rules.js` are gone. Both are now handled by a single file: **`api/admin-resources.js`**.
+### 1. Priority is no longer a scary 0–100 number
+Replaced the "الأولوية (0-100)" input with three clear buttons: **منخفضة / عادية / عالية**. Same underlying values (25 / 50 / 75) — you don't need to think in numbers anymore. When two rules overlap, higher importance wins.
 
-It dispatches on a `?resource=` query param:
-- `?resource=maintenance` → maintenance CRUD
-- `?resource=pricing-rules` → pricing rules CRUD
+### 2. Weekend pricing now actually works
+Rules now have an "أيام تطبيق القاعدة" (days of week) section. Three quick presets:
+- **كل الأيام** (default) — rule applies every day in the date range
+- **عطلة نهاية الأسبوع (الجمعة + السبت)** — Saudi weekend only
+- **أيام العمل (الأحد – الخميس)** — workweek only
 
-Frontend URLs in `DataContext.jsx` are updated accordingly. From your perspective as a user of the app, nothing changes — the sidebar tabs, the forms, the timeline all work exactly the same. This is purely a deployment thing.
+Plus 7 individual day toggles if you need something custom (e.g., "Thursday nights only").
 
-## Install
+**How to set up a weekend surcharge**: create a rule named "عطلة نهاية الأسبوع"، pick a long date range (like today → end of 2027 — it'll just recur every weekend), click the "عطلة نهاية الأسبوع" preset, set value to ×1.3, save. Done.
 
-**Important**: if you already applied the earlier `rentflow-maintenance-pricing-patch.zip`, DELETE the two old API files before applying this one. If you haven't applied the earlier one, ignore this note.
+### 3. No more ugly browser date picker
+Replaced the native `<input type="date">` with the same `DatePickerCal` component the booking form uses. One range picker, styled to match the rest of the app.
+
+### 4. Maintenance costs now count in analytics
+When a maintenance issue is resolved with a cost logged, that cost:
+- Gets added to **totalExpenses** in the analytics summary
+- Shows as a separate line item **"تكاليف الصيانة"** in the profit breakdown modal (the one you screenshotted)
+- Feeds into the monthly expenses trend chart on the correct month
+
+Filters apply naturally — filter by apartment or date range and only maintenance costs in scope get counted.
+
+### 5. Overlap conflict warning in the rule form
+When you're creating/editing a rule, if it overlaps with any existing rule (same dates + same days + same scope), a warning box appears at the bottom listing the overlapping rules and their importance levels. Makes it obvious when priority actually matters.
+
+## About the "white line in the analytics page"
+
+I looked at the analytics view code and didn't spot anything obviously wrong at the top. Can you send another screenshot with the profit modal **closed** and the white line clearly visible? It could be:
+- A border rendering thick on some resolutions
+- A gap between two card components
+- Something specific to your browser zoom or theme
+
+Once I see it clearly I can fix it in one shot.
+
+## How to install
 
 ```bash
-# 0. Delete old separate endpoints if they exist
-rm -f api/maintenance.js api/pricing-rules.js
+unzip -o rentflow-pricing-fixpack-1.zip -d .
+cp -r patch/prisma/schema.prisma          prisma/schema.prisma
+cp -r patch/api/*                         api/
+cp -r patch/src/lib/*                     src/lib/
+cp -r patch/src/components/ui/*           src/components/ui/
+cp -r patch/src/components/views/*        src/components/views/
+rm -rf patch rentflow-pricing-fixpack-1.zip
 
-# 1. Unzip this patch
-unzip -o rentflow-maintenance-pricing-patch.zip -d .
-
-# 2. Copy everything into place
-cp -r patch/prisma/schema.prisma  prisma/schema.prisma
-cp -r patch/api/*                 api/
-cp -r patch/src/lib/*             src/lib/
-cp -r patch/src/context/*         src/context/
-cp -r patch/src/components/ui/*   src/components/ui/
-cp -r patch/src/components/views/* src/components/views/
-cp -r patch/src/components/layout/* src/components/layout/
-
-# 3. Clean up
-rm -rf patch rentflow-maintenance-pricing-patch.zip
-
-# 4. Commit & push
 git add -A
-git commit -m "feat: maintenance log + seasonal pricing (single endpoint)"
-git push origin main
+git commit -m "fix: pricing UX + maintenance in analytics"
+git push origin design-md-changes    # or main, wherever you're deploying
 ```
 
-You'll now have **12 serverless functions** — exactly at the Hobby cap. This deploy should succeed.
+Prisma will `db push` on Vercel and add the `daysOfWeek` column to `PricingRule` automatically. No manual migration needed. Since no rules use daysOfWeek yet, existing rules will default to `[]` (= apply every day, no change in behavior).
 
-## Important — next feature will hit the same limit
+## Files changed
 
-You're at 12/12. Any next feature that needs a new endpoint will fail the same way. Two paths when that happens:
-
-1. **Upgrade to Pro** — $20/mo, no code changes ever.
-2. **Merge another endpoint into `admin-resources.js`** — the same pattern I used here. Suitable candidates that are similar in shape: `licenses.js`, `staff-expenses.js`. Both are simple userId-scoped CRUD, similar to what's already in `admin-resources`.
-
-Just so you're not surprised the first time you add a feature and see the same 12-function error.
-
-## If you upgrade to Pro later
-
-You can split `admin-resources.js` back into two files if you prefer. Copy each handler function (`maintenanceHandler` and `pricingRulesHandler`) into its own `api/{name}.js` with the same imports, and change the URLs in `DataContext.jsx` back to `/maintenance` and `/pricing-rules`. No data migration needed.
-
-## Files in this patch
-
-**New:**
-- `api/admin-resources.js` ← merged endpoint
-- `src/lib/maintenanceUtils.js`
-- `src/lib/pricingUtils.js`
-- `src/components/ui/MaintenanceIssueForm.jsx`
-- `src/components/ui/PricingRuleForm.jsx`
-- `src/components/views/MaintenanceView.jsx`
-- `src/components/views/PricingView.jsx`
-
-**Modified:**
-- `prisma/schema.prisma` — added `MaintenanceIssue` and `PricingRule` models
-- `src/context/DataContext.jsx` — CRUD wired to `/admin-resources?resource=...`
-- `src/components/ui/BookingForm.jsx` — auto-pricing + maintenance warning
-- `src/components/layout/Sidebar.jsx` — added الصيانة + الأسعار الموسمية tabs
-- `src/components/layout/Layout.jsx` — routing for both new views
-
-## Features recap (same as before)
-
-**سجل الصيانة** — Log any issue on any unit, track it open → in progress → resolved. Costs and contractor names get recorded for later reporting. Urgent open issues warn in the booking form but don't block bookings.
-
-**الأسعار الموسمية** — Rules like "الحج ×2.5" or "رمضان = 800 SAR fixed". Rules target one unit or all units. Bookings during those periods auto-price with a per-night breakdown. Priority controls overlap resolution.
-
-The 12-month timeline in the Pricing view is the piece I most want your reaction to — it's the whole point of the feature.
+- `prisma/schema.prisma` — added `daysOfWeek Int[]` to `PricingRule`
+- `api/admin-resources.js` — accepts + validates daysOfWeek in create/update
+- `api/analytics.js` — maintenance costs added to totalExpenses, trend map, and profit breakdown line item
+- `src/lib/pricingUtils.js` — day-of-week filtering in `ruleActiveOnDate`; new helpers (DAYS_OF_WEEK, WEEKEND_DAYS, WORKWEEK_DAYS, PRIORITY_LEVELS, summarizeDaysOfWeek)
+- `src/components/ui/PricingRuleForm.jsx` — rewritten with DatePickerCal, 3-button priority, day-of-week picker, live overlap conflict warning
+- `src/components/views/PricingView.jsx` — rule list now shows day-of-week summary

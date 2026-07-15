@@ -22,6 +22,14 @@ const startOfDay = (d) => {
 // A single rule's active-on-this-date test
 const ruleActiveOnDate = (rule, date, apartmentId) => {
   if (rule.apartmentId && rule.apartmentId !== apartmentId) return false;
+
+  // Day-of-week filter: if the rule specifies days, only apply on those.
+  // Empty array (default) = applies every day.
+  if (Array.isArray(rule.daysOfWeek) && rule.daysOfWeek.length > 0) {
+    const dow = new Date(date).getDay(); // 0=Sun..6=Sat
+    if (!rule.daysOfWeek.includes(dow)) return false;
+  }
+
   const day = startOfDay(date).getTime();
   const start = startOfDay(rule.startDate).getTime();
   const end = startOfDay(rule.endDate).getTime();
@@ -153,4 +161,60 @@ export const PRICE_MODES = [
 export const formatRuleValue = (rule) => {
   if (rule.priceMode === 'fixed') return `${Number(rule.value)} ر.س`;
   return `×${Number(rule.value)}`;
+};
+
+/**
+ * Days of week (Arabic labels) — Saudi calendar week starts on Sunday.
+ * value = JS Date.getDay() (0=Sun..6=Sat)
+ */
+export const DAYS_OF_WEEK = [
+  { value: 0, label: 'الأحد',   shortLabel: 'أح' },
+  { value: 1, label: 'الاثنين', shortLabel: 'اث' },
+  { value: 2, label: 'الثلاثاء', shortLabel: 'ثل' },
+  { value: 3, label: 'الأربعاء', shortLabel: 'أر' },
+  { value: 4, label: 'الخميس',  shortLabel: 'خم' },
+  { value: 5, label: 'الجمعة',  shortLabel: 'جم' },
+  { value: 6, label: 'السبت',   shortLabel: 'سب' }
+];
+
+// Saudi weekend and workweek presets — the two cases users will actually hit
+export const WEEKEND_DAYS = [5, 6];     // Friday + Saturday
+export const WORKWEEK_DAYS = [0, 1, 2, 3, 4]; // Sunday–Thursday
+
+/**
+ * Human-friendly summary of a rule's day scope, for showing in the rule list.
+ * "كل الأيام" | "عطلة نهاية الأسبوع فقط" | "أيام العمل فقط" | "الجمعة، السبت"
+ */
+export const summarizeDaysOfWeek = (days) => {
+  if (!Array.isArray(days) || days.length === 0) return 'كل الأيام';
+  if (days.length === 7) return 'كل الأيام';
+  const set = new Set(days);
+  const isWeekend = WEEKEND_DAYS.every(d => set.has(d)) && set.size === 2;
+  if (isWeekend) return 'عطلة نهاية الأسبوع فقط';
+  const isWorkweek = WORKWEEK_DAYS.every(d => set.has(d)) && set.size === 5;
+  if (isWorkweek) return 'أيام العمل فقط';
+  return days
+    .slice()
+    .sort((a, b) => a - b)
+    .map(d => DAYS_OF_WEEK.find(x => x.value === d)?.label)
+    .filter(Boolean)
+    .join('، ');
+};
+
+/**
+ * Priority levels — replacing the confusing 0–100 number input with three
+ * meaningful buckets. Stored value stays a number so backend logic is unchanged.
+ */
+export const PRIORITY_LEVELS = [
+  { value: 25, label: 'منخفضة', hint: 'تتراجع أمام أي قاعدة أخرى' },
+  { value: 50, label: 'عادية',   hint: 'الوضع الافتراضي' },
+  { value: 75, label: 'عالية',  hint: 'تتقدم على القواعد الأخرى' }
+];
+
+// Categorize any priority number into one of the three buckets (for edit view)
+export const priorityLevel = (n) => {
+  if (n == null) return 50;
+  if (n <= 33) return 25;
+  if (n >= 67) return 75;
+  return 50;
 };

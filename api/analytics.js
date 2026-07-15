@@ -168,12 +168,31 @@ export default async function handler(req, res) {
              });
          }
 
+         // Maintenance costs — resolved issues with a cost value, filtered by
+         // the date range (resolvedAt is when the money was actually spent) and
+         // apartment scope. Show as a separate ledger line so operators can see
+         // maintenance spend at a glance.
+         const maintFilter = { userId: targetUserId, status: 'resolved', cost: { not: null } };
+         if (apartmentIds) maintFilter.apartmentId = { in: apartmentIds.split(',') };
+         if (startDate && endDate) {
+             maintFilter.resolvedAt = {
+                 gte: new Date(startDate),
+                 lte: new Date(endDate)
+             };
+         }
+         const maintenanceIssues = await prisma.maintenanceIssue.findMany({
+             where: maintFilter,
+             select: { cost: true }
+         });
+         const maintenance = maintenanceIssues.reduce((s, m) => s + (m.cost ? Number(m.cost) : 0), 0);
+
          return res.status(200).json({
              data: [
                  { category: 'إجمالي الإيرادات', amount: rev, type: 'income' },
                  { category: 'تكاليف الإيجار', amount: rent, type: 'expense' },
                  { category: 'رسوم المنصات', amount: platform, type: 'expense' },
                  { category: 'رواتب الموظفين', amount: staffExp, type: 'expense' },
+                 { category: 'تكاليف الصيانة', amount: maintenance, type: 'expense' },
                  { category: 'مصروفات عامة وأخرى', amount: global + other, type: 'expense' },
              ]
          });
@@ -398,6 +417,34 @@ export default async function handler(req, res) {
     }
 
     totalExpenses += apportionedGlobalExpenses;
+
+    // Maintenance costs — treat each resolved issue with a cost as an expense
+    // on its resolvedAt date. Filtered by same apartment scope and date range
+    // as the rest of analytics, so it plays nice with filters.
+    const maintFilterMain = { userId: targetUserId, status: 'resolved', cost: { not: null } };
+    if (apartmentIds) maintFilterMain.apartmentId = { in: apartmentIds.split(',') };
+    if (startDate && endDate) {
+        maintFilterMain.resolvedAt = {
+            gte: new Date(startDate),
+            lte: new Date(endDate)
+        };
+    }
+    const maintenanceItems = await prisma.maintenanceIssue.findMany({
+        where: maintFilterMain,
+        select: { cost: true, resolvedAt: true }
+    });
+    let totalMaintenance = 0;
+    maintenanceItems.forEach(m => {
+        const c = m.cost ? Number(m.cost) : 0;
+        if (c <= 0) return;
+        totalMaintenance += c;
+        // Also land it in the correct month bucket for the trend chart
+        if (m.resolvedAt) {
+            const key = `${m.resolvedAt.getFullYear()}-${String(m.resolvedAt.getMonth() + 1).padStart(2, '0')}`;
+            if (dailyTrendMap[key]) dailyTrendMap[key].expenses += c;
+        }
+    });
+    totalExpenses += totalMaintenance;
 
     // Distribute the global expenses roughly into the trend map if it has items, otherwise we just leave it out of trend
     const trendKeys = Object.keys(dailyTrendMap);
