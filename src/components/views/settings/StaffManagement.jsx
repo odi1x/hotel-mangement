@@ -63,14 +63,14 @@ export default function StaffManagement() {
   }
 
   return (
-    <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] overflow-hidden">
-      <div className="p-6 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+    <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden">
+      <div className="p-6 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white flex items-center gap-2">
             <Shield className="text-ink dark:text-white" />
             <span>إدارة الموظفين والصلاحيات</span>
           </h2>
-          <p className="text-sm text-muted dark:text-[#a1a1aa] mt-1">
+          <p className="text-sm text-muted dark:text-body-dark mt-1">
             أضف موظفين جدد وحدد صلاحيات وصولهم للنظام
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function StaffManagement() {
       <div className="overflow-x-auto">
         <table className="w-full text-right">
           <thead>
-            <tr className="text-muted dark:text-[#a1a1aa] text-sm border-b border-gray-100 dark:border-[#242424]">
+            <tr className="text-muted dark:text-body-dark text-sm border-b border-hairline-soft dark:border-hairline-dark">
               <th className="p-4 font-semibold">الموظف</th>
               <th className="p-4 font-semibold">اسم المستخدم</th>
               <th className="p-4 font-semibold">تاريخ الإضافة</th>
@@ -94,7 +94,7 @@ export default function StaffManagement() {
               <th className="p-4 font-semibold w-24">إجراءات</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-[#242424]">
+          <tbody className="divide-y divide-hairline-soft dark:divide-hairline-dark">
             {staff.map((s) => (
               <tr key={s.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
                 <td className="p-4">
@@ -111,8 +111,8 @@ export default function StaffManagement() {
                     <span className="font-semibold text-ink dark:text-white">{s.name || 'بدون اسم'}</span>
                   </div>
                 </td>
-                <td className="p-4 text-body dark:text-[#a1a1aa]" dir="ltr">{s.username}</td>
-                <td className="p-4 text-muted dark:text-[#a1a1aa] text-sm">
+                <td className="p-4 text-body dark:text-body-dark" dir="ltr">{s.username}</td>
+                <td className="p-4 text-muted dark:text-body-dark text-sm">
                   {new Date(s.createdAt).toLocaleDateString('ar-SA')}
                 </td>
                 <td className="p-4">
@@ -149,7 +149,7 @@ export default function StaffManagement() {
             ))}
             {staff.length === 0 && (
               <tr>
-                <td colSpan="5" className="p-8 text-center text-muted dark:text-[#a1a1aa]">
+                <td colSpan="5" className="p-8 text-center text-muted dark:text-body-dark">
                   لا يوجد موظفين مضافين حالياً. انقر على "إضافة موظف" للبدء.
                 </td>
               </tr>
@@ -173,16 +173,16 @@ export default function StaffManagement() {
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-[#2e2e2e]">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft">
             <div className="p-6 text-center">
               <div className="w-16 h-16 rounded-full bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center mx-auto mb-4 text-ink dark:text-white">
                 <Trash2 size={32} />
               </div>
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-xl mb-2">تأكيد الحذف</h3>
-              <p className="text-muted dark:text-[#a1a1aa] text-sm">هل أنت متأكد من حذف هذا الموظف؟ لن يمكن التراجع عن هذا الإجراء.</p>
+              <p className="text-muted dark:text-body-dark text-sm">هل أنت متأكد من حذف هذا الموظف؟ لن يمكن التراجع عن هذا الإجراء.</p>
             </div>
 
-            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex gap-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex gap-3">
               <button
                 onClick={() => setDeleteConfirmId(null)}
                 className="btn-secondary flex-1"

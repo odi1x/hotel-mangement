@@ -55,9 +55,9 @@ export default function ProfileSettingsModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
-      <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-xl shadow-soft border border-hairline dark:border-[#2e2e2e] overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-xl shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col max-h-[90vh]">
 
-        <div className="p-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+        <div className="p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
           <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">إعدادات الحساب الشخصي</h2>
           <button
             onClick={onClose}
@@ -70,10 +70,10 @@ export default function ProfileSettingsModal({ onClose }) {
         <div className="p-6 overflow-y-auto flex-1 space-y-8">
 
           <form onSubmit={handleUpdateProfile} className="space-y-6 bg-surface-card dark:bg-surface-dark-elevated p-6 rounded-lg">
-            <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white border-b pb-2 border-hairline dark:border-[#2e2e2e]">المعلومات الأساسية</h3>
+            <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white border-b pb-2 border-hairline dark:border-hairline-dark-soft">المعلومات الأساسية</h3>
 
             <div className="flex flex-col items-center">
-              <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-3">الصورة الشخصية</label>
+              <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">الصورة الشخصية</label>
               <ImageUpload
                 onUploadSuccess={url => setProfilePicture(url)}
                 currentImage={profilePicture}
@@ -81,7 +81,7 @@ export default function ProfileSettingsModal({ onClose }) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">الاسم الكامل</label>
+              <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">الاسم الكامل</label>
               <input
                 required
                 type="text"
@@ -104,11 +104,11 @@ export default function ProfileSettingsModal({ onClose }) {
           </form>
 
           <form onSubmit={handleChangePassword} className="space-y-6 bg-surface-card dark:bg-surface-dark-elevated p-6 rounded-lg">
-            <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white border-b pb-2 border-hairline dark:border-[#2e2e2e]">تغيير كلمة المرور</h3>
+            <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white border-b pb-2 border-hairline dark:border-hairline-dark-soft">تغيير كلمة المرور</h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">كلمة المرور الحالية</label>
+                <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">كلمة المرور الحالية</label>
                 <input
                   required
                   type="password"
@@ -119,7 +119,7 @@ export default function ProfileSettingsModal({ onClose }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">كلمة المرور الجديدة</label>
+                <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">كلمة المرور الجديدة</label>
                 <input
                   required
                   type="password"
@@ -130,7 +130,7 @@ export default function ProfileSettingsModal({ onClose }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">تأكيد كلمة المرور الجديدة</label>
+                <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">تأكيد كلمة المرور الجديدة</label>
                 <input
                   required
                   type="password"

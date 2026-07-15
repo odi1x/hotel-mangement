@@ -47,7 +47,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const eyebrow = 'block text-[11px] font-semibold text-body dark:text-[#a1a1aa] mb-1.5 uppercase tracking-wider';
+  const eyebrow = 'block text-[11px] font-semibold text-body dark:text-body-dark mb-1.5 uppercase tracking-wider';
 
   const previewApartment = useMemo(() => {
     if (form.apartmentId) return apartments.find(a => a.id === form.apartmentId);
@@ -125,9 +125,9 @@ export default function PricingRuleForm({ onClose, initialData }) {
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
       <div className="absolute inset-0" onClick={onClose}></div>
 
-      <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-2xl overflow-hidden border border-hairline dark:border-[#2e2e2e] flex flex-col max-h-[92vh]">
+      <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-2xl overflow-hidden border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[92vh]">
 
-        <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
+        <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-md" style={{ backgroundColor: `${form.color}22`, color: form.color }}>
               <TagsIcon size={18} />
@@ -136,7 +136,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg leading-tight">
                 {isEdit ? 'تعديل قاعدة سعرية' : 'قاعدة سعرية جديدة'}
               </h3>
-              <p className="text-xs text-muted dark:text-[#a1a1aa] mt-0.5">
+              <p className="text-xs text-muted dark:text-body-dark mt-0.5">
                 حدّد فترة موسمية أو نمط أسبوعي وسعرها الخاص
               </p>
             </div>
@@ -163,13 +163,13 @@ export default function PricingRuleForm({ onClose, initialData }) {
           {/* Date range — using DatePickerCal (same as booking form) */}
           <div>
             <label className={eyebrow}>الفترة</label>
-            <div className="border border-hairline dark:border-[#2e2e2e] rounded-md p-3 bg-canvas dark:bg-surface-dark-elevated">
+            <div className="border border-hairline dark:border-hairline-dark-soft rounded-md p-3 bg-canvas dark:bg-surface-dark-elevated">
               <DatePickerCal
                 value={{ startDate: form.startDate, endDate: form.endDate }}
                 onChange={(v) => setForm({ ...form, startDate: v.startDate, endDate: v.endDate })}
               />
             </div>
-            <p className="text-[10px] text-muted-soft mt-1">
+            <p className="text-2xs text-muted-soft mt-1">
               للأنماط الأسبوعية (مثل عطلة نهاية الأسبوع)، اختر فترة طويلة تصل لسنة كاملة.
             </p>
           </div>
@@ -184,7 +184,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
                 className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
                   form.daysOfWeek.length === 0
                     ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                    : 'text-muted border-hairline hover:text-ink dark:text-body-dark dark:border-hairline-dark-soft'
                 }`}
               >
                 كل الأيام
@@ -195,7 +195,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
                 className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
                   form.daysOfWeek.length === 2 && WEEKEND_DAYS.every(d => form.daysOfWeek.includes(d))
                     ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                    : 'text-muted border-hairline hover:text-ink dark:text-body-dark dark:border-hairline-dark-soft'
                 }`}
               >
                 عطلة نهاية الأسبوع (الجمعة + السبت)
@@ -206,7 +206,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
                 className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
                   form.daysOfWeek.length === 5 && WORKWEEK_DAYS.every(d => form.daysOfWeek.includes(d))
                     ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                    : 'text-muted border-hairline hover:text-ink dark:text-body-dark dark:border-hairline-dark-soft'
                 }`}
               >
                 أيام العمل (الأحد – الخميس)
@@ -224,7 +224,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
                     className={`h-9 rounded-md text-xs font-semibold transition-colors border ${
                       on
                         ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                        : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                        : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark-soft'
                     }`}
                   >
                     {d.shortLabel}
@@ -232,7 +232,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
                 );
               })}
             </div>
-            <p className="text-[10px] text-muted-soft mt-1.5">
+            <p className="text-2xs text-muted-soft mt-1.5">
               {dayScopeSummary}
               {form.daysOfWeek.length === 0 && ' — القاعدة تسري على كل يوم ضمن الفترة'}
             </p>
@@ -263,11 +263,11 @@ export default function PricingRuleForm({ onClose, initialData }) {
                   className={`p-3 rounded-md text-right transition-colors border ${
                     form.priceMode === m.value
                       ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                      : 'bg-canvas text-body border-hairline hover:border-muted dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                      : 'bg-canvas text-body border-hairline hover:border-muted dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark-soft'
                   }`}
                 >
                   <div className="text-sm font-semibold mb-0.5">{m.label}</div>
-                  <div className={`text-[10px] ${form.priceMode === m.value ? 'opacity-80' : 'text-muted-soft'}`}>{m.hint}</div>
+                  <div className={`text-2xs ${form.priceMode === m.value ? 'opacity-80' : 'text-muted-soft'}`}>{m.hint}</div>
                 </button>
               ))}
             </div>
@@ -304,16 +304,16 @@ export default function PricingRuleForm({ onClose, initialData }) {
                     className={`p-3 rounded-md text-center transition-colors border ${
                       active
                         ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                        : 'bg-canvas text-body border-hairline hover:border-muted dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
+                        : 'bg-canvas text-body border-hairline hover:border-muted dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark-soft'
                     }`}
                   >
                     <div className="text-sm font-semibold mb-0.5">{p.label}</div>
-                    <div className={`text-[10px] ${active ? 'opacity-80' : 'text-muted-soft'}`}>{p.hint}</div>
+                    <div className={`text-2xs ${active ? 'opacity-80' : 'text-muted-soft'}`}>{p.hint}</div>
                   </button>
                 );
               })}
             </div>
-            <p className="text-[10px] text-muted-soft mt-1.5">
+            <p className="text-2xs text-muted-soft mt-1.5">
               عند تداخل قاعدتين على نفس اليوم، تُطبَّق القاعدة الأعلى أهمية.
             </p>
           </div>
@@ -324,7 +324,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
               <p className="text-[11px] font-semibold text-accent-strong mb-1">
                 تتداخل هذه القاعدة مع {overlapConflicts.length} {overlapConflicts.length === 1 ? 'قاعدة أخرى' : 'قواعد أخرى'}:
               </p>
-              <ul className="text-[11px] text-body dark:text-[#a1a1aa] space-y-0.5">
+              <ul className="text-[11px] text-body dark:text-body-dark space-y-0.5">
                 {overlapConflicts.slice(0, 4).map(r => (
                   <li key={r.id} className="flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5 truncate">
@@ -338,7 +338,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
                   <li className="text-muted-soft">... و {overlapConflicts.length - 4} أخرى</li>
                 )}
               </ul>
-              <p className="text-[10px] text-muted-soft mt-1.5">
+              <p className="text-2xs text-muted-soft mt-1.5">
                 ضع أهميتها الأعلى لتسبق، أو الأقل لتتراجع أمامها.
               </p>
             </div>
@@ -370,11 +370,11 @@ export default function PricingRuleForm({ onClose, initialData }) {
             >
               <div className="flex items-center gap-2 mb-2">
                 <CalendarDays size={13} style={{ color: form.color }} />
-                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: form.color }}>
+                <span className="text-2xs font-semibold uppercase tracking-wider" style={{ color: form.color }}>
                   معاينة
                 </span>
               </div>
-              <p className="text-sm text-body dark:text-[#a1a1aa] leading-relaxed">
+              <p className="text-sm text-body dark:text-body-dark leading-relaxed">
                 خلال هذه الفترة (و{form.daysOfWeek.length === 0 ? 'كل الأيام' : dayScopeSummary})، سعر الليلة على {form.apartmentId ? previewApartment.name : 'كل الوحدات (بمثال)'} سيكون{' '}
                 <span className="font-black text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
                   {previewPrice} ر.س
@@ -387,7 +387,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
           )}
         </form>
 
-        <div className="px-6 py-4 border-t border-hairline-soft dark:border-[#242424] flex justify-end gap-3 shrink-0">
+        <div className="px-6 py-4 border-t border-hairline-soft dark:border-hairline-dark flex justify-end gap-3 shrink-0">
           <button type="button" onClick={onClose} className="btn-secondary h-10 px-5">
             إلغاء
           </button>

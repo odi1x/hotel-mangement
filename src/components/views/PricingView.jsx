@@ -94,9 +94,9 @@ export default function PricingView() {
         <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
-              <TagsIcon size={13} className="text-muted dark:text-[#a1a1aa]" />
+              <TagsIcon size={13} className="text-muted dark:text-body-dark" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               إجمالي القواعد
             </p>
           </div>
@@ -108,9 +108,9 @@ export default function PricingView() {
         <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
-              <Calendar size={13} className="text-muted dark:text-[#a1a1aa]" />
+              <Calendar size={13} className="text-muted dark:text-body-dark" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               قواعد نشطة الآن
             </p>
           </div>
@@ -124,9 +124,9 @@ export default function PricingView() {
         <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
-              <Home size={13} className="text-muted dark:text-[#a1a1aa]" />
+              <Home size={13} className="text-muted dark:text-body-dark" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               قواعد عامة (لكل الوحدات)
             </p>
           </div>
@@ -137,13 +137,13 @@ export default function PricingView() {
       </div>
 
       {/* Timeline */}
-      <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] p-5 mb-6">
+      <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold tracking-tight text-ink dark:text-white leading-tight">
               الجدول الزمني للأسعار
             </h3>
-            <p className="text-xs text-muted dark:text-[#a1a1aa] mt-0.5">
+            <p className="text-xs text-muted dark:text-body-dark mt-0.5">
               ١٢ شهراً قادمة — كل شريط يمثّل قاعدة سعرية
             </p>
           </div>
@@ -168,10 +168,10 @@ export default function PricingView() {
 
         {/* Month headers */}
         <div className="relative" dir="rtl">
-          <div className="grid grid-cols-12 border-b border-hairline-soft dark:border-[#242424] pb-1.5">
+          <div className="grid grid-cols-12 border-b border-hairline-soft dark:border-hairline-dark pb-1.5">
             {months.map((m, i) => (
-              <div key={i} className="text-center border-r border-hairline-soft dark:border-[#242424] last:border-r-0 first:border-r-0">
-                <div className="text-[10px] font-semibold text-muted dark:text-[#a1a1aa]">{m.label}</div>
+              <div key={i} className="text-center border-r border-hairline-soft dark:border-hairline-dark last:border-r-0 first:border-r-0">
+                <div className="text-2xs font-semibold text-muted dark:text-body-dark">{m.label}</div>
                 <div className="text-[9px] text-muted-soft">{m.year}</div>
               </div>
             ))}
@@ -180,7 +180,7 @@ export default function PricingView() {
           {/* Rows */}
           {scopedRules.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-muted dark:text-[#a1a1aa]">
+              <p className="text-sm text-muted dark:text-body-dark">
                 {pricingRules.length === 0
                   ? 'لم تُنشأ قواعد سعرية بعد. ابدأ بإنشاء قاعدة للحج أو رمضان.'
                   : 'لا توجد قواعد ضمن هذا النطاق للاثنى عشر شهراً القادمة.'}
@@ -193,7 +193,7 @@ export default function PricingView() {
                   {/* Faint month grid inside each row */}
                   <div className="absolute inset-0 grid grid-cols-12 pointer-events-none">
                     {months.map((_, i) => (
-                      <div key={i} className="border-r border-hairline-soft/60 dark:border-[#242424]/70 last:border-r-0 first:border-r-0"></div>
+                      <div key={i} className="border-r border-hairline-soft/60 dark:border-hairline-dark/70 last:border-r-0 first:border-r-0"></div>
                     ))}
                   </div>
 
@@ -220,8 +220,8 @@ export default function PricingView() {
       </div>
 
       {/* Rule list — plain */}
-      <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] overflow-hidden flex flex-col min-h-0">
-        <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
+      <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
+        <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
           <h3 className="font-semibold tracking-tight text-ink dark:text-white">قائمة القواعد</h3>
           <span className="badge-pill text-[11px] font-semibold">
             {pricingRules.length} قاعدة
@@ -237,7 +237,7 @@ export default function PricingView() {
               <p className="text-base font-semibold text-ink dark:text-white mb-1">
                 لا توجد قواعد سعرية بعد
               </p>
-              <p className="text-sm text-muted dark:text-[#a1a1aa] mb-4">
+              <p className="text-sm text-muted dark:text-body-dark mb-4">
                 أنشئ قاعدة موسمية لتطبيق أسعار مختلفة على فترات معيّنة تلقائياً.
               </p>
               <button onClick={() => setShowAdd(true)} className="btn-accent h-10 px-5 mx-auto">
@@ -246,7 +246,7 @@ export default function PricingView() {
               </button>
             </div>
           ) : (
-            <ul className="divide-y divide-hairline-soft dark:divide-[#242424]">
+            <ul className="divide-y divide-hairline-soft dark:divide-hairline-dark">
               {pricingRules.map(rule => {
                 const isActive = new Date(rule.startDate).getTime() <= now && new Date(rule.endDate).getTime() >= now;
                 const isPast = new Date(rule.endDate).getTime() < now;
@@ -262,18 +262,18 @@ export default function PricingView() {
                             {rule.label}
                           </p>
                           {isActive && (
-                            <span className="badge-pill badge-solid text-[10px] font-semibold">نشطة الآن</span>
+                            <span className="badge-pill badge-solid text-2xs font-semibold">نشطة الآن</span>
                           )}
                           {isPast && (
-                            <span className="badge-pill badge-ghost text-[10px] font-semibold">منتهية</span>
+                            <span className="badge-pill badge-ghost text-2xs font-semibold">منتهية</span>
                           )}
                           {rule.apartmentId ? (
-                            <span className="badge-pill badge-outline text-[10px] font-semibold">وحدة محددة</span>
+                            <span className="badge-pill badge-outline text-2xs font-semibold">وحدة محددة</span>
                           ) : (
-                            <span className="badge-pill badge-dashed text-[10px] font-semibold">كل الوحدات</span>
+                            <span className="badge-pill badge-dashed text-2xs font-semibold">كل الوحدات</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted dark:text-[#a1a1aa] flex-wrap">
+                        <div className="flex items-center gap-2 text-xs text-muted dark:text-body-dark flex-wrap">
                           <span>{dateFormat(rule.startDate)}</span>
                           <ArrowLeftRight size={11} className="text-muted-soft" />
                           <span>{dateFormat(rule.endDate)}</span>
@@ -289,7 +289,7 @@ export default function PricingView() {
                       </div>
 
                       <div className="text-left shrink-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-soft mb-0.5">
+                        <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-0.5">
                           {rule.priceMode === 'multiplier' ? 'المضاعف' : 'ثابت'}
                         </p>
                         <p className="text-lg font-bold tracking-tight" style={{ color: rule.color, fontVariantNumeric: 'tabular-nums' }}>
@@ -330,7 +330,7 @@ export default function PricingView() {
       {confirmDelete && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
           <div className="absolute inset-0" onClick={() => setConfirmDelete(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-[#2e2e2e] overflow-hidden">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
             <div className="p-6 text-center">
               <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-4">
                 <AlertTriangle className="h-7 w-7 text-ink dark:text-white" />
@@ -338,11 +338,11 @@ export default function PricingView() {
               <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white mb-1.5">
                 حذف هذه القاعدة السعرية؟
               </h3>
-              <p className="text-sm text-muted dark:text-[#a1a1aa]">
+              <p className="text-sm text-muted dark:text-body-dark">
                 لن تؤثر على الحجوزات القائمة، لكن الحجوزات الجديدة لن تستفيد منها.
               </p>
             </div>
-            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex gap-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex gap-3">
               <button
                 onClick={() => { deletePricingRule(confirmDelete); setConfirmDelete(null); }}
                 className="btn-primary flex-1"

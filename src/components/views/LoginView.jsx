@@ -34,21 +34,21 @@ export default function LoginView() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas dark:bg-surface-dark p-4" dir="rtl">
-      <div className="bg-canvas dark:bg-surface-dark-elevated p-8 rounded-xl shadow-soft w-full max-w-md border border-hairline dark:border-[#2e2e2e]">
+      <div className="bg-canvas dark:bg-surface-dark-elevated p-8 rounded-xl shadow-soft w-full max-w-md border border-hairline dark:border-hairline-dark-soft">
         <div className="flex flex-col items-center mb-8">
           <div className="bg-accent p-3 rounded-md mb-4 shadow-soft">
             <Home className="text-white" size={32} />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink dark:text-white">رنت فلو</h1>
-          <p className="text-muted dark:text-[#a1a1aa] text-sm mt-2">نظام إدارة الضيافة</p>
+          <p className="text-muted dark:text-body-dark text-sm mt-2">نظام إدارة الضيافة</p>
         </div>
 
-        {error && <div className="bg-surface-card dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] text-ink dark:text-white p-3 rounded-md mb-4 text-sm text-center">{error}</div>}
+        {error && <div className="bg-surface-card dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft text-ink dark:text-white p-3 rounded-md mb-4 text-sm text-center">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div className="flex flex-col items-center mb-6">
-              <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-3">الصورة الشخصية (اختياري)</label>
+              <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">الصورة الشخصية (اختياري)</label>
               <ImageUpload
                 onUploadSuccess={url => setProfilePicture(url)}
                 currentImage={profilePicture}
@@ -57,7 +57,7 @@ export default function LoginView() {
           )}
           {!isLogin && (
             <div>
-              <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">الاسم الكامل</label>
+              <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">الاسم الكامل</label>
               <input
                 required={!isLogin}
                 type="text"
@@ -68,7 +68,7 @@ export default function LoginView() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">اسم المستخدم</label>
+            <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">اسم المستخدم</label>
             <input
               name="username"
               required
@@ -79,7 +79,7 @@ export default function LoginView() {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">كلمة المرور</label>
+            <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">كلمة المرور</label>
             <input
               name="password"
               required

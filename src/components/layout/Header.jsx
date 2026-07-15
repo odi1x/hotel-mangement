@@ -33,7 +33,7 @@ export default function Header({ openStaffSettings, onNavigate }) {
         >
           <div className="text-left hidden sm:block">
             <p className="text-sm font-semibold text-ink dark:text-white">{user?.name || user?.username}</p>
-            <p className="text-xs text-muted dark:text-[#a1a1aa]">
+            <p className="text-xs text-muted dark:text-body-dark">
               {user?.role === 'admin' ? 'مدير النظام' : 'موظف'}
             </p>
           </div>
@@ -42,21 +42,21 @@ export default function Header({ openStaffSettings, onNavigate }) {
             {user?.profilePicture ? (
               <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <UserIcon className="w-5 h-5 text-muted dark:text-[#a1a1aa]" />
+              <UserIcon className="w-5 h-5 text-muted dark:text-body-dark" />
             )}
           </div>
         </button>
 
         {dropdownOpen && (
-          <div className="absolute left-0 mt-2 w-48 bg-canvas dark:bg-surface-dark-elevated rounded-lg shadow-soft border border-hairline dark:border-[#2e2e2e] py-1 overflow-hidden z-50">
-            <div className="px-4 py-3 border-b border-hairline-soft dark:border-[#2e2e2e] sm:hidden">
+          <div className="absolute left-0 mt-2 w-48 bg-canvas dark:bg-surface-dark-elevated rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft py-1 overflow-hidden z-50">
+            <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark-soft sm:hidden">
               <p className="text-sm font-semibold text-ink dark:text-white truncate">{user?.name || user?.username}</p>
-              <p className="text-xs text-muted dark:text-[#a1a1aa]">{user?.role === 'admin' ? 'مدير النظام' : 'موظف'}</p>
+              <p className="text-xs text-muted dark:text-body-dark">{user?.role === 'admin' ? 'مدير النظام' : 'موظف'}</p>
             </div>
 
             <button
               onClick={handleOpenSettings}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-[#242424] hover:text-ink dark:hover:text-white transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white transition-colors"
             >
               <Settings className="w-4 h-4" />
               <span>إعدادات الحساب</span>
@@ -67,7 +67,7 @@ export default function Header({ openStaffSettings, onNavigate }) {
                 setDropdownOpen(false);
                 logout();
               }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-[#242424] hover:text-ink dark:hover:text-white transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span>تسجيل الخروج</span>

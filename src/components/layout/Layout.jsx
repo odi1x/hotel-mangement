@@ -87,23 +87,23 @@ export default function Layout() {
             <h1 className="text-3xl font-bold tracking-tightest text-ink dark:text-white mb-1.5 leading-none">
               {getViewTitle()}
             </h1>
-            <p className="text-sm text-muted dark:text-[#a1a1aa]">{getViewSubtitle()}</p>
+            <p className="text-sm text-muted dark:text-body-dark">{getViewSubtitle()}</p>
           </div>
           {(user?.role === 'admin' || user?.permissions?.canBook) && (
             <div className="flex items-center space-x-reverse space-x-3">
 
               {view === 'apartments' && (
-                <div className="bg-canvas dark:bg-surface-dark-elevated p-1.5 rounded-md border border-hairline dark:border-[#2e2e2e] flex items-center gap-2 max-w-[300px]">
-                  <div className="bg-surface-card dark:bg-[#242424] p-1.5 rounded-md text-ink dark:text-white">
+                <div className="bg-canvas dark:bg-surface-dark-elevated p-1.5 rounded-md border border-hairline dark:border-hairline-dark-soft flex items-center gap-2 max-w-[300px]">
+                  <div className="bg-surface-card dark:bg-hairline-dark p-1.5 rounded-md text-ink dark:text-white">
                     <Share2 size={16} />
                   </div>
                   <div className="flex-1 overflow-hidden hidden md:block">
-                    <p className="text-[10px] text-muted dark:text-[#a1a1aa] mb-0.5 truncate">رابط الحجز المباشر للعملاء</p>
+                    <p className="text-2xs text-muted dark:text-body-dark mb-0.5 truncate">رابط الحجز المباشر للعملاء</p>
                     <input
                       type="text"
                       readOnly
                       value={shareableLink}
-                      className="w-full text-xs bg-transparent border-none outline-none text-body dark:text-[#a1a1aa] text-left truncate"
+                      className="w-full text-xs bg-transparent border-none outline-none text-body dark:text-body-dark text-left truncate"
                       dir="ltr"
                     />
                   </div>

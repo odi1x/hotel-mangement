@@ -31,8 +31,8 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-2xl shadow-soft border border-hairline dark:border-[#2e2e2e] flex flex-col max-h-[90vh]">
-        <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center rounded-t-xl">
+      <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-2xl shadow-soft border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[90vh]">
+        <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center rounded-t-xl">
           <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white flex items-center gap-2">
             <CalendarPlus className="text-ink dark:text-white" size={22} />
             حجز جديد
@@ -50,7 +50,7 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
 
           {/* Available units appear once a range is chosen */}
           {hasRange && (
-            <div className="mt-6 pt-6 border-t border-hairline-soft dark:border-[#242424]">
+            <div className="mt-6 pt-6 border-t border-hairline-soft dark:border-hairline-dark">
               <h3 className="font-semibold text-ink dark:text-white mb-4">
                 الوحدات المتاحة <span className="text-muted font-medium">({availableApartments.length})</span>
               </h3>
@@ -74,7 +74,7 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                               <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-canvas dark:bg-surface-dark text-ink dark:text-white border border-dashed border-muted-soft">تحتاج تنظيف</span>
                             )}
                           </div>
-                          <p className="text-xs text-muted dark:text-[#a1a1aa] mb-2">{apt.type}</p>
+                          <p className="text-xs text-muted dark:text-body-dark mb-2">{apt.type}</p>
                           <p className="text-lg font-semibold tracking-tight text-ink dark:text-white mb-4">
                             {apt.basePrice} <span className="text-xs text-muted font-semibold">ر.س / ليلة</span>
                           </p>
@@ -84,12 +84,12 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                           (user?.role === 'admin' || user?.permissions?.canEdit) ? (
                             <button
                               onClick={async () => await updateApartment({ ...apt, needsCleaning: false })}
-                              className="w-full bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] hover:bg-surface-soft dark:hover:bg-[#242424] text-ink dark:text-white py-2 rounded-md font-semibold text-sm transition-colors"
+                              className="w-full bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft hover:bg-surface-soft dark:hover:bg-hairline-dark text-ink dark:text-white py-2 rounded-md font-semibold text-sm transition-colors"
                             >
                               تحديد كـ "تم التنظيف"
                             </button>
                           ) : (
-                            <div className="w-full bg-surface-card dark:bg-surface-dark text-muted dark:text-[#a1a1aa] py-2 rounded-md font-semibold text-sm text-center">
+                            <div className="w-full bg-surface-card dark:bg-surface-dark text-muted dark:text-body-dark py-2 rounded-md font-semibold text-sm text-center">
                               الوحدة تحتاج لتنظيف
                             </div>
                           )
@@ -107,10 +107,10 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                 </div>
               ) : (
                 <div className="text-center py-10 bg-surface-card dark:bg-surface-dark-elevated rounded-lg">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-canvas dark:bg-surface-dark mb-3 border border-hairline dark:border-[#2e2e2e]">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-canvas dark:bg-surface-dark mb-3 border border-hairline dark:border-hairline-dark-soft">
                     <CalendarPlus size={24} className="text-muted-soft" />
                   </div>
-                  <p className="text-muted dark:text-[#a1a1aa] font-medium">لا توجد وحدات متاحة في هذه الفترة.</p>
+                  <p className="text-muted dark:text-body-dark font-medium">لا توجد وحدات متاحة في هذه الفترة.</p>
                 </div>
               )}
             </div>

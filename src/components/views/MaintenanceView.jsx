@@ -85,8 +85,8 @@ export default function MaintenanceView() {
   const severityBadge = (s) => {
     const map = {
       urgent:      { cls: 'bg-accent-strong text-white', dot: null },
-      normal:      { cls: 'bg-surface-soft text-body dark:bg-surface-dark-elevated dark:text-[#a1a1aa]', dot: null },
-      improvement: { cls: 'bg-transparent text-muted-soft border border-hairline dark:border-[#2e2e2e]', dot: null }
+      normal:      { cls: 'bg-surface-soft text-body dark:bg-surface-dark-elevated dark:text-body-dark', dot: null },
+      improvement: { cls: 'bg-transparent text-muted-soft border border-hairline dark:border-hairline-dark-soft', dot: null }
     };
     const v = map[s] || map.normal;
     return (
@@ -101,7 +101,7 @@ export default function MaintenanceView() {
     const map = {
       open:        { cls: 'border border-accent/60 text-accent-strong bg-accent-soft', Icon: Circle },
       in_progress: { cls: 'border border-dashed border-accent/60 text-accent-strong bg-transparent', Icon: CircleDashed },
-      resolved:    { cls: 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-[#a1a1aa]', Icon: CheckCircle2 }
+      resolved:    { cls: 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark', Icon: CheckCircle2 }
     };
     const v = map[s] || map.open;
     return (
@@ -119,9 +119,9 @@ export default function MaintenanceView() {
         <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
-              <Wrench size={13} className="text-muted dark:text-[#a1a1aa]" />
+              <Wrench size={13} className="text-muted dark:text-body-dark" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               مفتوحة الآن
             </p>
           </div>
@@ -135,7 +135,7 @@ export default function MaintenanceView() {
             <div className="p-1.5 rounded-md bg-accent-soft">
               <AlertTriangle size={13} className="text-accent-strong" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               عاجلة
             </p>
           </div>
@@ -147,9 +147,9 @@ export default function MaintenanceView() {
         <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
-              <CircleDashed size={13} className="text-muted dark:text-[#a1a1aa]" />
+              <CircleDashed size={13} className="text-muted dark:text-body-dark" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               قيد المعالجة
             </p>
           </div>
@@ -161,9 +161,9 @@ export default function MaintenanceView() {
         <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
-              <CheckCircle2 size={13} className="text-muted dark:text-[#a1a1aa]" />
+              <CheckCircle2 size={13} className="text-muted dark:text-body-dark" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               أُنجزت هذا الشهر
             </p>
           </div>
@@ -174,8 +174,8 @@ export default function MaintenanceView() {
       </div>
 
       {/* Main list */}
-      <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] overflow-hidden flex flex-col min-h-0">
-        <div className="p-4 border-b border-hairline-soft dark:border-[#242424] shrink-0">
+      <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
+        <div className="p-4 border-b border-hairline-soft dark:border-hairline-dark shrink-0">
           <div className="flex justify-between items-center gap-4 mb-4">
             <h3 className="font-semibold tracking-tight text-ink dark:text-white shrink-0">
               سجل البلاغات
@@ -202,7 +202,7 @@ export default function MaintenanceView() {
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 mr-1">
               <Filter size={12} className="text-muted-soft" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-soft">تصفية:</span>
+              <span className="text-2xs font-semibold uppercase tracking-wider text-muted-soft">تصفية:</span>
             </div>
 
             <div className="nav-pill-group">
@@ -217,7 +217,7 @@ export default function MaintenanceView() {
                   onClick={() => setStatusFilter(o.v)}
                   className={`h-7 px-3 rounded-full text-xs font-semibold transition-colors ${
                     statusFilter === o.v
-                      ? 'bg-canvas text-ink shadow-pill dark:bg-[#2e2e2e] dark:text-white'
+                      ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
                       : 'text-muted hover:text-ink dark:hover:text-white'
                   }`}
                 >
@@ -259,14 +259,14 @@ export default function MaintenanceView() {
               <p className="text-base font-semibold text-ink dark:text-white mb-1">
                 لا توجد بلاغات مطابقة
               </p>
-              <p className="text-sm text-muted dark:text-[#a1a1aa]">
+              <p className="text-sm text-muted dark:text-body-dark">
                 {maintenanceIssues.length === 0
                   ? 'ابدأ بتوثيق مشكلة صيانة أولى.'
                   : 'جرّب تعديل عوامل التصفية أعلاه.'}
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-hairline-soft dark:divide-[#242424]">
+            <ul className="divide-y divide-hairline-soft dark:divide-hairline-dark">
               {filtered.map(issue => {
                 const apt = apartments.find(a => a.id === issue.apartmentId);
                 const days = daysOpen(issue);
@@ -289,7 +289,7 @@ export default function MaintenanceView() {
                           {severityBadge(issue.severity)}
                           {statusBadge(issue.status)}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted dark:text-[#a1a1aa] mb-1">
+                        <div className="flex items-center gap-2 text-xs text-muted dark:text-body-dark mb-1">
                           <span className="font-medium">{apt?.name || 'وحدة محذوفة'}</span>
                           <span className="text-muted-soft">·</span>
                           <span>{categoryLabel(issue.category)}</span>
@@ -309,7 +309,7 @@ export default function MaintenanceView() {
                           )}
                         </div>
                         {issue.description && (
-                          <p className="text-xs text-muted dark:text-[#a1a1aa] mt-1 line-clamp-2">
+                          <p className="text-xs text-muted dark:text-body-dark mt-1 line-clamp-2">
                             {issue.description}
                           </p>
                         )}
@@ -374,7 +374,7 @@ export default function MaintenanceView() {
       {confirmDelete && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
           <div className="absolute inset-0" onClick={() => setConfirmDelete(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-[#2e2e2e] overflow-hidden">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
             <div className="p-6 text-center">
               <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-4">
                 <AlertTriangle className="h-7 w-7 text-ink dark:text-white" />
@@ -382,11 +382,11 @@ export default function MaintenanceView() {
               <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white mb-1.5">
                 حذف هذا البلاغ؟
               </h3>
-              <p className="text-sm text-muted dark:text-[#a1a1aa]">
+              <p className="text-sm text-muted dark:text-body-dark">
                 سيتم فقدان سجل البلاغ نهائياً. يفضّل تحديث حالته إلى «منجَز» بدلاً من الحذف.
               </p>
             </div>
-            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex gap-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex gap-3">
               <button
                 onClick={() => { deleteMaintenanceIssue(confirmDelete); setConfirmDelete(null); }}
                 className="btn-primary flex-1"

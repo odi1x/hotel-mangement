@@ -200,13 +200,13 @@ export default function SettingsView() {
     <div className="h-full overflow-hidden flex flex-col w-full max-w-6xl mx-auto">
 
       {user?.role === 'admin' && (
-        <div className="flex gap-6 border-b border-hairline dark:border-[#242424]">
+        <div className="flex gap-6 border-b border-hairline dark:border-hairline-dark">
           <button
             onClick={() => setActiveTab('general')}
             className={`pb-3 pt-1 font-semibold text-sm transition-colors flex items-center gap-2 border-b-2 -mb-px ${
               activeTab === 'general'
                 ? 'text-ink dark:text-white border-ink dark:border-white'
-                : 'text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white border-transparent'
+                : 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white border-transparent'
             }`}
           >
             <Settings size={18} />
@@ -217,7 +217,7 @@ export default function SettingsView() {
             className={`pb-3 pt-1 font-semibold text-sm transition-colors flex items-center gap-2 border-b-2 -mb-px ${
               activeTab === 'staff'
                 ? 'text-ink dark:text-white border-ink dark:border-white'
-                : 'text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white border-transparent'
+                : 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white border-transparent'
             }`}
           >
             <Shield size={18} />
@@ -231,11 +231,11 @@ export default function SettingsView() {
           <StaffManagement />
         </div>
       ) : (
-      <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] flex flex-col flex-1 min-h-0 overflow-hidden mt-4">
+      <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark flex flex-col flex-1 min-h-0 overflow-hidden mt-4">
 
         {/* Sub-Navigation for General Settings — nav-pill-group */}
         <div className="p-6 md:p-8 pb-0 shrink-0">
-          <div className="mb-4 border-b border-hairline-soft dark:border-[#242424] pb-4">
+          <div className="mb-4 border-b border-hairline-soft dark:border-hairline-dark pb-4">
             <div className="nav-pill-group flex-wrap">
               {facilitySubTabs.map(tab => (
                 <button
@@ -254,7 +254,7 @@ export default function SettingsView() {
           <div className="flex-1 min-h-0 overflow-y-auto px-6 md:px-8 pt-4 pb-6">
             <div className="space-y-6 max-w-3xl">
               {successMsg && (
-                <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-[#2e2e2e]">
+                <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-hairline-dark-soft">
                   {successMsg}
                 </div>
               )}
@@ -263,7 +263,7 @@ export default function SettingsView() {
           {facilityTab === 'identity' && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 <div>
-                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">اسم المنشأة / العقار</label>
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">اسم المنشأة / العقار</label>
                   <input
                     type="text"
                     name="businessName"
@@ -275,10 +275,10 @@ export default function SettingsView() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">شعار المنشأة (للطباعة)</label>
-                    <label className="border border-dashed border-hairline dark:border-[#2e2e2e] rounded-md p-4 flex flex-col items-center justify-center bg-surface-soft dark:bg-surface-dark-elevated hover:bg-surface-card dark:hover:bg-[#242424] transition cursor-pointer">
+                    <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">شعار المنشأة (للطباعة)</label>
+                    <label className="border border-dashed border-hairline dark:border-hairline-dark-soft rounded-md p-4 flex flex-col items-center justify-center bg-surface-soft dark:bg-surface-dark-elevated hover:bg-surface-card dark:hover:bg-hairline-dark transition cursor-pointer">
                       <UploadCloud size={24} className="text-muted mb-2" />
-                      <span className="text-sm font-medium text-muted dark:text-[#a1a1aa]">اضغط هنا لرفع الشعار</span>
+                      <span className="text-sm font-medium text-muted dark:text-body-dark">اضغط هنا لرفع الشعار</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -286,14 +286,14 @@ export default function SettingsView() {
                         className="hidden"
                       />
                     </label>
-                    {formData.logoUrl && <img src={formData.logoUrl} alt="Logo preview" className="mt-4 h-20 object-contain rounded-md border border-hairline dark:border-[#2e2e2e] p-2" />}
+                    {formData.logoUrl && <img src={formData.logoUrl} alt="Logo preview" className="mt-4 h-20 object-contain rounded-md border border-hairline dark:border-hairline-dark-soft p-2" />}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">الختم / التوقيع (للطباعة)</label>
-                    <label className="border border-dashed border-hairline dark:border-[#2e2e2e] rounded-md p-4 flex flex-col items-center justify-center bg-surface-soft dark:bg-surface-dark-elevated hover:bg-surface-card dark:hover:bg-[#242424] transition cursor-pointer">
+                    <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">الختم / التوقيع (للطباعة)</label>
+                    <label className="border border-dashed border-hairline dark:border-hairline-dark-soft rounded-md p-4 flex flex-col items-center justify-center bg-surface-soft dark:bg-surface-dark-elevated hover:bg-surface-card dark:hover:bg-hairline-dark transition cursor-pointer">
                       <UploadCloud size={24} className="text-muted mb-2" />
-                      <span className="text-sm font-medium text-muted dark:text-[#a1a1aa]">اضغط هنا لرفع الختم</span>
+                      <span className="text-sm font-medium text-muted dark:text-body-dark">اضغط هنا لرفع الختم</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -301,7 +301,7 @@ export default function SettingsView() {
                         className="hidden"
                       />
                     </label>
-                    {formData.stampUrl && <img src={formData.stampUrl} alt="Stamp preview" className="mt-4 h-20 object-contain rounded-md border border-hairline dark:border-[#2e2e2e] p-2" />}
+                    {formData.stampUrl && <img src={formData.stampUrl} alt="Stamp preview" className="mt-4 h-20 object-contain rounded-md border border-hairline dark:border-hairline-dark-soft p-2" />}
                   </div>
                 </div>
               </div>
@@ -311,7 +311,7 @@ export default function SettingsView() {
           {facilityTab === 'legal' && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 <div>
-                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">أرقام التراخيص (تراخيص السياحة)</label>
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">أرقام التراخيص (تراخيص السياحة)</label>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -353,11 +353,11 @@ export default function SettingsView() {
                         </button>
                       </div>
                     ))}
-                    {licenses.length === 0 && <span className="text-sm text-muted p-4 bg-surface-soft dark:bg-surface-dark-elevated rounded-md border border-dashed border-hairline dark:border-[#2e2e2e] text-center">لا توجد تراخيص مضافة</span>}
+                    {licenses.length === 0 && <span className="text-sm text-muted p-4 bg-surface-soft dark:bg-surface-dark-elevated rounded-md border border-dashed border-hairline dark:border-hairline-dark-soft text-center">لا توجد تراخيص مضافة</span>}
                   </div>
                 </div>
 
-                <div className="border border-hairline dark:border-[#2e2e2e] rounded-lg p-5 bg-surface-soft dark:bg-surface-dark-elevated">
+                <div className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-5 bg-surface-soft dark:bg-surface-dark-elevated">
                   <div className="flex items-center mb-4">
                     <input
                       type="checkbox"
@@ -367,12 +367,12 @@ export default function SettingsView() {
                       onChange={handleChange}
                       className="w-5 h-5 accent-black bg-white border-hairline rounded ml-3"
                     />
-                    <label htmlFor="taxEnabled" className="text-sm font-semibold text-body dark:text-[#a1a1aa] cursor-pointer">تفعيل ضريبة القيمة المضافة / رسوم البلدية</label>
+                    <label htmlFor="taxEnabled" className="text-sm font-semibold text-body dark:text-body-dark cursor-pointer">تفعيل ضريبة القيمة المضافة / رسوم البلدية</label>
                   </div>
 
                   {formData.taxEnabled && (
                     <div className="w-1/2">
-                      <label className="block text-xs font-semibold text-muted dark:text-[#a1a1aa] mb-2">النسبة المئوية (%)</label>
+                      <label className="block text-xs font-semibold text-muted dark:text-body-dark mb-2">النسبة المئوية (%)</label>
                       <input
                         type="number"
                         name="taxPercentage"
@@ -388,7 +388,7 @@ export default function SettingsView() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-2">الشروط والأحكام المخصصة (تظهر في العقد)</label>
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">الشروط والأحكام المخصصة (تظهر في العقد)</label>
                   <textarea
                     name="customTerms"
                     value={formData.customTerms}
@@ -404,30 +404,30 @@ export default function SettingsView() {
           {/* Finance Tab */}
           {facilityTab === 'finance' && (
               <div className="space-y-6 animate-in fade-in duration-300 flex flex-col min-h-[400px]">
-                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-6 rounded-lg border border-hairline dark:border-[#2e2e2e]">
-                  <h3 className="text-sm font-semibold text-ink dark:text-white mb-6 flex items-center border-b border-hairline dark:border-[#2e2e2e] pb-3">التكاليف والمصروفات التشغيلية الثابتة (شهرياً)</h3>
+                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-6 rounded-lg border border-hairline dark:border-hairline-dark-soft">
+                  <h3 className="text-sm font-semibold text-ink dark:text-white mb-6 flex items-center border-b border-hairline dark:border-hairline-dark-soft pb-3">التكاليف والمصروفات التشغيلية الثابتة (شهرياً)</h3>
 
                   <div className="flex flex-col gap-6 mb-6">
                                         {/* Staff Expenses Management */}
-                    <div className="mt-8 border-t border-hairline dark:border-[#242424] pt-8">
+                    <div className="mt-8 border-t border-hairline dark:border-hairline-dark pt-8">
                       <h3 className="text-base font-semibold text-ink dark:text-white mb-6">الرواتب والموظفين</h3>
 
-                      <div className="mb-6 rounded-lg border border-hairline dark:border-[#2e2e2e] overflow-hidden">
+                      <div className="mb-6 rounded-lg border border-hairline dark:border-hairline-dark-soft overflow-hidden">
                         <table className="w-full text-right">
-                          <thead className="bg-canvas dark:bg-surface-dark border-b border-hairline dark:border-[#2e2e2e]">
+                          <thead className="bg-canvas dark:bg-surface-dark border-b border-hairline dark:border-hairline-dark-soft">
                             <tr>
-                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-[#a1a1aa]">الاسم / المسمى</th>
-                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-[#a1a1aa]">الراتب الشهري</th>
-                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-[#a1a1aa]">النطاق</th>
-                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-[#a1a1aa]">إجراء</th>
+                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-body-dark">الاسم / المسمى</th>
+                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-body-dark">الراتب الشهري</th>
+                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-body-dark">النطاق</th>
+                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-body-dark">إجراء</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-[#242424] bg-canvas dark:bg-surface-dark">
+                          <tbody className="divide-y divide-hairline-soft dark:divide-hairline-dark bg-canvas dark:bg-surface-dark">
                             {staffExpenses?.map(staff => (
                               <tr key={staff.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
                                 <td className="px-4 py-3 text-sm font-medium text-ink dark:text-white">{staff.name}</td>
-                                <td className="px-4 py-3 text-sm text-muted dark:text-[#a1a1aa]">{staff.monthlySalary} ر.س</td>
-                                <td className="px-4 py-3 text-sm text-muted dark:text-[#a1a1aa]">{staff.scope === 'all' ? 'جميع الوحدات' : staff.scope?.split(',').length + ' وحدات'}</td>
+                                <td className="px-4 py-3 text-sm text-muted dark:text-body-dark">{staff.monthlySalary} ر.س</td>
+                                <td className="px-4 py-3 text-sm text-muted dark:text-body-dark">{staff.scope === 'all' ? 'جميع الوحدات' : staff.scope?.split(',').length + ' وحدات'}</td>
                                 <td className="px-4 py-3 text-sm">
                                   <button
                                     onClick={async () => {
@@ -448,15 +448,15 @@ export default function SettingsView() {
                             ))}
                             {(!staffExpenses || staffExpenses.length === 0) && (
                               <tr>
-                                <td colSpan="4" className="px-4 py-6 text-center text-sm text-muted dark:text-[#a1a1aa]">لا يوجد موظفين مضافين</td>
+                                <td colSpan="4" className="px-4 py-6 text-center text-sm text-muted dark:text-body-dark">لا يوجد موظفين مضافين</td>
                               </tr>
                             )}
                           </tbody>
                         </table>
                       </div>
 
-                      <div className="bg-canvas dark:bg-surface-dark p-4 rounded-lg border border-hairline dark:border-[#2e2e2e] space-y-4">
-                        <h4 className="text-sm font-semibold text-body dark:text-[#a1a1aa]">إضافة مصروف راتب +</h4>
+                      <div className="bg-canvas dark:bg-surface-dark p-4 rounded-lg border border-hairline dark:border-hairline-dark-soft space-y-4">
+                        <h4 className="text-sm font-semibold text-body dark:text-body-dark">إضافة مصروف راتب +</h4>
                         <div className="flex flex-col md:flex-row gap-4">
                           <div className="flex-grow">
                             <input
@@ -541,7 +541,7 @@ export default function SettingsView() {
 
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-body dark:text-[#a1a1aa] mb-2">مصروفات عامة أخرى (إيجارات، كهرباء، ماء، إنترنت)</label>
+                    <label className="block text-xs font-semibold text-body dark:text-body-dark mb-2">مصروفات عامة أخرى (إيجارات، كهرباء، ماء، إنترنت)</label>
                     <div className="relative md:w-1/2">
                       <input
                         type="number"
@@ -556,7 +556,7 @@ export default function SettingsView() {
                   </div>
                 </div>
 
-                <div className="mt-auto pt-6 text-xs text-body dark:text-[#a1a1aa]">
+                <div className="mt-auto pt-6 text-xs text-body dark:text-body-dark">
                     <p className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg leading-relaxed">
                         <span className="font-semibold text-ink dark:text-white block mb-1">كيفية الحساب:</span>
                         يقوم النظام تلقائياً بتجزئة المصروفات الشهرية الثابتة وتحويلها إلى تكلفة يومية تضاف على الحجوزات بشكل دقيق. يتم تقسيم المصروفات العامة على جميع الوحدات بالتساوي، بينما يتم تخصيص رواتب الموظفين للوحدات المحددة في نطاق عملهم فقط.
@@ -576,7 +576,7 @@ export default function SettingsView() {
                         <BellRing size={18} className="text-ink dark:text-white" />
                         إشعارات المتصفح
                       </h3>
-                      <p className="text-xs text-muted dark:text-[#a1a1aa] mt-1">تلقي تنبيهات فورية حتى عند إغلاق التطبيق</p>
+                      <p className="text-xs text-muted dark:text-body-dark mt-1">تلقي تنبيهات فورية حتى عند إغلاق التطبيق</p>
                     </div>
                     <button
                       type="button"
@@ -602,7 +602,7 @@ export default function SettingsView() {
                       <span className="w-4 h-4 rounded-full bg-accent inline-block"></span>
                       لون النظام
                     </h3>
-                    <p className="text-xs text-muted dark:text-[#a1a1aa] mb-4">يُطبَّق فوراً على الأزرار والتقويم والتنبيهات وشريط التمرير.</p>
+                    <p className="text-xs text-muted dark:text-body-dark mb-4">يُطبَّق فوراً على الأزرار والتقويم والتنبيهات وشريط التمرير.</p>
                     <div className="flex flex-wrap gap-3">
                       {ACCENTS.map(a => (
                         <button
@@ -620,7 +620,7 @@ export default function SettingsView() {
                   </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-3">أنواع الوحدات المتاحة</label>
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">أنواع الوحدات المتاحة</label>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -655,8 +655,8 @@ export default function SettingsView() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-hairline-soft dark:border-[#242424]">
-                  <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-3">مصادر الحجوزات</label>
+                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">مصادر الحجوزات</label>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -695,7 +695,7 @@ export default function SettingsView() {
 
             </div>
           </div>
-          <div className="shrink-0 p-6 md:p-8 border-t border-hairline-soft dark:border-[#242424] flex justify-start">
+          <div className="shrink-0 p-6 md:p-8 border-t border-hairline-soft dark:border-hairline-dark flex justify-start">
             <button
               type="submit"
             disabled={loading}

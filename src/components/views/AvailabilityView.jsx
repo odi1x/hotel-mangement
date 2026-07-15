@@ -70,7 +70,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex,
   return (
     <div
       ref={cellRef}
-      className={`flex flex-col min-h-0 h-full p-2.5 border-b border-l border-[1px] border-gray-100 dark:border-[#242424] last:border-l-0 relative group transition-colors overflow-hidden
+      className={`flex flex-col min-h-0 h-full p-2.5 border-b border-l border-[1px] border-hairline-soft dark:border-hairline-dark last:border-l-0 relative group transition-colors overflow-hidden
         ${!dayObj.isCurrentMonth ? 'bg-surface-soft/60 dark:bg-surface-dark-elevated/40' : 'bg-canvas dark:bg-surface-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60'}
       `}
       onClick={() => setSelectedDayBookings({ date: dayObj.date, bookings: dayBookings })}
@@ -78,10 +78,10 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex,
       <div className="flex justify-between items-start mb-1 shrink-0">
         <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full
           ${isToday ? 'bg-accent text-white' :
-            !dayObj.isCurrentMonth ? 'text-muted-soft dark:text-[#555]' : 'text-body dark:text-[#a1a1aa]'
+            !dayObj.isCurrentMonth ? 'text-muted-soft dark:text-[#555]' : 'text-body dark:text-body-dark'
           }
         `}>{dayObj.date.getDate()}</span>
-        {isToday && <span className="text-[10px] font-semibold text-accent">اليوم</span>}
+        {isToday && <span className="text-2xs font-semibold text-accent">اليوم</span>}
       </div>
 
       <div className="flex-1 min-h-0 w-full flex flex-col gap-[3px] overflow-hidden">
@@ -100,14 +100,14 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex,
               style={style}
               className={`text-[11px] px-2 rounded-md flex items-center h-[22px] font-semibold truncate cursor-pointer transition-opacity hover:opacity-80 shrink-0 w-full border
                 ${isPending
-                  ? 'bg-surface-soft text-muted border-dashed border-hairline dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#3a3a3a]'
+                  ? 'bg-surface-soft text-muted border-dashed border-hairline dark:bg-surface-dark-elevated dark:text-body-dark dark:border-[#3a3a3a]'
                   : 'border-solid'}`}
               onClick={(e) => { e.stopPropagation(); setSelectedBookingDetails(booking); }}
             ><span className="opacity-70 ml-1 truncate">{apt.name}:</span><span className="truncate">{booking.residentName}</span></div>
           );
         })}
         {hiddenCount > 0 && (
-          <div className="shrink-0 mt-auto text-[10px] font-semibold text-muted dark:text-[#a1a1aa] px-1.5 py-0.5">
+          <div className="shrink-0 mt-auto text-2xs font-semibold text-muted dark:text-body-dark px-1.5 py-0.5">
             +{hiddenCount} أخرى
           </div>
         )}
@@ -275,17 +275,17 @@ export default function AvailabilityView({ openBookingForm }) {
   };
 
   return (
-    <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center bg-canvas dark:bg-surface-dark">
+    <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
+      <div className="p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center bg-canvas dark:bg-surface-dark">
         <div className="flex items-center space-x-reverse space-x-4">
           <h3 className="font-semibold text-ink dark:text-white flex items-center text-lg tracking-tight">
             <Calendar size={20} className="ml-2 text-ink dark:text-white" />
             {rangeLabel}
           </h3>
-          <div className="flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-[#2e2e2e] rounded-md p-1 mr-4">
-            <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-[#242424] rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={18} /></button>
-            <button onClick={handleToday} className="px-4 text-xs font-semibold text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-[#242424] hover:text-ink dark:hover:text-white rounded py-1 transition-colors">اليوم</button>
-            <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-[#242424] rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={18} /></button>
+          <div className="flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-1 mr-4">
+            <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={18} /></button>
+            <button onClick={handleToday} className="px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-1 transition-colors">اليوم</button>
+            <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={18} /></button>
           </div>
           <div className="nav-pill-group">
             {[{ id: 'week', t: 'أسبوع' }, { id: 'half', t: 'نصف شهر' }, { id: 'month', t: 'شهر' }].map(v => (
@@ -294,7 +294,7 @@ export default function AvailabilityView({ openBookingForm }) {
           </div>
         </div>
         <div className="flex items-center space-x-reverse space-x-4">
-          <p className="badge-pill text-muted dark:text-[#a1a1aa] hidden lg:inline-flex">
+          <p className="badge-pill text-muted dark:text-body-dark hidden lg:inline-flex">
             اسحب على الخلايا الفارغة لإنشاء حجز
           </p>
           <div className="relative" ref={filterRef}>
@@ -307,7 +307,7 @@ export default function AvailabilityView({ openBookingForm }) {
             </button>
 
             {filterOpen && (
-              <div className="absolute left-0 mt-2 w-72 bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] rounded-xl shadow-soft z-50 p-4">
+              <div className="absolute left-0 mt-2 w-72 bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-xl shadow-soft z-50 p-4">
                 {/* mini calendar — jump to date */}
                 <div className="text-xs font-semibold text-muted mb-2">الانتقال إلى تاريخ</div>
                 {(() => {
@@ -327,7 +327,7 @@ export default function AvailabilityView({ openBookingForm }) {
                         <button onClick={() => setPickerMonth(new Date(py, pm + 1, 1))} className="icon-action p-1"><ChevronLeft size={16} /></button>
                       </div>
                       <div className="grid grid-cols-7 gap-0.5 text-center">
-                        {['أ','ن','ث','ر','خ','ج','س'].map((w, i) => <div key={i} className="text-[10px] text-muted-soft py-1">{w}</div>)}
+                        {['أ','ن','ث','ر','خ','ج','س'].map((w, i) => <div key={i} className="text-2xs text-muted-soft py-1">{w}</div>)}
                         {cells.map((d, i) => {
                           if (d === null) return <div key={`e${i}`}></div>;
                           const dt = new Date(py, pm, d);
@@ -335,7 +335,7 @@ export default function AvailabilityView({ openBookingForm }) {
                           const isSel = dt.toDateString() === selStr;
                           return (
                             <button key={i} onClick={() => { setCurrentDate(dt); setFilterOpen(false); }}
-                              className={`text-xs w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSel ? 'bg-accent text-white font-semibold' : isToday ? 'text-accent font-bold' : 'text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-surface-dark-elevated'}`}>
+                              className={`text-xs w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSel ? 'bg-accent text-white font-semibold' : isToday ? 'text-accent font-bold' : 'text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated'}`}>
                               {d}
                             </button>
                           );
@@ -346,7 +346,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 })()}
 
                 {/* unit filter — MUI-style resources */}
-                <div className="border-t border-hairline-soft dark:border-[#242424] mt-3 pt-3">
+                <div className="border-t border-hairline-soft dark:border-hairline-dark mt-3 pt-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold text-muted">الوحدات</span>
                     {unitFilter.length > 0 && <button onClick={() => setUnitFilter([])} className="text-[11px] link-accent">عرض الكل</button>}
@@ -400,7 +400,7 @@ export default function AvailabilityView({ openBookingForm }) {
           <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none">
             <div style={{ display: 'grid', gridTemplateColumns: `150px repeat(${N}, minmax(${minCol}px, 1fr))`, minWidth: 'min-content' }}>
               {/* corner */}
-              <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex items-center justify-center text-xs font-semibold text-muted dark:text-[#a1a1aa]" style={{ gridColumn: 1, gridRow: 1, height: 46, ...frozenShadow }}>
+              <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center justify-center text-xs font-semibold text-muted dark:text-body-dark" style={{ gridColumn: 1, gridRow: 1, height: 46, ...frozenShadow }}>
                 الوحدة
               </div>
               {/* day headers */}
@@ -408,9 +408,9 @@ export default function AvailabilityView({ openBookingForm }) {
                 const isToday = floorDay(dt) === todayN;
                 const wknd = isWknd(dt);
                 return (
-                  <div key={`h${i}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-gray-100 dark:border-[#242424] flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 46, ...(isToday ? { borderLeft: '2px solid rgb(var(--accent-rgb))' } : {}) }}>
-                    <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-accent text-white' : wknd ? 'text-muted-soft' : 'text-body dark:text-[#a1a1aa]'}`}>{dt.getDate()}</span>
-                    <span className="text-[10px] mt-0.5 text-muted-soft">{wd[dt.getDay()]}</span>
+                  <div key={`h${i}`} className="sticky top-0 z-30 bg-canvas dark:bg-surface-dark border-b border-l border-hairline-soft dark:border-hairline-dark flex flex-col items-center justify-center" style={{ gridColumn: 2 + i, gridRow: 1, height: 46, ...(isToday ? { borderLeft: '2px solid rgb(var(--accent-rgb))' } : {}) }}>
+                    <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-accent text-white' : wknd ? 'text-muted-soft' : 'text-body dark:text-body-dark'}`}>{dt.getDate()}</span>
+                    <span className="text-2xs mt-0.5 text-muted-soft">{wd[dt.getDay()]}</span>
                   </div>
                 );
               })}
@@ -424,7 +424,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 return (
                   <Fragment key={apt.id}>
                     {/* sticky unit label */}
-                    <div className="sticky right-0 z-20 border-b border-l border-gray-100 dark:border-[#242424] flex items-center gap-2 px-3" style={{ gridColumn: 1, gridRow: row, height: rowH, ...frozenShadow, backgroundColor: r % 2 === 1 ? (darkMode ? '#161514' : '#fcfcfb') : (darkMode ? '#101010' : '#ffffff') }}>
+                    <div className="sticky right-0 z-20 border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center gap-2 px-3" style={{ gridColumn: 1, gridRow: row, height: rowH, ...frozenShadow, backgroundColor: r % 2 === 1 ? (darkMode ? '#161514' : '#fcfcfb') : (darkMode ? '#101010' : '#ffffff') }}>
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: unitColor }}></span>
                       <span className="text-sm font-semibold text-ink dark:text-white truncate">{apt.name}</span>
                     </div>
@@ -438,7 +438,7 @@ export default function AvailabilityView({ openBookingForm }) {
                           key={`c${apt.id}-${i}`}
                           onMouseDown={canBook ? (ev) => { ev.preventDefault(); setDragSel({ aptId: apt.id, startIdx: i, curIdx: i }); } : undefined}
                           onMouseEnter={canBook ? () => setDragSel(prev => (prev && prev.aptId === apt.id) ? { ...prev, curIdx: i } : prev) : undefined}
-                          className={`border-b border-l border-gray-100 dark:border-[#242424] transition-colors ${canBook ? 'cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60' : ''}`}
+                          className={`border-b border-l border-hairline-soft dark:border-hairline-dark transition-colors ${canBook ? 'cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60' : ''}`}
                           style={{ gridColumn: 2 + i, gridRow: row, height: rowH, backgroundColor: inDrag ? 'rgb(var(--accent-rgb) / 0.14)' : cellBg(isToday, wknd, r), ...(isToday ? { borderLeft: '2px solid rgb(var(--accent-rgb))' } : {}) }}
                           title={canBook ? 'اسحب لإنشاء حجز' : ''}
                         ></div>
@@ -487,12 +487,12 @@ export default function AvailabilityView({ openBookingForm }) {
                           onClick={(ev) => { ev.stopPropagation(); setSelectedBookingDetails(b); }}
                           onMouseDown={(ev) => ev.stopPropagation()}
                           title={tip}
-                          className={`self-center flex items-center gap-1 pr-2.5 pl-2 h-[32px] text-[12px] font-semibold cursor-pointer transition-all hover:brightness-95 ${isPending ? 'bg-transparent text-muted border border-dashed border-hairline dark:text-[#a1a1aa] dark:border-[#4a463f]' : ''}`}
+                          className={`self-center flex items-center gap-1 pr-2.5 pl-2 h-[32px] text-[12px] font-semibold cursor-pointer transition-all hover:brightness-95 ${isPending ? 'bg-transparent text-muted border border-dashed border-hairline dark:text-body-dark dark:border-[#4a463f]' : ''}`}
                           style={style}
                         >
                           {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" title="مقيم حالياً"></span>}
                           <span className="truncate">{b.residentName}</span>
-                          {isPending && <span className="text-[10px] opacity-70 shrink-0">(معلّق)</span>}
+                          {isPending && <span className="text-2xs opacity-70 shrink-0">(معلّق)</span>}
                         </div>
                       );
                     })}
@@ -511,8 +511,8 @@ export default function AvailabilityView({ openBookingForm }) {
       {/* First Modal: List of bookings for the selected day */}
       {selectedDayBookings && !selectedBookingDetails && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-[#2e2e2e] overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+          <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">حجوزات يوم {formatDateAr(selectedDayBookings.date)}</h2>
               <button onClick={() => setSelectedDayBookings(null)} className="icon-action">
                 <X size={20} />
@@ -528,7 +528,7 @@ export default function AvailabilityView({ openBookingForm }) {
                       <div
                         key={booking.id}
                         onClick={() => setSelectedBookingDetails(booking)}
-                        className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg cursor-pointer hover:bg-surface-strong/60 dark:hover:bg-[#242424] transition-colors group"
+                        className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg cursor-pointer hover:bg-surface-strong/60 dark:hover:bg-hairline-dark transition-colors group"
                       >
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-semibold text-ink dark:text-white flex items-center gap-2">
@@ -541,7 +541,7 @@ export default function AvailabilityView({ openBookingForm }) {
                             <span className="badge-pill font-semibold">{booking.pricePerNight} ر.س</span>
                           )}
                         </div>
-                        <div className="flex items-center text-sm text-muted dark:text-[#a1a1aa]">
+                        <div className="flex items-center text-sm text-muted dark:text-body-dark">
                           <User size={14} className="ml-1" />
                           {booking.residentName}
                         </div>
@@ -550,12 +550,12 @@ export default function AvailabilityView({ openBookingForm }) {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-10 text-muted dark:text-[#a1a1aa] font-medium">لا توجد حجوزات في هذا اليوم</div>
+                <div className="text-center py-10 text-muted dark:text-body-dark font-medium">لا توجد حجوزات في هذا اليوم</div>
               )}
             </div>
 
             {(user?.role === 'admin' || user?.permissions?.canBook) && (
-              <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex justify-between">
+              <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex justify-between">
                 <button
                   onClick={() => {
                     setSelectedDayBookings(null);
@@ -575,8 +575,8 @@ export default function AvailabilityView({ openBookingForm }) {
       {/* Second Modal: Specific Booking Details */}
       {selectedBookingDetails && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-[#2e2e2e] overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+          <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">تفاصيل الحجز</h2>
               <button onClick={() => setSelectedBookingDetails(null)} className="icon-action">
                 <X size={20} />
@@ -587,7 +587,7 @@ export default function AvailabilityView({ openBookingForm }) {
               <div className="flex items-center space-x-reverse space-x-3 bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
                 <Home size={24} className="text-ink dark:text-white" />
                 <div>
-                  <div className="text-xs text-muted dark:text-[#a1a1aa]">الوحدة المحجوزة</div>
+                  <div className="text-xs text-muted dark:text-body-dark">الوحدة المحجوزة</div>
                   <div className="font-semibold text-ink dark:text-white">
                     {apartments.find(a => a.id === selectedBookingDetails.apartmentId)?.name || 'غير معروف'}
                   </div>
@@ -596,17 +596,17 @@ export default function AvailabilityView({ openBookingForm }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-surface-card dark:bg-surface-dark-elevated p-3 rounded-lg">
-                  <div className="text-xs text-muted dark:text-[#a1a1aa] flex items-center mb-1"><User size={12} className="ml-1"/> اسم النزيل</div>
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><User size={12} className="ml-1"/> اسم النزيل</div>
                   <div className="font-semibold text-sm text-ink dark:text-white">{selectedBookingDetails.residentName}</div>
                 </div>
                 <div className="bg-surface-card dark:bg-surface-dark-elevated p-3 rounded-lg">
-                  <div className="text-xs text-muted dark:text-[#a1a1aa] flex items-center mb-1"><Phone size={12} className="ml-1"/> رقم التواصل</div>
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><Phone size={12} className="ml-1"/> رقم التواصل</div>
                   <div className="font-semibold text-sm text-ink dark:text-white" dir="ltr">{selectedBookingDetails.phone}</div>
                 </div>
               </div>
 
               <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
-                <div className="text-xs text-muted dark:text-[#a1a1aa] flex items-center mb-2"><Calendar size={12} className="ml-1"/> فترة الحجز</div>
+                <div className="text-xs text-muted dark:text-body-dark flex items-center mb-2"><Calendar size={12} className="ml-1"/> فترة الحجز</div>
                 <div className="flex justify-between items-center text-sm font-semibold text-ink dark:text-white">
                   <span>{new Date(selectedBookingDetails.startDate).toLocaleDateString('ar-EG')}</span>
                   <span className="text-muted-soft">إلى</span>
@@ -615,32 +615,32 @@ export default function AvailabilityView({ openBookingForm }) {
               </div>
 
               <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
-                <div className="text-xs text-muted dark:text-[#a1a1aa] flex items-center mb-1"><Receipt size={12} className="ml-1"/> السعر لليلة</div>
+                <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><Receipt size={12} className="ml-1"/> السعر لليلة</div>
                 <div className="font-semibold text-lg text-ink dark:text-white">{selectedBookingDetails.pricePerNight} ر.س</div>
               </div>
 
               {selectedBookingDetails.customerRequest && selectedBookingDetails.customerRequest.trim() !== '' && (
-                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-lg border border-hairline dark:border-[#2e2e2e]">
-                  <div className="text-xs text-muted dark:text-[#a1a1aa] flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> طلب النزيل الإضافي</div>
+                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-lg border border-hairline dark:border-hairline-dark-soft">
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> طلب النزيل الإضافي</div>
                   <div className="text-sm font-semibold text-ink dark:text-white">{selectedBookingDetails.customerRequest}</div>
                 </div>
               )}
 
               {selectedBookingDetails.notes && selectedBookingDetails.notes.trim() !== '' && (
-                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-lg border border-hairline dark:border-[#2e2e2e]">
-                  <div className="text-xs text-muted dark:text-[#a1a1aa] flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> ملاحظات داخلية (للموظفين)</div>
-                  <div className="text-sm font-medium text-body dark:text-[#a1a1aa]">{selectedBookingDetails.notes}</div>
+                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-lg border border-hairline dark:border-hairline-dark-soft">
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> ملاحظات داخلية (للموظفين)</div>
+                  <div className="text-sm font-medium text-body dark:text-body-dark">{selectedBookingDetails.notes}</div>
                 </div>
               )}
 
               {selectedBookingDetails.creatorName && (
-                <div className="text-xs text-muted dark:text-[#a1a1aa] text-center">
+                <div className="text-xs text-muted dark:text-body-dark text-center">
                   تم إضافة الحجز بواسطة: <span className="font-semibold text-ink dark:text-white">{selectedBookingDetails.creatorName}</span>
                 </div>
               )}
             </div>
 
-            <div className={`p-4 border-t border-hairline-soft dark:border-[#242424] grid gap-3 ${user?.role === 'admin' || user?.permissions?.canEdit ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={`p-4 border-t border-hairline-soft dark:border-hairline-dark grid gap-3 ${user?.role === 'admin' || user?.permissions?.canEdit ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {(user?.role === 'admin' || user?.permissions?.canEdit) && (
                 <button
                   onClick={() => {

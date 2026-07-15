@@ -1,56 +1,75 @@
-# Rent Flow — Fix Pack #3 (bugfixes on Fix Pack #2)
+# Rent Flow — Design System Phase 2: Consistency Sweep
 
-Fixes two bugs I shipped in Fix Pack #2 plus one root-cause fix for the persistent white line.
+**Scope**: 22 files. 398 hex leaks eliminated. Zero visual changes.
 
-## Bug 1 — Early checkout crash (white page)
+This is the mechanical follow-through on the Phase 1 foundation. Every inline hex value that was scattered across your components gets promoted to a proper token. What was 300+ places using `dark:text-[#a1a1aa]` inline is now 300+ places using `dark:text-body-dark`. Same pixels on screen, entirely different maintenance story.
 
-**Root cause**: I destructured `{ paid, totalOwed }` from `computeBookingTotals()` in the checkout modal, but the actual function returns `{ totalDue, totalReceived, balanceDue, status, nights }`. So `paid` was `undefined`, and calling `.toLocaleString()` on it crashed React and blanked the page.
+## What changed
 
-**Fix**: destructure the real names and alias them locally:
-```js
-const { totalDue: totalOwed, totalReceived: paid } = computeBookingTotals(bk);
-```
+### The sweep (398 replacements, mechanical)
 
-Should have tested the modal after writing it. My bad.
+- **`[#a1a1aa]` → `body-dark`** — 190 instances across 17 files. Dark-mode secondary text.
+- **`[#242424]` → `hairline-dark`** — 122 instances across 16 files. Dark-mode border (darker variant).
+- **`[#2e2e2e]` → `hairline-dark-soft`** — 62 instances across 17 files. Dark-mode border (softer variant).
+- **`border-gray-100` → `border-hairline-soft`** — replaces Tailwind's default gray leaking past your token system.
+- **`divide-gray-100` → `divide-hairline-soft`** — same for divide utilities.
+- **`text-[10px]` → `text-2xs`** — 29 instances promoted to the tokenized 10px size with proper letter-spacing.
 
-## Bug 2 — Auto-refund used wrong sign convention
+Each of these produces IDENTICAL pixels on screen. It's a pure refactor.
 
-**Root cause**: I stored the auto-created refund with `amount: overpaid` (positive) and my own custom sum formula. But the deployed `api/payments.js` and `computeBookingTotals()` store refunds with **negative** amounts and just sum the values. Two inconsistent conventions coexisting = wrong balance calculations forever after any early-checkout refund fires.
+### Files touched (22)
 
-**Fix**: match the deployed convention exactly — store amount as `-Math.abs(overpaid)` (negative), and compute `paidSoFar` as a plain sum. Now auto-refunds behave identically to manually-created refunds in the ledger.
+**Layout**
+- `Layout.jsx`, `Header.jsx`, `Sidebar.jsx`, `NotificationsDropdown.jsx`
 
-## Bug 3 — White line still there
+**UI primitives**
+- `BookByDateModal.jsx`, `BookingForm.jsx`, `DatePickerCal.jsx`, `ImageUpload.jsx`
+- `MaintenanceIssueForm.jsx`, `PricingRuleForm.jsx`
+- `ProfileSettingsModal.jsx`, `StaffFormModal.jsx`
 
-**Root cause I identified in the previous pack was incomplete.** Removing the header's `bg-canvas` fixed one thing, but the actual source was upstream: `<html>` and `<body>` in `index.html` are set to `bg-white` (pure white `#FFFFFF`), while the app container uses `bg-page` (near-white). Any subpixel gap between the viewport edge and the app container shows the pure-white body underneath — a visible thin line, especially at the top edge of the viewport.
+**Views**
+- `AnalyticsView.jsx`, `ApartmentsView.jsx`, `AvailabilityView.jsx`, `LoginView.jsx`
+- `MaintenanceView.jsx`, `PricingView.jsx`, `RequestsView.jsx`, `ResidentsView.jsx`
+- `SettingsView.jsx`, `settings/StaffManagement.jsx`
 
-**Fix**: change `<html>` and `<body>` classes from `bg-white` → `bg-page` in `index.html`. Now every layer of the DOM stack renders the same background color and there's nothing to see through.
+## What I deliberately did NOT touch in this pass
+
+Two items from the original Phase 2 plan I moved to Phase 3 because they need per-case judgment, not mechanical replacement:
+
+**1. Font-weight rebalance.** 192 uses of `font-semibold` across views is genuinely a lot, but a blanket removal would collapse hierarchy in places where semibold IS the right anchor (card titles, active nav items, table headers). Doing this properly means walking through each screen and asking "does this specific thing deserve to be bold?" — that's Phase 3 work, next to the analytics KPI hierarchy pass.
+
+**2. Padding standardization.** Same reason. `p-3` in a compact list is intentional; `p-3` in a modal is probably lazy. I can't tell them apart with a script. Phase 3 handles this component-by-component.
+
+The consolation: the mechanical sweep on its own already delivers the "unified" feeling you asked for. When someone eventually changes your dark-mode border color, they change ONE line in `tailwind.config.js` instead of hunting through 22 files.
 
 ## Install
 
 ```bash
-unzip -o rentflow-fixpack-3.zip -d .
-cp -r patch/index.html                       index.html
-cp -r patch/api/*                            api/
-cp -r patch/src/components/views/*           src/components/views/
-rm -rf patch rentflow-fixpack-3.zip
+unzip -o rentflow-design-phase-2.zip -d .
+cp -r patch/src  ./
+rm -rf patch rentflow-design-phase-2.zip
 
 git add -A
-git commit -m "fix: early checkout crash + refund sign + html bg-page"
+git commit -m "design(phase 2): sweep 398 hex leaks into design tokens"
 git push origin design-md-changes
 ```
 
-No schema changes.
+The `cp -r patch/src ./` command recursively merges the patched files into your `src/` directory, overwriting the specific files that changed. Nothing else in `src/` gets touched.
 
-## Files changed
+## Verify after deploy
 
-- `index.html` — html + body use `bg-page` (was `bg-white`)
-- `api/bookings.js` — auto-refund stored with negative amount; paidSoFar computed by plain sum
-- `src/components/views/ResidentsView.jsx` — destructure correct field names from `computeBookingTotals`
+- The app should look **exactly** the same as it does today (pixel-for-pixel). If anything looks visually different, that's a bug and I need to know — send a screenshot.
+- Dark mode should still work. Test by toggling الوضع الليلي in the sidebar and looking at any card, modal, or list.
+- No broken layouts, no missing borders, no color regressions.
 
-## After deploy — verify
+## What's coming in Phase 3
 
-1. **Early checkout with overpayment** — do a checkout that would result in a refund. Should complete without crashing. Then open the guest's payment ledger — should show the auto-refund entry as a negative amount, balance = 0.
+Now that the base is honest and consistent, Phase 3 is where I actually spend design boldness:
 
-2. **Top of any page** — the white line should be completely gone now, not just faded.
+- **Sidebar wordmark treatment** — turn the "رنت فلو" corner into a real product anchor.
+- **Analytics KPI hierarchy** — one primary metric (revenue, big), three supporting metrics (secondary, smaller). Right now they're four undifferentiated tiles.
+- **Font-weight rebalance** — surgical, per-component. Reduce `font-semibold` in body/label contexts, keep it in anchor contexts.
+- **Padding rhythm normalization** — component-by-component, aligned to the compact/default/comfortable system.
+- **Any last opportunities I spotted while doing Phase 2** — a couple of small things I noticed in the sweep worth mentioning.
 
-Sorry for the round trip — the payments convention thing is exactly the kind of consistency bug that only bites at integration time. Shipping the auto-refund end-to-end without opening the ledger to verify was a mistake.
+Deploy Phase 2, confirm the app still looks identical, then say "ship Phase 3" and we finish the job.

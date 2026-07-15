@@ -48,7 +48,7 @@ export default function ImageUpload({ onUploadSuccess, currentImage, className =
     >
       <div className={`relative inline-block ${className}`}>
         <div
-          className="relative w-24 h-24 rounded-full border border-hairline dark:border-[#2e2e2e] overflow-hidden bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center cursor-pointer group"
+          className="relative w-24 h-24 rounded-full border border-hairline dark:border-hairline-dark-soft overflow-hidden bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center cursor-pointer group"
           onClick={() => ikUploadRef.current?.click()}
         >
           {currentImage ? (

@@ -151,17 +151,17 @@ export default function BookingForm({ onClose, initialData }) {
     }
   };
 
-  const eyebrow = "block text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wide mb-1.5";
+  const eyebrow = "block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5";
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto pt-10 pb-32" dir="rtl">
-      <div className="bg-canvas dark:bg-surface-dark rounded-xl shadow-soft border border-hairline dark:border-[#2e2e2e] w-full max-w-2xl overflow-visible animate-in zoom-in-95 duration-200">
-        <div className="p-6 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center rounded-t-xl">
+      <div className="bg-canvas dark:bg-surface-dark rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl overflow-visible animate-in zoom-in-95 duration-200">
+        <div className="p-6 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center rounded-t-xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent-soft text-accent flex items-center justify-center"><Calendar size={20} /></div>
             <div>
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white leading-none mb-1">{formData.id ? 'تعديل الحجز' : 'حجز جديد'}</h2>
-              <p className="text-xs text-muted dark:text-[#a1a1aa]">أدخل التفاصيل لإعداد عقد الإيجار.</p>
+              <p className="text-xs text-muted dark:text-body-dark">أدخل التفاصيل لإعداد عقد الإيجار.</p>
             </div>
           </div>
           <button onClick={onClose} className="icon-action"><X size={20} /></button>
@@ -169,7 +169,7 @@ export default function BookingForm({ onClose, initialData }) {
 
         <form onSubmit={handleSubmit} className="p-8">
           {error && (
-            <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-[#2e2e2e] flex justify-between items-center">
+            <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-hairline-dark-soft flex justify-between items-center">
               <span>{error}</span>
               {error === 'لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.' && (user?.role === 'admin' || user?.permissions?.canEdit) && (
                 <button
@@ -196,7 +196,7 @@ export default function BookingForm({ onClose, initialData }) {
                 <p className="text-xs font-semibold text-accent-strong mb-0.5">
                   تنبيه: هذه الوحدة لديها {urgentOpenIssues.length} {urgentOpenIssues.length === 1 ? 'بلاغ صيانة عاجل' : 'بلاغات صيانة عاجلة'} مفتوحة
                 </p>
-                <ul className="text-[11px] text-body dark:text-[#a1a1aa] space-y-0.5 mt-1">
+                <ul className="text-[11px] text-body dark:text-body-dark space-y-0.5 mt-1">
                   {urgentOpenIssues.slice(0, 3).map(i => (
                     <li key={i.id} className="flex items-center gap-1.5">
                       <Wrench size={10} className="text-muted-soft" />
@@ -207,7 +207,7 @@ export default function BookingForm({ onClose, initialData }) {
                     <li className="text-muted-soft">... و {urgentOpenIssues.length - 3} أخرى</li>
                   )}
                 </ul>
-                <p className="text-[10px] text-muted-soft mt-1.5">يمكنك المتابعة، لكن تأكّد من حل المشكلة قبل الوصول.</p>
+                <p className="text-2xs text-muted-soft mt-1.5">يمكنك المتابعة، لكن تأكّد من حل المشكلة قبل الوصول.</p>
               </div>
             </div>
           )}
@@ -217,15 +217,15 @@ export default function BookingForm({ onClose, initialData }) {
             <label className={eyebrow}>فترة الإقامة</label>
             {(dateValue.startDate && dateValue.endDate && !showCal) ? (
               <button type="button" onClick={() => setShowCal(true)}
-                className="w-full flex items-center justify-between bg-surface-card dark:bg-surface-dark-elevated rounded-lg px-4 py-3 text-right transition-colors hover:bg-surface-strong/50 dark:hover:bg-[#242424]">
+                className="w-full flex items-center justify-between bg-surface-card dark:bg-surface-dark-elevated rounded-lg px-4 py-3 text-right transition-colors hover:bg-surface-strong/50 dark:hover:bg-hairline-dark">
                 <div className="flex items-center gap-3">
                   <div className="text-center">
-                    <div className="text-[10px] text-muted-soft">الوصول</div>
+                    <div className="text-2xs text-muted-soft">الوصول</div>
                     <div className="font-semibold text-ink dark:text-white text-sm">{fmtShort(dateValue.startDate)}</div>
                   </div>
                   <span className="text-muted-soft">←</span>
                   <div className="text-center">
-                    <div className="text-[10px] text-muted-soft">المغادرة</div>
+                    <div className="text-2xs text-muted-soft">المغادرة</div>
                     <div className="font-semibold text-ink dark:text-white text-sm">{fmtShort(dateValue.endDate)}</div>
                   </div>
                   {nights > 0 && <span className="badge-pill bg-accent-soft text-accent-strong font-semibold mr-2">{nights} ليالٍ</span>}
@@ -233,7 +233,7 @@ export default function BookingForm({ onClose, initialData }) {
                 <span className="flex items-center gap-1 text-xs link-accent"><Pencil size={13} /> تعديل</span>
               </button>
             ) : (
-              <div className="border border-hairline dark:border-[#2e2e2e] rounded-lg p-4 max-w-sm">
+              <div className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-4 max-w-sm">
                 <DatePickerCal
                   value={dateValue}
                   onChange={(v) => { setDateValue(v); if (v.startDate && v.endDate) setShowCal(false); }}
@@ -244,7 +244,7 @@ export default function BookingForm({ onClose, initialData }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <h4 className="text-[11px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-widest border-b border-hairline-soft dark:border-[#242424] pb-2">معلومات النزيل</h4>
+              <h4 className="text-[11px] font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">معلومات النزيل</h4>
               <div>
                 <label className={eyebrow}>الاسم الكامل</label>
                 <input required type="text" placeholder="مثلاً: أحمد محمد" className="input-field" value={formData.residentName} onChange={(e) => setFormData({ ...formData, residentName: e.target.value })} />
@@ -259,8 +259,8 @@ export default function BookingForm({ onClose, initialData }) {
               </div>
 
               {initialData?.customerRequest && (
-                <div className="bg-surface-card dark:bg-surface-dark-elevated border border-hairline dark:border-[#2e2e2e] rounded-md p-3 flex flex-col gap-1">
-                  <p className="text-[10px] font-semibold text-muted dark:text-[#a1a1aa] uppercase">طلب النزيل الإضافي</p>
+                <div className="bg-surface-card dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-3 flex flex-col gap-1">
+                  <p className="text-2xs font-semibold text-muted dark:text-body-dark uppercase">طلب النزيل الإضافي</p>
                   <p className="text-xs text-ink dark:text-white">{initialData.customerRequest}</p>
                 </div>
               )}
@@ -268,7 +268,7 @@ export default function BookingForm({ onClose, initialData }) {
               {retrievedNotes && (
                 <div className="bg-accent-soft border border-accent/30 rounded-md p-3 flex flex-col gap-2">
                   <p className="text-xs text-accent-strong font-semibold">يوجد ملاحظة سابقة لهذا النزيل:</p>
-                  <p className="text-xs text-body dark:text-[#a1a1aa] bg-canvas dark:bg-surface-dark p-2 rounded border border-hairline dark:border-[#2e2e2e]">{retrievedNotes}</p>
+                  <p className="text-xs text-body dark:text-body-dark bg-canvas dark:bg-surface-dark p-2 rounded border border-hairline dark:border-hairline-dark-soft">{retrievedNotes}</p>
                   <button
                     type="button"
                     onClick={() => { setFormData({ ...formData, notes: retrievedNotes }); setRetrievedNotes(null); }}
@@ -286,7 +286,7 @@ export default function BookingForm({ onClose, initialData }) {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[11px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-widest border-b border-hairline-soft dark:border-[#242424] pb-2">تفاصيل الإقامة</h4>
+              <h4 className="text-[11px] font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">تفاصيل الإقامة</h4>
               <div>
                 <label className={eyebrow}>الوحدة</label>
                 <select required className="input-field" value={formData.apartmentId} onChange={(e) => {
@@ -326,7 +326,7 @@ export default function BookingForm({ onClose, initialData }) {
                     <button
                       type="button"
                       onClick={() => setPriceManuallyEdited(false)}
-                      className="text-[10px] text-accent-strong hover:underline mt-1 font-semibold"
+                      className="text-2xs text-accent-strong hover:underline mt-1 font-semibold"
                     >
                       إعادة حساب السعر تلقائياً حسب القواعد الموسمية
                     </button>
@@ -345,7 +345,7 @@ export default function BookingForm({ onClose, initialData }) {
                 <div className="border border-dashed border-accent/40 rounded-md p-3 bg-accent-soft/40">
                   <div className="flex items-center gap-1.5 mb-2">
                     <TagsIcon size={11} className="text-accent-strong" />
-                    <span className="text-[10px] font-semibold text-accent-strong uppercase tracking-wider">
+                    <span className="text-2xs font-semibold text-accent-strong uppercase tracking-wider">
                       تسعير موسمي
                     </span>
                   </div>
@@ -356,7 +356,7 @@ export default function BookingForm({ onClose, initialData }) {
                           {g.ruleColor && (
                             <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: g.ruleColor }}></div>
                           )}
-                          <span className="text-body dark:text-[#a1a1aa] truncate">
+                          <span className="text-body dark:text-body-dark truncate">
                             {g.ruleLabel || 'السعر الأساسي'}
                           </span>
                         </div>
@@ -371,7 +371,7 @@ export default function BookingForm({ onClose, initialData }) {
 
               {/* Running total */}
               <div className="flex items-center justify-between bg-surface-card dark:bg-surface-dark-elevated rounded-lg px-4 py-3 mt-2">
-                <span className="text-sm text-muted dark:text-[#a1a1aa]">
+                <span className="text-sm text-muted dark:text-body-dark">
                   الإجمالي التقديري{nights > 0 ? ` (${nights} ليالٍ)` : ''}
                 </span>
                 <span className="text-lg font-bold tracking-tight text-accent" style={{ fontVariantNumeric: 'tabular-nums' }}>

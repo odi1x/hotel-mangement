@@ -186,9 +186,9 @@ export default function AnalyticsView() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
           {[1,2,3,4].map(i => (
             <div key={i} className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg h-28 flex flex-col justify-center">
-              <div className="h-4 w-20 bg-surface-strong dark:bg-[#242424] rounded mb-3"></div>
-              <div className="h-8 w-32 bg-surface-strong dark:bg-[#242424] rounded mb-2"></div>
-              <div className="h-3 w-24 bg-surface-strong/60 dark:bg-[#242424] rounded"></div>
+              <div className="h-4 w-20 bg-surface-strong dark:bg-hairline-dark rounded mb-3"></div>
+              <div className="h-8 w-32 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
+              <div className="h-3 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
             </div>
           ))}
         </div>
@@ -197,37 +197,37 @@ export default function AnalyticsView() {
           {/* Top Performers and Pie Chart Skeleton */}
           <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
             <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col">
-               <div className="h-5 w-24 bg-surface-strong dark:bg-[#242424] rounded mb-2"></div>
-               <div className="h-3 w-32 bg-surface-strong/60 dark:bg-[#242424] rounded mb-4"></div>
+               <div className="h-5 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
+               <div className="h-3 w-32 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-4"></div>
                <div className="flex-1 flex flex-col gap-3 justify-center">
                   {[1,2,3].map(i => (
                     <div key={i} className="flex justify-between items-center">
-                       <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-surface-strong dark:bg-[#242424]"></div><div className="h-4 w-20 bg-surface-strong dark:bg-[#242424] rounded"></div></div>
-                       <div className="h-6 w-16 bg-surface-strong dark:bg-[#242424] rounded"></div>
+                       <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-surface-strong dark:bg-hairline-dark"></div><div className="h-4 w-20 bg-surface-strong dark:bg-hairline-dark rounded"></div></div>
+                       <div className="h-6 w-16 bg-surface-strong dark:bg-hairline-dark rounded"></div>
                     </div>
                   ))}
                </div>
             </div>
 
             <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col items-center justify-center">
-              <div className="self-start h-5 w-24 bg-surface-strong dark:bg-[#242424] rounded mb-2"></div>
-              <div className="self-start h-3 w-32 bg-surface-strong/60 dark:bg-[#242424] rounded mb-4"></div>
-              <div className="w-32 h-32 rounded-full border-8 border-surface-strong dark:border-[#242424] mt-4"></div>
+              <div className="self-start h-5 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
+              <div className="self-start h-3 w-32 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-4"></div>
+              <div className="w-32 h-32 rounded-full border-8 border-surface-strong dark:border-hairline-dark mt-4"></div>
             </div>
           </div>
 
           {/* Area Chart Skeleton */}
           <div className="lg:col-span-2 bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-5 flex flex-col h-full min-h-0">
             <div className="flex justify-between items-center mb-6">
-              <div className="h-5 w-40 bg-surface-strong dark:bg-[#242424] rounded"></div>
-              <div className="h-8 w-48 bg-surface-strong/60 dark:bg-[#242424] rounded-full"></div>
+              <div className="h-5 w-40 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+              <div className="h-8 w-48 bg-surface-strong/60 dark:bg-hairline-dark rounded-full"></div>
             </div>
             <div className="flex gap-6 mb-6">
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-[#242424] rounded"></div>
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-[#242424] rounded"></div>
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-[#242424] rounded"></div>
+               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
             </div>
-            <div className="flex-1 w-full bg-surface-soft dark:bg-[#242424] rounded-lg"></div>
+            <div className="flex-1 w-full bg-surface-soft dark:bg-hairline-dark rounded-lg"></div>
           </div>
         </div>
       </div>
@@ -283,9 +283,9 @@ export default function AnalyticsView() {
           )}
 
           {isFilterOpen && (
-            <div className="absolute top-full left-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] rounded-lg shadow-soft z-50 p-4">
+            <div className="absolute top-full left-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
               <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-[#a1a1aa] mb-2">الفترة الزمنية:</span>
+                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الفترة الزمنية:</span>
                 <DatePickerCal
                   value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
                   onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
@@ -293,12 +293,12 @@ export default function AnalyticsView() {
               </div>
 
               <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-[#a1a1aa] mb-2">الوحدات:</span>
+                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الوحدات:</span>
                 <div className="max-h-48 overflow-y-auto space-y-1.5 p-1">
                   {apartments.map(a => {
                       const isChecked = tempFilter.apartmentIds?.includes(a.id);
                       return (
-                          <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-surface-dark-elevated p-2 rounded-md transition-colors">
+                          <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated p-2 rounded-md transition-colors">
                               <input
                                   type="checkbox"
                                   checked={isChecked || false}
@@ -319,7 +319,7 @@ export default function AnalyticsView() {
               </div>
 
               {hasFilterChanges() && (
-                <div className="pt-3 border-t border-hairline-soft dark:border-[#242424] flex justify-end">
+                <div className="pt-3 border-t border-hairline-soft dark:border-hairline-dark flex justify-end">
                   <button
                     onClick={handleApplyFilter}
                     className="btn-primary h-9 px-4 text-sm"
@@ -340,7 +340,7 @@ export default function AnalyticsView() {
           onClick={() => fetchBreakdown('revenue')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">إجمالي الإيرادات</p>
+          <p className="text-sm text-muted dark:text-body-dark font-semibold mb-2">إجمالي الإيرادات</p>
           <h3 className="text-3xl font-bold text-accent tracking-tightest">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-semibold text-muted-soft">ر.س</span></h3>
         </div>
 
@@ -348,7 +348,7 @@ export default function AnalyticsView() {
           onClick={() => fetchBreakdown('profit')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">صافي الأرباح</p>
+          <p className="text-sm text-muted dark:text-body-dark font-semibold mb-2">صافي الأرباح</p>
           <h3 className="text-3xl font-bold text-accent tracking-tightest">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-semibold text-muted-soft">ر.س</span></h3>
         </div>
 
@@ -356,7 +356,7 @@ export default function AnalyticsView() {
           onClick={() => fetchBreakdown('occupancy')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">معدل الإشغال</p>
+          <p className="text-sm text-muted dark:text-body-dark font-semibold mb-2">معدل الإشغال</p>
           <h3 className="text-3xl font-bold text-ink dark:text-white tracking-tightest">{Math.round(analytics.occupancyRate)}<span className="text-sm font-semibold text-muted">%</span></h3>
           <p className="text-xs text-muted-soft mt-2 font-medium">من إجمالي الأيام المتاحة</p>
         </div>
@@ -365,7 +365,7 @@ export default function AnalyticsView() {
           onClick={() => fetchBreakdown('nights')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">الليالي المؤجرة</p>
+          <p className="text-sm text-muted dark:text-body-dark font-semibold mb-2">الليالي المؤجرة</p>
           <h3 className="text-3xl font-bold text-ink dark:text-white tracking-tightest">{analytics.totalNights} <span className="text-sm font-semibold text-muted">ليلة</span></h3>
           <p className="text-xs text-muted-soft mt-2 font-medium">عبر {analytics.count} حجز</p>
         </div>
@@ -383,7 +383,7 @@ export default function AnalyticsView() {
 
             <div className="flex-1 flex flex-col justify-center gap-2 pr-1">
                 {topUnits.length > 0 ? topUnits.map((unit, idx) => (
-                    <div key={unit.id} className="flex items-center justify-between p-2 rounded-md hover:bg-canvas dark:hover:bg-[#242424] transition-colors">
+                    <div key={unit.id} className="flex items-center justify-between p-2 rounded-md hover:bg-canvas dark:hover:bg-hairline-dark transition-colors">
                         <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${idx === 0 ? 'bg-accent text-white' : 'bg-surface-card text-ink dark:bg-surface-dark dark:text-white'}`}>
                                 #{idx + 1}
@@ -395,7 +395,7 @@ export default function AnalyticsView() {
                         </div>
                         <div className="text-left">
                             <p className="text-lg font-semibold tracking-tight text-ink dark:text-white leading-none">{unit.revenue.toLocaleString()}</p>
-                            <p className="text-[10px] text-muted-soft mt-0.5">ر.س</p>
+                            <p className="text-2xs text-muted-soft mt-0.5">ر.س</p>
                         </div>
                     </div>
                 )) : <div className="text-center py-10 text-muted font-medium">لا توجد بيانات كافية</div>}
@@ -459,7 +459,7 @@ export default function AnalyticsView() {
                 <button
                   key={opt.id}
                   onClick={() => setChartFilter(opt.id)}
-                  className={`nav-pill px-3 py-1.5 text-xs font-semibold ${chartFilter === opt.id ? 'nav-pill-active bg-surface-card dark:bg-[#2e2e2e]' : ''}`}
+                  className={`nav-pill px-3 py-1.5 text-xs font-semibold ${chartFilter === opt.id ? 'nav-pill-active bg-surface-card dark:bg-hairline-dark-soft' : ''}`}
                 >
                   {opt.label}
                 </button>
@@ -467,18 +467,18 @@ export default function AnalyticsView() {
             </div>
           </div>
 
-          <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-[#242424] pb-4">
+          <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-hairline-dark pb-4">
             <div>
-              <p className="text-[10px] font-semibold text-muted-soft mb-1">إجمالي الإيرادات</p>
-              <p className="font-bold text-accent">{chartKPIs.revenue.toLocaleString()} <span className="text-[10px] text-muted-soft">ر.س</span></p>
+              <p className="text-2xs font-semibold text-muted-soft mb-1">إجمالي الإيرادات</p>
+              <p className="font-bold text-accent">{chartKPIs.revenue.toLocaleString()} <span className="text-2xs text-muted-soft">ر.س</span></p>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-muted-soft mb-1">إجمالي المصروفات</p>
-              <p className="font-semibold text-muted dark:text-[#a1a1aa]">{chartKPIs.expenses.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
+              <p className="text-2xs font-semibold text-muted-soft mb-1">إجمالي المصروفات</p>
+              <p className="font-semibold text-muted dark:text-body-dark">{chartKPIs.expenses.toLocaleString()} <span className="text-2xs">ر.س</span></p>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-muted-soft mb-1">صافي الأرباح</p>
-              <p className="text-lg font-bold tracking-tight text-accent leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-[10px] text-muted-soft">ر.س</span></p>
+              <p className="text-2xs font-semibold text-muted-soft mb-1">صافي الأرباح</p>
+              <p className="text-lg font-bold tracking-tight text-accent leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-2xs text-muted-soft">ر.س</span></p>
             </div>
           </div>
 
@@ -521,8 +521,8 @@ export default function AnalyticsView() {
       {breakdownModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-[#2e2e2e]">
-            <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-hairline-dark-soft">
+            <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
                 {breakdownModal === 'revenue' && 'تفصيل الإيرادات حسب الوحدة'}
                 {breakdownModal === 'profit' && 'سجل المصروفات والأرباح'}
@@ -545,16 +545,16 @@ export default function AnalyticsView() {
                   {breakdownModal === 'profit' ? (
                      <table className="w-full text-sm text-right">
                         <thead>
-                          <tr className="text-muted dark:text-[#a1a1aa]">
+                          <tr className="text-muted dark:text-body-dark">
                             <th className="pb-3 font-semibold">البند</th>
                             <th className="pb-3 font-semibold">المبلغ (ر.س)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {breakdownData.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors border-t border-gray-100 dark:border-[#242424]">
+                            <tr key={idx} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors border-t border-hairline-soft dark:border-hairline-dark">
                               <td className="py-3 font-semibold text-ink dark:text-white">{item.category}</td>
-                              <td className={`py-3 font-semibold ${item.type === 'income' ? 'text-ink dark:text-white' : 'text-muted dark:text-[#a1a1aa]'}`}>
+                              <td className={`py-3 font-semibold ${item.type === 'income' ? 'text-ink dark:text-white' : 'text-muted dark:text-body-dark'}`}>
                                 {item.type === 'expense' ? '- ' : ''}{item.amount.toLocaleString()}
                               </td>
                             </tr>
@@ -570,7 +570,7 @@ export default function AnalyticsView() {
                   ) : (
                     <table className="w-full text-sm text-right">
                       <thead>
-                        <tr className="text-muted dark:text-[#a1a1aa]">
+                        <tr className="text-muted dark:text-body-dark">
                           <th className="pb-3 font-semibold">الوحدة</th>
                           {breakdownModal === 'revenue' && (
                             <>
@@ -590,21 +590,21 @@ export default function AnalyticsView() {
                       </thead>
                       <tbody>
                         {breakdownData.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors border-t border-gray-100 dark:border-[#242424]">
+                          <tr key={idx} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors border-t border-hairline-soft dark:border-hairline-dark">
                             <td className="py-3 font-semibold text-ink dark:text-white">{item.name}</td>
 
                             {breakdownModal === 'revenue' && (
                               <>
                                 <td className="py-3 font-semibold text-ink dark:text-white">{item.revenue.toLocaleString()}</td>
-                                <td className="py-3 font-medium text-body dark:text-[#a1a1aa]">{item.percentage}%</td>
-                                <td className="py-3 font-medium text-body dark:text-[#a1a1aa]">{item.count}</td>
+                                <td className="py-3 font-medium text-body dark:text-body-dark">{item.percentage}%</td>
+                                <td className="py-3 font-medium text-body dark:text-body-dark">{item.count}</td>
                               </>
                             )}
 
                             {(breakdownModal === 'occupancy' || breakdownModal === 'nights') && (
                               <>
                                 <td className="py-3 font-semibold text-ink dark:text-white">{item.nights}</td>
-                                <td className="py-3 font-medium text-body dark:text-[#a1a1aa]">{item.availableNights}</td>
+                                <td className="py-3 font-medium text-body dark:text-body-dark">{item.availableNights}</td>
                                 <td className="py-3 font-semibold text-ink dark:text-white">{item.occupancy}%</td>
                               </>
                             )}

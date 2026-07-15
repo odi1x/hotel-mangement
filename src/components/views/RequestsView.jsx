@@ -36,26 +36,26 @@ export default function RequestsView({ openBookingForm }) {
           </div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-ink dark:text-white">طلبات الحجز المعلقة</h1>
-            <p className="text-muted dark:text-[#a1a1aa] mt-1">
+            <p className="text-muted dark:text-body-dark mt-1">
               لديك <span className="font-semibold text-ink dark:text-white">{pendingRequests.length}</span> طلبات بانتظار التأكيد
             </p>
           </div>
         </div>
 
         {pendingRequests.length === 0 ? (
-          <div className="text-center py-20 bg-canvas dark:bg-surface-dark rounded-xl border border-dashed border-hairline dark:border-[#2e2e2e]">
-            <CheckCircle className="mx-auto text-hairline dark:text-[#2e2e2e] mb-4" size={48} />
+          <div className="text-center py-20 bg-canvas dark:bg-surface-dark rounded-xl border border-dashed border-hairline dark:border-hairline-dark-soft">
+            <CheckCircle className="mx-auto text-hairline dark:text-hairline-dark-soft mb-4" size={48} />
             <h3 className="text-lg font-semibold text-ink dark:text-white mb-2">لا توجد طلبات معلقة</h3>
-            <p className="text-muted dark:text-[#a1a1aa]">لقد قمت بمراجعة جميع طلبات الحجز الواردة.</p>
+            <p className="text-muted dark:text-body-dark">لقد قمت بمراجعة جميع طلبات الحجز الواردة.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {pendingRequests.map(request => {
               const apt = apartments.find(a => a.id === request.apartmentId);
               return (
-                <div key={request.id} className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] overflow-hidden flex flex-col">
+                <div key={request.id} className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
 
-                  <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-start">
+                  <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-start">
                     <div>
                       <span className="badge-pill mb-2">
                         قيد المراجعة
@@ -74,11 +74,11 @@ export default function RequestsView({ openBookingForm }) {
 
                   <div className="p-5 flex-1 flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 text-sm text-body dark:text-[#a1a1aa]">
+                      <div className="flex items-center gap-3 text-sm text-body dark:text-body-dark">
                         <User size={16} className="text-muted-soft" />
                         <span className="font-medium truncate">{request.residentName}</span>
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-body dark:text-[#a1a1aa]">
+                      <div className="flex items-center gap-3 text-sm text-body dark:text-body-dark">
                         <Phone size={16} className="text-muted-soft" />
                         <span dir="ltr" className="font-medium truncate">{request.phone}</span>
                       </div>
@@ -97,7 +97,7 @@ export default function RequestsView({ openBookingForm }) {
                     </div>
 
                     {request.customerRequest && (
-                      <div className="text-sm text-body dark:text-[#a1a1aa] bg-surface-soft dark:bg-surface-dark-elevated p-3 rounded-lg flex flex-col gap-1">
+                      <div className="text-sm text-body dark:text-body-dark bg-surface-soft dark:bg-surface-dark-elevated p-3 rounded-lg flex flex-col gap-1">
                         <span className="text-xs font-semibold text-muted">ملاحظات إضافية من النزيل:</span>
                         <span className="italic">"{request.customerRequest}"</span>
                       </div>

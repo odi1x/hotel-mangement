@@ -69,9 +69,9 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
-      <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-2xl shadow-soft border border-hairline dark:border-[#2e2e2e] overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-2xl shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col max-h-[90vh]">
 
-        <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+        <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
           <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">
             {isEditing ? 'تعديل بيانات الموظف' : 'إضافة موظف جديد'}
           </h2>
@@ -87,7 +87,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
           <form id="staff-form" onSubmit={handleSubmit} className="space-y-6">
 
             <div className="flex flex-col items-center mb-6">
-              <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-3">صورة الموظف (اختياري)</label>
+              <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">صورة الموظف (اختياري)</label>
               <ImageUpload
                 onUploadSuccess={url => setFormData(prev => ({ ...prev, profilePicture: url }))}
                 currentImage={formData.profilePicture}
@@ -96,7 +96,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">الاسم الكامل *</label>
+                <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">الاسم الكامل *</label>
                 <input
                   required
                   type="text"
@@ -108,7 +108,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">اسم المستخدم * (للدخول)</label>
+                <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">اسم المستخدم * (للدخول)</label>
                 <input
                   required
                   type="text"
@@ -121,7 +121,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-1.5">
+                <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">
                   كلمة المرور {isEditing && <span className="text-muted-soft font-normal">(اتركها فارغة إذا لم ترد تغييرها)</span>}
                   {!isEditing && <span className="text-ink dark:text-white">*</span>}
                 </label>
@@ -138,7 +138,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink dark:text-[#a1a1aa] dark:hover:text-white"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink dark:text-body-dark dark:hover:text-white"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -146,12 +146,12 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
               </div>
             </div>
 
-            <div className="mt-8 border-t border-hairline dark:border-[#242424] pt-6">
+            <div className="mt-8 border-t border-hairline dark:border-hairline-dark pt-6">
               <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white mb-4">صلاحيات الموظف</h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {permissions.map(perm => (
-                  <label key={perm.name} className="flex items-center p-3 rounded-md border border-hairline dark:border-[#2e2e2e] cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
+                  <label key={perm.name} className="flex items-center p-3 rounded-md border border-hairline dark:border-hairline-dark-soft cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
                     <input
                       type="checkbox"
                       name={perm.name}
@@ -161,7 +161,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
                     />
                     <div>
                       <div className="font-semibold text-ink dark:text-white">{perm.title}</div>
-                      <div className="text-xs text-muted dark:text-[#a1a1aa]">{perm.desc}</div>
+                      <div className="text-xs text-muted dark:text-body-dark">{perm.desc}</div>
                     </div>
                   </label>
                 ))}
@@ -171,7 +171,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
           </form>
         </div>
 
-        <div className="p-5 border-t border-hairline-soft dark:border-[#242424] flex justify-end gap-3">
+        <div className="p-5 border-t border-hairline-soft dark:border-hairline-dark flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
