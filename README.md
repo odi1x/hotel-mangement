@@ -1,105 +1,103 @@
-# Rent Flow — Batch A: Cleanup Sweep + Analytics Polish
+# Rent Flow — Batch B: Signature Polish
 
-15 files. The follow-through pass after the tab-by-tab audit.
+4 files. The signature moves on the three views you built.
 
 ## What changed
 
-### Mechanical sweeps (leftovers from Phase 2)
+### 1. Analytics right column — fixed the squished cards
 
-- **`[#898989]` leak fixed** — one instance in `ResidentsView.jsx` line 236 that my Phase 2 sweep missed because the pattern was different.
-- **`text-[11px]` → `text-xs`** — 45 instances across 13 files migrated to the tokenized `text-xs` (12px). Font size shifts by 1 pixel, imperceptible in most cases, gains full type-scale consistency.
-- **`BalancesView.jsx` swept** — 15 additional hex leaks Phase 2 missed on this file (it's a Feature 1 file that wasn't in my Phase 2 working copy at the time). Now uses `body-dark`, `hairline-dark`, `hairline-dark-soft` throughout.
+**The problem you flagged**: on the analytics page, the "الأعلى أداءً" card only showed 2 rows (should be 3) and the "مصادر التسويق" donut chart was squished, with the "زيارة مباشرة" label bleeding off the card edge.
 
-### New: `<EmptyState>` component
+**Root cause**: two cards forced to share fixed vertical space via `flex-1 flex-1`. When content is heavy, both get crushed. The donut chart needs a roughly square aspect ratio to render legibly, so it always fights the height constraint.
 
-Extracted the RequestsView empty-state pattern (soft-accent icon disc + heading + supporting subtext + optional CTA) into `src/components/ui/EmptyState.jsx`. Two variants:
+**Fix**:
 
-- `variant="soft"` (default) — plain empty state on a card
-- `variant="dashed"` — dashed border around the whole block, for "nothing here yet" states
+- **Right column now scrolls when needed** (`overflow-y-auto`). Both cards get natural content-height (`shrink-0`) instead of fighting over half the space each. If everything fits — no scroll. If it doesn't — scroll gracefully. This is what the rest of the app already does.
 
-Applied in three places this pass:
-- **BalancesView** — replaced the inline "all balances paid" empty state
-- **ResidentsView** — replaced the single-line "لا توجد حجوزات مطابقة" with a proper empty state inside the table cell
-- **ApartmentsView** — added a first-time-user empty state with a CTA button ("إضافة أول وحدة")
+- **Donut chart → compact ranked list.** The pie/donut format was fundamentally wrong for this small a card. Now each source renders as one row:
 
-Other views (RequestsView, MaintenanceView) already have good empty states — I left those alone rather than force-migrate. Their patterns will drift toward `<EmptyState>` naturally when they're touched next.
+  ```
+  زيارة مباشرة                                5 حجز · 45%
+  ██████████████████████████░░░░░░░░
+  Airbnb                                        3 حجز · 27%
+  ████████████░░░░░░░░░░░░
+  Booking.com                                   2 حجز · 18%
+  ████████░░░░░░░░░░░░░░░
+  ```
 
-### ApartmentsView: custom status pills → `.badge-*` variants
+  Sorted by count descending. The top source gets the emerald accent bar (concentrating attention on the biggest source). Others get muted-gray bars (respecting the scarce-accent rule). Way more space-efficient, reads instantly, no cropped labels.
 
-The three status badges on unit cards (متاحة / مشغولة / تحتاج تنظيف) were hand-rolled with backdrop-blur classes:
+- **Top performers row rhythm** — dropped the `justify-center` on the row container. Centering rows vertically was actively harmful when space was tight — it collapsed rows onto each other. Now rows stack from the top with consistent `gap-1.5`, capped at max 5.
 
-```jsx
-<span className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1 bg-canvas/90 text-ink border border-dashed border-muted-soft backdrop-blur-sm">
-```
+Removed the recharts `PieChart`, `Pie`, `Cell`, `Legend` imports and the `COLORS` constant since none are needed anymore. Slightly smaller bundle as a bonus.
 
-Now use the design-system `.badge-*` treatments:
+### 2. Maintenance — days-open badge for aging urgent items
 
-```jsx
-<span className="badge-pill badge-dashed backdrop-blur-sm bg-canvas/90 dark:bg-surface-dark/90">تحتاج تنظيف</span>
-<span className="badge-pill badge-solid backdrop-blur-sm bg-ink/90 dark:bg-white/90">مشغولة</span>
-<span className="badge-pill badge-outline backdrop-blur-sm bg-canvas/90 dark:bg-surface-dark/90">
-  <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
-  متاحة
-</span>
-```
+Before: when an urgent maintenance issue had been open ≥ 3 days, the "days open" label got tinted with `text-accent-strong`. Legible, but visually forgettable — it disappeared into the meta row.
 
-Same visual result, but now these pills share their DNA with every other badge in the app. First time you want to tweak how a "warning" badge looks, one class change updates every warning badge everywhere.
-
-### Analytics polish (following up on my Phase 3 self-critique)
-
-Two of the observations I flagged after your Phase 3 deploy, now fixed:
-
-**1. Missing subtitle on the Revenue KPI card.** The other two supporting cards (Occupancy, Nights) both had a subtitle line, but Revenue sat alone with just a number — making its tile look "shorter" than its peers. Now shows "عبر X حجز" (matching the Nights card's own subtitle format).
-
-**2. Empty left side of the hero card.** The profit hero had a lot of dead trailing whitespace on wide screens. Now that space carries the **math behind the profit**:
+After: those aging urgent items now render the days-open label as a **dashed accent badge** using `.badge-dashed` with the accent border:
 
 ```
-صافي الأرباح            الإيرادات        المصروفات
-6,940 ر.س      =        8,940 ر.س   −   2,000 ر.س
-الإيرادات ناقص ...
+شقة 93 · تكييف · [منذ 5 أيام]   ← dashed accent border, stands out
 ```
 
-Two small stacked figures on the trailing (LTR-left) edge with a subtle `−` separator. Turns "6,940" from an abstract number into a visible story: *revenue minus expenses equals profit*. On mobile (narrow screens) they hide with `hidden md:flex` since the hero is already tall enough.
+Normal-severity or new items still render the days-open as plain text. Only urgent-and-aging gets the badge treatment — because that's the exact case where the reality check matters most. When you scan the list, your eye catches those badges immediately.
 
-Uses `analytics.totalExpenses` if provided by the API, otherwise computes it as `totalRevenue - netProfit`. Won't break if the field isn't there.
+### 3. Pricing — losing rule bars now dim in overlaps
 
-**Two other polish items I diagnosed and then found weren't real:**
+Before: overlapping rule bars in the timeline stacked on top of each other, and the priority winner wasn't visually distinguishable. If you had a "Ramadan ×1.5" rule (normal priority) and a "Hajj @ Nuzha" rule (high priority) overlapping, you couldn't tell from the timeline which one actually gets applied.
 
-- The right-column cards (top performers, marketing sources) already use `text-lg` numbers, not `text-3xl`. My earlier "they feel loud" call was a misread from the screenshot. No change needed.
-- The chart title weight is fine at `font-semibold`. It's a card-level heading, one size below the page heading — appropriate.
+After: any rule that loses to a higher-priority overlapping rule renders at **40% opacity**, with hover restoring to 80%. Winners render at full opacity.
+
+Matches the actual resolution logic in `pricingUtils.js`:
+- Higher priority wins outright
+- On tie, apartment-specific rule beats global
+
+Titles on dimmed bars also change to `"— تتراجع أمام قاعدة أعلى أهمية"` so hovering tells you *why* it's dimmed. Priority is now visible on the timeline, not just in the form. Correcting a mis-ordered priority also becomes a game of "spot the dimmed bar and bump its importance up".
+
+### 4. Balances — sort toggle unified + hex leak sweep
+
+Before: the sort toggle (الأقرب مغادرة / الأكبر مبلغاً) used hand-rolled buttons with a custom active state — inconsistent with the sub-nav pattern used everywhere else (Settings, chart-range picker, maintenance filters).
+
+After: migrated to the `nav-pill-group` + `nav-pill` + `nav-pill-active` pattern. Same behavior, but now it visually belongs to the same family as every other "pick one from a small set" control in the app.
+
+Also, the eyebrow label above the sort toggle was still using the inline `text-xs font-semibold uppercase tracking-wider text-muted` pattern. Migrated to the `.eyebrow` utility class I added in Phase 3. That's the pattern for all uppercase micro-labels.
+
+Bonus: swept 2 remaining `text-[10px]` instances in this file that my earlier passes missed (this file wasn't in Phase 2's working copy). No more `text-[10px]` anywhere in the codebase.
+
+**Note on "stronger CTA per row"** — I mentioned this in the audit but on inspection the row's "تسجيل دفعة" button already uses `.btn-accent`, which is the strongest button in the design system. Nothing to strengthen. Kept as-is.
 
 ## Install
 
 ```bash
-unzip -o rentflow-batch-a.zip -d .
+unzip -o rentflow-batch-b.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-batch-a.zip
+rm -rf patch rentflow-batch-b.zip
 
 git add -A
-git commit -m "design(batch a): sweep leftovers + EmptyState + apartments badges + analytics polish"
+git commit -m "design(batch b): analytics right column + maintenance aging badges + pricing overlap dim + balances sort"
 git push origin design-md-changes
 ```
 
-15 files. No schema changes, no API changes.
+Four files. No schema changes. No API changes.
 
 ## After deploy — what to look at
 
-1. **Open analytics.** Look at the hero. On wide screens you should see the math breakdown on the trailing side (Revenue − Expenses). On mobile, hero shrinks to just the profit number as before.
-2. **Look at the Revenue supporting card.** Should now have "عبر ٥ حجز" (or however many bookings) as a subtitle, matching Nights.
-3. **Open apartments.** If you have zero apartments, empty state should appear with a "إضافة أول وحدة" CTA. If you have apartments, the status pills should look identical to before but they're now sharing DNA with the rest of the design system.
-4. **Empty a filter on residents.** The "لا توجد حجوزات مطابقة" state should now be a proper empty state with an icon and helpful subtitle, not a single-line message.
-5. **Pay off all balances.** BalancesView empty state should show the "عمل ممتاز" message with the wallet icon.
+1. **Open analytics.** Right column should now show 3+ top performers with full row breathing, and marketing sources should render as a clean ranked list with subtle horizontal bars. If the column has more content than fits, scroll works.
 
-## What's next
+2. **Log a maintenance issue as urgent, wait 3+ days.** (Or find one already aged.) The days-open indicator should now be a dashed accent badge, not just tinted text.
 
-**Batch B — Signature polish** *(the signature moves)*
-- Maintenance: days-open badge for urgent-and-aging items
-- Pricing: opacity dim on losing rule bars in overlaps (makes priority visible)
-- Balances: nav-pill-group for the sort toggle + stronger CTA per row
+3. **Open pricing.** If you have any overlapping rules with different priorities, the loser should render dimmed. Hover reveals a "تتراجع أمام قاعدة أعلى أهمية" tooltip.
 
-**Batch C — Bigger refactors** *(only if you want)*
+4. **Open balances.** Sort toggle should look identical to the sub-nav in Settings and the chart-range picker on analytics. Same DNA.
+
+## What's still on the list (if you want to keep going)
+
+**Batch C — Bigger refactors**
 - AvailabilityView: replace custom mini-calendar with DatePickerCal (~60 line reduction)
 - Settings: extract `.tab-underline` utility
 - Residents: shorter column headers + drop "created-by" line
 
-Say the word to ship Batch B, or take a look at Batch A first and confirm you like the direction.
+These are lower priority since they're more about code hygiene and micro-tightening than "user notices it looks better". Only worth it if the design pass momentum is still there.
+
+Any of the previous polish items still bugging you after deploy? Or any new observations from using the app between deploys? I'd rather fix specific things you notice than chase generic improvements at this point.

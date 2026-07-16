@@ -4,10 +4,7 @@ import { useData } from '../../context/DataContext';
 import DatePickerCal from '../ui/DatePickerCal';
 import { getAccent } from '../../lib/accent';
 import axios from 'axios';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-
-// Monochrome data palette — near-black to hairline gray (DESIGN-cal.md color scarcity rule)
-const COLORS = ['#111111', '#374151', '#6b7280', '#9ca3af', '#c4c9d0', '#d1d5db', '#e5e7eb'];
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 export default function AnalyticsView() {
   const accentHex = getAccent().hex;
@@ -421,8 +418,8 @@ export default function AnalyticsView() {
       </div>
 
       <div className="flex-1 min-h-0 w-full overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-5 pb-2">
-        <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
-            <div className="card-surface p-5 flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0 overflow-y-auto lg:pl-1">
+            <div className="card-surface p-5 shrink-0 flex flex-col overflow-hidden">
             <div className="shrink-0">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
                 <Star size={18} className="ml-2 text-muted" /> الأعلى أداءً
@@ -430,64 +427,71 @@ export default function AnalyticsView() {
               <p className="text-xs text-muted mb-3">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
             </div>
 
-            <div className="flex-1 flex flex-col justify-center gap-2 pr-1">
-                {topUnits.length > 0 ? topUnits.map((unit, idx) => (
-                    <div key={unit.id} className="flex items-center justify-between p-2 rounded-md hover:bg-canvas dark:hover:bg-hairline-dark transition-colors">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${idx === 0 ? 'bg-accent text-white' : 'bg-surface-card text-ink dark:bg-surface-dark dark:text-white'}`}>
+            {/* Top-performers list — natural rhythm from top, no justify-center
+                so rows can't crush into each other when height is tight. */}
+            <div className="flex flex-col gap-1.5 pr-1">
+                {topUnits.length > 0 ? topUnits.slice(0, 5).map((unit, idx) => (
+                    <div key={unit.id} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-surface-soft/60 dark:hover:bg-hairline-dark transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${idx === 0 ? 'bg-accent text-white' : 'bg-surface-card text-ink dark:bg-surface-dark dark:text-white'}`}>
                                 #{idx + 1}
                             </div>
-                            <div>
-                                <p className="text-sm font-semibold text-ink dark:text-white">{unit.name}</p>
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-ink dark:text-white truncate">{unit.name}</p>
                                 <p className="text-xs text-muted">{unit.nights} ليلة مؤجرة</p>
                             </div>
                         </div>
-                        <div className="text-left">
-                            <p className="text-lg font-semibold tracking-tight text-ink dark:text-white leading-none">{unit.revenue.toLocaleString()}</p>
+                        <div className="text-left shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            <p className="text-base font-bold tracking-tight text-ink dark:text-white leading-none">{unit.revenue.toLocaleString()}</p>
                             <p className="text-2xs text-muted-soft mt-0.5">ر.س</p>
                         </div>
                     </div>
-                )) : <div className="text-center py-10 text-muted font-medium">لا توجد بيانات كافية</div>}
+                )) : <div className="text-center py-8 text-muted font-medium">لا توجد بيانات كافية</div>}
             </div>
           </div>
 
-            <div className="card-surface p-5 flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="card-surface p-5 shrink-0 flex flex-col overflow-hidden">
             <div className="shrink-0">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center"><Globe size={18} className="ml-2 text-muted" /> مصادر التسويق</h4>
-              <p className="text-xs text-muted mb-2">توزيع الحجوزات حسب المنصات</p>
+              <p className="text-xs text-muted mb-4">توزيع الحجوزات حسب المنصات</p>
             </div>
 
-            <div className="flex-1 min-h-0 w-full relative overflow-hidden" dir="ltr">
-              {sourceChartData.length > 0 ? (
-                <div className="absolute inset-0 pb-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={sourceChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {sourceChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontFamily: 'inherit' }}
-                        labelStyle={{ fontWeight: '600', color: '#111111', marginBottom: '8px' }}
-                      />
-                      <Legend verticalAlign="bottom" height={24} wrapperStyle={{ fontFamily: 'inherit', fontSize: '11px', paddingTop: '10px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                  <div className="h-full flex items-center justify-center text-muted font-medium">لا توجد بيانات كافية</div>
-              )}
-            </div>
+            {/* Marketing sources — was a squished donut. Now a compact ranked
+                list with a subtle horizontal bar per source. Uses way less
+                vertical space, reads instantly, and the top source gets the
+                scarce accent to draw the eye. */}
+            {sourceChartData.length > 0 ? (() => {
+              const total = sourceChartData.reduce((s, x) => s + x.value, 0) || 1;
+              const sorted = [...sourceChartData].sort((a, b) => b.value - a.value);
+              return (
+                <ul className="space-y-3.5">
+                  {sorted.map((source, idx) => {
+                    const pct = Math.round((source.value / total) * 100);
+                    const isTop = idx === 0;
+                    return (
+                      <li key={source.name}>
+                        <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                          <span className="text-sm font-semibold text-ink dark:text-white truncate">
+                            {source.name}
+                          </span>
+                          <span className="text-2xs font-semibold text-muted-soft shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {source.value} حجز · {pct}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-surface-card dark:bg-surface-dark-elevated overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${isTop ? 'bg-accent' : 'bg-muted-soft/60 dark:bg-body-dark/60'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              );
+            })() : (
+              <div className="py-8 text-center text-muted font-medium">لا توجد بيانات كافية</div>
+            )}
           </div>
         </div>
 

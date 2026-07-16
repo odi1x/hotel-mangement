@@ -69,6 +69,30 @@ export default function PricingView() {
       });
   }, [pricingRules, scopeFilter, timelineStart, timelineEnd]);
 
+  // Detect rules that lose to a higher-priority rule in an overlap zone.
+  // Matches the resolution logic in pricingUtils: priority DESC, and on tie,
+  // apartment-specific beats global. Losing rules render dimmed so the eye
+  // reads the timeline as "here's what's actually being applied".
+  const isOverridden = (rule) => {
+    const rStart = new Date(rule.startDate).getTime();
+    const rEnd = new Date(rule.endDate).getTime();
+    return scopedRules.some(o => {
+      if (o.id === rule.id) return false;
+      // Scope compat: both target the same apartment, or one/both is global
+      const scopeMatch = !o.apartmentId || !rule.apartmentId || o.apartmentId === rule.apartmentId;
+      if (!scopeMatch) return false;
+      // Date overlap
+      const oStart = new Date(o.startDate).getTime();
+      const oEnd = new Date(o.endDate).getTime();
+      if (oEnd < rStart || oStart > rEnd) return false;
+      // Priority: higher wins outright
+      if (o.priority > rule.priority) return true;
+      // Tie: apartment-specific beats global
+      if (o.priority === rule.priority && o.apartmentId && !rule.apartmentId) return true;
+      return false;
+    });
+  };
+
   // Convert rule → % offset + width relative to timeline
   const barStyle = (rule) => {
     const totalMs = timelineEnd.getTime() - timelineStart.getTime();
@@ -188,7 +212,9 @@ export default function PricingView() {
             </div>
           ) : (
             <div className="relative mt-3 space-y-2">
-              {scopedRules.map(rule => (
+              {scopedRules.map(rule => {
+                const overridden = isOverridden(rule);
+                return (
                 <div key={rule.id} className="relative h-9 group">
                   {/* Faint month grid inside each row */}
                   <div className="absolute inset-0 grid grid-cols-12 pointer-events-none">
@@ -197,23 +223,28 @@ export default function PricingView() {
                     ))}
                   </div>
 
-                  {/* The rule bar */}
+                  {/* The rule bar — dimmed if a higher-priority rule overlaps
+                      any of its date range. Hover restores partial opacity so
+                      you can still read losing rules when needed. */}
                   <div
-                    className="absolute top-1 bottom-1 rounded-md flex items-center px-2 text-white text-xs font-semibold overflow-hidden cursor-pointer transition-transform hover:scale-[1.01] hover:shadow-md"
+                    className={`absolute top-1 bottom-1 rounded-md flex items-center px-2 text-white text-xs font-semibold overflow-hidden cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md ${overridden ? 'opacity-40 hover:opacity-80' : ''}`}
                     style={{
                       ...barStyle(rule),
                       backgroundColor: rule.color,
                       boxShadow: `0 1px 2px ${rule.color}44`
                     }}
                     onClick={() => setEditRule(rule)}
-                    title={`${rule.label} — ${formatRuleValue(rule)} — ${scopeLabel(rule)}`}
+                    title={overridden
+                      ? `${rule.label} — ${formatRuleValue(rule)} — تتراجع أمام قاعدة أعلى أهمية`
+                      : `${rule.label} — ${formatRuleValue(rule)} — ${scopeLabel(rule)}`}
                   >
                     <span className="truncate">{rule.label}</span>
                     <span className="mx-1.5 opacity-60">·</span>
                     <span className="opacity-90" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatRuleValue(rule)}</span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

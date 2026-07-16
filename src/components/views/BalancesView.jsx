@@ -102,29 +102,22 @@ export default function BalancesView() {
 
         <div className="card-surface p-5 flex flex-col justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark mb-2">
-              الترتيب
-            </p>
+            <p className="eyebrow mb-2">الترتيب</p>
           </div>
-          <div className="flex gap-2">
+          {/* Sort toggle — nav-pill-group matches the sub-nav pattern used
+              in Settings, Maintenance filters, and the analytics chart-range
+              picker. One pattern for "pick one option from a small set". */}
+          <div className="nav-pill-group w-full">
             <button
               onClick={() => setSort('checkout')}
-              className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md text-xs font-semibold transition-colors ${
-                sort === 'checkout'
-                  ? 'bg-ink text-white dark:bg-white dark:text-ink'
-                  : 'bg-surface-soft text-muted hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark'
-              }`}
+              className={`nav-pill flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'checkout' ? 'nav-pill-active' : ''}`}
             >
               <ArrowUpNarrowWide size={13} />
               الأقرب مغادرة
             </button>
             <button
               onClick={() => setSort('amount')}
-              className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md text-xs font-semibold transition-colors ${
-                sort === 'amount'
-                  ? 'bg-ink text-white dark:bg-white dark:text-ink'
-                  : 'bg-surface-soft text-muted hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark'
-              }`}
+              className={`nav-pill flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'amount' ? 'nav-pill-active' : ''}`}
             >
               <ArrowDownWideNarrow size={13} />
               الأكبر مبلغاً
@@ -192,7 +185,7 @@ export default function BalancesView() {
 
                       {/* Balance */}
                       <div className="text-left shrink-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-soft mb-0.5">
+                        <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-0.5">
                           المتبقّي
                         </p>
                         <p
@@ -203,7 +196,7 @@ export default function BalancesView() {
                           <span className="text-xs font-medium text-muted mr-1">ر.س</span>
                         </p>
                         <p
-                          className="text-[10px] text-muted-soft mt-1"
+                          className="text-2xs text-muted-soft mt-1"
                           style={{ fontVariantNumeric: 'tabular-nums' }}
                         >
                           من {formatSAR(totals.totalDue)} ر.س

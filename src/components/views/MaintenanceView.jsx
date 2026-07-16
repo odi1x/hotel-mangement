@@ -289,18 +289,21 @@ export default function MaintenanceView() {
                           {severityBadge(issue.severity)}
                           {statusBadge(issue.status)}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted dark:text-body-dark mb-1">
+                        <div className="flex items-center gap-2 text-xs text-muted dark:text-body-dark mb-1 flex-wrap">
                           <span className="font-medium">{apt?.name || 'وحدة محذوفة'}</span>
                           <span className="text-muted-soft">·</span>
                           <span>{categoryLabel(issue.category)}</span>
                           <span className="text-muted-soft">·</span>
-                          <span
-                            className={`font-medium ${
-                              isUrgentOpen && days >= 3 ? 'text-accent-strong' : ''
-                            }`}
-                          >
-                            {daysOpenLabel(days)}
-                          </span>
+                          {isUrgentOpen && days >= 3 ? (
+                            /* Aging urgent: promote days-open from tinted text
+                               to a dashed accent badge so the reality check
+                               is visible, not just legible. */
+                            <span className="badge-pill badge-dashed text-2xs font-semibold text-accent-strong border-accent/60">
+                              {daysOpenLabel(days)}
+                            </span>
+                          ) : (
+                            <span className="font-medium">{daysOpenLabel(days)}</span>
+                          )}
                           {issue.reportedBy && (
                             <>
                               <span className="text-muted-soft">·</span>
