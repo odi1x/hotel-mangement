@@ -233,54 +233,38 @@ export default function AnalyticsView() {
 
   return (
     <>
-    <div className="h-full overflow-hidden flex flex-col space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-        <div className="flex gap-2">
-          <button
-            onClick={() => exportToExcel(false)}
-            className="btn-primary text-sm"
-          >
-            <Download size={18} />
-            <span>تحميل التقرير الشامل (Excel)</span>
-          </button>
-
-          {hasActiveFilters && (
-            <button
-              onClick={() => exportToExcel(true)}
-              className="btn-secondary text-sm"
-            >
-              <Download size={18} />
-              <span>تحميل التقرير المصفى</span>
-            </button>
-          )}
-        </div>
-
-        <div className="relative flex items-center gap-2">
+    <div className="h-full flex flex-col">
+      {/* Compact action strip — filter chip + Excel export. Was two full-size
+          button rows (~130px total). Now a single ~36px row so the analytics
+          content below gets that vertical space back. */}
+      <div className="flex justify-between items-center mb-5 gap-3 shrink-0">
+        <div className="relative flex items-center gap-1.5">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`btn-secondary text-sm ${
-              (analyticsFilter.apartmentIds?.length > 0 || analyticsFilter.startDate)
-                ? 'border-ink text-ink dark:border-white dark:text-white'
-                : ''
+            className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold transition-colors border ${
+              hasActiveFilters
+                ? 'bg-accent-soft text-accent-strong border-accent/40'
+                : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark dark:hover:text-white'
             }`}
           >
-            <Filter size={18} />
-            <span>تصفية التحليلات</span>
-            <ChevronDown size={16} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+            <Filter size={13} />
+            <span>تصفية</span>
+            {hasActiveFilters && <span className="w-1.5 h-1.5 bg-accent rounded-full mx-0.5"></span>}
+            <ChevronDown size={13} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {hasActiveFilters && (
             <button
               onClick={() => { const empty = { apartmentIds: [], startDate: null, endDate: null }; setAnalyticsFilter(empty); setTempFilter(empty); setIsFilterOpen(false); }}
-              className="icon-action opacity-100"
+              className="icon-action opacity-100 h-8 w-8"
               title="إلغاء التصفية"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           )}
 
           {isFilterOpen && (
-            <div className="absolute top-full left-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
+            <div className="absolute top-full right-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
               <div className="mb-4">
                 <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الفترة الزمنية:</span>
                 <DatePickerCal
@@ -329,8 +313,36 @@ export default function AnalyticsView() {
             </div>
           )}
         </div>
+
+        {/* Excel export — trailing side (RTL end) */}
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <button
+              onClick={() => exportToExcel(true)}
+              className="btn-secondary h-9 px-3 text-xs"
+              title="تحميل التقرير المصفى"
+            >
+              <Download size={14} />
+              <span>المصفى</span>
+            </button>
+          )}
+          <button
+            onClick={() => exportToExcel(false)}
+            className="btn-primary h-9 px-3 text-xs"
+            title="تحميل التقرير الشامل"
+          >
+            <Download size={14} />
+            <span>Excel</span>
+          </button>
+        </div>
       </div>
 
+
+      {/* One scrollable content zone — the whole analytics page scrolls as
+          one unit. Each card is natural content-height; the scroll happens
+          at the page level, not per-card. */}
+      <div className="flex-1 overflow-y-auto min-h-0 -mx-1 px-1">
+      <div className="flex flex-col space-y-5 pb-4">
 
       {/* KPI hierarchy:
           Net Profit is the PRIMARY — the one number that actually captures
@@ -342,7 +354,7 @@ export default function AnalyticsView() {
 
       <div
         onClick={() => fetchBreakdown('profit')}
-        className="relative card-surface p-6 md:p-7 group cursor-pointer transition-all hover:shadow-soft overflow-hidden shrink-0"
+        className="relative card-surface p-6 md:p-7 group cursor-pointer transition-all hover:shadow-soft overflow-hidden"
       >
         {/* Signature: accent bar on the leading (right-side, RTL) edge */}
         <span className="absolute right-0 top-6 bottom-6 w-[3px] rounded-l-full bg-accent"></span>
@@ -381,7 +393,7 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div
           onClick={() => fetchBreakdown('revenue')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
@@ -417,20 +429,19 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 w-full overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-5 pb-2">
-        <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
-            {/* Top performers — matches Maintenance/Pricing/Balances pattern:
-                header is shrink-0, list scrolls internally when it overflows.
-                No column-level scroll — every card owns its own overflow. */}
-            <div className="card-surface flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="p-5 shrink-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-1 flex flex-col gap-5">
+            {/* Top performers — natural content-height. Page scrolls, not the
+                card. Matches the single-scroll model of the whole view. */}
+            <div className="card-surface p-5">
+            <div>
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
                 <Star size={18} className="ml-2 text-muted" /> الأعلى أداءً
               </h4>
-              <p className="text-xs text-muted">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
+              <p className="text-xs text-muted mb-3">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
             </div>
 
-            <div className="flex-1 overflow-y-auto min-h-0 px-5 pb-5">
+            <div>
                 {topUnits.length > 0 ? (
                 <div className="flex flex-col gap-1.5">
                   {topUnits.slice(0, 5).map((unit, idx) => (
@@ -455,13 +466,13 @@ export default function AnalyticsView() {
             </div>
           </div>
 
-            <div className="card-surface flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="p-5 shrink-0">
+            <div className="card-surface p-5">
+            <div>
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center"><Globe size={18} className="ml-2 text-muted" /> مصادر التسويق</h4>
-              <p className="text-xs text-muted">توزيع الحجوزات حسب المنصات</p>
+              <p className="text-xs text-muted mb-4">توزيع الحجوزات حسب المنصات</p>
             </div>
 
-            <div className="flex-1 overflow-y-auto min-h-0 px-5 pb-5">
+            <div>
             {sourceChartData.length > 0 ? (() => {
               const total = sourceChartData.reduce((s, x) => s + x.value, 0) || 1;
               const sorted = [...sourceChartData].sort((a, b) => b.value - a.value);
@@ -498,7 +509,7 @@ export default function AnalyticsView() {
           </div>
         </div>
 
-        <div className="card-surface p-5 lg:col-span-2 flex flex-col h-full min-h-0">
+        <div className="card-surface p-5 lg:col-span-2 flex flex-col min-h-[440px]">
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
             <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">
@@ -538,7 +549,7 @@ export default function AnalyticsView() {
             </div>
           </div>
 
-          <div className="flex-1 w-full min-h-[250px] lg:min-h-0 relative overflow-hidden" dir="ltr">
+          <div className="flex-1 w-full min-h-[280px] relative overflow-hidden" dir="ltr">
             <div className="absolute inset-0 pb-8 pr-4">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
@@ -569,9 +580,11 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      {/* End of main content — modal is moved OUTSIDE this wrapper so
-          space-y-5's margin-top selector can't push it down. */}
-      </div>
+      {/* End of main content — modal is moved OUTSIDE the scroll wrapper so
+          it renders as viewport-fixed, not inside the scrolling area. */}
+      </div>{/* /space-y flow wrapper */}
+      </div>{/* /scroll zone */}
+      </div>{/* /outer h-full flex flex-col */}
 
       {/* Breakdown Modal */}
       {breakdownModal && (

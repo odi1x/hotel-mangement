@@ -1,97 +1,79 @@
-# Rent Flow — Batch C: Analytics Scroll Model + Tab Utility + Density Tightening
+# Rent Flow — Analytics: Single Scroll + Compact Action Strip
 
-Four files. Your scroll-model instinct + the Batch C refactors.
+One file. The fix for what you actually asked in the last iteration.
 
-## On your scroll-model question — you're right
+## What went wrong last time
 
-Column-level scrolling on Analytics (what I shipped in Batch B) was inconsistent with the rest of the app. Every other view (Maintenance, Pricing, Balances, Residents) uses the **same pattern**: fixed page height, one main container with internal scroll on its list content. The page itself never scrolls.
+You asked for a single page-level scroll for the whole analytics content (the blue arrow along the leading edge in your screenshot). I read that as "make each card scroll internally like other views do" and shipped exactly the wrong pattern. My mistake — I was pattern-matching to "consistency with other tabs" without listening to what you specifically wanted for analytics.
 
-Analytics being the one view where a column scrolls independently was a small friction that compounds — users learn one mental model for how views scroll, and then Analytics behaves differently. That's the kind of inconsistency that reads as "not quite right" without anyone being able to name why.
-
-Fixed in this patch: each of the two right-column cards on Analytics now handles its own content overflow internally, matching how MaintenanceView's issue list scrolls inside its container, or how ResidentsView's table scrolls inside its wrapper. Same DNA.
+You were right: analytics is a **content-heavy report page**, not a "list of items" page like Maintenance/Pricing/Balances. Report pages should scroll top-to-bottom as one document. That's how people read reports.
 
 ## What changed
 
-### 1. Analytics scroll model (the fix above)
+### 1. Compact action strip (the two big buttons in the red circles)
 
-Both cards in the right column (الأعلى أداءً, مصادر التسويق) now use the standard pattern:
+**Before**: two full-height rows totaling ~130px of vertical space:
+- Row 1: Big "تحميل التقرير الشامل (Excel)" button + optional filtered-report button
+- Row 2: Big "تصفية التحليلات" button + optional clear button
 
-- Card header: `shrink-0` (fixed at top)
-- Card content: `flex-1 overflow-y-auto min-h-0` (fills remaining, scrolls when needed)
+**After**: one 36px row with both compressed:
+- Right (RTL start): filter chip — `[⚙ تصفية ⌄]`, small, chip-shaped, uses accent-soft when a filter is active
+- Left (RTL end): Excel button — `[⬇ Excel]`, `h-9 px-3 text-xs`, minimal but still clearly primary
 
-The cards still get equal vertical space via `flex-1` at the column level, but overflow is handled **inside each card** instead of the column scrolling as a whole. That's the pattern MaintenanceView, PricingView, and BalancesView already use — Analytics now joins them.
+The filter dropdown panel itself is unchanged — same date picker + unit checkboxes. Only the trigger button got compressed.
 
-### 2. `.tab-underline` utility (Settings pattern extracted)
+That gives you back **~90px of vertical space** for the actual analytics content — enough to see the entire hero card AND the first row of supporting KPIs without scrolling, on most screens.
 
-The top-level tab pattern in SettingsView (border-b-2 -mb-px underline, hover-transition, ink-when-active) was hand-rolled inline classes. It's a real pattern worth reusing, so I extracted it into two utility classes:
+### 2. Single page-level scroll (the blue arrow)
 
-```css
-.tab-underline        /* base state — muted, transparent border */
-.tab-underline-active /* add this when active — ink text, ink border */
+**Before (my Batch C mistake)**: page-fixed, each right-column card had its own internal scroll. Confusing scroll zones.
+
+**After**: one scrollable content zone that holds the entire analytics page. The action strip stays fixed at the top; everything below scrolls as one document:
+
+```
+[Action strip (fixed)]
+├─────────────────────────
+[Hero: Net Profit]        ─┐
+[Supporting KPIs row]      │
+[Chart + right column]     │  ← one scroll zone
+[Anything future]         ─┘
 ```
 
-Usage:
-```jsx
-<button className={`tab-underline flex items-center gap-2 ${
-  activeTab === 'general' ? 'tab-underline-active' : ''
-}`}>
-```
+Cards are natural content-height — no more `flex-1` forcing equal splits, no more internal card scrolls. Scroll bar appears on the leading edge (LTR: right, RTL: left) when content exceeds viewport height.
 
-Applied to SettingsView's two top tabs. Available for any future "top-level tabs above a shared bottom border" pattern.
+### 3. Card cleanup
 
-### 3. ResidentsView column headers tightened
+Since the page scrolls now, the internal scroll infrastructure I added in Batch C is gone:
+- Right column cards: no more `flex-1 min-h-0 overflow-hidden`
+- Card bodies: no more `flex-1 overflow-y-auto min-h-0`
+- Just plain `card-surface p-5` — the card knows its own height
 
-Before:
-| معلومات النزيل | الاتصال والهوية | الوحدة / السعر | الفترة | الحالة | الإجراءات |
-
-After:
-| النزيل | الاتصال | الوحدة | الفترة | الحالة | الإجراءات |
-
-Shorter headers = wider actual data columns = less horizontal cramping. Same information (the row content still shows ID under the phone, price under the unit name — nothing lost).
-
-## What I deliberately did NOT do
-
-**Drop the "بواسطة: {creatorName}" line under booking rows.** My audit called this out as a density opportunity ("if you never look at 'created-by' in practice, drop it"). But I don't actually know whether you look at it — sometimes staff bookings need to be traced back for accountability. Removing an audit trail is a data-loss change I shouldn't make unilaterally. If you want it dropped, tell me and it's a 1-line delete.
-
-**Replace AvailabilityView's mini-calendar with DatePickerCal.** I overestimated this in the audit — DatePickerCal is a *range* picker (startDate + endDate), while the AvailabilityView mini-calendar is a *single-date* jumper. Making DatePickerCal support single-date mode would be a bigger refactor than the ~30 lines of mini-calendar code it replaces. Not worth it — the mini-calendar works, it's local, leave it alone.
+Chart card gets `min-h-[440px]` so it renders at a stable, readable size in the scroll flow instead of collapsing.
 
 ## Install
 
 ```bash
-unzip -o rentflow-batch-c.zip -d .
+unzip -o rentflow-analytics-scroll-fix.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-batch-c.zip
+rm -rf patch rentflow-analytics-scroll-fix.zip
 
 git add -A
-git commit -m "design(batch c): analytics scroll model + tab-underline utility + residents headers"
+git commit -m "design(analytics): single page scroll + compact action strip"
 git push origin design-md-changes
 ```
 
-Four files. No schema changes.
+One file — `src/components/views/AnalyticsView.jsx`.
 
 ## After deploy
 
-1. **Open analytics.** The right column should no longer have its own scroll — each card handles overflow inside itself. Behavior on wide screens should look identical to before Batch B (both cards sized to fit); on constrained heights, each card's list scrolls internally.
+- **Top of analytics**: the two big button rows should be gone. In their place, a small filter chip on the right (RTL start) and a compact Excel button on the left (RTL end). Both in one line.
+- **Scroll**: one scroll bar for the whole analytics content, top to bottom. No more per-card scrolls, no column-scroll.
+- **Chart**: fixed at 440px min-height so it renders reliably as you scroll past.
 
-2. **Open Settings.** The top tab pattern (إعدادات المنشأة / إدارة الموظفين) should look identical to before, but its underlying classes are now the reusable `.tab-underline` utility.
+## What this means for the "consistency" argument I made
 
-3. **Open سجل النزلاء.** Column headers should feel less wordy. Row content is unchanged.
+I said in the last README that analytics should match other views' scroll pattern. That was wrong. Different content shapes deserve different scroll models — a records list (Maintenance issues, Bookings) is naturally card-with-internal-scroll; a report page (Analytics) is naturally single-page-scroll. The pattern that matters is "one obvious scroll direction per view", and both models satisfy that.
 
-## Where we are
+Analytics gets the report treatment. Everything else keeps the list treatment. That's the actual right rule.
 
-Design pass status:
-- **Phase 1** (foundation): warm tokens + type scale + hex leak infrastructure
-- **Phase 2** (mechanical): 398 hex leaks swept
-- **Phase 3** (polish): sidebar wordmark, analytics KPI hierarchy, modal utilities
-- **Batch A** (cleanup + polish follow-through): EmptyState, apartment badges, analytics polish
-- **Batch B** (signature moves): analytics list format, aging maintenance badges, pricing overlap dim
-- **Batch C** (this): scroll model correction + tab utility + density
-
-The mainline design system work is done. The system is consistent, the scroll model is uniform, the hierarchy on key screens is clear, and every widely-used pattern has a utility class.
-
-What's still open, if you want:
-- Padding rhythm normalization (I deferred this in Phase 3 for good reason — needs per-component judgment)
-- Font-weight surgical rebalance (same reason — 192 uses of `font-semibold`, some correct, some overuse)
-- One-off screen improvements you notice while using the app
-
-I'd rather stop here and let you use the app for a while, then come back with specific things that still feel off, than chase generic "next improvement" without a concrete pain point. The best design work now is: use it, see what bugs you, tell me.
+Sorry for the round-trip on this one — should have listened to your first ask more literally.
