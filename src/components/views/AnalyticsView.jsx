@@ -335,39 +335,67 @@ export default function AnalyticsView() {
       </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 shrink-0">
+      {/* KPI hierarchy:
+          Net Profit is the PRIMARY — the one number that actually captures
+          whether the business is winning. Given a hero treatment with the
+          scarce emerald accent + an accent bar on the leading edge. The
+          three supporting metrics (Revenue, Occupancy, Nights) render at
+          a subordinate weight in a strict 3-column grid below so the eye
+          reads them as "context for the primary" rather than "four peers". */}
+
+      <div
+        onClick={() => fetchBreakdown('profit')}
+        className="relative card-surface p-6 md:p-7 group cursor-pointer transition-all hover:shadow-soft overflow-hidden shrink-0"
+      >
+        {/* Signature: accent bar on the leading (right-side, RTL) edge */}
+        <span className="absolute right-0 top-6 bottom-6 w-[3px] rounded-l-full bg-accent"></span>
+
+        <div className="flex items-start justify-between gap-4 pr-3">
+          <div className="min-w-0">
+            <p className="eyebrow mb-2">صافي الأرباح</p>
+            <h3 className="text-4xl md:text-5xl font-bold text-accent tracking-tightest leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {Math.round(analytics.netProfit).toLocaleString()}
+              <span className="text-lg md:text-xl font-semibold text-muted-soft mr-2">ر.س</span>
+            </h3>
+            <p className="text-xs text-muted-soft mt-3">
+              الإيرادات ناقص كل المصروفات خلال الفترة المحددة
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 shrink-0">
         <div
           onClick={() => fetchBreakdown('revenue')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-body-dark font-semibold mb-2">إجمالي الإيرادات</p>
-          <h3 className="text-3xl font-bold text-accent tracking-tightest">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-semibold text-muted-soft">ر.س</span></h3>
-        </div>
-
-        <div
-          onClick={() => fetchBreakdown('profit')}
-          className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
-        >
-          <p className="text-sm text-muted dark:text-body-dark font-semibold mb-2">صافي الأرباح</p>
-          <h3 className="text-3xl font-bold text-accent tracking-tightest">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-semibold text-muted-soft">ر.س</span></h3>
+          <p className="eyebrow mb-2">إجمالي الإيرادات</p>
+          <h3 className="text-2xl font-bold text-ink dark:text-white tracking-tightest" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {analytics.totalRevenue.toLocaleString()}
+            <span className="text-xs font-semibold text-muted-soft mr-1.5">ر.س</span>
+          </h3>
         </div>
 
         <div
           onClick={() => fetchBreakdown('occupancy')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-body-dark font-semibold mb-2">معدل الإشغال</p>
-          <h3 className="text-3xl font-bold text-ink dark:text-white tracking-tightest">{Math.round(analytics.occupancyRate)}<span className="text-sm font-semibold text-muted">%</span></h3>
-          <p className="text-xs text-muted-soft mt-2 font-medium">من إجمالي الأيام المتاحة</p>
+          <p className="eyebrow mb-2">معدل الإشغال</p>
+          <h3 className="text-2xl font-bold text-ink dark:text-white tracking-tightest" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {Math.round(analytics.occupancyRate)}<span className="text-xs font-semibold text-muted mr-0.5">%</span>
+          </h3>
+          <p className="text-xs text-muted-soft mt-1.5">من إجمالي الأيام المتاحة</p>
         </div>
 
         <div
           onClick={() => fetchBreakdown('nights')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-body-dark font-semibold mb-2">الليالي المؤجرة</p>
-          <h3 className="text-3xl font-bold text-ink dark:text-white tracking-tightest">{analytics.totalNights} <span className="text-sm font-semibold text-muted">ليلة</span></h3>
-          <p className="text-xs text-muted-soft mt-2 font-medium">عبر {analytics.count} حجز</p>
+          <p className="eyebrow mb-2">الليالي المؤجرة</p>
+          <h3 className="text-2xl font-bold text-ink dark:text-white tracking-tightest" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {analytics.totalNights} <span className="text-xs font-semibold text-muted mr-0.5">ليلة</span>
+          </h3>
+          <p className="text-xs text-muted-soft mt-1.5">عبر {analytics.count} حجز</p>
         </div>
       </div>
 

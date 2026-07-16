@@ -1,75 +1,116 @@
-# Rent Flow — Design System Phase 2: Consistency Sweep
+# Rent Flow — Design System Phase 3: Polish
 
-**Scope**: 22 files. 398 hex leaks eliminated. Zero visual changes.
+**Scope**: 3 files. The visible design pass.
 
-This is the mechanical follow-through on the Phase 1 foundation. Every inline hex value that was scattered across your components gets promoted to a proper token. What was 300+ places using `dark:text-[#a1a1aa]` inline is now 300+ places using `dark:text-body-dark`. Same pixels on screen, entirely different maintenance story.
+Phases 1 and 2 were structural. This is where design boldness actually lives — the one hero moment on the analytics screen, the brand corner on the sidebar, and the utility infrastructure for future modal consistency.
 
 ## What changed
 
-### The sweep (398 replacements, mechanical)
+### 1. Analytics KPI hierarchy — one primary, three supporting
 
-- **`[#a1a1aa]` → `body-dark`** — 190 instances across 17 files. Dark-mode secondary text.
-- **`[#242424]` → `hairline-dark`** — 122 instances across 16 files. Dark-mode border (darker variant).
-- **`[#2e2e2e]` → `hairline-dark-soft`** — 62 instances across 17 files. Dark-mode border (softer variant).
-- **`border-gray-100` → `border-hairline-soft`** — replaces Tailwind's default gray leaking past your token system.
-- **`divide-gray-100` → `divide-hairline-soft`** — same for divide utilities.
-- **`text-[10px]` → `text-2xs`** — 29 instances promoted to the tokenized 10px size with proper letter-spacing.
+**Before**: four undifferentiated tiles in a 4-column grid, revenue and profit both using the emerald accent (spreading the scarce color thin), all reading as visual peers.
 
-Each of these produces IDENTICAL pixels on screen. It's a pure refactor.
+**After**: **صافي الأرباح (Net Profit)** promoted to a hero tile — the one number that actually captures whether the business is winning:
+- Full-width card at the top
+- Number is `text-5xl` on desktop (`text-4xl` on mobile), tighter tracking, tabular numerals
+- Only place on the whole screen that uses the emerald accent for the number
+- Signature accent bar on the leading (right, RTL) edge — small brand touch
+- Subtitle explains what "صافي" actually means (revenue minus all expenses)
 
-### Files touched (22)
+Below the hero, three supporting metrics in a strict 3-column grid:
+- إجمالي الإيرادات (Total Revenue) — was accent, now ink
+- معدل الإشغال (Occupancy Rate)
+- الليالي المؤجرة (Nights Rented)
 
-**Layout**
-- `Layout.jsx`, `Header.jsx`, `Sidebar.jsx`, `NotificationsDropdown.jsx`
+Same clickable behavior (each opens the breakdown modal). Smaller number (`text-2xl` instead of `text-3xl`) to make the hero feel taller. All four still use tabular numerals for aligned display of digits.
 
-**UI primitives**
-- `BookByDateModal.jsx`, `BookingForm.jsx`, `DatePickerCal.jsx`, `ImageUpload.jsx`
-- `MaintenanceIssueForm.jsx`, `PricingRuleForm.jsx`
-- `ProfileSettingsModal.jsx`, `StaffFormModal.jsx`
+Why Net Profit and not Revenue as the hero: revenue is easy — anyone can generate revenue by dropping prices. Net Profit is what actually pays the bills, and it's the number owners intuitively check first thing in the morning. Making it primary teaches good habits. If you want Revenue as the hero instead, it's a 3-line swap in AnalyticsView.jsx.
 
-**Views**
-- `AnalyticsView.jsx`, `ApartmentsView.jsx`, `AvailabilityView.jsx`, `LoginView.jsx`
-- `MaintenanceView.jsx`, `PricingView.jsx`, `RequestsView.jsx`, `ResidentsView.jsx`
-- `SettingsView.jsx`, `settings/StaffManagement.jsx`
+### 2. Sidebar wordmark — a real brand corner
 
-## What I deliberately did NOT touch in this pass
+**Before**: generic Home icon + wordmark in `font-semibold`, `tracking-tight`, followed by `mb-10` of dead space before the nav.
 
-Two items from the original Phase 2 plan I moved to Phase 3 because they need per-case judgment, not mechanical replacement:
+**After**:
+- Wordmark now uses `font-bold tracking-tightest leading-none` — reads as a logo, not a nav item
+- The block is followed by a hairline-soft border-bottom that creates a "chapter" break between brand identity and navigation
+- Slightly reduced padding (`mb-6 pb-6` instead of `mb-10`) — the divider does the separation work now, so no wasted whitespace
+- Icon slightly smaller (22 instead of 24) to balance with the tighter wordmark
 
-**1. Font-weight rebalance.** 192 uses of `font-semibold` across views is genuinely a lot, but a blanket removal would collapse hierarchy in places where semibold IS the right anchor (card titles, active nav items, table headers). Doing this properly means walking through each screen and asking "does this specific thing deserve to be bold?" — that's Phase 3 work, next to the analytics KPI hierarchy pass.
+The effect: the top-right corner of the app now feels like "you are here" instead of "here's some space then the nav starts".
 
-**2. Padding standardization.** Same reason. `p-3` in a compact list is intentional; `p-3` in a modal is probably lazy. I can't tell them apart with a script. Phase 3 handles this component-by-component.
+### 3. Sidebar active state — drop the redundant tint
 
-The consolation: the mechanical sweep on its own already delivers the "unified" feeling you asked for. When someone eventually changes your dark-mode border color, they change ONE line in `tailwind.config.js` instead of hunting through 22 files.
+**Before**: an active nav item had SIX signals of activation stacked on top of each other:
+1. Background color change (`bg-surface-card`)
+2. Text color change (`text-ink` vs `muted`)
+3. Font weight change (`font-semibold` vs default)
+4. Accent bar on the leading edge (`bg-accent`)
+5. Icon tint change (`text-accent`)
+6. Icon stroke-width bump (`strokeWidth={2.25}` vs `2`)
+
+Six signals for "this is the current page" is over-emphasis. When everything's shouting, nothing's heard.
+
+**After**: dropped the icon accent tint. The accent bar is doing that job already, and having them both was double-emphasizing the same thing. The remaining signals (bg, text color, font weight, bar, stroke width) still make the active state unmistakable — they just each contribute a different kind of emphasis (layout / hierarchy / brand / weight).
+
+### 4. Modal utility classes (infrastructure, no adoption yet)
+
+Added seven composable utility classes to `index.css` for future modal migrations:
+
+```
+.modal-backdrop  — the fixed backdrop that covers the viewport
+.modal-shell     — the actual dialog box (add max-w-* per instance)
+.modal-header    — px-6 py-4, hairline-soft bottom border
+.modal-body      — flex-1, overflow-y-auto, p-6
+.modal-footer    — px-6 py-4, hairline-soft top border
+.modal-title     — text-lg font-semibold tracking-tight
+.modal-subtitle  — text-xs muted
+```
+
+Also added `.eyebrow` for the uppercase micro-labels used everywhere:
+```
+.eyebrow — text-2xs font-semibold uppercase tracking-wider text-muted
+```
+
+These are available now. When any modal is next edited for a bug or feature reason, migrate it to the utility classes as part of that work. That's a lower-risk way to migrate ~12 modals than doing it all at once.
+
+## What I deliberately deferred
+
+Two items from the plan I chose not to do in this pass:
+
+**1. Font-weight rebalance across the whole app.** I did rebalance the analytics KPI cards specifically (the eyebrow labels drop from `font-semibold` to `.eyebrow`'s baked-in weight, which is still 600 but semantic). But I didn't sweep 192 uses of `font-semibold` across every view because that's high-risk work — some are correct, some are overuse, and only visual inspection can tell them apart. Better to fix them as I encounter them in other work.
+
+**2. Padding standardization.** Same reason — it's per-component judgment. Modals I touch in future will use the new `.modal-*` classes which enforce the "comfortable" density (p-6). Cards will migrate naturally over time.
+
+Doing these two properly means walking through every screen with fresh eyes — that's a next quarter thing, not a "ship this patch" thing.
 
 ## Install
 
 ```bash
-unzip -o rentflow-design-phase-2.zip -d .
+unzip -o rentflow-design-phase-3.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-design-phase-2.zip
+rm -rf patch rentflow-design-phase-3.zip
 
 git add -A
-git commit -m "design(phase 2): sweep 398 hex leaks into design tokens"
+git commit -m "design(phase 3): analytics KPI hierarchy + sidebar brand corner + modal utilities"
 git push origin design-md-changes
 ```
 
-The `cp -r patch/src ./` command recursively merges the patched files into your `src/` directory, overwriting the specific files that changed. Nothing else in `src/` gets touched.
+Three files touched: `src/index.css`, `src/components/layout/Sidebar.jsx`, `src/components/views/AnalyticsView.jsx`.
 
-## Verify after deploy
+## After deploy — the moments to look at
 
-- The app should look **exactly** the same as it does today (pixel-for-pixel). If anything looks visually different, that's a bug and I need to know — send a screenshot.
-- Dark mode should still work. Test by toggling الوضع الليلي in the sidebar and looking at any card, modal, or list.
-- No broken layouts, no missing borders, no color regressions.
+- **Open analytics.** The eye should land on the profit number immediately, then drift down to the three supporting metrics. If it feels like your gaze bounces around not knowing where to land, hierarchy failed and I need to know.
+- **Look at the sidebar.** The wordmark corner should read as a small brand statement. The active nav item should feel emphasized but not screamed at.
+- **Navigate between tabs.** Watch the active-state transitions on the sidebar items. They should feel calmer than before — the accent bar carries the "current" signal and the icon just... follows the text.
 
-## What's coming in Phase 3
+## What's not shipped and why
 
-Now that the base is honest and consistent, Phase 3 is where I actually spend design boldness:
+The KPI redesign is the one aesthetic bet in this pass. If it doesn't land, it's a 20-line revert (delete the new hero div, restore the 4-card grid). The other changes (sidebar wordmark, active-state cleanup, utility classes) are lower-stakes — they're refinement, not reimagination.
 
-- **Sidebar wordmark treatment** — turn the "رنت فلو" corner into a real product anchor.
-- **Analytics KPI hierarchy** — one primary metric (revenue, big), three supporting metrics (secondary, smaller). Right now they're four undifferentiated tiles.
-- **Font-weight rebalance** — surgical, per-component. Reduce `font-semibold` in body/label contexts, keep it in anchor contexts.
-- **Padding rhythm normalization** — component-by-component, aligned to the compact/default/comfortable system.
-- **Any last opportunities I spotted while doing Phase 2** — a couple of small things I noticed in the sweep worth mentioning.
+If you want to keep pushing on the design later:
+- **Fixed-width sidebar in expanded mode** — the current `w-64` is fine but could be `w-60` for a slightly tighter feel
+- **Chart card treatment on analytics** — the revenue trend chart currently has the same visual weight as the KPI cards; could be quieter
+- **Empty states across the app** — most views have decent empty states from my Feature 1 patches, but there are older screens where empty is just... white space
+- **Print styles for the receipt/agreement PDFs** — those still use the old inline hex values and could benefit from the token system in a future pass
 
-Deploy Phase 2, confirm the app still looks identical, then say "ship Phase 3" and we finish the job.
+Say the word if you want any of those.

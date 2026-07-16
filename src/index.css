@@ -146,6 +146,47 @@
   .link-accent {
     @apply text-accent font-semibold hover:text-accent-strong transition-colors;
   }
+
+  /* ---- Modal shells: unified structure ------------------------------------
+     Use these together to compose a consistent modal:
+       .modal-backdrop → the fixed backdrop that covers the viewport
+       .modal-shell    → the actual dialog box (add max-w-* per instance)
+       .modal-header   → title strip at the top
+       .modal-body     → scrollable content area
+       .modal-footer   → action strip at the bottom
+     -------------------------------------------------------------------- */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4
+           bg-black/40 backdrop-blur-sm;
+  }
+  .modal-shell {
+    @apply relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft
+           w-full overflow-hidden border border-hairline dark:border-hairline-dark
+           flex flex-col max-h-[92vh];
+  }
+  .modal-header {
+    @apply px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark-soft
+           flex justify-between items-center shrink-0;
+  }
+  .modal-body {
+    @apply flex-1 overflow-y-auto min-h-0 p-6;
+  }
+  .modal-footer {
+    @apply px-6 py-4 border-t border-hairline-soft dark:border-hairline-dark-soft
+           flex justify-end gap-3 shrink-0;
+  }
+  .modal-title {
+    @apply font-semibold tracking-tight text-ink dark:text-white text-lg leading-tight;
+  }
+  .modal-subtitle {
+    @apply text-xs text-muted dark:text-body-dark mt-0.5;
+  }
+
+  /* ---- Eyebrow: uppercase micro-label used above card titles / form fields ---- */
+  .eyebrow {
+    @apply block text-2xs font-semibold uppercase tracking-wider
+           text-muted dark:text-body-dark;
+  }
 }
 
 /* ============================================================
