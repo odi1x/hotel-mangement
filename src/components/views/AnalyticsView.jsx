@@ -418,19 +418,22 @@ export default function AnalyticsView() {
       </div>
 
       <div className="flex-1 min-h-0 w-full overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-5 pb-2">
-        <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0 overflow-y-auto lg:pl-1">
-            <div className="card-surface p-5 shrink-0 flex flex-col overflow-hidden">
-            <div className="shrink-0">
+        <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
+            {/* Top performers — matches Maintenance/Pricing/Balances pattern:
+                header is shrink-0, list scrolls internally when it overflows.
+                No column-level scroll — every card owns its own overflow. */}
+            <div className="card-surface flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="p-5 shrink-0">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
                 <Star size={18} className="ml-2 text-muted" /> الأعلى أداءً
               </h4>
-              <p className="text-xs text-muted mb-3">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
+              <p className="text-xs text-muted">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
             </div>
 
-            {/* Top-performers list — natural rhythm from top, no justify-center
-                so rows can't crush into each other when height is tight. */}
-            <div className="flex flex-col gap-1.5 pr-1">
-                {topUnits.length > 0 ? topUnits.slice(0, 5).map((unit, idx) => (
+            <div className="flex-1 overflow-y-auto min-h-0 px-5 pb-5">
+                {topUnits.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  {topUnits.slice(0, 5).map((unit, idx) => (
                     <div key={unit.id} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-surface-soft/60 dark:hover:bg-hairline-dark transition-colors">
                         <div className="flex items-center gap-3 min-w-0">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${idx === 0 ? 'bg-accent text-white' : 'bg-surface-card text-ink dark:bg-surface-dark dark:text-white'}`}>
@@ -446,20 +449,19 @@ export default function AnalyticsView() {
                             <p className="text-2xs text-muted-soft mt-0.5">ر.س</p>
                         </div>
                     </div>
-                )) : <div className="text-center py-8 text-muted font-medium">لا توجد بيانات كافية</div>}
+                  ))}
+                </div>
+                ) : <div className="text-center py-8 text-muted font-medium">لا توجد بيانات كافية</div>}
             </div>
           </div>
 
-            <div className="card-surface p-5 shrink-0 flex flex-col overflow-hidden">
-            <div className="shrink-0">
+            <div className="card-surface flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="p-5 shrink-0">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center"><Globe size={18} className="ml-2 text-muted" /> مصادر التسويق</h4>
-              <p className="text-xs text-muted mb-4">توزيع الحجوزات حسب المنصات</p>
+              <p className="text-xs text-muted">توزيع الحجوزات حسب المنصات</p>
             </div>
 
-            {/* Marketing sources — was a squished donut. Now a compact ranked
-                list with a subtle horizontal bar per source. Uses way less
-                vertical space, reads instantly, and the top source gets the
-                scarce accent to draw the eye. */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-5 pb-5">
             {sourceChartData.length > 0 ? (() => {
               const total = sourceChartData.reduce((s, x) => s + x.value, 0) || 1;
               const sorted = [...sourceChartData].sort((a, b) => b.value - a.value);
@@ -492,6 +494,7 @@ export default function AnalyticsView() {
             })() : (
               <div className="py-8 text-center text-muted font-medium">لا توجد بيانات كافية</div>
             )}
+            </div>
           </div>
         </div>
 

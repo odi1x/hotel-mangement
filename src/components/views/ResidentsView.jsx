@@ -190,9 +190,9 @@ export default function ResidentsView({ openBookingForm }) {
           <table className="w-full text-right">
             <thead>
               <tr className="text-xs font-semibold text-muted dark:text-body-dark border-b border-hairline-soft dark:border-hairline-dark">
-                <th className="px-6 py-4">معلومات النزيل</th>
-                <th className="px-6 py-4">الاتصال والهوية</th>
-                <th className="px-6 py-4">الوحدة / السعر</th>
+                <th className="px-6 py-4">النزيل</th>
+                <th className="px-6 py-4">الاتصال</th>
+                <th className="px-6 py-4">الوحدة</th>
                 <th className="px-6 py-4">الفترة</th>
                 <th className="px-6 py-4">الحالة</th>
                 <th className="px-6 py-4 text-center">الإجراءات</th>

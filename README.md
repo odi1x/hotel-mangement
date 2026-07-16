@@ -1,103 +1,97 @@
-# Rent Flow — Batch B: Signature Polish
+# Rent Flow — Batch C: Analytics Scroll Model + Tab Utility + Density Tightening
 
-4 files. The signature moves on the three views you built.
+Four files. Your scroll-model instinct + the Batch C refactors.
+
+## On your scroll-model question — you're right
+
+Column-level scrolling on Analytics (what I shipped in Batch B) was inconsistent with the rest of the app. Every other view (Maintenance, Pricing, Balances, Residents) uses the **same pattern**: fixed page height, one main container with internal scroll on its list content. The page itself never scrolls.
+
+Analytics being the one view where a column scrolls independently was a small friction that compounds — users learn one mental model for how views scroll, and then Analytics behaves differently. That's the kind of inconsistency that reads as "not quite right" without anyone being able to name why.
+
+Fixed in this patch: each of the two right-column cards on Analytics now handles its own content overflow internally, matching how MaintenanceView's issue list scrolls inside its container, or how ResidentsView's table scrolls inside its wrapper. Same DNA.
 
 ## What changed
 
-### 1. Analytics right column — fixed the squished cards
+### 1. Analytics scroll model (the fix above)
 
-**The problem you flagged**: on the analytics page, the "الأعلى أداءً" card only showed 2 rows (should be 3) and the "مصادر التسويق" donut chart was squished, with the "زيارة مباشرة" label bleeding off the card edge.
+Both cards in the right column (الأعلى أداءً, مصادر التسويق) now use the standard pattern:
 
-**Root cause**: two cards forced to share fixed vertical space via `flex-1 flex-1`. When content is heavy, both get crushed. The donut chart needs a roughly square aspect ratio to render legibly, so it always fights the height constraint.
+- Card header: `shrink-0` (fixed at top)
+- Card content: `flex-1 overflow-y-auto min-h-0` (fills remaining, scrolls when needed)
 
-**Fix**:
+The cards still get equal vertical space via `flex-1` at the column level, but overflow is handled **inside each card** instead of the column scrolling as a whole. That's the pattern MaintenanceView, PricingView, and BalancesView already use — Analytics now joins them.
 
-- **Right column now scrolls when needed** (`overflow-y-auto`). Both cards get natural content-height (`shrink-0`) instead of fighting over half the space each. If everything fits — no scroll. If it doesn't — scroll gracefully. This is what the rest of the app already does.
+### 2. `.tab-underline` utility (Settings pattern extracted)
 
-- **Donut chart → compact ranked list.** The pie/donut format was fundamentally wrong for this small a card. Now each source renders as one row:
+The top-level tab pattern in SettingsView (border-b-2 -mb-px underline, hover-transition, ink-when-active) was hand-rolled inline classes. It's a real pattern worth reusing, so I extracted it into two utility classes:
 
-  ```
-  زيارة مباشرة                                5 حجز · 45%
-  ██████████████████████████░░░░░░░░
-  Airbnb                                        3 حجز · 27%
-  ████████████░░░░░░░░░░░░
-  Booking.com                                   2 حجز · 18%
-  ████████░░░░░░░░░░░░░░░
-  ```
-
-  Sorted by count descending. The top source gets the emerald accent bar (concentrating attention on the biggest source). Others get muted-gray bars (respecting the scarce-accent rule). Way more space-efficient, reads instantly, no cropped labels.
-
-- **Top performers row rhythm** — dropped the `justify-center` on the row container. Centering rows vertically was actively harmful when space was tight — it collapsed rows onto each other. Now rows stack from the top with consistent `gap-1.5`, capped at max 5.
-
-Removed the recharts `PieChart`, `Pie`, `Cell`, `Legend` imports and the `COLORS` constant since none are needed anymore. Slightly smaller bundle as a bonus.
-
-### 2. Maintenance — days-open badge for aging urgent items
-
-Before: when an urgent maintenance issue had been open ≥ 3 days, the "days open" label got tinted with `text-accent-strong`. Legible, but visually forgettable — it disappeared into the meta row.
-
-After: those aging urgent items now render the days-open label as a **dashed accent badge** using `.badge-dashed` with the accent border:
-
-```
-شقة 93 · تكييف · [منذ 5 أيام]   ← dashed accent border, stands out
+```css
+.tab-underline        /* base state — muted, transparent border */
+.tab-underline-active /* add this when active — ink text, ink border */
 ```
 
-Normal-severity or new items still render the days-open as plain text. Only urgent-and-aging gets the badge treatment — because that's the exact case where the reality check matters most. When you scan the list, your eye catches those badges immediately.
+Usage:
+```jsx
+<button className={`tab-underline flex items-center gap-2 ${
+  activeTab === 'general' ? 'tab-underline-active' : ''
+}`}>
+```
 
-### 3. Pricing — losing rule bars now dim in overlaps
+Applied to SettingsView's two top tabs. Available for any future "top-level tabs above a shared bottom border" pattern.
 
-Before: overlapping rule bars in the timeline stacked on top of each other, and the priority winner wasn't visually distinguishable. If you had a "Ramadan ×1.5" rule (normal priority) and a "Hajj @ Nuzha" rule (high priority) overlapping, you couldn't tell from the timeline which one actually gets applied.
+### 3. ResidentsView column headers tightened
 
-After: any rule that loses to a higher-priority overlapping rule renders at **40% opacity**, with hover restoring to 80%. Winners render at full opacity.
+Before:
+| معلومات النزيل | الاتصال والهوية | الوحدة / السعر | الفترة | الحالة | الإجراءات |
 
-Matches the actual resolution logic in `pricingUtils.js`:
-- Higher priority wins outright
-- On tie, apartment-specific rule beats global
+After:
+| النزيل | الاتصال | الوحدة | الفترة | الحالة | الإجراءات |
 
-Titles on dimmed bars also change to `"— تتراجع أمام قاعدة أعلى أهمية"` so hovering tells you *why* it's dimmed. Priority is now visible on the timeline, not just in the form. Correcting a mis-ordered priority also becomes a game of "spot the dimmed bar and bump its importance up".
+Shorter headers = wider actual data columns = less horizontal cramping. Same information (the row content still shows ID under the phone, price under the unit name — nothing lost).
 
-### 4. Balances — sort toggle unified + hex leak sweep
+## What I deliberately did NOT do
 
-Before: the sort toggle (الأقرب مغادرة / الأكبر مبلغاً) used hand-rolled buttons with a custom active state — inconsistent with the sub-nav pattern used everywhere else (Settings, chart-range picker, maintenance filters).
+**Drop the "بواسطة: {creatorName}" line under booking rows.** My audit called this out as a density opportunity ("if you never look at 'created-by' in practice, drop it"). But I don't actually know whether you look at it — sometimes staff bookings need to be traced back for accountability. Removing an audit trail is a data-loss change I shouldn't make unilaterally. If you want it dropped, tell me and it's a 1-line delete.
 
-After: migrated to the `nav-pill-group` + `nav-pill` + `nav-pill-active` pattern. Same behavior, but now it visually belongs to the same family as every other "pick one from a small set" control in the app.
-
-Also, the eyebrow label above the sort toggle was still using the inline `text-xs font-semibold uppercase tracking-wider text-muted` pattern. Migrated to the `.eyebrow` utility class I added in Phase 3. That's the pattern for all uppercase micro-labels.
-
-Bonus: swept 2 remaining `text-[10px]` instances in this file that my earlier passes missed (this file wasn't in Phase 2's working copy). No more `text-[10px]` anywhere in the codebase.
-
-**Note on "stronger CTA per row"** — I mentioned this in the audit but on inspection the row's "تسجيل دفعة" button already uses `.btn-accent`, which is the strongest button in the design system. Nothing to strengthen. Kept as-is.
+**Replace AvailabilityView's mini-calendar with DatePickerCal.** I overestimated this in the audit — DatePickerCal is a *range* picker (startDate + endDate), while the AvailabilityView mini-calendar is a *single-date* jumper. Making DatePickerCal support single-date mode would be a bigger refactor than the ~30 lines of mini-calendar code it replaces. Not worth it — the mini-calendar works, it's local, leave it alone.
 
 ## Install
 
 ```bash
-unzip -o rentflow-batch-b.zip -d .
+unzip -o rentflow-batch-c.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-batch-b.zip
+rm -rf patch rentflow-batch-c.zip
 
 git add -A
-git commit -m "design(batch b): analytics right column + maintenance aging badges + pricing overlap dim + balances sort"
+git commit -m "design(batch c): analytics scroll model + tab-underline utility + residents headers"
 git push origin design-md-changes
 ```
 
-Four files. No schema changes. No API changes.
+Four files. No schema changes.
 
-## After deploy — what to look at
+## After deploy
 
-1. **Open analytics.** Right column should now show 3+ top performers with full row breathing, and marketing sources should render as a clean ranked list with subtle horizontal bars. If the column has more content than fits, scroll works.
+1. **Open analytics.** The right column should no longer have its own scroll — each card handles overflow inside itself. Behavior on wide screens should look identical to before Batch B (both cards sized to fit); on constrained heights, each card's list scrolls internally.
 
-2. **Log a maintenance issue as urgent, wait 3+ days.** (Or find one already aged.) The days-open indicator should now be a dashed accent badge, not just tinted text.
+2. **Open Settings.** The top tab pattern (إعدادات المنشأة / إدارة الموظفين) should look identical to before, but its underlying classes are now the reusable `.tab-underline` utility.
 
-3. **Open pricing.** If you have any overlapping rules with different priorities, the loser should render dimmed. Hover reveals a "تتراجع أمام قاعدة أعلى أهمية" tooltip.
+3. **Open سجل النزلاء.** Column headers should feel less wordy. Row content is unchanged.
 
-4. **Open balances.** Sort toggle should look identical to the sub-nav in Settings and the chart-range picker on analytics. Same DNA.
+## Where we are
 
-## What's still on the list (if you want to keep going)
+Design pass status:
+- **Phase 1** (foundation): warm tokens + type scale + hex leak infrastructure
+- **Phase 2** (mechanical): 398 hex leaks swept
+- **Phase 3** (polish): sidebar wordmark, analytics KPI hierarchy, modal utilities
+- **Batch A** (cleanup + polish follow-through): EmptyState, apartment badges, analytics polish
+- **Batch B** (signature moves): analytics list format, aging maintenance badges, pricing overlap dim
+- **Batch C** (this): scroll model correction + tab utility + density
 
-**Batch C — Bigger refactors**
-- AvailabilityView: replace custom mini-calendar with DatePickerCal (~60 line reduction)
-- Settings: extract `.tab-underline` utility
-- Residents: shorter column headers + drop "created-by" line
+The mainline design system work is done. The system is consistent, the scroll model is uniform, the hierarchy on key screens is clear, and every widely-used pattern has a utility class.
 
-These are lower priority since they're more about code hygiene and micro-tightening than "user notices it looks better". Only worth it if the design pass momentum is still there.
+What's still open, if you want:
+- Padding rhythm normalization (I deferred this in Phase 3 for good reason — needs per-component judgment)
+- Font-weight surgical rebalance (same reason — 192 uses of `font-semibold`, some correct, some overuse)
+- One-off screen improvements you notice while using the app
 
-Any of the previous polish items still bugging you after deploy? Or any new observations from using the app between deploys? I'd rather fix specific things you notice than chase generic improvements at this point.
+I'd rather stop here and let you use the app for a while, then come back with specific things that still feel off, than chase generic "next improvement" without a concrete pain point. The best design work now is: use it, see what bugs you, tell me.

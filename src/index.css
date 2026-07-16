@@ -182,6 +182,21 @@
     @apply text-xs text-muted dark:text-body-dark mt-0.5;
   }
 
+  /* ---- Tab underline: the "border-b-2 -mb-px" pattern used in Settings.
+     One layer tabs live above a shared bottom border and the active tab's
+     underline overlaps the border, hiding it selectively. Use it like:
+       <div className="flex gap-6 border-b border-hairline">
+         <button className={`tab-underline ${active === 'x' ? 'tab-underline-active' : ''}`}>...
+     -------------------------------------------------------------------- */
+  .tab-underline {
+    @apply relative pb-3 -mb-px border-b-2 border-transparent
+           text-sm font-semibold text-muted transition-colors
+           hover:text-ink dark:text-body-dark dark:hover:text-white;
+  }
+  .tab-underline-active {
+    @apply border-ink text-ink dark:border-white dark:text-white;
+  }
+
   /* ---- Eyebrow: uppercase micro-label used above card titles / form fields ---- */
   .eyebrow {
     @apply block text-2xs font-semibold uppercase tracking-wider

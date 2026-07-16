@@ -203,22 +203,14 @@ export default function SettingsView() {
         <div className="flex gap-6 border-b border-hairline dark:border-hairline-dark">
           <button
             onClick={() => setActiveTab('general')}
-            className={`pb-3 pt-1 font-semibold text-sm transition-colors flex items-center gap-2 border-b-2 -mb-px ${
-              activeTab === 'general'
-                ? 'text-ink dark:text-white border-ink dark:border-white'
-                : 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white border-transparent'
-            }`}
+            className={`tab-underline flex items-center gap-2 ${activeTab === 'general' ? 'tab-underline-active' : ''}`}
           >
             <Settings size={18} />
             إعدادات المنشأة
           </button>
           <button
             onClick={() => setActiveTab('staff')}
-            className={`pb-3 pt-1 font-semibold text-sm transition-colors flex items-center gap-2 border-b-2 -mb-px ${
-              activeTab === 'staff'
-                ? 'text-ink dark:text-white border-ink dark:border-white'
-                : 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white border-transparent'
-            }`}
+            className={`tab-underline flex items-center gap-2 ${activeTab === 'staff' ? 'tab-underline-active' : ''}`}
           >
             <Shield size={18} />
             إدارة الموظفين
