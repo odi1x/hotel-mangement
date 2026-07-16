@@ -5,6 +5,7 @@ import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import PaymentStatusBadge from '../ui/PaymentStatusBadge';
 import PaymentLedgerModal from '../ui/PaymentLedgerModal';
 import PrintAgreement from '../ui/PrintAgreement';
+import EmptyState from '../ui/EmptyState';
 
 /**
  * The dues queue.
@@ -60,9 +61,9 @@ export default function BalancesView() {
         <div className="card-surface p-5">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
-              <Wallet size={14} className="text-muted dark:text-[#a1a1aa]" />
+              <Wallet size={14} className="text-muted dark:text-body-dark" />
             </div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               إجمالي المستحقات
             </p>
           </div>
@@ -83,7 +84,7 @@ export default function BalancesView() {
             <div className="p-1.5 rounded-md bg-accent-soft">
               <Wallet size={14} className="text-accent-strong" />
             </div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa]">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
               إجمالي المحصَّل
             </p>
           </div>
@@ -101,7 +102,7 @@ export default function BalancesView() {
 
         <div className="card-surface p-5 flex flex-col justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa] mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark mb-2">
               الترتيب
             </p>
           </div>
@@ -111,7 +112,7 @@ export default function BalancesView() {
               className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md text-xs font-semibold transition-colors ${
                 sort === 'checkout'
                   ? 'bg-ink text-white dark:bg-white dark:text-ink'
-                  : 'bg-surface-soft text-muted hover:text-ink dark:bg-surface-dark-elevated dark:text-[#a1a1aa]'
+                  : 'bg-surface-soft text-muted hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark'
               }`}
             >
               <ArrowUpNarrowWide size={13} />
@@ -122,7 +123,7 @@ export default function BalancesView() {
               className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md text-xs font-semibold transition-colors ${
                 sort === 'amount'
                   ? 'bg-ink text-white dark:bg-white dark:text-ink'
-                  : 'bg-surface-soft text-muted hover:text-ink dark:bg-surface-dark-elevated dark:text-[#a1a1aa]'
+                  : 'bg-surface-soft text-muted hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark'
               }`}
             >
               <ArrowDownWideNarrow size={13} />
@@ -133,31 +134,25 @@ export default function BalancesView() {
       </div>
 
       {/* Dues list */}
-      <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] overflow-hidden flex flex-col min-h-0">
-        <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
+      <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
+        <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
           <h3 className="font-semibold tracking-tight text-ink dark:text-white">
             الحجوزات ذات المبالغ المستحقة
           </h3>
-          <span className="badge-pill text-[11px] font-semibold">
+          <span className="badge-pill text-xs font-semibold">
             {dues.length} {dues.length === 1 ? 'حجز' : 'حجوزات'}
           </span>
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0">
           {dues.length === 0 ? (
-            <div className="py-20 text-center">
-              <div className="mx-auto h-14 w-14 rounded-full bg-accent-soft flex items-center justify-center mb-4">
-                <Wallet size={22} className="text-accent-strong" />
-              </div>
-              <p className="text-base font-semibold text-ink dark:text-white mb-1">
-                لا توجد مستحقات معلّقة
-              </p>
-              <p className="text-sm text-muted dark:text-[#a1a1aa]">
-                جميع الحجوزات مسدَّدة بالكامل. عمل ممتاز.
-              </p>
-            </div>
+            <EmptyState
+              icon={Wallet}
+              title="لا توجد مستحقات معلّقة"
+              subtitle="جميع الحجوزات مسدَّدة بالكامل. عمل ممتاز."
+            />
           ) : (
-            <ul className="divide-y divide-hairline-soft dark:divide-[#242424]">
+            <ul className="divide-y divide-hairline-soft dark:divide-hairline-dark">
               {dues.map(({ booking, totals }) => {
                 const apt = apartments.find(a => a.id === booking.apartmentId);
                 const days = daysUntil(booking.endDate);
@@ -177,14 +172,14 @@ export default function BalancesView() {
                           </p>
                           <PaymentStatusBadge status={totals.status} />
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted dark:text-[#a1a1aa]">
+                        <div className="flex items-center gap-3 text-xs text-muted dark:text-body-dark">
                           <span className="truncate">{apt?.name || 'وحدة محذوفة'}</span>
                           <span className="text-muted-soft">·</span>
                           <span className="flex items-center gap-1">
                             <Phone size={11} />{booking.phone}
                           </span>
                         </div>
-                        <div className={`text-[11px] mt-1.5 font-medium ${
+                        <div className={`text-xs mt-1.5 font-medium ${
                           urgent
                             ? 'text-accent-strong'
                             : days < 0

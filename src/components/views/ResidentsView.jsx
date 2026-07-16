@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
+import EmptyState from '../ui/EmptyState';
 import { computeBookingTotals } from '../../lib/paymentUtils';
 import toast from 'react-hot-toast';
 
@@ -233,7 +234,7 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium flex items-center text-body dark:text-body-dark"><Phone size={14} className="ml-1.5 text-muted-soft"/> {booking.phone}</div>
-                      <div className="text-xs text-muted dark:text-[#898989] mt-1">هوية: {booking.residentId}</div>
+                      <div className="text-xs text-muted dark:text-body-dark mt-1">هوية: {booking.residentId}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-ink dark:text-white">{apt?.name || 'وحدة محذوفة'}</div>
@@ -245,13 +246,13 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       {booking.status === 'checked_out_early' ? (
-                          <span className="badge-pill badge-dashed text-[11px] font-semibold">خروج مبكر</span>
+                          <span className="badge-pill badge-dashed text-xs font-semibold">خروج مبكر</span>
                       ) : isCurrent ? (
-                        <span className="badge-pill badge-solid text-[11px] font-semibold">مقيم حالياً</span>
+                        <span className="badge-pill badge-solid text-xs font-semibold">مقيم حالياً</span>
                       ) : isFuture ? (
-                        <span className="badge-pill badge-outline text-[11px] font-semibold">متوقع وصوله</span>
+                        <span className="badge-pill badge-outline text-xs font-semibold">متوقع وصوله</span>
                       ) : (
-                        <span className="badge-pill badge-ghost text-[11px] font-semibold">مغادر</span>
+                        <span className="badge-pill badge-ghost text-xs font-semibold">مغادر</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -308,7 +309,13 @@ export default function ResidentsView({ openBookingForm }) {
               ))}
               {!isLoading && currentBookings.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-muted font-medium">لا توجد حجوزات مطابقة</td>
+                  <td colSpan="6" className="px-6 py-4">
+                    <EmptyState
+                      icon={Users}
+                      title="لا توجد حجوزات مطابقة"
+                      subtitle="جرّب تعديل الفلاتر أو مصطلح البحث للعثور على النزلاء."
+                    />
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -529,14 +536,14 @@ export default function ResidentsView({ openBookingForm }) {
                         <button
                           type="button"
                           onClick={() => setCheckoutData({...checkoutData, days: String(nightsStayedActual)})}
-                          className="text-[11px] text-accent-strong font-semibold hover:underline whitespace-nowrap"
+                          className="text-xs text-accent-strong font-semibold hover:underline whitespace-nowrap"
                           title="الأيام الفعلية المقضية من تاريخ الوصول حتى اليوم"
                         >
                           استخدم {nightsStayedActual}
                         </button>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted mt-2">
+                    <p className="text-xs text-muted mt-2">
                       السعر الإجمالي الجديد:{' '}
                       <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         {Number(newTotal).toLocaleString()} ر.س
@@ -555,7 +562,7 @@ export default function ResidentsView({ openBookingForm }) {
                           <p className="text-xs font-semibold text-accent-strong mb-0.5">
                             سيتم إنشاء استرداد تلقائي
                           </p>
-                          <p className="text-[11px] text-body dark:text-body-dark">
+                          <p className="text-xs text-body dark:text-body-dark">
                             المدفوع ({paid.toLocaleString()} ر.س) أكبر من الإجمالي الجديد ({Number(newTotal).toLocaleString()} ر.س).
                             سيُسجَّل استرداد بمقدار{' '}
                             <span className="font-bold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -568,7 +575,7 @@ export default function ResidentsView({ openBookingForm }) {
                     </div>
                   )}
                   {refundAmount === 0 && remainingAfter > 0 && (
-                    <div className="border border-hairline dark:border-hairline-dark-soft rounded-md p-3 text-[11px] text-muted dark:text-body-dark">
+                    <div className="border border-hairline dark:border-hairline-dark-soft rounded-md p-3 text-xs text-muted dark:text-body-dark">
                       لا استرداد. النزيل لا يزال مديناً بـ{' '}
                       <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         {remainingAfter.toLocaleString()} ر.س

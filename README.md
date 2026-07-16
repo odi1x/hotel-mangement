@@ -1,116 +1,105 @@
-# Rent Flow — Design System Phase 3: Polish
+# Rent Flow — Batch A: Cleanup Sweep + Analytics Polish
 
-**Scope**: 3 files. The visible design pass.
-
-Phases 1 and 2 were structural. This is where design boldness actually lives — the one hero moment on the analytics screen, the brand corner on the sidebar, and the utility infrastructure for future modal consistency.
+15 files. The follow-through pass after the tab-by-tab audit.
 
 ## What changed
 
-### 1. Analytics KPI hierarchy — one primary, three supporting
+### Mechanical sweeps (leftovers from Phase 2)
 
-**Before**: four undifferentiated tiles in a 4-column grid, revenue and profit both using the emerald accent (spreading the scarce color thin), all reading as visual peers.
+- **`[#898989]` leak fixed** — one instance in `ResidentsView.jsx` line 236 that my Phase 2 sweep missed because the pattern was different.
+- **`text-[11px]` → `text-xs`** — 45 instances across 13 files migrated to the tokenized `text-xs` (12px). Font size shifts by 1 pixel, imperceptible in most cases, gains full type-scale consistency.
+- **`BalancesView.jsx` swept** — 15 additional hex leaks Phase 2 missed on this file (it's a Feature 1 file that wasn't in my Phase 2 working copy at the time). Now uses `body-dark`, `hairline-dark`, `hairline-dark-soft` throughout.
 
-**After**: **صافي الأرباح (Net Profit)** promoted to a hero tile — the one number that actually captures whether the business is winning:
-- Full-width card at the top
-- Number is `text-5xl` on desktop (`text-4xl` on mobile), tighter tracking, tabular numerals
-- Only place on the whole screen that uses the emerald accent for the number
-- Signature accent bar on the leading (right, RTL) edge — small brand touch
-- Subtitle explains what "صافي" actually means (revenue minus all expenses)
+### New: `<EmptyState>` component
 
-Below the hero, three supporting metrics in a strict 3-column grid:
-- إجمالي الإيرادات (Total Revenue) — was accent, now ink
-- معدل الإشغال (Occupancy Rate)
-- الليالي المؤجرة (Nights Rented)
+Extracted the RequestsView empty-state pattern (soft-accent icon disc + heading + supporting subtext + optional CTA) into `src/components/ui/EmptyState.jsx`. Two variants:
 
-Same clickable behavior (each opens the breakdown modal). Smaller number (`text-2xl` instead of `text-3xl`) to make the hero feel taller. All four still use tabular numerals for aligned display of digits.
+- `variant="soft"` (default) — plain empty state on a card
+- `variant="dashed"` — dashed border around the whole block, for "nothing here yet" states
 
-Why Net Profit and not Revenue as the hero: revenue is easy — anyone can generate revenue by dropping prices. Net Profit is what actually pays the bills, and it's the number owners intuitively check first thing in the morning. Making it primary teaches good habits. If you want Revenue as the hero instead, it's a 3-line swap in AnalyticsView.jsx.
+Applied in three places this pass:
+- **BalancesView** — replaced the inline "all balances paid" empty state
+- **ResidentsView** — replaced the single-line "لا توجد حجوزات مطابقة" with a proper empty state inside the table cell
+- **ApartmentsView** — added a first-time-user empty state with a CTA button ("إضافة أول وحدة")
 
-### 2. Sidebar wordmark — a real brand corner
+Other views (RequestsView, MaintenanceView) already have good empty states — I left those alone rather than force-migrate. Their patterns will drift toward `<EmptyState>` naturally when they're touched next.
 
-**Before**: generic Home icon + wordmark in `font-semibold`, `tracking-tight`, followed by `mb-10` of dead space before the nav.
+### ApartmentsView: custom status pills → `.badge-*` variants
 
-**After**:
-- Wordmark now uses `font-bold tracking-tightest leading-none` — reads as a logo, not a nav item
-- The block is followed by a hairline-soft border-bottom that creates a "chapter" break between brand identity and navigation
-- Slightly reduced padding (`mb-6 pb-6` instead of `mb-10`) — the divider does the separation work now, so no wasted whitespace
-- Icon slightly smaller (22 instead of 24) to balance with the tighter wordmark
+The three status badges on unit cards (متاحة / مشغولة / تحتاج تنظيف) were hand-rolled with backdrop-blur classes:
 
-The effect: the top-right corner of the app now feels like "you are here" instead of "here's some space then the nav starts".
-
-### 3. Sidebar active state — drop the redundant tint
-
-**Before**: an active nav item had SIX signals of activation stacked on top of each other:
-1. Background color change (`bg-surface-card`)
-2. Text color change (`text-ink` vs `muted`)
-3. Font weight change (`font-semibold` vs default)
-4. Accent bar on the leading edge (`bg-accent`)
-5. Icon tint change (`text-accent`)
-6. Icon stroke-width bump (`strokeWidth={2.25}` vs `2`)
-
-Six signals for "this is the current page" is over-emphasis. When everything's shouting, nothing's heard.
-
-**After**: dropped the icon accent tint. The accent bar is doing that job already, and having them both was double-emphasizing the same thing. The remaining signals (bg, text color, font weight, bar, stroke width) still make the active state unmistakable — they just each contribute a different kind of emphasis (layout / hierarchy / brand / weight).
-
-### 4. Modal utility classes (infrastructure, no adoption yet)
-
-Added seven composable utility classes to `index.css` for future modal migrations:
-
-```
-.modal-backdrop  — the fixed backdrop that covers the viewport
-.modal-shell     — the actual dialog box (add max-w-* per instance)
-.modal-header    — px-6 py-4, hairline-soft bottom border
-.modal-body      — flex-1, overflow-y-auto, p-6
-.modal-footer    — px-6 py-4, hairline-soft top border
-.modal-title     — text-lg font-semibold tracking-tight
-.modal-subtitle  — text-xs muted
+```jsx
+<span className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1 bg-canvas/90 text-ink border border-dashed border-muted-soft backdrop-blur-sm">
 ```
 
-Also added `.eyebrow` for the uppercase micro-labels used everywhere:
+Now use the design-system `.badge-*` treatments:
+
+```jsx
+<span className="badge-pill badge-dashed backdrop-blur-sm bg-canvas/90 dark:bg-surface-dark/90">تحتاج تنظيف</span>
+<span className="badge-pill badge-solid backdrop-blur-sm bg-ink/90 dark:bg-white/90">مشغولة</span>
+<span className="badge-pill badge-outline backdrop-blur-sm bg-canvas/90 dark:bg-surface-dark/90">
+  <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+  متاحة
+</span>
 ```
-.eyebrow — text-2xs font-semibold uppercase tracking-wider text-muted
+
+Same visual result, but now these pills share their DNA with every other badge in the app. First time you want to tweak how a "warning" badge looks, one class change updates every warning badge everywhere.
+
+### Analytics polish (following up on my Phase 3 self-critique)
+
+Two of the observations I flagged after your Phase 3 deploy, now fixed:
+
+**1. Missing subtitle on the Revenue KPI card.** The other two supporting cards (Occupancy, Nights) both had a subtitle line, but Revenue sat alone with just a number — making its tile look "shorter" than its peers. Now shows "عبر X حجز" (matching the Nights card's own subtitle format).
+
+**2. Empty left side of the hero card.** The profit hero had a lot of dead trailing whitespace on wide screens. Now that space carries the **math behind the profit**:
+
+```
+صافي الأرباح            الإيرادات        المصروفات
+6,940 ر.س      =        8,940 ر.س   −   2,000 ر.س
+الإيرادات ناقص ...
 ```
 
-These are available now. When any modal is next edited for a bug or feature reason, migrate it to the utility classes as part of that work. That's a lower-risk way to migrate ~12 modals than doing it all at once.
+Two small stacked figures on the trailing (LTR-left) edge with a subtle `−` separator. Turns "6,940" from an abstract number into a visible story: *revenue minus expenses equals profit*. On mobile (narrow screens) they hide with `hidden md:flex` since the hero is already tall enough.
 
-## What I deliberately deferred
+Uses `analytics.totalExpenses` if provided by the API, otherwise computes it as `totalRevenue - netProfit`. Won't break if the field isn't there.
 
-Two items from the plan I chose not to do in this pass:
+**Two other polish items I diagnosed and then found weren't real:**
 
-**1. Font-weight rebalance across the whole app.** I did rebalance the analytics KPI cards specifically (the eyebrow labels drop from `font-semibold` to `.eyebrow`'s baked-in weight, which is still 600 but semantic). But I didn't sweep 192 uses of `font-semibold` across every view because that's high-risk work — some are correct, some are overuse, and only visual inspection can tell them apart. Better to fix them as I encounter them in other work.
-
-**2. Padding standardization.** Same reason — it's per-component judgment. Modals I touch in future will use the new `.modal-*` classes which enforce the "comfortable" density (p-6). Cards will migrate naturally over time.
-
-Doing these two properly means walking through every screen with fresh eyes — that's a next quarter thing, not a "ship this patch" thing.
+- The right-column cards (top performers, marketing sources) already use `text-lg` numbers, not `text-3xl`. My earlier "they feel loud" call was a misread from the screenshot. No change needed.
+- The chart title weight is fine at `font-semibold`. It's a card-level heading, one size below the page heading — appropriate.
 
 ## Install
 
 ```bash
-unzip -o rentflow-design-phase-3.zip -d .
+unzip -o rentflow-batch-a.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-design-phase-3.zip
+rm -rf patch rentflow-batch-a.zip
 
 git add -A
-git commit -m "design(phase 3): analytics KPI hierarchy + sidebar brand corner + modal utilities"
+git commit -m "design(batch a): sweep leftovers + EmptyState + apartments badges + analytics polish"
 git push origin design-md-changes
 ```
 
-Three files touched: `src/index.css`, `src/components/layout/Sidebar.jsx`, `src/components/views/AnalyticsView.jsx`.
+15 files. No schema changes, no API changes.
 
-## After deploy — the moments to look at
+## After deploy — what to look at
 
-- **Open analytics.** The eye should land on the profit number immediately, then drift down to the three supporting metrics. If it feels like your gaze bounces around not knowing where to land, hierarchy failed and I need to know.
-- **Look at the sidebar.** The wordmark corner should read as a small brand statement. The active nav item should feel emphasized but not screamed at.
-- **Navigate between tabs.** Watch the active-state transitions on the sidebar items. They should feel calmer than before — the accent bar carries the "current" signal and the icon just... follows the text.
+1. **Open analytics.** Look at the hero. On wide screens you should see the math breakdown on the trailing side (Revenue − Expenses). On mobile, hero shrinks to just the profit number as before.
+2. **Look at the Revenue supporting card.** Should now have "عبر ٥ حجز" (or however many bookings) as a subtitle, matching Nights.
+3. **Open apartments.** If you have zero apartments, empty state should appear with a "إضافة أول وحدة" CTA. If you have apartments, the status pills should look identical to before but they're now sharing DNA with the rest of the design system.
+4. **Empty a filter on residents.** The "لا توجد حجوزات مطابقة" state should now be a proper empty state with an icon and helpful subtitle, not a single-line message.
+5. **Pay off all balances.** BalancesView empty state should show the "عمل ممتاز" message with the wallet icon.
 
-## What's not shipped and why
+## What's next
 
-The KPI redesign is the one aesthetic bet in this pass. If it doesn't land, it's a 20-line revert (delete the new hero div, restore the 4-card grid). The other changes (sidebar wordmark, active-state cleanup, utility classes) are lower-stakes — they're refinement, not reimagination.
+**Batch B — Signature polish** *(the signature moves)*
+- Maintenance: days-open badge for urgent-and-aging items
+- Pricing: opacity dim on losing rule bars in overlaps (makes priority visible)
+- Balances: nav-pill-group for the sort toggle + stronger CTA per row
 
-If you want to keep pushing on the design later:
-- **Fixed-width sidebar in expanded mode** — the current `w-64` is fine but could be `w-60` for a slightly tighter feel
-- **Chart card treatment on analytics** — the revenue trend chart currently has the same visual weight as the KPI cards; could be quieter
-- **Empty states across the app** — most views have decent empty states from my Feature 1 patches, but there are older screens where empty is just... white space
-- **Print styles for the receipt/agreement PDFs** — those still use the old inline hex values and could benefit from the token system in a future pass
+**Batch C — Bigger refactors** *(only if you want)*
+- AvailabilityView: replace custom mini-calendar with DatePickerCal (~60 line reduction)
+- Settings: extract `.tab-underline` utility
+- Residents: shorter column headers + drop "created-by" line
 
-Say the word if you want any of those.
+Say the word to ship Batch B, or take a look at Batch A first and confirm you like the direction.

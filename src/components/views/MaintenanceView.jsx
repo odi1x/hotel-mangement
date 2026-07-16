@@ -90,7 +90,7 @@ export default function MaintenanceView() {
     };
     const v = map[s] || map.normal;
     return (
-      <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-0.5 ${v.cls}`}>
+      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-0.5 ${v.cls}`}>
         {s === 'urgent' && <AlertTriangle size={11} strokeWidth={2.5} />}
         {severityLabel(s)}
       </span>
@@ -105,7 +105,7 @@ export default function MaintenanceView() {
     };
     const v = map[s] || map.open;
     return (
-      <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-0.5 ${v.cls}`}>
+      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-0.5 ${v.cls}`}>
         <v.Icon size={11} strokeWidth={2.5} />
         {statusLabel(s)}
       </span>
@@ -314,7 +314,7 @@ export default function MaintenanceView() {
                           </p>
                         )}
                         {issue.status === 'resolved' && (issue.cost || issue.contractor) && (
-                          <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-soft">
+                          <div className="mt-2 flex items-center gap-3 text-xs text-muted-soft">
                             {issue.cost != null && (
                               <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 التكلفة: <span className="font-semibold text-body">{Number(issue.cost)} ر.س</span>

@@ -199,7 +199,7 @@ export default function PricingView() {
 
                   {/* The rule bar */}
                   <div
-                    className="absolute top-1 bottom-1 rounded-md flex items-center px-2 text-white text-[11px] font-semibold overflow-hidden cursor-pointer transition-transform hover:scale-[1.01] hover:shadow-md"
+                    className="absolute top-1 bottom-1 rounded-md flex items-center px-2 text-white text-xs font-semibold overflow-hidden cursor-pointer transition-transform hover:scale-[1.01] hover:shadow-md"
                     style={{
                       ...barStyle(rule),
                       backgroundColor: rule.color,
@@ -223,7 +223,7 @@ export default function PricingView() {
       <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
         <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
           <h3 className="font-semibold tracking-tight text-ink dark:text-white">قائمة القواعد</h3>
-          <span className="badge-pill text-[11px] font-semibold">
+          <span className="badge-pill text-xs font-semibold">
             {pricingRules.length} قاعدة
           </span>
         </div>

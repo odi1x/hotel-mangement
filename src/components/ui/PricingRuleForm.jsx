@@ -47,7 +47,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const eyebrow = 'block text-[11px] font-semibold text-body dark:text-body-dark mb-1.5 uppercase tracking-wider';
+  const eyebrow = 'block text-xs font-semibold text-body dark:text-body-dark mb-1.5 uppercase tracking-wider';
 
   const previewApartment = useMemo(() => {
     if (form.apartmentId) return apartments.find(a => a.id === form.apartmentId);
@@ -181,7 +181,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
               <button
                 type="button"
                 onClick={() => setForm({ ...form, daysOfWeek: [] })}
-                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
+                className={`h-7 px-3 rounded-full text-xs font-semibold border transition-colors ${
                   form.daysOfWeek.length === 0
                     ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
                     : 'text-muted border-hairline hover:text-ink dark:text-body-dark dark:border-hairline-dark-soft'
@@ -192,7 +192,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
               <button
                 type="button"
                 onClick={() => setForm({ ...form, daysOfWeek: [...WEEKEND_DAYS] })}
-                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
+                className={`h-7 px-3 rounded-full text-xs font-semibold border transition-colors ${
                   form.daysOfWeek.length === 2 && WEEKEND_DAYS.every(d => form.daysOfWeek.includes(d))
                     ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
                     : 'text-muted border-hairline hover:text-ink dark:text-body-dark dark:border-hairline-dark-soft'
@@ -203,7 +203,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
               <button
                 type="button"
                 onClick={() => setForm({ ...form, daysOfWeek: [...WORKWEEK_DAYS] })}
-                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
+                className={`h-7 px-3 rounded-full text-xs font-semibold border transition-colors ${
                   form.daysOfWeek.length === 5 && WORKWEEK_DAYS.every(d => form.daysOfWeek.includes(d))
                     ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
                     : 'text-muted border-hairline hover:text-ink dark:text-body-dark dark:border-hairline-dark-soft'
@@ -321,10 +321,10 @@ export default function PricingRuleForm({ onClose, initialData }) {
           {/* Overlap conflict warning — only shows when there ARE overlaps */}
           {overlapConflicts.length > 0 && (
             <div className="border border-dashed border-accent/60 bg-accent-soft rounded-md p-3">
-              <p className="text-[11px] font-semibold text-accent-strong mb-1">
+              <p className="text-xs font-semibold text-accent-strong mb-1">
                 تتداخل هذه القاعدة مع {overlapConflicts.length} {overlapConflicts.length === 1 ? 'قاعدة أخرى' : 'قواعد أخرى'}:
               </p>
-              <ul className="text-[11px] text-body dark:text-body-dark space-y-0.5">
+              <ul className="text-xs text-body dark:text-body-dark space-y-0.5">
                 {overlapConflicts.slice(0, 4).map(r => (
                   <li key={r.id} className="flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5 truncate">

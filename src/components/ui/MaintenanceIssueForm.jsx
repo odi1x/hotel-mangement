@@ -25,7 +25,7 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const eyebrow = 'block text-[11px] font-semibold text-body dark:text-body-dark mb-1.5 uppercase tracking-wider';
+  const eyebrow = 'block text-xs font-semibold text-body dark:text-body-dark mb-1.5 uppercase tracking-wider';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,7 +140,7 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
             <div className="border-t border-hairline-soft dark:border-hairline-dark pt-5 space-y-5">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle size={14} className="text-muted" />
-                <span className="text-[11px] font-semibold text-muted dark:text-body-dark uppercase tracking-wider">
+                <span className="text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-wider">
                   تفاصيل المتابعة والإنجاز
                 </span>
               </div>

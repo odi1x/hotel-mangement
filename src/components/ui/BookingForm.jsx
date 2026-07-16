@@ -196,7 +196,7 @@ export default function BookingForm({ onClose, initialData }) {
                 <p className="text-xs font-semibold text-accent-strong mb-0.5">
                   تنبيه: هذه الوحدة لديها {urgentOpenIssues.length} {urgentOpenIssues.length === 1 ? 'بلاغ صيانة عاجل' : 'بلاغات صيانة عاجلة'} مفتوحة
                 </p>
-                <ul className="text-[11px] text-body dark:text-body-dark space-y-0.5 mt-1">
+                <ul className="text-xs text-body dark:text-body-dark space-y-0.5 mt-1">
                   {urgentOpenIssues.slice(0, 3).map(i => (
                     <li key={i.id} className="flex items-center gap-1.5">
                       <Wrench size={10} className="text-muted-soft" />
@@ -244,7 +244,7 @@ export default function BookingForm({ onClose, initialData }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <h4 className="text-[11px] font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">معلومات النزيل</h4>
+              <h4 className="text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">معلومات النزيل</h4>
               <div>
                 <label className={eyebrow}>الاسم الكامل</label>
                 <input required type="text" placeholder="مثلاً: أحمد محمد" className="input-field" value={formData.residentName} onChange={(e) => setFormData({ ...formData, residentName: e.target.value })} />
@@ -286,7 +286,7 @@ export default function BookingForm({ onClose, initialData }) {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[11px] font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">تفاصيل الإقامة</h4>
+              <h4 className="text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">تفاصيل الإقامة</h4>
               <div>
                 <label className={eyebrow}>الوحدة</label>
                 <select required className="input-field" value={formData.apartmentId} onChange={(e) => {
@@ -351,7 +351,7 @@ export default function BookingForm({ onClose, initialData }) {
                   </div>
                   <ul className="space-y-1">
                     {breakdownSummary.map((g, i) => (
-                      <li key={i} className="flex items-center justify-between text-[11px]">
+                      <li key={i} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 flex-1 min-w-0">
                           {g.ruleColor && (
                             <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: g.ruleColor }}></div>

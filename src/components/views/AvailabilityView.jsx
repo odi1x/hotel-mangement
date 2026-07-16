@@ -98,7 +98,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex,
           return (
             <div key={booking.id} title={`${apt.name} - ${booking.residentName}`}
               style={style}
-              className={`text-[11px] px-2 rounded-md flex items-center h-[22px] font-semibold truncate cursor-pointer transition-opacity hover:opacity-80 shrink-0 w-full border
+              className={`text-xs px-2 rounded-md flex items-center h-[22px] font-semibold truncate cursor-pointer transition-opacity hover:opacity-80 shrink-0 w-full border
                 ${isPending
                   ? 'bg-surface-soft text-muted border-dashed border-hairline dark:bg-surface-dark-elevated dark:text-body-dark dark:border-[#3a3a3a]'
                   : 'border-solid'}`}
@@ -349,7 +349,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 <div className="border-t border-hairline-soft dark:border-hairline-dark mt-3 pt-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold text-muted">الوحدات</span>
-                    {unitFilter.length > 0 && <button onClick={() => setUnitFilter([])} className="text-[11px] link-accent">عرض الكل</button>}
+                    {unitFilter.length > 0 && <button onClick={() => setUnitFilter([])} className="text-xs link-accent">عرض الكل</button>}
                   </div>
                   <div className="max-h-44 overflow-y-auto space-y-0.5 pl-0.5">
                     {apartments.map(a => {

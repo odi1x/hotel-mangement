@@ -100,7 +100,7 @@ export default function DatePickerCal({ value, onChange }) {
       {mode === 'days' ? (
         <div className="grid grid-cols-7">
           {AR_DOW.map((w, i) => (
-            <div key={i} className="text-center text-[11px] font-semibold text-muted-soft py-2">{w}</div>
+            <div key={i} className="text-center text-xs font-semibold text-muted-soft py-2">{w}</div>
           ))}
           {cells.map((d, i) => {
             if (!d) return <div key={`e${i}`} className="h-11" />;

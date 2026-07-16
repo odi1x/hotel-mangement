@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useData } from '../../context/DataContext';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check, Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import EmptyState from '../ui/EmptyState';
 export default function ApartmentsView() {
   const { apartments, addApartment, updateApartment, deleteApartment, licenses, refreshData } = useData();
   const { user } = useAuth();
@@ -181,6 +182,22 @@ export default function ApartmentsView() {
 
 
       <div className="flex-1 overflow-y-auto">
+        {apartments.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title="لا توجد وحدات بعد"
+            subtitle="ابدأ ببناء قائمة الوحدات لديك. كل وحدة يمكن ربطها بالحجوزات والصيانة والأسعار الموسمية."
+            variant="dashed"
+            action={
+              (user?.role === 'admin' || user?.permissions?.canEdit) && (
+                <button onClick={() => handleOpenModal(null)} className="btn-accent h-10 px-5">
+                  <Plus size={16} />
+                  <span>إضافة أول وحدة</span>
+                </button>
+              )
+            }
+          />
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-4">
         {paginatedApartments.map((apt) => {
           const isNotClean = apt.needsCleaning;
@@ -205,18 +222,24 @@ export default function ApartmentsView() {
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-muted-soft gap-1.5">
                         <ImageIcon size={20} className="opacity-40" />
-                        <span className="text-[11px] font-medium">أضف صورة</span>
+                        <span className="text-xs font-medium">أضف صورة</span>
                     </div>
                 )}
 
-                {/* Operational status — leading edge (RTL: top-right) */}
+                {/* Operational status — leading edge (RTL: top-right).
+                    Uses design-system .badge-* variants: dashed=attention,
+                    solid=occupied, outline=available. Backdrop-blur retained
+                    so the pills sit legibly over the cover photo. */}
                 <div className="absolute top-3 right-3">
                   {isNotClean ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-canvas/90 text-ink border border-dashed border-muted-soft backdrop-blur-sm">تحتاج تنظيف</span>
+                    <span className="badge-pill badge-dashed backdrop-blur-sm bg-canvas/90 dark:bg-surface-dark/90">تحتاج تنظيف</span>
                   ) : isBooked ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-ink/90 text-white backdrop-blur-sm">مشغولة</span>
+                    <span className="badge-pill badge-solid backdrop-blur-sm bg-ink/90 dark:bg-white/90">مشغولة</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-canvas/90 text-ink border border-hairline backdrop-blur-sm"><span className="w-1.5 h-1.5 rounded-full bg-accent"></span>متاحة</span>
+                    <span className="badge-pill badge-outline backdrop-blur-sm bg-canvas/90 dark:bg-surface-dark/90">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                      متاحة
+                    </span>
                   )}
                 </div>
 
@@ -245,7 +268,7 @@ export default function ApartmentsView() {
 
             {/* Body — name & price lead; type is a quiet eyebrow */}
             <div className="p-5 flex flex-col flex-1">
-              <p className="text-[11px] font-semibold text-muted-soft mb-1">{apt.type}</p>
+              <p className="text-xs font-semibold text-muted-soft mb-1">{apt.type}</p>
               <h3 className="text-lg font-bold tracking-tight text-ink dark:text-white leading-tight">{apt.name}</h3>
               {apt.description && (
                 <p className="text-xs text-muted dark:text-body-dark mt-1 line-clamp-1">{apt.description}</p>
@@ -279,6 +302,7 @@ export default function ApartmentsView() {
           </button>
         )}
       </div>
+        )}
       {totalPages > 1 && (
         <div className="flex justify-center items-center py-4 border-t border-hairline-soft dark:border-hairline-dark shrink-0">
           <div className="nav-pill-group">
@@ -321,7 +345,7 @@ export default function ApartmentsView() {
             <div className="overflow-y-auto p-6 space-y-8 flex-1">
               {/* Basic info */}
               <section className="space-y-4">
-                <h3 className="text-[11px] font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">المعلومات الأساسية</h3>
+                <h3 className="text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">المعلومات الأساسية</h3>
                 <div>
                   <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">اسم / رقم الوحدة</label>
                   <input required type="text" placeholder="مثال: شقة 101" className="input-field" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
@@ -356,7 +380,7 @@ export default function ApartmentsView() {
 
               {/* Images */}
               <section className="space-y-4">
-                <h3 className="text-[11px] font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">صور الوحدة</h3>
+                <h3 className="text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">صور الوحدة</h3>
                 <div className="border border-dashed border-hairline dark:border-hairline-dark-soft rounded-lg p-6 text-center hover:bg-surface-soft dark:hover:bg-surface-dark-elevated hover:border-accent transition-colors relative">
                   <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={isUploading} />
                   <div className="flex flex-col items-center justify-center gap-2">
@@ -364,7 +388,7 @@ export default function ApartmentsView() {
                       <ImageIcon size={22} className="text-muted" />
                     </div>
                     <p className="font-semibold text-body dark:text-body-dark text-sm">{isUploading ? 'جاري الرفع...' : 'اسحب الصور هنا أو اضغط للتصفح'}</p>
-                    <p className="text-[11px] text-muted-soft">أول صورة تصبح الغلاف تلقائياً — يمكنك تغييرها بالمرور على أي صورة.</p>
+                    <p className="text-xs text-muted-soft">أول صورة تصبح الغلاف تلقائياً — يمكنك تغييرها بالمرور على أي صورة.</p>
                   </div>
                 </div>
                 {formData.images && formData.images.length > 0 && (
@@ -394,7 +418,7 @@ export default function ApartmentsView() {
               {/* Financials (collapsible) */}
               <section>
                 <button type="button" onClick={() => setShowAdvancedFinancials(!showAdvancedFinancials)}
-                  className="w-full flex justify-between items-center text-[11px] font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">
+                  className="w-full flex justify-between items-center text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">
                   <span>التكاليف والمالية (إعدادات متقدمة)</span>
                   <ChevronLeft size={16} className={`transition-transform ${showAdvancedFinancials ? '-rotate-90' : ''}`} />
                 </button>

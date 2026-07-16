@@ -150,7 +150,7 @@ export default function NotificationsDropdown({ onNavigate }) {
                           {notif.message}
                         </p>
                         {targetFor(notif) && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-accent mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             عرض التفاصيل <ChevronLeft className="w-3 h-3" />
                           </span>
                         )}

@@ -350,7 +350,7 @@ export default function AnalyticsView() {
         {/* Signature: accent bar on the leading (right-side, RTL) edge */}
         <span className="absolute right-0 top-6 bottom-6 w-[3px] rounded-l-full bg-accent"></span>
 
-        <div className="flex items-start justify-between gap-4 pr-3">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pr-3">
           <div className="min-w-0">
             <p className="eyebrow mb-2">صافي الأرباح</p>
             <h3 className="text-4xl md:text-5xl font-bold text-accent tracking-tightest leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -360,6 +360,26 @@ export default function AnalyticsView() {
             <p className="text-xs text-muted-soft mt-3">
               الإيرادات ناقص كل المصروفات خلال الفترة المحددة
             </p>
+          </div>
+
+          {/* Math breakdown — turns the abstract profit number into a story:
+              you can literally see it's revenue minus expenses. */}
+          <div className="hidden md:flex items-center gap-8 pl-2">
+            <div className="text-right">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-1">الإيرادات</p>
+              <p className="text-lg font-bold text-ink dark:text-white tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {analytics.totalRevenue.toLocaleString()}
+                <span className="text-xs font-semibold text-muted-soft mr-1">ر.س</span>
+              </p>
+            </div>
+            <div className="text-muted-soft text-2xl leading-none">−</div>
+            <div className="text-right">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-1">المصروفات</p>
+              <p className="text-lg font-bold text-ink dark:text-white tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {Math.round(analytics.totalExpenses || (analytics.totalRevenue - analytics.netProfit)).toLocaleString()}
+                <span className="text-xs font-semibold text-muted-soft mr-1">ر.س</span>
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -374,6 +394,7 @@ export default function AnalyticsView() {
             {analytics.totalRevenue.toLocaleString()}
             <span className="text-xs font-semibold text-muted-soft mr-1.5">ر.س</span>
           </h3>
+          <p className="text-xs text-muted-soft mt-1.5">عبر {analytics.count} حجز</p>
         </div>
 
         <div

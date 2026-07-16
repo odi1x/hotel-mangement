@@ -71,7 +71,7 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                               <span className="font-semibold text-ink dark:text-white">{apt.name}</span>
                             </div>
                             {isNotClean && (
-                              <span className="inline-flex items-center gap-1.5 rounded-full text-[11px] font-semibold px-2.5 py-1 bg-canvas dark:bg-surface-dark text-ink dark:text-white border border-dashed border-muted-soft">تحتاج تنظيف</span>
+                              <span className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1 bg-canvas dark:bg-surface-dark text-ink dark:text-white border border-dashed border-muted-soft">تحتاج تنظيف</span>
                             )}
                           </div>
                           <p className="text-xs text-muted dark:text-body-dark mb-2">{apt.type}</p>
