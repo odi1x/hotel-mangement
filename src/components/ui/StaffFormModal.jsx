@@ -21,7 +21,8 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     canViewSettings:    staff ? staff.canViewSettings    : false,
     canViewBalances:    staff ? staff.canViewBalances    : true,   // operational — staff usually record payments
     canViewMaintenance: staff ? staff.canViewMaintenance : true,   // operational — staff report issues from the field
-    canViewPricing:     staff ? staff.canViewPricing     : false   // sensitive — reveals pricing strategy
+    canViewPricing:     staff ? staff.canViewPricing     : false,  // sensitive — reveals pricing strategy
+    canViewPrices:      staff ? staff.canViewPrices      : true    // if turned off: receptionist mode (no prices in bookings/residents)
   });
 
   const handleChange = (e) => {
@@ -66,6 +67,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     { name: 'canBook',            title: 'إضافة حجوزات',        desc: 'يسمح للموظف بإنشاء حجوزات جديدة' },
     { name: 'canEdit',            title: 'تعديل البيانات',       desc: 'تعديل الشقق وتفاصيل الحجوزات القائمة' },
     { name: 'canDelete',          title: 'حذف البيانات',         desc: 'حذف الحجوزات والشقق والنزلاء' },
+    { name: 'canViewPrices',      title: 'عرض الأسعار',          desc: 'رؤية الأسعار الليلية والإجماليات في سجل النزلاء وتفاصيل الحجوزات. أوقفه للاستقبال والموظفين الذين لا يجب أن يرَوا المبالغ.' },
     { name: 'canViewBalances',    title: 'إدارة المستحقات',      desc: 'تسجيل الدفعات ومراجعة الأرصدة المتبقية على الحجوزات' },
     { name: 'canViewMaintenance', title: 'إدارة الصيانة',         desc: 'تسجيل بلاغات الصيانة ومتابعة حالتها حتى الحل' },
     { name: 'canViewPricing',     title: 'إدارة الأسعار الموسمية', desc: 'إنشاء وتعديل قواعد الأسعار للمواسم والفترات الخاصة' },

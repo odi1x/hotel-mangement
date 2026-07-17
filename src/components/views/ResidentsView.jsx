@@ -238,7 +238,9 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-ink dark:text-white">{apt?.name || 'وحدة محذوفة'}</div>
-                      <div className="text-xs text-accent font-semibold mt-1">{booking.pricePerNight} ر.س / ليلة</div>
+                      {(user?.role === 'admin' || user?.permissions?.canViewPrices !== false) && (
+                        <div className="text-xs text-accent font-semibold mt-1">{booking.pricePerNight} ر.س / ليلة</div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs font-medium text-body dark:text-body-dark">{formatDate(booking.startDate)} <span className="mx-1 text-muted-soft">←</span> {formatDate(booking.endDate)}</div>

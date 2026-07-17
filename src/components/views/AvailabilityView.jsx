@@ -119,6 +119,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex,
 export default function AvailabilityView({ openBookingForm }) {
   const { apartments, bookings, deleteBooking } = useData();
   const { user } = useAuth();
+  const canSeePrices = user?.role === 'admin' || user?.permissions?.canViewPrices !== false;
   const { darkMode } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
@@ -480,7 +481,7 @@ export default function AvailabilityView({ openBookingForm }) {
                       };
                       const nights = Math.max(1, be - bs);
                       const statusTxt = isPending ? 'طلب معلّق' : isCurrent ? 'مقيم حالياً' : isPast ? 'مغادر' : 'قادم';
-                      const tip = `${apt.name} — ${b.residentName}\n${new Date(b.startDate).toLocaleDateString('ar-EG')} ← ${new Date(b.endDate).toLocaleDateString('ar-EG')} · ${nights} ليالٍ\n${b.pricePerNight} ر.س/ليلة · ${statusTxt}`;
+                      const tip = `${apt.name} — ${b.residentName}\n${new Date(b.startDate).toLocaleDateString('ar-EG')} ← ${new Date(b.endDate).toLocaleDateString('ar-EG')} · ${nights} ليالٍ\n${canSeePrices ? `${b.pricePerNight} ر.س/ليلة · ` : ''}${statusTxt}`;
                       return (
                         <div
                           key={b.id}
@@ -537,9 +538,9 @@ export default function AvailabilityView({ openBookingForm }) {
                           </span>
                           {booking.status === 'pending' ? (
                             <span className="badge-pill text-muted border border-dashed border-hairline dark:border-[#3a3a3a]">طلب معلق</span>
-                          ) : (
+                          ) : canSeePrices ? (
                             <span className="badge-pill font-semibold">{booking.pricePerNight} ر.س</span>
-                          )}
+                          ) : null}
                         </div>
                         <div className="flex items-center text-sm text-muted dark:text-body-dark">
                           <User size={14} className="ml-1" />
@@ -614,10 +615,12 @@ export default function AvailabilityView({ openBookingForm }) {
                 </div>
               </div>
 
-              <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
-                <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><Receipt size={12} className="ml-1"/> السعر لليلة</div>
-                <div className="font-semibold text-lg text-ink dark:text-white">{selectedBookingDetails.pricePerNight} ر.س</div>
-              </div>
+              {canSeePrices && (
+                <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><Receipt size={12} className="ml-1"/> السعر لليلة</div>
+                  <div className="font-semibold text-lg text-ink dark:text-white">{selectedBookingDetails.pricePerNight} ر.س</div>
+                </div>
+              )}
 
               {selectedBookingDetails.customerRequest && selectedBookingDetails.customerRequest.trim() !== '' && (
                 <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-lg border border-hairline dark:border-hairline-dark-soft">

@@ -43,7 +43,7 @@ export default async function handler(req, res) {
           role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing
+            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices
           }
         }
       });
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
           role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing
+            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices
           }
         }
       });
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing
+          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices
         }
       });
     }
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing
+          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices
         }
       });
     }

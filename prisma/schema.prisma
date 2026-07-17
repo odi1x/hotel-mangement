@@ -23,6 +23,7 @@ model User {
   canViewBalances     Boolean     @default(true)
   canViewMaintenance  Boolean     @default(true)
   canViewPricing      Boolean     @default(true)
+  canViewPrices       Boolean     @default(true)
   businessName     String?
   tourismLicense   String?
   logoUrl          String?
