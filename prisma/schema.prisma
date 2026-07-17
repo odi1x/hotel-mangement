@@ -15,11 +15,14 @@ model User {
   profilePicture   String?
   role             String      @default("admin")
   adminId          String?
-  canBook          Boolean     @default(true)
-  canEdit          Boolean     @default(true)
-  canDelete        Boolean     @default(true)
-  canViewAnalytics Boolean     @default(true)
-  canViewSettings  Boolean     @default(true)
+  canBook             Boolean     @default(true)
+  canEdit             Boolean     @default(true)
+  canDelete           Boolean     @default(true)
+  canViewAnalytics    Boolean     @default(true)
+  canViewSettings     Boolean     @default(true)
+  canViewBalances     Boolean     @default(true)
+  canViewMaintenance  Boolean     @default(true)
+  canViewPricing      Boolean     @default(true)
   businessName     String?
   tourismLicense   String?
   logoUrl          String?

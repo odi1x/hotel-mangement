@@ -14,11 +14,14 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     password: '',
     name: staff?.name || '',
     profilePicture: staff?.profilePicture || null,
-    canBook: staff ? staff.canBook : true,
-    canEdit: staff ? staff.canEdit : false,
-    canDelete: staff ? staff.canDelete : false,
-    canViewAnalytics: staff ? staff.canViewAnalytics : false,
-    canViewSettings: staff ? staff.canViewSettings : false
+    canBook:            staff ? staff.canBook            : true,
+    canEdit:            staff ? staff.canEdit            : false,
+    canDelete:          staff ? staff.canDelete          : false,
+    canViewAnalytics:   staff ? staff.canViewAnalytics   : false,
+    canViewSettings:    staff ? staff.canViewSettings    : false,
+    canViewBalances:    staff ? staff.canViewBalances    : true,   // operational — staff usually record payments
+    canViewMaintenance: staff ? staff.canViewMaintenance : true,   // operational — staff report issues from the field
+    canViewPricing:     staff ? staff.canViewPricing     : false   // sensitive — reveals pricing strategy
   });
 
   const handleChange = (e) => {
@@ -60,11 +63,14 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
   };
 
   const permissions = [
-    { name: 'canBook', title: 'إضافة حجوزات', desc: 'يسمح للموظف بإنشاء حجوزات جديدة' },
-    { name: 'canEdit', title: 'تعديل البيانات', desc: 'تعديل الشقق وتفاصيل الحجوزات القائمة' },
-    { name: 'canDelete', title: 'حذف البيانات', desc: 'حذف الحجوزات والشقق والنزلاء' },
-    { name: 'canViewAnalytics', title: 'عرض الإحصائيات', desc: 'الوصول إلى تقارير الأداء المالي والتحليلات' },
-    { name: 'canViewSettings', title: 'إدارة الإعدادات', desc: 'الوصول لإعدادات النظام العامة (باستثناء الموظفين)' },
+    { name: 'canBook',            title: 'إضافة حجوزات',        desc: 'يسمح للموظف بإنشاء حجوزات جديدة' },
+    { name: 'canEdit',            title: 'تعديل البيانات',       desc: 'تعديل الشقق وتفاصيل الحجوزات القائمة' },
+    { name: 'canDelete',          title: 'حذف البيانات',         desc: 'حذف الحجوزات والشقق والنزلاء' },
+    { name: 'canViewBalances',    title: 'إدارة المستحقات',      desc: 'تسجيل الدفعات ومراجعة الأرصدة المتبقية على الحجوزات' },
+    { name: 'canViewMaintenance', title: 'إدارة الصيانة',         desc: 'تسجيل بلاغات الصيانة ومتابعة حالتها حتى الحل' },
+    { name: 'canViewPricing',     title: 'إدارة الأسعار الموسمية', desc: 'إنشاء وتعديل قواعد الأسعار للمواسم والفترات الخاصة' },
+    { name: 'canViewAnalytics',   title: 'عرض الإحصائيات',        desc: 'الوصول إلى تقارير الأداء المالي والتحليلات' },
+    { name: 'canViewSettings',    title: 'إدارة الإعدادات',       desc: 'الوصول لإعدادات النظام العامة (باستثناء الموظفين)' },
   ];
 
   return (

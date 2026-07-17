@@ -1,79 +1,105 @@
-# Rent Flow — Analytics: Single Scroll + Compact Action Strip
+# Rent Flow — Staff Permissions for New Tabs
 
-One file. The fix for what you actually asked in the last iteration.
+6 files. Closes the real gap I left when I shipped Features 1 and 3.
 
-## What went wrong last time
+## What was missing
 
-You asked for a single page-level scroll for the whole analytics content (the blue arrow along the leading edge in your screenshot). I read that as "make each card scroll internally like other views do" and shipped exactly the wrong pattern. My mistake — I was pattern-matching to "consistency with other tabs" without listening to what you specifically wanted for analytics.
+When I shipped the three new tabs — **المستحقات**, **الصيانة**, **الأسعار الموسمية** — I added them to the sidebar without permission gates. Every staff member could see all three, including the pricing strategy. That's not what you wanted, and I should have added the permission plumbing at the time.
 
-You were right: analytics is a **content-heavy report page**, not a "list of items" page like Maintenance/Pricing/Balances. Report pages should scroll top-to-bottom as one document. That's how people read reports.
+**Notifications were covered** (staff → admin notifications on maintenance issues and payment records were part of the Feature 1/3 patches), but the visibility gating was missing.
 
 ## What changed
 
-### 1. Compact action strip (the two big buttons in the red circles)
-
-**Before**: two full-height rows totaling ~130px of vertical space:
-- Row 1: Big "تحميل التقرير الشامل (Excel)" button + optional filtered-report button
-- Row 2: Big "تصفية التحليلات" button + optional clear button
-
-**After**: one 36px row with both compressed:
-- Right (RTL start): filter chip — `[⚙ تصفية ⌄]`, small, chip-shaped, uses accent-soft when a filter is active
-- Left (RTL end): Excel button — `[⬇ Excel]`, `h-9 px-3 text-xs`, minimal but still clearly primary
-
-The filter dropdown panel itself is unchanged — same date picker + unit checkboxes. Only the trigger button got compressed.
-
-That gives you back **~90px of vertical space** for the actual analytics content — enough to see the entire hero card AND the first row of supporting KPIs without scrolling, on most screens.
-
-### 2. Single page-level scroll (the blue arrow)
-
-**Before (my Batch C mistake)**: page-fixed, each right-column card had its own internal scroll. Confusing scroll zones.
-
-**After**: one scrollable content zone that holds the entire analytics page. The action strip stays fixed at the top; everything below scrolls as one document:
+### 1. Schema — three new permission fields
 
 ```
-[Action strip (fixed)]
-├─────────────────────────
-[Hero: Net Profit]        ─┐
-[Supporting KPIs row]      │
-[Chart + right column]     │  ← one scroll zone
-[Anything future]         ─┘
+canViewBalances     Boolean  @default(true)
+canViewMaintenance  Boolean  @default(true)
+canViewPricing      Boolean  @default(true)
 ```
 
-Cards are natural content-height — no more `flex-1` forcing equal splits, no more internal card scrolls. Scroll bar appears on the leading edge (LTR: right, RTL: left) when content exceeds viewport height.
+All default `true` at the DB level, which means when Vercel's `prisma db push` runs, **every existing staff member automatically gets access to all three tabs** — nothing changes for them until you decide to revoke. This is the safe migration path.
 
-### 3. Card cleanup
+### 2. StaffFormModal — three new toggles
 
-Since the page scrolls now, the internal scroll infrastructure I added in Batch C is gone:
-- Right column cards: no more `flex-1 min-h-0 overflow-hidden`
-- Card bodies: no more `flex-1 overflow-y-auto min-h-0`
-- Just plain `card-surface p-5` — the card knows its own height
+Added to the permissions checklist in the staff form:
 
-Chart card gets `min-h-[440px]` so it renders at a stable, readable size in the scroll flow instead of collapsing.
+| Permission | Title | Default for NEW staff |
+|---|---|---|
+| `canViewBalances` | إدارة المستحقات | ✅ true (operational — staff record payments) |
+| `canViewMaintenance` | إدارة الصيانة | ✅ true (operational — staff report issues) |
+| `canViewPricing` | إدارة الأسعار الموسمية | ⛔ false (sensitive — reveals pricing strategy) |
+
+The pattern here matches the existing conventions:
+- Operational permissions (things staff need to do their job) default on
+- Sensitive permissions (revenue data, business strategy) default off — admin must explicitly grant
+
+`canViewPricing` defaults **off** for new staff because pricing rules reveal your competitive strategy. If a staff member joins and you want them on that side, flip it on when creating them.
+
+Order in the form: operational permissions grouped together, then sensitive/admin ones at the bottom. Same layout you already have.
+
+### 3. Sidebar — three tabs gated
+
+Each of the three tabs now has `(user?.role === 'admin' || user?.permissions?.canViewXxx)` gating, matching the same pattern already used for `canViewAnalytics` and `canViewSettings`.
+
+If a staff member has `canViewBalances: false`, the المستحقات item disappears from their sidebar. Same for the other two.
+
+### 4. Layout — setView guard at the source
+
+Even with the sidebar hiding gated tabs, there are still edge cases where an unauthorized view could get set (stale local state, direct manipulation, admin revokes permission mid-session). Wrapped `setView` in a permission check that silently no-ops if the target view is gated and the user doesn't have permission. Admin always bypasses.
+
+Cleaner than a `useEffect` that reactively corrects the view — the guard now runs at the source, not as a side effect.
+
+### 5. `api/staff.js` — pass the three new fields on GET / POST / PUT
+
+The staff API was explicitly destructuring each permission field from `req.body` (not spreading), so the new fields wouldn't have flowed through without an update. Added to:
+- **GET** `/api/staff` — the returned staff list now includes `canViewBalances`, `canViewMaintenance`, `canViewPricing` (so the form loads with correct values when editing)
+- **POST** `/api/staff` — accepts and stores the three new fields on creation
+- **PUT** `/api/staff` — accepts and updates the three new fields on edit
+
+### 6. `api/auth.js` — expose new permissions to the client on login
+
+Four places in `api/auth.js` compose the `user.permissions` object returned to the client (login, register, refresh, /me). Each now includes the three new fields. Without this, even if the DB had them, the client-side `user.permissions.canViewBalances` would be `undefined`, defaulting to falsy — and staff would lose access after login.
 
 ## Install
 
 ```bash
-unzip -o rentflow-analytics-scroll-fix.zip -d .
-cp -r patch/src  ./
-rm -rf patch rentflow-analytics-scroll-fix.zip
+unzip -o rentflow-staff-permissions.zip -d .
+cp -r patch/api             ./
+cp -r patch/prisma          ./
+cp -r patch/src             ./
+rm -rf patch rentflow-staff-permissions.zip
 
 git add -A
-git commit -m "design(analytics): single page scroll + compact action strip"
+git commit -m "feat: staff permission gating for balances/maintenance/pricing tabs"
 git push origin design-md-changes
 ```
 
-One file — `src/components/views/AnalyticsView.jsx`.
+Vercel will run `prisma db push` during the build, which adds the three new columns to the User table with `@default(true)` — no data migration needed, existing staff automatically get access to all three tabs.
 
 ## After deploy
 
-- **Top of analytics**: the two big button rows should be gone. In their place, a small filter chip on the right (RTL start) and a compact Excel button on the left (RTL end). Both in one line.
-- **Scroll**: one scroll bar for the whole analytics content, top to bottom. No more per-card scrolls, no column-scroll.
-- **Chart**: fixed at 440px min-height so it renders reliably as you scroll past.
+**Verify migration ran:**
+- Go to Settings → Staff management. Open any existing staff member's edit form. The three new toggles (إدارة المستحقات, إدارة الصيانة, إدارة الأسعار الموسمية) should be visible and ON by default (because their DB field defaulted to true).
 
-## What this means for the "consistency" argument I made
+**Test gating:**
+- Create a test staff member with `canViewPricing` OFF. Log in as that staff member. The الأسعار الموسمية tab should not appear in the sidebar.
+- Or edit an existing staff member and turn off `canViewBalances`. Log them out and back in (or refresh). المستحقات should disappear from their sidebar.
 
-I said in the last README that analytics should match other views' scroll pattern. That was wrong. Different content shapes deserve different scroll models — a records list (Maintenance issues, Bookings) is naturally card-with-internal-scroll; a report page (Analytics) is naturally single-page-scroll. The pattern that matters is "one obvious scroll direction per view", and both models satisfy that.
+**Test the edge case:**
+- Log in as a staff member with all three permissions on, open the الأسعار الموسمية tab. In another browser tab (as admin), edit that staff member and revoke `canViewPricing`. The staff member's tab stays where it is (they still see pricing until they navigate away) — but if they click الأسعار الموسمية in the sidebar it won't appear because the sidebar re-renders on user change, AND if they try to navigate via any other mechanism, `setView` will silently no-op. So worst case they finish what they're doing on the current view, and next navigation locks them out.
 
-Analytics gets the report treatment. Everything else keeps the list treatment. That's the actual right rule.
+## What I did NOT change
 
-Sorry for the round-trip on this one — should have listened to your first ask more literally.
+**Server-side permission enforcement.** The existing pattern in this codebase gates at the client — `api/pricing-rules.js` doesn't currently check `canViewPricing` before returning rules, same as `api/analytics.js` doesn't check `canViewAnalytics`. I followed that same pattern for consistency. If a technically-savvy staff member wanted to hit `/api/pricing-rules` directly with a token, they could still see the data.
+
+If you want defense-in-depth server-side checks, that's a separate hardening pass — say the word and I'll add explicit permission checks in the four API handlers (pricing-rules, admin-resources for maintenance, payments, and analytics).
+
+## Files touched
+
+- `prisma/schema.prisma` — 3 new fields
+- `api/auth.js` — 4 permissions blocks updated
+- `api/staff.js` — GET / POST / PUT updated
+- `src/components/layout/Layout.jsx` — setView guard
+- `src/components/layout/Sidebar.jsx` — 3 tabs gated
+- `src/components/ui/StaffFormModal.jsx` — 3 new toggles + defaults

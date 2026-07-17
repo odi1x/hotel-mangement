@@ -17,15 +17,41 @@ import ProfileSettingsModal from '../ui/ProfileSettingsModal';
 import { Plus, CalendarSearch, Share2, Copy, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
+// Permission-gated views. If a staff member's permission for one of these
+// is false, setView() silently no-ops instead of navigating. Admin always
+// bypasses. Keeping this in module scope so it's a single source of truth.
+const GATED_VIEW_PERM = {
+  balances:    'canViewBalances',
+  maintenance: 'canViewMaintenance',
+  pricing:     'canViewPricing',
+  analytics:   'canViewAnalytics',
+  settings:    'canViewSettings',
+};
+
 export default function Layout() {
   const { user } = useAuth();
-  const [view, setView] = useState('availability');
+  const [view, setViewRaw] = useState('availability');
   const [isAddingBooking, setIsAddingBooking] = useState(false);
   const [isBookingByDate, setIsBookingByDate] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [initialBookingData, setInitialBookingData] = useState({});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Wrap setView so unauthorized navigation is blocked at the source.
+  // Admin bypasses gating. Non-gated views (availability, apartments,
+  // requests, residents) pass straight through.
+  const setView = (newView) => {
+    if (user?.role === 'admin' || !GATED_VIEW_PERM[newView]) {
+      setViewRaw(newView);
+      return;
+    }
+    const permKey = GATED_VIEW_PERM[newView];
+    if (user?.permissions?.[permKey]) {
+      setViewRaw(newView);
+    }
+    // else: silently ignore — the sidebar shouldn't have exposed this option anyway
+  };
 
   const shareableLink = `${window.location.origin}/book/${user?.adminId || user?.id}`;
 
