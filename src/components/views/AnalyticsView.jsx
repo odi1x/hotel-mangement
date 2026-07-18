@@ -509,7 +509,7 @@ export default function AnalyticsView() {
           </div>
         </div>
 
-        <div className="card-surface p-5 lg:col-span-2 flex flex-col min-h-[440px]">
+        <div className="card-surface p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[320px] md:min-h-[440px]">
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
             <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">

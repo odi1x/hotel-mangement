@@ -34,8 +34,8 @@ export default function LoginView() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas dark:bg-surface-dark p-4" dir="rtl">
-      <div className="bg-canvas dark:bg-surface-dark-elevated p-8 rounded-xl shadow-soft w-full max-w-md border border-hairline dark:border-hairline-dark-soft">
-        <div className="flex flex-col items-center mb-8">
+      <div className="bg-canvas dark:bg-surface-dark-elevated p-6 md:p-8 rounded-xl shadow-soft w-full max-w-md border border-hairline dark:border-hairline-dark-soft">
+        <div className="flex flex-col items-center mb-6 md:mb-8">
           <div className="bg-accent p-3 rounded-md mb-4 shadow-soft">
             <Home className="text-white" size={32} />
           </div>
@@ -61,7 +61,7 @@ export default function LoginView() {
               <input
                 required={!isLogin}
                 type="text"
-                className="input-field"
+                className="input-field h-11 text-base"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -73,7 +73,8 @@ export default function LoginView() {
               name="username"
               required
               type="text"
-              className="input-field"
+              autoComplete="username"
+              className="input-field h-11 text-base"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -84,14 +85,15 @@ export default function LoginView() {
               name="password"
               required
               type="password"
-              className="input-field"
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              className="input-field h-11 text-base"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           <button
             type="submit"
-            className="btn-primary w-full h-11 text-base mt-2"
+            className="btn-primary w-full h-12 text-base mt-2"
           >
             {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'}
           </button>

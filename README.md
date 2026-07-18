@@ -1,107 +1,90 @@
-# Rent Flow — Mobile Phase M1: Bottom Nav Foundation
+# Rent Flow — Mobile Phase M2: Core View Adaptations
 
-5 files. The essential first move for mobile. Nothing else works until nav does.
+3 files. The screens people use every day now actually work on a phone.
 
 ## What changed
 
-### New: floating bottom nav + FAB (mobile only)
+### 1. ResidentsView — table becomes cards on mobile
 
-`src/components/layout/MobileBottomNav.jsx`
+This was the worst mobile experience in the app. A 6-column table (النزيل / الاتصال / الوحدة / الفترة / الحالة / الإجراءات) at 375px is unreadable — either it clips or you scroll horizontally forever.
 
-A rounded-pill nav bar with **4 tabs + separated FAB**, floating at the bottom of the screen with `shadow-lift`. This is the pattern the video specifically calls out — "floating with the important action broken out". Both the nav pill and FAB are 56px tall — safely above the 44px minimum tap target.
+**Solution**: keep the desktop table (`hidden md:block`) exactly as-is. Add a **mobile card view** (`md:hidden`) that renders the same data as stacked cards. Each guest gets one card:
 
-**The 4 tabs:**
-- **التوفر** (Availability) — daily check
-- **الطلبات** (Requests) — has pending-count badge
-- **النزلاء** (Residents) — daily guest work
-- **المزيد** (More) — everything else, with an aggregate badge for hidden urgent items (dues + urgent maintenance)
+```
+┌─────────────────────────────────────┐
+│ خالد علي واصلي         [مقيم حالياً]│
+│ 📞 +966 58 115 1062                 │
+│                                      │
+│ شقة 93 · 15 يوليو ← 23 يوليو · 8 ليالي│
+│ 550 ر.س / ليلة                       │
+│                                      │
+│                    🖨️  📝  ✏️  🗑️    │
+└─────────────────────────────────────┘
+```
 
-**The FAB:**
-- Always opens the "حجز جديد" flow (booking by date modal)
-- Visible only on the three primary content tabs (Availability / Requests / Residents)
-- Hidden on المزيد itself and on views reached through it — those aren't "quick new booking" contexts
-- Emerald accent, matches the app's one-scarce-color rule
+Follows the video's "one direction per section" rule — stack vertically inside each card, no side-by-side content on mobile. Action icons get **p-2.5** padding (10px) to be a **44px effective tap target** even though the icon is 18px, per the video's tap target guideline.
 
-### New: "More" as a whole page
+Price line still respects `canViewPrices` — a receptionist won't see it. Empty state uses the existing `<EmptyState>` component. Skeleton loaders adapted for the card layout too.
 
-`src/components/layout/MobileMoreMenu.jsx`
+### 2. AnalyticsView — chart height responsive
 
-The Notion pattern the video describes: when nine sidebar items don't fit in a bar, treat "More" as its own full page. It contains:
+The chart card was `min-h-[440px]` — that's 60% of a 720px viewport height, leaving no room for KPIs above it. On mobile the chart doesn't need to be that tall; you can scroll to see everything.
 
-- **Profile card at top** — tapping opens profile settings (same modal desktop uses)
-- **إدارة المنشأة** section — Apartments / Balances / Maintenance / Pricing (each permission-gated identically to the sidebar)
-- **التقارير والإعدادات** section — Analytics / Settings (permission-gated)
-- **أخرى** section — dark mode toggle, logout
+Now: **`min-h-[320px]` on mobile, `md:min-h-[440px]` on desktop**. Chart card also gets `p-4 md:p-5` — slightly tighter on mobile. All other analytics work was already responsive (KPI grid stacks 1-col on mobile, hero math hides on mobile, right column already stacks below chart at `lg:` breakpoint).
 
-Each row is a card-style tap target with icon on the leading edge (RTL right), label, optional badge, and a chevron on the trailing edge. Sections are separated by `eyebrow`-style micro-labels for scannability. Permission gates match the existing rules exactly — a receptionist with `canViewPricing: false` won't see the pricing row.
+### 3. LoginView — mobile-first tweaks
 
-### Sidebar hidden on mobile
+Was already tolerable on mobile (centered card, `p-4` outer, `max-w-md`), but:
+- Card inner padding: **`p-6 md:p-8`** (tighter on mobile, comfortable on desktop)
+- Section spacing: **`mb-6 md:mb-8`** on the brand block
+- Input fields: **`h-11 text-base`** — larger tap target and 16px font (browsers won't auto-zoom on focus)
+- Submit button: **`h-12`** (48px) — bigger than the default `h-11` for a primary action
+- Added `autoComplete="username"` / `autoComplete="current-password"` / `autoComplete="new-password"` — password managers now work correctly on iOS/Android
 
-`src/components/layout/Sidebar.jsx` — one class change: `hidden md:flex`. On mobile the sidebar completely disappears (no drawer, no hamburger — the bottom nav is the whole navigation model). On md+ (768px+), sidebar returns exactly as-is.
+## What I did NOT change (and why)
 
-### Layout adapts to mobile
+**MaintenanceView, PricingView, BalancesView stat card grids** — I checked, they already use `grid-cols-1 md:grid-cols-4` (or 3) — they stack to 1-col on mobile automatically. No change needed.
 
-`src/components/layout/Layout.jsx`
-- Main content padding: `p-4` on mobile (16px), `md:p-6` (24px) on desktop — matches the video's guidance that spacing stays similar or larger on mobile, but keeps enough room for content on 375px screens
-- Main bottom padding: `pb-28` (112px) on mobile to leave room above the floating bottom nav
-- Title: `text-2xl` on mobile, `text-3xl` on desktop — still large per the "iOS uses 17px base" principle
-- Subtitle: `line-clamp-2` — can't wrap forever on narrow screens
-- The desktop "حجز جديد" button in the header area is **hidden on mobile** (`hidden md:flex` wrapper) since the FAB replaces it
-- The شارك link box on Apartments is also hidden on mobile — narrow screens don't have room for it
-- New view case: `view === 'more'` renders the MobileMoreMenu
+**RequestsView** — already card-based with a decent empty state. Works on mobile as-is.
 
-### Header cleanup
+**ApartmentsView** — grid is already `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`. Cards have `hover:-translate-y-0.5` which gracefully degrades on touch. Not worth touching.
 
-`src/components/layout/Header.jsx`
-- Padding: `px-4 md:px-8` — tighter on mobile
-- Fixed two stray `dark:text-[#a1a1aa]` hex leaks that Phase 2 sweep missed (they were re-introduced somewhere post-sweep) → `dark:text-body-dark`
-- The name/role text next to the profile picture already hid on `<sm` breakpoints via `hidden sm:block` — no change needed
-- Bell + profile pic stay as-is on mobile
+**SettingsView** — 8 responsive classes, mostly works. Might revisit if you notice issues.
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-m1.zip -d .
+unzip -o rentflow-mobile-m2.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-mobile-m1.zip
+rm -rf patch rentflow-mobile-m2.zip
 
 git add -A
-git commit -m "mobile(m1): bottom nav + FAB + more menu — mobile navigation foundation"
+git commit -m "mobile(m2): residents cards + analytics chart height + login tweaks"
 git push origin design-md-changes
 ```
 
-Five files: 2 new (`MobileBottomNav.jsx`, `MobileMoreMenu.jsx`), 3 modified (`Layout.jsx`, `Sidebar.jsx`, `Header.jsx`).
-
-No schema, no API, no data changes.
-
 ## After deploy — what to look at
 
-**On desktop (>= 768px):** nothing should look different. Same sidebar, same layout, same everything. The bottom nav is hidden (`md:hidden`), the desktop "حجز جديد" button is still there.
+**On phone, open سجل النزلاء.** Each guest should be a stacked card with name at top, status badge on the trailing edge, unit + dates + nights in the middle, and action icons at the bottom aligned to the trailing edge. No horizontal scroll, no clipped columns. Tap any icon — targets should feel comfortable (not tiny).
 
-**On phone (< 768px):**
-1. Sidebar is gone.
-2. Bottom of the screen has a rounded pill nav with 4 tabs (Availability / Requests / Residents / More) and a floating emerald "+" button next to it.
-3. Tap "المزيد" — the app content area becomes the more menu: your profile at top, then sections for apartments / balances / maintenance / pricing, then analytics / settings, then dark mode + logout.
-4. Tap any item in the more menu → navigates to that view. Bottom nav still shows, and "المزيد" stays highlighted so you know you're in a "more" section.
-5. Tap the "+" FAB on any of the three primary tabs → opens the "book by date" flow (same as desktop's حجز جديد button).
-6. Badges: red dots on the tab icons for pending requests, and a combined dues + urgent-maintenance count on the More icon.
+**On phone, open التحليلات.** Scroll through: hero card (Net Profit big), 3 supporting KPIs stacked, chart at 320px tall (not the desktop 440px), top performers below, marketing sources below that. Should feel like a report you scroll through.
 
-## Known limitations of M1 (fixed in M2/M3/M4)
+**Log out and log in on phone.** Card should fit comfortably with 24px inner padding. Inputs should be 44px tall with 16px text (no zoom-on-focus). Try letting your password manager fill it — should work.
 
-**Views themselves are still desktop-first.** Analytics KPIs are still 3-column. Residents is still a 6-column table you have to scroll horizontally to read. Availability is still a wide unit×date grid that clips on 375px. Modals are still centered rather than bottom sheets.
-
-M1 gets you around the app on mobile. M2 makes the content in each view actually readable at 375px. M3 turns modals into bottom sheets. M4 handles the timelines + polish.
+**On desktop:** nothing should look different. All the `md:` conditions preserve current desktop appearance.
 
 ## What's next
 
-**Phase M2 — Core view adaptations** (biggest single change to make the app feel usable):
-- Analytics: hero math stacks vertically, KPIs go 1-column, right column drops below chart
-- Residents: table → cards
-- Apartments: 1-col grid on mobile
-- Login: proper mobile-first form
+**Phase M3 — modals become bottom sheets** on mobile:
+- BookingForm, BookByDateModal, PaymentLedgerModal, MaintenanceIssueForm, PricingRuleForm, StaffFormModal, ProfileSettingsModal
+- Slide up from bottom, rounded top corners, drag handle at top, full-width
+- The video calls this out specifically as the modern mobile pattern for context-preserving actions
+- Requires a new `.sheet-*` utility class set + touch on each modal
 
-**Phase M3 — Modals become bottom sheets** on mobile (booking form, filters, payment ledger, maintenance form, pricing form, staff form)
+**Phase M4 — timeline views + polish**:
+- Availability grid: sticky unit column + horizontal scroll for dates
+- Pricing timeline: same treatment
+- PublicBookingView (guest-facing, likely mostly mobile) — dedicated pass
+- Touch target audit across all views
 
-**Phase M4 — Timeline views + polish** (availability + pricing on mobile, public booking view, touch target sweep)
-
-Deploy M1, look at it on your phone, tell me if the bottom nav feels right — then say "ship M2" and I'll do the content adaptations.
+Deploy M2, check it on your phone alongside M1, tell me what still feels wrong. Or if the residents cards / login look good, say **"ship M3"** and I do the bottom sheets — that's the biggest remaining "this doesn't feel native" complaint.

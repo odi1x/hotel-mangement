@@ -186,7 +186,7 @@ export default function ResidentsView({ openBookingForm }) {
             <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
           </div>
         </div>
-        <div className="overflow-x-auto overflow-y-auto flex-1 h-full min-h-0">
+        <div className="overflow-x-auto overflow-y-auto flex-1 h-full min-h-0 hidden md:block">
           <table className="w-full text-right">
             <thead>
               <tr className="text-xs font-semibold text-muted dark:text-body-dark border-b border-hairline-soft dark:border-hairline-dark">
@@ -322,6 +322,134 @@ export default function ResidentsView({ openBookingForm }) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card view — replaces the 6-column desktop table. Renders the
+            same data as stacked cards: name + status on top, unit + dates in
+            the middle, actions at the bottom. One direction of layout per
+            section, matching the mobile pattern. */}
+        <div className="md:hidden flex-1 overflow-y-auto divide-y divide-hairline-soft dark:divide-hairline-dark">
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, idx) => (
+              <div key={`skeleton-mobile-${idx}`} className="animate-pulse p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex-1">
+                    <div className="h-4 bg-surface-card dark:bg-surface-dark-elevated rounded w-32 mb-2"></div>
+                    <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-24"></div>
+                  </div>
+                  <div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-20 shrink-0"></div>
+                </div>
+                <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-full"></div>
+              </div>
+            ))
+          ) : currentBookings.length === 0 ? (
+            <div className="p-4">
+              <EmptyState
+                icon={Users}
+                title="لا توجد حجوزات مطابقة"
+                subtitle="جرّب تعديل الفلاتر أو مصطلح البحث للعثور على النزلاء."
+              />
+            </div>
+          ) : (
+            currentBookings.map(booking => {
+              const apt = apartments.find(a => a.id === booking.apartmentId);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const startDate = new Date(booking.startDate);
+              startDate.setHours(0, 0, 0, 0);
+              const endDate = new Date(booking.endDate);
+              endDate.setHours(0, 0, 0, 0);
+              const isCurrent = booking.status !== 'checked_out_early' && today >= startDate && today < endDate;
+              const isFuture = booking.status !== 'checked_out_early' && today < startDate;
+
+              return (
+                <div key={booking.id} className="p-4 hover:bg-surface-soft/40 dark:hover:bg-surface-dark-elevated/40 transition-colors">
+                  {/* Header row: name + status */}
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink dark:text-white truncate leading-tight">
+                        {booking.residentName}
+                      </p>
+                      <p className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5">
+                        <Phone size={12} className="text-muted-soft shrink-0" />
+                        <span className="truncate">{booking.phone}</span>
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      {booking.status === 'checked_out_early' ? (
+                        <span className="badge-pill badge-dashed text-xs font-semibold">خروج مبكر</span>
+                      ) : isCurrent ? (
+                        <span className="badge-pill badge-solid text-xs font-semibold">مقيم حالياً</span>
+                      ) : isFuture ? (
+                        <span className="badge-pill badge-outline text-xs font-semibold">متوقع</span>
+                      ) : (
+                        <span className="badge-pill badge-ghost text-xs font-semibold">مغادر</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Meta row: unit + dates + nights */}
+                  <div className="flex items-center gap-1.5 text-xs text-body dark:text-body-dark mb-2 flex-wrap">
+                    <span className="font-semibold text-ink dark:text-white">{apt?.name || 'وحدة محذوفة'}</span>
+                    <span className="text-muted-soft">·</span>
+                    <span>{formatDate(booking.startDate)} ← {formatDate(booking.endDate)}</span>
+                    <span className="text-muted-soft">·</span>
+                    <span>{calculateNights(booking.startDate, booking.endDate)} ليالي</span>
+                  </div>
+
+                  {/* Price line — only when canViewPrices */}
+                  {(user?.role === 'admin' || user?.permissions?.canViewPrices !== false) && (
+                    <p className="text-xs text-accent font-semibold mb-3">
+                      {booking.pricePerNight} ر.س / ليلة
+                    </p>
+                  )}
+
+                  {/* Actions — trailing, tap-target sized */}
+                  <div className="flex items-center gap-1 justify-end -mr-2">
+                    {isCurrent && booking.status !== 'checked_out_early' && (
+                      <button
+                        onClick={() => handleCheckout(booking)}
+                        className="icon-action p-2.5 hover:text-accent"
+                        title="تسجيل خروج مبكر"
+                      >
+                        <LogOut size={18} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setPrintSelectorBooking(booking)}
+                      className="icon-action p-2.5 hover:text-accent"
+                      title="طباعة العقد"
+                    >
+                      <Printer size={18} />
+                    </button>
+                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                      <button
+                        onClick={() => openNoteModal(booking)}
+                        className={`icon-action p-2.5 hover:text-accent ${booking.notes && booking.notes.trim() !== '' ? 'opacity-100 text-accent' : ''}`}
+                        title="ملاحظات النزيل"
+                      >
+                        <MessageSquare size={18} />
+                      </button>
+                    )}
+                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                      <button
+                        onClick={() => openBookingForm(booking)}
+                        className="icon-action p-2.5 hover:text-accent"
+                        title="تعديل الحجز"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    )}
+                    {(user?.role === 'admin' || user?.permissions?.canDelete) && (
+                      <button onClick={() => handleDelete(booking.id)} className="icon-action p-2.5 hover:text-accent" title="حذف الحجز">
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Pagination Controls — Cal.com capsule group */}
