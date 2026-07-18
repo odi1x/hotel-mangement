@@ -1,65 +1,107 @@
-# Rent Flow — Receptionist Permission (canViewPrices)
+# Rent Flow — Mobile Phase M1: Bottom Nav Foundation
 
-Follow-up to the staff-permissions patch. Adds a `canViewPrices` toggle for the "front-desk / receptionist" role: staff who need to see who's checking in and who's currently staying, but shouldn't see the money.
+5 files. The essential first move for mobile. Nothing else works until nav does.
 
-## What this enables
+## What changed
 
-Turn off `canViewPrices` for a staff member and:
-- **Availability view**: booking cells stop showing the nightly-rate badge. Tooltips drop the price line. The details panel that opens when clicking a booking hides the "السعر لليلة" card.
-- **Residents list**: the price line (`{X} ر.س / ليلة`) below each unit name disappears. Only the unit name shows.
+### New: floating bottom nav + FAB (mobile only)
 
-Everything else in those views works exactly as before — guest names, check-in/out dates, unit assignments, phones, IDs, nights count. The receptionist can do their job.
+`src/components/layout/MobileBottomNav.jsx`
 
-## What still shows financials (correctly)
+A rounded-pill nav bar with **4 tabs + separated FAB**, floating at the bottom of the screen with `shadow-lift`. This is the pattern the video specifically calls out — "floating with the important action broken out". Both the nav pill and FAB are 56px tall — safely above the 44px minimum tap target.
 
-- **Balances page** — already gated by `canViewBalances`. If the staff has that off, the whole tab is hidden.
-- **Analytics** — gated by `canViewAnalytics`.
-- **Booking form** — creating/editing bookings is gated by `canBook`/`canEdit`. If a receptionist somehow has one of those, they'd see the price fields as inputs anyway (they'd be entering them). But typically a receptionist role would have canBook=false as well.
+**The 4 tabs:**
+- **التوفر** (Availability) — daily check
+- **الطلبات** (Requests) — has pending-count badge
+- **النزلاء** (Residents) — daily guest work
+- **المزيد** (More) — everything else, with an aggregate badge for hidden urgent items (dues + urgent maintenance)
 
-The gating is layered — this new one just closes the specific gap where a staff with tab access could still see prices in read-only booking displays.
+**The FAB:**
+- Always opens the "حجز جديد" flow (booking by date modal)
+- Visible only on the three primary content tabs (Availability / Requests / Residents)
+- Hidden on المزيد itself and on views reached through it — those aren't "quick new booking" contexts
+- Emerald accent, matches the app's one-scarce-color rule
 
-## Files changed
+### New: "More" as a whole page
 
-- `prisma/schema.prisma` — `canViewPrices Boolean @default(true)`
-- `api/auth.js` — 4 permissions blocks updated
-- `api/staff.js` — GET/POST/PUT accept and return the new field
-- `src/components/ui/StaffFormModal.jsx` — new toggle: "عرض الأسعار" with a clear description explaining the receptionist use case
-- `src/components/views/ResidentsView.jsx` — 1 site: nightly price line in unit column
-- `src/components/views/AvailabilityView.jsx` — 3 sites: booking-cell badge, tooltip, details panel
+`src/components/layout/MobileMoreMenu.jsx`
 
-## Default behavior
+The Notion pattern the video describes: when nine sidebar items don't fit in a bar, treat "More" as its own full page. It contains:
 
-- **Schema default: `true`** — every existing staff member automatically gets access to prices (no behavior change on deploy).
-- **New staff default: `true`** — matches expectation; only turn it off when creating a restricted role.
+- **Profile card at top** — tapping opens profile settings (same modal desktop uses)
+- **إدارة المنشأة** section — Apartments / Balances / Maintenance / Pricing (each permission-gated identically to the sidebar)
+- **التقارير والإعدادات** section — Analytics / Settings (permission-gated)
+- **أخرى** section — dark mode toggle, logout
+
+Each row is a card-style tap target with icon on the leading edge (RTL right), label, optional badge, and a chevron on the trailing edge. Sections are separated by `eyebrow`-style micro-labels for scannability. Permission gates match the existing rules exactly — a receptionist with `canViewPricing: false` won't see the pricing row.
+
+### Sidebar hidden on mobile
+
+`src/components/layout/Sidebar.jsx` — one class change: `hidden md:flex`. On mobile the sidebar completely disappears (no drawer, no hamburger — the bottom nav is the whole navigation model). On md+ (768px+), sidebar returns exactly as-is.
+
+### Layout adapts to mobile
+
+`src/components/layout/Layout.jsx`
+- Main content padding: `p-4` on mobile (16px), `md:p-6` (24px) on desktop — matches the video's guidance that spacing stays similar or larger on mobile, but keeps enough room for content on 375px screens
+- Main bottom padding: `pb-28` (112px) on mobile to leave room above the floating bottom nav
+- Title: `text-2xl` on mobile, `text-3xl` on desktop — still large per the "iOS uses 17px base" principle
+- Subtitle: `line-clamp-2` — can't wrap forever on narrow screens
+- The desktop "حجز جديد" button in the header area is **hidden on mobile** (`hidden md:flex` wrapper) since the FAB replaces it
+- The شارك link box on Apartments is also hidden on mobile — narrow screens don't have room for it
+- New view case: `view === 'more'` renders the MobileMoreMenu
+
+### Header cleanup
+
+`src/components/layout/Header.jsx`
+- Padding: `px-4 md:px-8` — tighter on mobile
+- Fixed two stray `dark:text-[#a1a1aa]` hex leaks that Phase 2 sweep missed (they were re-introduced somewhere post-sweep) → `dark:text-body-dark`
+- The name/role text next to the profile picture already hid on `<sm` breakpoints via `hidden sm:block` — no change needed
+- Bell + profile pic stay as-is on mobile
 
 ## Install
 
 ```bash
-unzip -o rentflow-can-view-prices.zip -d .
-cp -r patch/api    ./
-cp -r patch/prisma ./
-cp -r patch/src    ./
-rm -rf patch rentflow-can-view-prices.zip
+unzip -o rentflow-mobile-m1.zip -d .
+cp -r patch/src  ./
+rm -rf patch rentflow-mobile-m1.zip
 
 git add -A
-git commit -m "feat: canViewPrices permission — hide prices in bookings/residents for receptionist role"
+git commit -m "mobile(m1): bottom nav + FAB + more menu — mobile navigation foundation"
 git push origin design-md-changes
 ```
 
-Vercel will run `prisma db push` and add the new column with `@default(true)` — no data migration issue.
+Five files: 2 new (`MobileBottomNav.jsx`, `MobileMoreMenu.jsx`), 3 modified (`Layout.jsx`, `Sidebar.jsx`, `Header.jsx`).
 
-## Verify after deploy
+No schema, no API, no data changes.
 
-1. Open Settings → Staff. Edit an existing staff member. There should be a new toggle "**عرض الأسعار**" above the "**إدارة المستحقات**" toggle. It should be ON by default.
-2. Create a test staff member: give them `canBook: false`, `canEdit: false`, `canViewBalances: false`, `canViewPrices: false`, everything else off except `canViewMaintenance` if relevant. This is the "receptionist" configuration.
-3. Log in as that staff. Open the availability view — booking cells should not show a "500 ر.س" badge, just the unit color + guest name. Click any booking — details panel should not show "السعر لليلة".
-4. Open سجل النزلاء — each row's "الوحدة" column should show only the unit name, no "500 ر.س / ليلة" line below it.
-5. Turn `canViewPrices` back on for that staff member. Refresh their browser. Prices should reappear everywhere.
+## After deploy — what to look at
 
-## What I did NOT gate
+**On desktop (>= 768px):** nothing should look different. Same sidebar, same layout, same everything. The bottom nav is hidden (`md:hidden`), the desktop "حجز جديد" button is still there.
 
-- **BookingForm inputs** — if a staff has `canBook` or `canEdit`, they'd be creating/editing prices themselves. Read-only display gating doesn't apply to input fields.
-- **PaymentLedgerModal** — only accessible via BalancesView, which is already gated.
-- **PrintAgreement** — printed contract inherently needs the total price. Only accessible from ResidentsView actions gated by `canEdit`.
+**On phone (< 768px):**
+1. Sidebar is gone.
+2. Bottom of the screen has a rounded pill nav with 4 tabs (Availability / Requests / Residents / More) and a floating emerald "+" button next to it.
+3. Tap "المزيد" — the app content area becomes the more menu: your profile at top, then sections for apartments / balances / maintenance / pricing, then analytics / settings, then dark mode + logout.
+4. Tap any item in the more menu → navigates to that view. Bottom nav still shows, and "المزيد" stays highlighted so you know you're in a "more" section.
+5. Tap the "+" FAB on any of the three primary tabs → opens the "book by date" flow (same as desktop's حجز جديد button).
+6. Badges: red dots on the tab icons for pending requests, and a combined dues + urgent-maintenance count on the More icon.
 
-If any of these surface a problem in practice, tell me and I'll add gates.
+## Known limitations of M1 (fixed in M2/M3/M4)
+
+**Views themselves are still desktop-first.** Analytics KPIs are still 3-column. Residents is still a 6-column table you have to scroll horizontally to read. Availability is still a wide unit×date grid that clips on 375px. Modals are still centered rather than bottom sheets.
+
+M1 gets you around the app on mobile. M2 makes the content in each view actually readable at 375px. M3 turns modals into bottom sheets. M4 handles the timelines + polish.
+
+## What's next
+
+**Phase M2 — Core view adaptations** (biggest single change to make the app feel usable):
+- Analytics: hero math stacks vertically, KPIs go 1-column, right column drops below chart
+- Residents: table → cards
+- Apartments: 1-col grid on mobile
+- Login: proper mobile-first form
+
+**Phase M3 — Modals become bottom sheets** on mobile (booking form, filters, payment ledger, maintenance form, pricing form, staff form)
+
+**Phase M4 — Timeline views + polish** (availability + pricing on mobile, public booking view, touch target sweep)
+
+Deploy M1, look at it on your phone, tell me if the bottom nav feels right — then say "ship M2" and I'll do the content adaptations.

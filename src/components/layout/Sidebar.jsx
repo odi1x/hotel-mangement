@@ -59,7 +59,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
   };
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-canvas dark:bg-surface-dark border-l border-hairline dark:border-hairline-dark p-6 flex flex-col h-full shrink-0 relative`}>
+    <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-canvas dark:bg-surface-dark border-l border-hairline dark:border-hairline-dark p-6 flex-col h-full shrink-0 relative`}>
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className={`absolute top-6 text-muted hover:text-ink dark:text-body-dark dark:hover:text-white z-10 transition-colors ${isCollapsed ? 'right-6' : 'left-6'}`}

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import toast from 'react-hot-toast';
 import Header from './Header';
+import MobileBottomNav from './MobileBottomNav';
+import MobileMoreMenu from './MobileMoreMenu';
 import AvailabilityView from '../views/AvailabilityView';
 import ApartmentsView from '../views/ApartmentsView';
 import ResidentsView from '../views/ResidentsView';
@@ -87,6 +89,7 @@ export default function Layout() {
       case 'analytics': return 'تحليلات الأداء';
       case 'settings': return 'الإعدادات';
       case 'requests': return 'طلبات الحجز';
+      case 'more': return 'المزيد';
       default: return '';
     }
   };
@@ -96,6 +99,7 @@ export default function Layout() {
       case 'balances':    return 'تتبّع الدفعات والأرصدة المتبقية على الحجوزات.';
       case 'maintenance': return 'وثّق بلاغات الصيانة وتتبّع حالتها حتى الحل.';
       case 'pricing':     return 'اضبط أسعار المواسم والفترات الخاصة تلقائياً.';
+      case 'more':        return null;
       default:            return 'إدارة التأجير اليومي والأسبوعي والشهري بدقة.';
     }
   };
@@ -107,16 +111,20 @@ export default function Layout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} onNavigate={setView} />
 
-        <main className="flex-1 overflow-hidden p-6 pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
-          <div className="flex justify-between items-end mb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tightest text-ink dark:text-white mb-1.5 leading-none">
+        {/* Main padding: comfortable on desktop (p-6), tighter on mobile (p-4).
+            Bottom padding on mobile leaves space for the floating bottom nav. */}
+        <main className="flex-1 overflow-hidden p-4 pb-28 md:p-6 md:pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
+          <div className="flex justify-between items-end mb-4 md:mb-6 gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tightest text-ink dark:text-white mb-1 md:mb-1.5 leading-none">
               {getViewTitle()}
             </h1>
-            <p className="text-sm text-muted dark:text-body-dark">{getViewSubtitle()}</p>
+            {getViewSubtitle() && (
+              <p className="text-xs md:text-sm text-muted dark:text-body-dark line-clamp-2">{getViewSubtitle()}</p>
+            )}
           </div>
           {(user?.role === 'admin' || user?.permissions?.canBook) && (
-            <div className="flex items-center space-x-reverse space-x-3">
+            <div className="hidden md:flex items-center space-x-reverse space-x-3 shrink-0">
 
               {view === 'apartments' && (
                 <div className="bg-canvas dark:bg-surface-dark-elevated p-1.5 rounded-md border border-hairline dark:border-hairline-dark-soft flex items-center gap-2 max-w-[300px]">
@@ -144,7 +152,7 @@ export default function Layout() {
                 </div>
               )}
 
-              {view !== 'balances' && view !== 'maintenance' && view !== 'pricing' && (
+              {view !== 'balances' && view !== 'maintenance' && view !== 'pricing' && view !== 'more' && (
                 <button
                   onClick={() => setIsBookingByDate(true)}
                   className="btn-accent"
@@ -167,9 +175,23 @@ export default function Layout() {
             {view === 'pricing' && <PricingView />}
             {view === 'analytics' && <AnalyticsView />}
             {view === 'settings' && <SettingsView />}
+            {view === 'more' && (
+              <MobileMoreMenu
+                setView={setView}
+                onProfileClick={() => setIsProfileSettingsOpen(true)}
+              />
+            )}
           </div>
         </main>
       </div>
+
+      {/* Mobile bottom nav — floating pill + separated FAB. Hidden on desktop
+          (md:hidden inside the component). */}
+      <MobileBottomNav
+        view={view}
+        setView={setView}
+        onNewBooking={() => setIsBookingByDate(true)}
+      />
 
       {isProfileSettingsOpen && (
         <ProfileSettingsModal onClose={() => setIsProfileSettingsOpen(false)} />
