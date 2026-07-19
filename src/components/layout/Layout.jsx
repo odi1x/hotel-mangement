@@ -109,7 +109,7 @@ export default function Layout() {
       <Sidebar view={view} setView={setView} isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} onNavigate={setView} />
+        <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} onNavigate={setView} title={getViewTitle()} />
 
         {/* Main padding: comfortable on desktop (p-6), tighter on mobile (p-4).
             No extra bottom padding — each view's own scrollable content area
@@ -117,7 +117,10 @@ export default function Layout() {
             so the main bg extends seamlessly to the bottom of the viewport
             (no visible edge above the nav bar). */}
         <main className="flex-1 overflow-hidden p-4 pb-4 md:p-6 md:pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
-          <div className="flex justify-between items-end mb-4 md:mb-6 gap-3">
+          {/* Title row — desktop only. On mobile the title lives in the header
+              row (see Header.jsx), giving that "up close to the corner" feel
+              instead of pushing the title 24px down into the content area. */}
+          <div className="hidden md:flex justify-between items-end mb-6 gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl md:text-3xl font-bold tracking-tightest text-ink dark:text-white mb-1 md:mb-1.5 leading-none">
               {getViewTitle()}

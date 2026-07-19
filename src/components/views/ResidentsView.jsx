@@ -173,15 +173,15 @@ export default function ResidentsView({ openBookingForm }) {
   return (
     <>
       <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
-        <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
-          <h3 className="font-semibold tracking-tight text-ink dark:text-white">سجلات الحجز الكاملة</h3>
-          <div className="relative w-64">
+        <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+          <h3 className="font-semibold tracking-tight text-ink dark:text-white shrink-0">سجلات الحجز الكاملة</h3>
+          <div className="relative flex-1 md:w-64 md:flex-none">
             <input
               type="text"
               placeholder="البحث بالاسم أو رقم الجوال..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              className="input-field pl-10 pr-4 py-2"
+              className="input-field pl-10 pr-4 py-2 w-full"
             />
             <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
           </div>

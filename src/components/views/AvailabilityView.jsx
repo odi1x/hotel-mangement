@@ -214,8 +214,13 @@ export default function AvailabilityView({ openBookingForm }) {
       const s = first ? 1 : 16, e = first ? 15 : dim;
       return Array.from({ length: e - s + 1 }, (_, i) => mk(d.getFullYear(), d.getMonth(), s + i));
     }
-    const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    return Array.from({ length: dim }, (_, i) => mk(d.getFullYear(), d.getMonth(), i + 1));
+    // Month mode is a rolling 30-day view starting 3 days before `currentDate`,
+    // NOT the calendar month 1-30. Past bookings matter far less than the near
+    // future, so we anchor slightly behind today and show the next ~27 days.
+    // When user navigates ← / → we shift by 30 days (see shiftRange below).
+    const start = new Date(d);
+    start.setDate(d.getDate() - 3);
+    return Array.from({ length: 30 }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
   }, [currentDate, viewMode]);
 
   const rangeStart = range[0];
@@ -225,7 +230,7 @@ export default function AvailabilityView({ openBookingForm }) {
     const d = new Date(currentDate);
     if (viewMode === 'week') d.setDate(d.getDate() + dir * 7);
     else if (viewMode === 'half') d.setDate(d.getDate() + dir * 15);
-    else d.setMonth(d.getMonth() + dir, 1);
+    else d.setDate(d.getDate() + dir * 30); // month = rolling 30-day window
     setCurrentDate(d);
   };
   const handlePrevMonth = () => shiftRange(1);   // RTL: chevron-right = forward
@@ -288,11 +293,23 @@ export default function AvailabilityView({ openBookingForm }) {
             <button onClick={handleToday} className="px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-1 transition-colors">اليوم</button>
             <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={18} /></button>
           </div>
-          <div className="nav-pill-group">
+          {/* View mode: desktop shows pill group. Mobile uses a compact
+              <select> so all three options are reachable without clipping
+              off the left edge. */}
+          <div className="hidden md:block nav-pill-group">
             {[{ id: 'week', t: 'أسبوع' }, { id: 'half', t: 'نصف شهر' }, { id: 'month', t: 'شهر' }].map(v => (
               <button key={v.id} onClick={() => setViewMode(v.id)} className={`nav-pill text-xs ${viewMode === v.id ? 'nav-pill-active' : ''}`}>{v.t}</button>
             ))}
           </div>
+          <select
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value)}
+            className="md:hidden input-field h-8 py-0 text-xs w-auto"
+          >
+            <option value="week">أسبوع</option>
+            <option value="half">نصف شهر</option>
+            <option value="month">شهر</option>
+          </select>
         </div>
         <div className="flex items-center space-x-reverse space-x-4">
           <p className="badge-pill text-muted dark:text-body-dark hidden lg:inline-flex">

@@ -208,18 +208,18 @@ export default function MaintenanceView() {
       {/* Main list */}
       <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
         <div className="p-4 border-b border-hairline-soft dark:border-hairline-dark shrink-0">
-          <div className="flex justify-between items-center gap-4 mb-4">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-4">
             <h3 className="font-semibold tracking-tight text-ink dark:text-white shrink-0">
               سجل البلاغات
             </h3>
             <div className="flex items-center gap-2">
-              <div className="relative w-64">
+              <div className="relative flex-1 md:w-64 md:flex-none">
                 <input
                   type="text"
                   placeholder="ابحث..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="input-field pl-10 pr-4 py-2"
+                  className="input-field pl-10 pr-4 py-2 w-full"
                 />
                 <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
               </div>
