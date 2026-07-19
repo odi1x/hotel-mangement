@@ -381,6 +381,12 @@ export default function AvailabilityView({ openBookingForm }) {
         const minCol = viewMode === 'week' ? 90 : viewMode === 'half' ? 60 : 40;
         const rowH = 46;
 
+        // Unit column narrower on mobile (100px) than desktop (150px) so
+        // more date columns fit within the visible viewport before needing
+        // to scroll horizontally.
+        const isMobile = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+        const unitCol = isMobile ? 100 : 150;
+
         const dayMs = 86400000;
         const floorDay = dt => Math.floor(new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime() / dayMs);
         const d0 = floorDay(rangeStart);
@@ -398,8 +404,8 @@ export default function AvailabilityView({ openBookingForm }) {
         const neutralBorder = darkMode ? '#33302c' : '#e5e7eb';
 
         return (
-          <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none">
-            <div style={{ display: 'grid', gridTemplateColumns: `150px repeat(${N}, minmax(${minCol}px, 1fr))`, minWidth: 'min-content' }}>
+          <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none pb-24 md:pb-0">
+            <div style={{ display: 'grid', gridTemplateColumns: `${unitCol}px repeat(${N}, minmax(${minCol}px, 1fr))`, minWidth: 'min-content' }}>
               {/* corner */}
               <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center justify-center text-xs font-semibold text-muted dark:text-body-dark" style={{ gridColumn: 1, gridRow: 1, height: 46, ...frozenShadow }}>
                 الوحدة

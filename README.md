@@ -1,94 +1,91 @@
-# Rent Flow — Mobile Phase M3: Modals Become Bottom Sheets
+# Rent Flow — Mobile Phase M4: Total Mobile Redesign
 
-13 files. Every modal in the app now slides up from the bottom on mobile like a native app.
+7 files. The final mobile pass. Fixes what you flagged: unusable stat grids, timeline dead on mobile, the visible split above the nav.
 
-## The pattern
+## The split you saw at the bottom
 
-Desktop stays centered — a modal with a dark backdrop, rounded on all sides, `max-w-*` limited, no changes to what you see today.
+**Root cause**: Layout's `<main>` had `pb-28` on mobile — 112px of empty space at the bottom to make room for the floating nav. But that empty space was *inside* main, showing bg-page below wherever the view container's bg-canvas ended. Where the view card ended (with its hairline border-b + rounded-b), a horizontal edge became visible above the empty area.
 
-Mobile becomes a **bottom sheet**: slides up from the bottom edge, full-width, rounded top corners only, flush with the screen at the bottom. A **small handle** at the top signals "this is a sheet, not a hard modal" — the video's specific pattern for context-preserving actions.
+**Fix**: removed `pb-28` from main (`p-4 pb-4 md:p-6 md:pb-6` uniform now). Each view's scrollable content area got `pb-24 md:pb-0` instead — safe area inside the scroll, so the last card can scroll past the nav. Main's bg-page now extends seamlessly to the viewport bottom under the floating nav. No visible split.
 
-The gesture (swipe down to close) isn't wired to a real drag library — that would be a bigger project — but the visual handle teaches the pattern. Users can still close by tapping the X, or tapping the backdrop.
+## The four view redesigns
 
-## What changed
+### **BalancesView** — 3 stacked cards → 1 hero + inline sort
 
-### `src/index.css` — utility class layer
+**Before**: `إجمالي المستحقات` card + `إجمالي المحصّل` card + `الترتيب` (sort) card, all stacked full-width on mobile. Three tall cards for a page with no dues yet.
 
-Three targeted changes to existing utility classes:
+**After (mobile only)**: single card with both numbers on one row — big "إجمالي المستحقات" number on the leading edge, small "محصَّل" figure trailing edge, subtle accent tint. Sort pills (`nav-pill-group`) inline below — no card wrapper. Way less vertical space, still shows all the key numbers.
 
-**`.modal-backdrop`**: was `flex items-center justify-center p-4`. Now `flex items-end p-0 md:items-center md:justify-center md:p-4`. Aligned to the bottom of the screen on mobile with zero padding (sheet flush to bottom), centered on desktop with 16px inset.
+Desktop layout unchanged.
 
-**`.modal-shell`**: was `rounded-xl` + full border. Now `rounded-t-2xl md:rounded-xl` and `border-t md:border` — rounded corners only at the top on mobile, all four on desktop. On mobile the border-t sits at the sheet's top edge as a hairline finishing detail; the shell fills to the screen bottom naturally.
+### **MaintenanceView** — 4 cards showing zeros → compact 4-quadrant strip
 
-**New: `.sheet-handle`**: the visual drag affordance. `md:hidden` — only appears on mobile. Renders as a 40×4px pill in `bg-hairline` centered at the top of the sheet.
+**Before**: 4 stat cards (مفتوحة الآن / عاجلة / قيد المعالجة / أنجزت هذا الشهر) at ~100px each = 200px just for 4 zero counters.
 
-### The 6 modal files
+**After (mobile)**: one card containing 4 mini-stats side-by-side, divided by hairlines. Each mini-stat: tiny icon + label + big number. Total height ~70px instead of 200px. Same 4 pieces of info, one-fifth the space. Urgent count still uses accent-strong when > 0.
 
-Each modal shell got:
-- Backdrop class updated to the responsive bottom-sheet pattern
-- Shell rounding: `rounded-xl` → `rounded-t-2xl md:rounded-xl`
-- `<div className="sheet-handle" />` inserted right after the shell opens
+Desktop 4-card grid unchanged.
 
-**Modified:**
-- `BookingForm.jsx` — biggest form in the app. Backdrop was uniquely `items-start` (top-anchored scroll for the long form) — I kept that as `md:items-start` and made mobile `items-end` (bottom sheet). Content scrolls internally per Cal-style shells.
-- `BookByDateModal.jsx` — the "حجز جديد" flow launched by the FAB
-- `MaintenanceIssueForm.jsx`
-- `PricingRuleForm.jsx`
-- `StaffFormModal.jsx`
-- `ProfileSettingsModal.jsx`
+### **PricingView** — timeline hidden on mobile, focus on the rules list
 
-### Inline modals in view files
+**Before**: The 12-month timeline card was the primary UI. At 375px viewport, each month gets ~30px — month labels overlap into unreadable soup ("يوليوأغسطسسبتمبر...").
 
-Six more modals live inline inside view files (analytics breakdown, apartments delete confirm, availability booking details, maintenance resolve, pricing edit, residents checkout + others). Their backdrops got the same responsive treatment:
+**After (mobile)**:
+- **Timeline card entirely hidden** (`hidden md:block`) — the visualization doesn't work at phone width, no point pretending otherwise
+- Replaced with a **compact action strip**: scope filter dropdown on the leading edge + "قاعدة جديدة" button on the trailing edge. One row, functional
+- Stat cards consolidated into the same 3-mini-stat strip pattern (like maintenance): Total / Active now / Global
+- The rules list (`قائمة القواعد`) becomes the primary UI on mobile — which is what actually matters
 
-- `AnalyticsView.jsx`
-- `ApartmentsView.jsx`
-- `AvailabilityView.jsx`
-- `MaintenanceView.jsx`
-- `PricingView.jsx`
-- `ResidentsView.jsx` (3 inline modals in this file — checkout, note, print-selector)
+Desktop timeline unchanged.
 
-Inline modals did NOT get sheet handles — they're smaller and less form-heavy, so the responsive backdrop + rounded top is enough of a mobile signal. If any of them feels "not sheet-y enough" in use, I'll add handles later.
+### **AvailabilityView** — narrower unit column
 
-## Desktop behavior — unchanged
+**Before**: Unit column locked at 150px on all screens. At 375px viewport that leaves ~225px for dates, showing only ~6 dates before needing to scroll.
 
-Every `md:` prefix means these changes only apply below 768px. On desktop:
-- Modals still centered with 16px backdrop padding
-- All four corners still rounded (`md:rounded-xl` reinstates it)
-- Full border still present (`md:border`)
-- No visible drag handles (they're `md:hidden`)
+**After (mobile)**: Unit column narrows to 100px (media-query detected via `window.matchMedia`). Now ~275px for dates → shows 7 dates in month mode, 4 in half-month, or 3 in week. Horizontal scroll still works exactly as before. The 100px is enough for "شقة 93", "غرفة 93", "119" — same units that were fitting in 150px.
 
-If desktop looks any different after this deploy, that's a bug — send me a screenshot.
+Desktop 150px unit column unchanged.
+
+## Files touched
+
+- `src/components/layout/Layout.jsx` — main padding: removed mobile pb-28
+- `src/components/views/BalancesView.jsx` — mobile-only hero + inline sort
+- `src/components/views/MaintenanceView.jsx` — mobile-only 4-quadrant strip + MobileStat helper
+- `src/components/views/PricingView.jsx` — hide timeline + mobile action strip + 3-quadrant stat strip + PricingMobileStat helper
+- `src/components/views/AvailabilityView.jsx` — responsive unit column width + safe area
+- `src/components/views/ResidentsView.jsx` — safe area on mobile card list
+- `src/components/views/AnalyticsView.jsx` — safe area on scroll container
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-m3.zip -d .
+unzip -o rentflow-mobile-m4.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-mobile-m3.zip
+rm -rf patch rentflow-mobile-m4.zip
 
 git add -A
-git commit -m "mobile(m3): modals become bottom sheets — responsive backdrop + drag handle"
+git commit -m "mobile(m4): view redesigns for pricing/maintenance/balances/availability + kill nav split"
 git push origin design-md-changes
 ```
 
-## After deploy — the moments to check on phone
+## After deploy — what to look at on phone
 
-1. **Tap the FAB (+) on the availability page.** The book-by-date modal should slide up from the bottom of the screen, full-width, with a small horizontal pill (handle) at the top. Round top corners, flat bottom flush with screen.
-2. **Open a booking to edit it** (Residents → tap edit). BookingForm should slide up from bottom. Because it's tall and scrollable, the sheet fills nearly all the vertical space with the drag handle visible at the very top.
-3. **From Maintenance, tap "بلاغ جديد".** Same sheet behavior.
-4. **From Settings → Staff, tap "إضافة موظف جديد".** StaffFormModal slides up.
-5. **Tap the profile picture in the header.** ProfileSettingsModal slides up.
-6. **On analytics, tap a KPI card.** Breakdown modal slides up (no drag handle on this one — inline modal, less form-heavy).
+1. **Bottom of any page** — scroll to the bottom. The bg-page should extend seamlessly under the floating nav. No visible horizontal edge above the nav.
 
-**On desktop:** open the same modals. Should look **identical** to before this patch — centered, all corners rounded, no visible handle.
+2. **Balances** — should show one card with two numbers on one row, sort pills below. Not three stacked cards.
 
-## What's next — the final mobile phase
+3. **Maintenance** — should show one compact strip with 4 mini stats in one row, not 4 large cards.
 
-**Phase M4 — the timeline views + polish**:
-- **Availability** grid: sticky unit column on the trailing edge + horizontal date scroll (right now the whole grid clips on 375px)
-- **Pricing** timeline: same treatment (12 months at 30px wide is unreadable)
-- **PublicBookingView** (guest-facing, most likely accessed on phones) — dedicated mobile pass
-- Touch target audit across remaining views
+4. **Pricing** — no big timeline anymore. Compact 3-stat strip at top, then a small "scope + قاعدة جديدة" action bar, then the rules list. Much more focused.
 
-Say **"ship M4"** when ready. After M4, the mobile pass is complete — every view has been touched, every modal is a sheet, every interaction feels native.
+5. **Availability** — should show at least 7 dates in month mode without scrolling, and the unit names (شقة 93 etc.) still fit in the narrower column. Horizontal scroll to see more dates.
+
+**Desktop:** open the same views. Should look **identical** to before this patch. All the mobile-only components are behind `md:hidden`, all desktop components behind `hidden md:*` — no crossover.
+
+## What's still worth doing (post-M4 polish)
+
+- **Pricing timeline on mobile — day/quarter view instead of month?** If the rules list alone isn't enough, we could add a very compact horizontal calendar strip (7 days at a time, scrollable) below the actions. But the rules list is probably enough for most flows.
+- **PublicBookingView** (guest-facing) — hasn't been touched at all. If guests are booking on phones, that's the most important mobile page. Worth its own patch.
+- **Touch target audit** — some icon buttons in older views might be smaller than 44px minimum.
+
+If you want any of those, say the word. Otherwise the mobile pass (M1 → M4) is complete: navigation, content adaptations, bottom sheets, view redesigns, safe area — the app should feel like a mobile app now.

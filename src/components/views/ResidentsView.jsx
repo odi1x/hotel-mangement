@@ -328,7 +328,7 @@ export default function ResidentsView({ openBookingForm }) {
             same data as stacked cards: name + status on top, unit + dates in
             the middle, actions at the bottom. One direction of layout per
             section, matching the mobile pattern. */}
-        <div className="md:hidden flex-1 overflow-y-auto divide-y divide-hairline-soft dark:divide-hairline-dark">
+        <div className="md:hidden flex-1 overflow-y-auto pb-24 md:pb-0 divide-y divide-hairline-soft dark:divide-hairline-dark">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, idx) => (
               <div key={`skeleton-mobile-${idx}`} className="animate-pulse p-4">

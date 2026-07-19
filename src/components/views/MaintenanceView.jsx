@@ -25,6 +25,27 @@ const STATUS_RANK = { open: 0, in_progress: 1, resolved: 2 };
  * shows how long each one has been open. That "days open" counter is the
  * point: it's a reality check that makes forgotten issues obvious.
  */
+// Compact stat cell for mobile — a quarter of a strip. Icon on top, tiny
+// label, big number below. Divider between cells comes from parent divide-x.
+function MobileStat({ icon: Icon, label, value, tone = 'ink' }) {
+  const toneColor = tone === 'accent'
+    ? 'text-accent-strong'
+    : tone === 'muted'
+      ? 'text-muted-soft'
+      : 'text-ink dark:text-white';
+  return (
+    <div className="px-2 py-1 flex flex-col items-center">
+      <div className="flex items-center gap-1 text-muted dark:text-body-dark mb-0.5">
+        <Icon size={11} strokeWidth={2} />
+        <span className="text-[10px] font-semibold">{label}</span>
+      </div>
+      <p className={`text-xl font-bold tracking-tight leading-none ${toneColor}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export default function MaintenanceView() {
   const { apartments, maintenanceIssues, deleteMaintenanceIssue } = useData();
   const { user } = useAuth();
@@ -114,8 +135,19 @@ export default function MaintenanceView() {
 
   return (
     <>
-      {/* Add button + stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+      {/* MOBILE — single compact strip with 4 mini stats side-by-side. Way less
+          vertical space than 4 large cards showing zeros. */}
+      <div className="md:hidden card-surface p-3 mb-4">
+        <div className="grid grid-cols-4 gap-1 divide-x divide-x-reverse divide-hairline-soft dark:divide-hairline-dark-soft">
+          <MobileStat icon={Wrench}       label="مفتوحة"  value={stats.totalOpen}         tone="ink" />
+          <MobileStat icon={AlertTriangle} label="عاجلة"   value={stats.urgent}            tone={stats.urgent > 0 ? 'accent' : 'muted'} />
+          <MobileStat icon={CircleDashed}  label="قيد ↺"   value={stats.inProgress}        tone="ink" />
+          <MobileStat icon={CheckCircle2}  label="مُنجَز" value={stats.resolvedThisMonth} tone="muted" />
+        </div>
+      </div>
+
+      {/* DESKTOP — original 4-card grid */}
+      <div className="hidden md:grid md:grid-cols-4 gap-4 mb-6">
         <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
@@ -252,7 +284,7 @@ export default function MaintenanceView() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 pb-24 md:pb-0">
           {filtered.length === 0 ? (
             <div className="py-20 text-center">
               <div className="mx-auto h-14 w-14 rounded-full bg-surface-soft dark:bg-surface-dark-elevated flex items-center justify-center mb-4">

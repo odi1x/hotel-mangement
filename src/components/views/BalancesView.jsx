@@ -56,8 +56,60 @@ export default function BalancesView() {
 
   return (
     <>
-      {/* Summary strip — the money at a glance */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* MOBILE — compact hero card with both money numbers stacked inside,
+          then inline sort pills below. Way less vertical space than 3 cards. */}
+      <div className="md:hidden mb-4">
+        <div className="card-surface p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="eyebrow mb-1.5">إجمالي المستحقات</p>
+              <p
+                className="text-3xl font-bold tracking-tight text-ink dark:text-white leading-none"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {formatSAR(summary.totalOutstanding)}
+                <span className="text-sm font-medium text-muted mr-1.5">ر.س</span>
+              </p>
+              <p className="text-xs text-muted-soft mt-2">
+                على {summary.count} {summary.count === 1 ? 'حجز' : 'حجزاً'}
+              </p>
+            </div>
+
+            {/* Collected total on the trailing edge — subtitle-scale, accent tint */}
+            <div className="text-left shrink-0">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-1">محصَّل</p>
+              <p
+                className="text-lg font-bold tracking-tight text-accent-strong leading-none"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {formatSAR(summary.totalCollected)}
+                <span className="text-xs font-medium text-accent-strong/70 mr-1">ر.س</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Sort toggle — inline pills, no card wrapper */}
+        <div className="nav-pill-group w-full mt-3">
+          <button
+            onClick={() => setSort('checkout')}
+            className={`nav-pill flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'checkout' ? 'nav-pill-active' : ''}`}
+          >
+            <ArrowUpNarrowWide size={13} />
+            الأقرب مغادرة
+          </button>
+          <button
+            onClick={() => setSort('amount')}
+            className={`nav-pill flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'amount' ? 'nav-pill-active' : ''}`}
+          >
+            <ArrowDownWideNarrow size={13} />
+            الأكبر مبلغاً
+          </button>
+        </div>
+      </div>
+
+      {/* DESKTOP — original 3-column grid (both totals as separate cards + sort card) */}
+      <div className="hidden md:grid md:grid-cols-3 gap-4 mb-6">
         <div className="card-surface p-5">
           <div className="flex items-center gap-2 mb-2">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
@@ -137,7 +189,7 @@ export default function BalancesView() {
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 pb-24 md:pb-0">
           {dues.length === 0 ? (
             <EmptyState
               icon={Wallet}

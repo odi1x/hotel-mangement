@@ -112,8 +112,11 @@ export default function Layout() {
         <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} onNavigate={setView} />
 
         {/* Main padding: comfortable on desktop (p-6), tighter on mobile (p-4).
-            Bottom padding on mobile leaves space for the floating bottom nav. */}
-        <main className="flex-1 overflow-hidden p-4 pb-28 md:p-6 md:pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
+            No extra bottom padding — each view's own scrollable content area
+            handles the safe-area padding to clear the floating bottom nav,
+            so the main bg extends seamlessly to the bottom of the viewport
+            (no visible edge above the nav bar). */}
+        <main className="flex-1 overflow-hidden p-4 pb-4 md:p-6 md:pb-6 bg-page dark:bg-surface-dark flex flex-col min-h-0">
           <div className="flex justify-between items-end mb-4 md:mb-6 gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl md:text-3xl font-bold tracking-tightest text-ink dark:text-white mb-1 md:mb-1.5 leading-none">

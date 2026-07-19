@@ -13,6 +13,23 @@ import PricingRuleForm from '../ui/PricingRuleForm';
  * on a date — that's exactly when priority matters, and this is where you
  * catch a mispricing before it hurts.
  */
+// Compact stat cell for mobile — a third of a strip. Icon + label on top,
+// number below. Divider between cells comes from parent divide-x.
+function PricingMobileStat({ icon: Icon, label, value, tone = 'ink' }) {
+  const toneColor = tone === 'accent' ? 'text-accent-strong' : 'text-ink dark:text-white';
+  return (
+    <div className="px-2 py-1 flex flex-col items-center">
+      <div className="flex items-center gap-1 text-muted dark:text-body-dark mb-0.5">
+        <Icon size={11} strokeWidth={2} />
+        <span className="text-[10px] font-semibold">{label}</span>
+      </div>
+      <p className={`text-xl font-bold tracking-tight leading-none ${toneColor}`} style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export default function PricingView() {
   const { apartments, pricingRules, deletePricingRule } = useData();
   const [showAdd, setShowAdd] = useState(false);
@@ -114,8 +131,25 @@ export default function PricingView() {
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
-        <div className="card-surface p-4 col-span-2 md:col-span-1">
+      {/* MOBILE — compact 3-stat strip. Same info, single row. */}
+      <div className="md:hidden card-surface p-3 mb-4">
+        <div className="grid grid-cols-3 gap-1 divide-x divide-x-reverse divide-hairline-soft dark:divide-hairline-dark-soft">
+          <PricingMobileStat icon={TagsIcon} label="الكل" value={pricingRules.length} tone="ink" />
+          <PricingMobileStat
+            icon={Calendar}
+            label="نشطة"
+            value={pricingRules.filter(r => (
+              new Date(r.startDate).getTime() <= now && new Date(r.endDate).getTime() >= now
+            )).length}
+            tone="accent"
+          />
+          <PricingMobileStat icon={Home} label="عامة" value={pricingRules.filter(r => !r.apartmentId).length} tone="ink" />
+        </div>
+      </div>
+
+      {/* DESKTOP — original 3-card grid */}
+      <div className="hidden md:grid md:grid-cols-3 gap-4 mb-6">
+        <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
               <TagsIcon size={13} className="text-muted dark:text-body-dark" />
@@ -160,8 +194,10 @@ export default function PricingView() {
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark p-5 mb-6">
+      {/* Timeline — desktop only. On mobile the 12-month bar chart at 30px per
+          month is unreadable, so we skip it entirely and show a compact mobile
+          action strip instead (below). */}
+      <div className="hidden md:block bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark p-5 mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div>
             <h3 className="font-semibold tracking-tight text-ink dark:text-white leading-tight">
@@ -250,6 +286,26 @@ export default function PricingView() {
         </div>
       </div>
 
+      {/* MOBILE — compact action strip replacing the hidden timeline card.
+          Scope filter (dropdown) + new rule button in one small row. */}
+      <div className="md:hidden flex items-center gap-2 mb-4">
+        <select
+          value={scopeFilter}
+          onChange={(e) => setScopeFilter(e.target.value)}
+          className="input-field h-10 text-sm flex-1"
+        >
+          <option value="all">كل النطاقات</option>
+          <option value="global">القواعد العامة فقط</option>
+          {apartments.map(a => (
+            <option key={a.id} value={a.id}>{a.name}</option>
+          ))}
+        </select>
+        <button onClick={() => setShowAdd(true)} className="btn-accent h-10 px-4 shrink-0">
+          <Plus size={16} />
+          <span>جديدة</span>
+        </button>
+      </div>
+
       {/* Rule list — plain */}
       <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
         <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
@@ -259,7 +315,7 @@ export default function PricingView() {
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 pb-24 md:pb-0">
           {pricingRules.length === 0 ? (
             <div className="py-16 text-center">
               <div className="mx-auto h-14 w-14 rounded-full bg-surface-soft dark:bg-surface-dark-elevated flex items-center justify-center mb-4">
