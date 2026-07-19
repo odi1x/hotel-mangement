@@ -30,8 +30,9 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
   }, [apartments, bookings, dateValue.startDate, dateValue.endDate, hasRange]);
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-2xl shadow-soft border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4">
+      <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl w-full max-w-2xl shadow-soft border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[90vh]">
+        <div className="sheet-handle" />
         <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center rounded-t-xl">
           <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white flex items-center gap-2">
             <CalendarPlus className="text-ink dark:text-white" size={22} />

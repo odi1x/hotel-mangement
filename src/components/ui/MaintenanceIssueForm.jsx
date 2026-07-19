@@ -25,7 +25,7 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const eyebrow = 'block text-xs font-semibold text-body dark:text-body-dark mb-1.5 uppercase tracking-wider';
+  const eyebrow = 'block text-[11px] font-semibold text-body dark:text-[#a1a1aa] mb-1.5 uppercase tracking-wider';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,12 +43,13 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
+    <div className="fixed inset-0 z-[80] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
       <div className="absolute inset-0" onClick={onClose}></div>
 
-      <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-2xl overflow-hidden border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[92vh]">
+      <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-2xl overflow-hidden border border-hairline dark:border-[#2e2e2e] flex flex-col max-h-[92vh]">
+        <div className="sheet-handle" />
 
-        <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
+        <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
               <Wrench size={18} className="text-ink dark:text-white" />
@@ -57,7 +58,7 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg leading-tight">
                 {isEdit ? 'تعديل البلاغ' : 'بلاغ صيانة جديد'}
               </h3>
-              <p className="text-xs text-muted dark:text-body-dark mt-0.5">
+              <p className="text-xs text-muted dark:text-[#a1a1aa] mt-0.5">
                 {isEdit ? 'حدّث حالة البلاغ أو تفاصيله' : 'وثّق كل مشكلة لبناء سجل صيانة الوحدة'}
               </p>
             </div>
@@ -82,7 +83,7 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
               {apartments.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
             {isEdit && (
-              <p className="text-2xs text-muted-soft mt-1">لا يمكن تغيير الوحدة بعد إنشاء البلاغ</p>
+              <p className="text-[10px] text-muted-soft mt-1">لا يمكن تغيير الوحدة بعد إنشاء البلاغ</p>
             )}
           </div>
 
@@ -137,10 +138,10 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
           </div>
 
           {isEdit && (
-            <div className="border-t border-hairline-soft dark:border-hairline-dark pt-5 space-y-5">
+            <div className="border-t border-hairline-soft dark:border-[#242424] pt-5 space-y-5">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle size={14} className="text-muted" />
-                <span className="text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-wider">
+                <span className="text-[11px] font-semibold text-muted dark:text-[#a1a1aa] uppercase tracking-wider">
                   تفاصيل المتابعة والإنجاز
                 </span>
               </div>
@@ -156,7 +157,7 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
                       className={`h-10 rounded-md text-xs font-semibold transition-colors border ${
                         form.status === s.value
                           ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark-soft'
+                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
                       }`}
                     >
                       {s.label}
@@ -206,7 +207,7 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
           )}
         </form>
 
-        <div className="px-6 py-4 border-t border-hairline-soft dark:border-hairline-dark flex justify-end gap-3 shrink-0">
+        <div className="px-6 py-4 border-t border-hairline-soft dark:border-[#242424] flex justify-end gap-3 shrink-0">
           <button type="button" onClick={onClose} className="btn-secondary h-10 px-5">
             إلغاء
           </button>

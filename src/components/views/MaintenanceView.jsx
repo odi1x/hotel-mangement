@@ -115,7 +115,7 @@ export default function MaintenanceView() {
   return (
     <>
       {/* Add button + stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         <div className="card-surface p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
@@ -198,14 +198,16 @@ export default function MaintenanceView() {
             </div>
           </div>
 
-          {/* Filter chips */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 mr-1">
+          {/* Filter chips — horizontal scroll on mobile so 4 status chips
+              + 2 dropdowns fit in one row you can swipe through, instead of
+              wrapping into 3-4 crammed rows. */}
+          <div className="flex items-center gap-2 md:flex-wrap overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0 scrollbar-none">
+            <div className="flex items-center gap-1.5 mr-1 shrink-0">
               <Filter size={12} className="text-muted-soft" />
               <span className="text-2xs font-semibold uppercase tracking-wider text-muted-soft">تصفية:</span>
             </div>
 
-            <div className="nav-pill-group">
+            <div className="nav-pill-group shrink-0">
               {[
                 { v: 'open',        label: 'مفتوح' },
                 { v: 'in_progress', label: 'قيد المعالجة' },
@@ -229,7 +231,7 @@ export default function MaintenanceView() {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="input-field h-7 py-0 text-xs w-auto"
+              className="input-field h-7 py-0 text-xs w-auto shrink-0"
             >
               <option value="all">كل التصنيفات</option>
               {MAINTENANCE_CATEGORIES.map(c => (
@@ -240,7 +242,7 @@ export default function MaintenanceView() {
             <select
               value={apartmentFilter}
               onChange={(e) => setApartmentFilter(e.target.value)}
-              className="input-field h-7 py-0 text-xs w-auto"
+              className="input-field h-7 py-0 text-xs w-auto shrink-0"
             >
               <option value="all">كل الوحدات</option>
               {apartments.map(a => (
@@ -375,9 +377,9 @@ export default function MaintenanceView() {
       )}
 
       {confirmDelete && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
+        <div className="fixed inset-0 z-[90] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
           <div className="absolute inset-0" onClick={() => setConfirmDelete(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
             <div className="p-6 text-center">
               <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-4">
                 <AlertTriangle className="h-7 w-7 text-ink dark:text-white" />

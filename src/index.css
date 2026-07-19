@@ -147,6 +147,15 @@
     @apply text-accent font-semibold hover:text-accent-strong transition-colors;
   }
 
+  /* ---- Sheet drag handle — visual affordance at the top of a bottom sheet
+     signalling "swipeable". We don't wire up an actual gesture library (that
+     would be a bigger project), but the handle itself teaches the user this
+     is a sheet, not a hard modal. md:hidden so it only shows on mobile
+     where the sheet pattern applies. --------------------------------- */
+  .sheet-handle {
+    @apply md:hidden mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-hairline dark:bg-hairline-dark-soft shrink-0;
+  }
+
   /* ---- Modal shells: unified structure ------------------------------------
      Use these together to compose a consistent modal:
        .modal-backdrop → the fixed backdrop that covers the viewport
@@ -154,15 +163,18 @@
        .modal-header   → title strip at the top
        .modal-body     → scrollable content area
        .modal-footer   → action strip at the bottom
+     On mobile, backdrop aligns to bottom and shell renders as a bottom sheet
+     (rounded top, flush with screen edges). On desktop, unchanged.
      -------------------------------------------------------------------- */
   .modal-backdrop {
-    @apply fixed inset-0 z-50 flex items-center justify-center p-4
-           bg-black/40 backdrop-blur-sm;
+    @apply fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm
+           items-end p-0 md:items-center md:justify-center md:p-4;
   }
   .modal-shell {
-    @apply relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft
-           w-full overflow-hidden border border-hairline dark:border-hairline-dark
-           flex flex-col max-h-[92vh];
+    @apply relative z-10 bg-canvas dark:bg-surface-dark shadow-soft
+           w-full overflow-hidden border-t border-hairline dark:border-hairline-dark
+           flex flex-col max-h-[92vh]
+           rounded-t-2xl md:rounded-xl md:border;
   }
   .modal-header {
     @apply px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark-soft
@@ -201,6 +213,16 @@
   .eyebrow {
     @apply block text-2xs font-semibold uppercase tracking-wider
            text-muted dark:text-body-dark;
+  }
+
+  /* ---- Hide scrollbar for horizontal chip rows (mobile filter bars).
+     Content still scrolls, just no visible scrollbar. -------------------- */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 

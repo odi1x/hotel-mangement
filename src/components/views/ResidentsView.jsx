@@ -511,7 +511,7 @@ export default function ResidentsView({ openBookingForm }) {
       )}
 
       {editingNoteId && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4">
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col">
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white flex items-center">
@@ -573,9 +573,9 @@ export default function ResidentsView({ openBookingForm }) {
         const remainingAfter = newTotal - paid;
 
         return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4">
           <div className="absolute inset-0" onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-lg overflow-hidden border border-hairline dark:border-hairline-dark-soft max-h-[92vh] flex flex-col">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-lg overflow-hidden border border-hairline dark:border-hairline-dark-soft max-h-[92vh] flex flex-col">
             <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
                 <LogOut size={20} />
@@ -749,9 +749,9 @@ export default function ResidentsView({ openBookingForm }) {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4">
           <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
             <div className="p-6 text-center">
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-5">
                 <AlertTriangle className="h-8 w-8 text-ink dark:text-white" />
@@ -783,9 +783,9 @@ export default function ResidentsView({ openBookingForm }) {
 
       {/* Print Options Modal */}
       {printSelectorBooking && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4">
           <div className="absolute inset-0" onClick={() => setPrintSelectorBooking(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
             <div className="px-6 py-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
                 <Printer size={20} className="text-ink dark:text-white" />

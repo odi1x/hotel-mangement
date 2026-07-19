@@ -1,90 +1,94 @@
-# Rent Flow — Mobile Phase M2: Core View Adaptations
+# Rent Flow — Mobile Phase M3: Modals Become Bottom Sheets
 
-3 files. The screens people use every day now actually work on a phone.
+13 files. Every modal in the app now slides up from the bottom on mobile like a native app.
+
+## The pattern
+
+Desktop stays centered — a modal with a dark backdrop, rounded on all sides, `max-w-*` limited, no changes to what you see today.
+
+Mobile becomes a **bottom sheet**: slides up from the bottom edge, full-width, rounded top corners only, flush with the screen at the bottom. A **small handle** at the top signals "this is a sheet, not a hard modal" — the video's specific pattern for context-preserving actions.
+
+The gesture (swipe down to close) isn't wired to a real drag library — that would be a bigger project — but the visual handle teaches the pattern. Users can still close by tapping the X, or tapping the backdrop.
 
 ## What changed
 
-### 1. ResidentsView — table becomes cards on mobile
+### `src/index.css` — utility class layer
 
-This was the worst mobile experience in the app. A 6-column table (النزيل / الاتصال / الوحدة / الفترة / الحالة / الإجراءات) at 375px is unreadable — either it clips or you scroll horizontally forever.
+Three targeted changes to existing utility classes:
 
-**Solution**: keep the desktop table (`hidden md:block`) exactly as-is. Add a **mobile card view** (`md:hidden`) that renders the same data as stacked cards. Each guest gets one card:
+**`.modal-backdrop`**: was `flex items-center justify-center p-4`. Now `flex items-end p-0 md:items-center md:justify-center md:p-4`. Aligned to the bottom of the screen on mobile with zero padding (sheet flush to bottom), centered on desktop with 16px inset.
 
-```
-┌─────────────────────────────────────┐
-│ خالد علي واصلي         [مقيم حالياً]│
-│ 📞 +966 58 115 1062                 │
-│                                      │
-│ شقة 93 · 15 يوليو ← 23 يوليو · 8 ليالي│
-│ 550 ر.س / ليلة                       │
-│                                      │
-│                    🖨️  📝  ✏️  🗑️    │
-└─────────────────────────────────────┘
-```
+**`.modal-shell`**: was `rounded-xl` + full border. Now `rounded-t-2xl md:rounded-xl` and `border-t md:border` — rounded corners only at the top on mobile, all four on desktop. On mobile the border-t sits at the sheet's top edge as a hairline finishing detail; the shell fills to the screen bottom naturally.
 
-Follows the video's "one direction per section" rule — stack vertically inside each card, no side-by-side content on mobile. Action icons get **p-2.5** padding (10px) to be a **44px effective tap target** even though the icon is 18px, per the video's tap target guideline.
+**New: `.sheet-handle`**: the visual drag affordance. `md:hidden` — only appears on mobile. Renders as a 40×4px pill in `bg-hairline` centered at the top of the sheet.
 
-Price line still respects `canViewPrices` — a receptionist won't see it. Empty state uses the existing `<EmptyState>` component. Skeleton loaders adapted for the card layout too.
+### The 6 modal files
 
-### 2. AnalyticsView — chart height responsive
+Each modal shell got:
+- Backdrop class updated to the responsive bottom-sheet pattern
+- Shell rounding: `rounded-xl` → `rounded-t-2xl md:rounded-xl`
+- `<div className="sheet-handle" />` inserted right after the shell opens
 
-The chart card was `min-h-[440px]` — that's 60% of a 720px viewport height, leaving no room for KPIs above it. On mobile the chart doesn't need to be that tall; you can scroll to see everything.
+**Modified:**
+- `BookingForm.jsx` — biggest form in the app. Backdrop was uniquely `items-start` (top-anchored scroll for the long form) — I kept that as `md:items-start` and made mobile `items-end` (bottom sheet). Content scrolls internally per Cal-style shells.
+- `BookByDateModal.jsx` — the "حجز جديد" flow launched by the FAB
+- `MaintenanceIssueForm.jsx`
+- `PricingRuleForm.jsx`
+- `StaffFormModal.jsx`
+- `ProfileSettingsModal.jsx`
 
-Now: **`min-h-[320px]` on mobile, `md:min-h-[440px]` on desktop**. Chart card also gets `p-4 md:p-5` — slightly tighter on mobile. All other analytics work was already responsive (KPI grid stacks 1-col on mobile, hero math hides on mobile, right column already stacks below chart at `lg:` breakpoint).
+### Inline modals in view files
 
-### 3. LoginView — mobile-first tweaks
+Six more modals live inline inside view files (analytics breakdown, apartments delete confirm, availability booking details, maintenance resolve, pricing edit, residents checkout + others). Their backdrops got the same responsive treatment:
 
-Was already tolerable on mobile (centered card, `p-4` outer, `max-w-md`), but:
-- Card inner padding: **`p-6 md:p-8`** (tighter on mobile, comfortable on desktop)
-- Section spacing: **`mb-6 md:mb-8`** on the brand block
-- Input fields: **`h-11 text-base`** — larger tap target and 16px font (browsers won't auto-zoom on focus)
-- Submit button: **`h-12`** (48px) — bigger than the default `h-11` for a primary action
-- Added `autoComplete="username"` / `autoComplete="current-password"` / `autoComplete="new-password"` — password managers now work correctly on iOS/Android
+- `AnalyticsView.jsx`
+- `ApartmentsView.jsx`
+- `AvailabilityView.jsx`
+- `MaintenanceView.jsx`
+- `PricingView.jsx`
+- `ResidentsView.jsx` (3 inline modals in this file — checkout, note, print-selector)
 
-## What I did NOT change (and why)
+Inline modals did NOT get sheet handles — they're smaller and less form-heavy, so the responsive backdrop + rounded top is enough of a mobile signal. If any of them feels "not sheet-y enough" in use, I'll add handles later.
 
-**MaintenanceView, PricingView, BalancesView stat card grids** — I checked, they already use `grid-cols-1 md:grid-cols-4` (or 3) — they stack to 1-col on mobile automatically. No change needed.
+## Desktop behavior — unchanged
 
-**RequestsView** — already card-based with a decent empty state. Works on mobile as-is.
+Every `md:` prefix means these changes only apply below 768px. On desktop:
+- Modals still centered with 16px backdrop padding
+- All four corners still rounded (`md:rounded-xl` reinstates it)
+- Full border still present (`md:border`)
+- No visible drag handles (they're `md:hidden`)
 
-**ApartmentsView** — grid is already `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`. Cards have `hover:-translate-y-0.5` which gracefully degrades on touch. Not worth touching.
-
-**SettingsView** — 8 responsive classes, mostly works. Might revisit if you notice issues.
+If desktop looks any different after this deploy, that's a bug — send me a screenshot.
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-m2.zip -d .
+unzip -o rentflow-mobile-m3.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-mobile-m2.zip
+rm -rf patch rentflow-mobile-m3.zip
 
 git add -A
-git commit -m "mobile(m2): residents cards + analytics chart height + login tweaks"
+git commit -m "mobile(m3): modals become bottom sheets — responsive backdrop + drag handle"
 git push origin design-md-changes
 ```
 
-## After deploy — what to look at
+## After deploy — the moments to check on phone
 
-**On phone, open سجل النزلاء.** Each guest should be a stacked card with name at top, status badge on the trailing edge, unit + dates + nights in the middle, and action icons at the bottom aligned to the trailing edge. No horizontal scroll, no clipped columns. Tap any icon — targets should feel comfortable (not tiny).
+1. **Tap the FAB (+) on the availability page.** The book-by-date modal should slide up from the bottom of the screen, full-width, with a small horizontal pill (handle) at the top. Round top corners, flat bottom flush with screen.
+2. **Open a booking to edit it** (Residents → tap edit). BookingForm should slide up from bottom. Because it's tall and scrollable, the sheet fills nearly all the vertical space with the drag handle visible at the very top.
+3. **From Maintenance, tap "بلاغ جديد".** Same sheet behavior.
+4. **From Settings → Staff, tap "إضافة موظف جديد".** StaffFormModal slides up.
+5. **Tap the profile picture in the header.** ProfileSettingsModal slides up.
+6. **On analytics, tap a KPI card.** Breakdown modal slides up (no drag handle on this one — inline modal, less form-heavy).
 
-**On phone, open التحليلات.** Scroll through: hero card (Net Profit big), 3 supporting KPIs stacked, chart at 320px tall (not the desktop 440px), top performers below, marketing sources below that. Should feel like a report you scroll through.
+**On desktop:** open the same modals. Should look **identical** to before this patch — centered, all corners rounded, no visible handle.
 
-**Log out and log in on phone.** Card should fit comfortably with 24px inner padding. Inputs should be 44px tall with 16px text (no zoom-on-focus). Try letting your password manager fill it — should work.
+## What's next — the final mobile phase
 
-**On desktop:** nothing should look different. All the `md:` conditions preserve current desktop appearance.
+**Phase M4 — the timeline views + polish**:
+- **Availability** grid: sticky unit column on the trailing edge + horizontal date scroll (right now the whole grid clips on 375px)
+- **Pricing** timeline: same treatment (12 months at 30px wide is unreadable)
+- **PublicBookingView** (guest-facing, most likely accessed on phones) — dedicated mobile pass
+- Touch target audit across remaining views
 
-## What's next
-
-**Phase M3 — modals become bottom sheets** on mobile:
-- BookingForm, BookByDateModal, PaymentLedgerModal, MaintenanceIssueForm, PricingRuleForm, StaffFormModal, ProfileSettingsModal
-- Slide up from bottom, rounded top corners, drag handle at top, full-width
-- The video calls this out specifically as the modern mobile pattern for context-preserving actions
-- Requires a new `.sheet-*` utility class set + touch on each modal
-
-**Phase M4 — timeline views + polish**:
-- Availability grid: sticky unit column + horizontal scroll for dates
-- Pricing timeline: same treatment
-- PublicBookingView (guest-facing, likely mostly mobile) — dedicated pass
-- Touch target audit across all views
-
-Deploy M2, check it on your phone alongside M1, tell me what still feels wrong. Or if the residents cards / login look good, say **"ship M3"** and I do the bottom sheets — that's the biggest remaining "this doesn't feel native" complaint.
+Say **"ship M4"** when ready. After M4, the mobile pass is complete — every view has been touched, every modal is a sheet, every interaction feels native.

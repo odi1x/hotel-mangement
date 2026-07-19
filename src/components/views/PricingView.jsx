@@ -114,8 +114,8 @@ export default function PricingView() {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="card-surface p-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6">
+        <div className="card-surface p-4 col-span-2 md:col-span-1">
           <div className="flex items-center gap-2 mb-1.5">
             <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
               <TagsIcon size={13} className="text-muted dark:text-body-dark" />
@@ -162,7 +162,7 @@ export default function PricingView() {
 
       {/* Timeline */}
       <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div>
             <h3 className="font-semibold tracking-tight text-ink dark:text-white leading-tight">
               الجدول الزمني للأسعار
@@ -171,11 +171,11 @@ export default function PricingView() {
               ١٢ شهراً قادمة — كل شريط يمثّل قاعدة سعرية
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <select
               value={scopeFilter}
               onChange={(e) => setScopeFilter(e.target.value)}
-              className="input-field h-9 text-xs w-auto"
+              className="input-field h-9 text-xs w-auto flex-1 md:flex-none"
             >
               <option value="all">كل النطاقات</option>
               <option value="global">القواعد العامة فقط</option>
@@ -183,7 +183,7 @@ export default function PricingView() {
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
-            <button onClick={() => setShowAdd(true)} className="btn-accent h-9 px-4">
+            <button onClick={() => setShowAdd(true)} className="btn-accent h-9 px-4 shrink-0">
               <Plus size={14} />
               <span>قاعدة جديدة</span>
             </button>
@@ -359,9 +359,9 @@ export default function PricingView() {
       )}
 
       {confirmDelete && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
+        <div className="fixed inset-0 z-[90] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
           <div className="absolute inset-0" onClick={() => setConfirmDelete(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
             <div className="p-6 text-center">
               <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-4">
                 <AlertTriangle className="h-7 w-7 text-ink dark:text-white" />

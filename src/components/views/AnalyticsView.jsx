@@ -588,9 +588,9 @@ export default function AnalyticsView() {
 
       {/* Breakdown Modal */}
       {breakdownModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4">
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-hairline-dark-soft">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-hairline-dark-soft">
             <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
                 {breakdownModal === 'revenue' && 'تفصيل الإيرادات حسب الوحدة'}

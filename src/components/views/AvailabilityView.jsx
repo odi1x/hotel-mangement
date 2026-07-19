@@ -308,7 +308,7 @@ export default function AvailabilityView({ openBookingForm }) {
             </button>
 
             {filterOpen && (
-              <div className="absolute left-0 mt-2 w-72 bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-xl shadow-soft z-50 p-4">
+              <div className="absolute left-0 mt-2 w-72 bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-t-2xl md:rounded-xl shadow-soft z-50 p-4">
                 {/* mini calendar — jump to date */}
                 <div className="text-xs font-semibold text-muted mb-2">الانتقال إلى تاريخ</div>
                 {(() => {
@@ -511,7 +511,7 @@ export default function AvailabilityView({ openBookingForm }) {
 
       {/* First Modal: List of bookings for the selected day */}
       {selectedDayBookings && !selectedBookingDetails && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4">
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">حجوزات يوم {formatDateAr(selectedDayBookings.date)}</h2>
@@ -575,7 +575,7 @@ export default function AvailabilityView({ openBookingForm }) {
 
       {/* Second Modal: Specific Booking Details */}
       {selectedBookingDetails && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4">
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col">
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">تفاصيل الحجز</h2>
