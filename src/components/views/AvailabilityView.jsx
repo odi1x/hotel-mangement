@@ -237,9 +237,16 @@ export default function AvailabilityView({ openBookingForm }) {
   const handleNextMonth = () => shiftRange(-1);
   const handleToday = () => setCurrentDate(new Date());
 
-  const rangeLabel = viewMode === 'month'
-    ? `${monthNames[rangeStart.getMonth()]} ${rangeStart.getFullYear()}`
-    : `${rangeStart.getDate()} ${monthNames[rangeStart.getMonth()]} – ${rangeEnd.getDate()} ${monthNames[rangeEnd.getMonth()]}`;
+  // Abbreviated month names for mobile — need shorter labels to fit next to
+  // navigation controls + view mode dropdown + filter button in one row.
+  const monthNamesShort = ['ينا', 'فبر', 'مار', 'أبر', 'ماي', 'يون', 'يول', 'أغس', 'سبت', 'أكت', 'نوف', 'دسم'];
+
+  // Full label — used on desktop where there's plenty of horizontal space.
+  // Month mode is now rolling 30 days so it needs a range like the others.
+  const rangeLabel = `${rangeStart.getDate()} ${monthNames[rangeStart.getMonth()]} – ${rangeEnd.getDate()} ${monthNames[rangeEnd.getMonth()]}`;
+
+  // Short label — mobile only. Uses 3-letter month abbreviations.
+  const rangeLabelShort = `${rangeStart.getDate()} ${monthNamesShort[rangeStart.getMonth()]} – ${rangeEnd.getDate()} ${monthNamesShort[rangeEnd.getMonth()]}`;
 
   useEffect(() => { dragRef.current = dragSel; }, [dragSel]);
 
@@ -282,16 +289,18 @@ export default function AvailabilityView({ openBookingForm }) {
 
   return (
     <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center bg-canvas dark:bg-surface-dark">
-        <div className="flex items-center space-x-reverse space-x-4">
-          <h3 className="font-semibold text-ink dark:text-white flex items-center text-lg tracking-tight">
-            <Calendar size={20} className="ml-2 text-ink dark:text-white" />
-            {rangeLabel}
+      <div className="p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center gap-2 bg-canvas dark:bg-surface-dark">
+        <div className="flex items-center space-x-reverse space-x-2 md:space-x-4 min-w-0">
+          <h3 className="font-semibold text-ink dark:text-white flex items-center gap-1 md:gap-2 text-xs md:text-lg tracking-tight leading-tight whitespace-nowrap shrink-0">
+            <Calendar size={14} className="text-ink dark:text-white shrink-0 md:hidden" />
+            <Calendar size={20} className="text-ink dark:text-white shrink-0 hidden md:block" />
+            <span className="md:hidden">{rangeLabelShort}</span>
+            <span className="hidden md:inline">{rangeLabel}</span>
           </h3>
-          <div className="flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-1 mr-4">
-            <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={18} /></button>
-            <button onClick={handleToday} className="px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-1 transition-colors">اليوم</button>
-            <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={18} /></button>
+          <div className="flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-1 mr-0 md:mr-4 shrink-0">
+            <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={16} /></button>
+            <button onClick={handleToday} className="px-2 md:px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-1 transition-colors">اليوم</button>
+            <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={16} /></button>
           </div>
           {/* View mode: desktop shows pill group. Mobile uses a compact
               <select> so all three options are reachable without clipping
@@ -318,14 +327,15 @@ export default function AvailabilityView({ openBookingForm }) {
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => { setPickerMonth(new Date(currentDate)); setFilterOpen(o => !o); }}
-              className={`btn-secondary h-9 px-3 text-xs ${filterOpen ? 'border-ink dark:border-white' : ''}`}
+              className={`btn-secondary h-9 px-2 md:px-3 text-xs shrink-0 ${filterOpen ? 'border-ink dark:border-white' : ''}`}
+              aria-label={unitFilterLabel}
             >
               <Filter size={15} />
-              <span>{unitFilterLabel}</span>
+              <span className="hidden md:inline">{unitFilterLabel}</span>
             </button>
 
             {filterOpen && (
-              <div className="absolute left-0 mt-2 w-72 bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-t-2xl md:rounded-xl shadow-soft z-50 p-4">
+              <div className="absolute left-0 mt-2 w-[calc(100vw-3rem)] md:w-72 max-w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-xl shadow-soft z-50 p-4">
                 {/* mini calendar — jump to date */}
                 <div className="text-xs font-semibold text-muted mb-2">الانتقال إلى تاريخ</div>
                 {(() => {

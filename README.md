@@ -1,84 +1,57 @@
-# Rent Flow — Mobile M4 Follow-up: Title in Header + Availability Rolling Window + Clipping Fixes
+# Rent Flow — Availability Header Fixes
 
-5 files. All four things you flagged from the last round of screenshots.
+1 file. Three related fixes to the availability header row for mobile.
 
 ## What changed
 
-### 1. Page titles now sit right at the top-corner on mobile
+### 1. Range label — smaller + one-line + abbreviated months
 
-**Before**: title (`جدول التوفر`, `سجل الصيانة`, etc.) rendered inside the main content area with `mb-4` and `p-4` padding above it → 24-32px of empty space between the header (profile + bell) and the title. Felt like the title was floating far from the corner.
+**Before**: `text-lg` label like "16 يوليو - 31 يوليو" tried to fit next to navigation controls, view mode dropdown, and filter button — all in one row on 375px width. When the range didn't fit horizontally, the text wrapped into 4 vertical lines ("16" / "يوليو" / "-" / "31" / "يوليو"), which made the whole header row taller and pushed everything below down.
 
-**After**: on mobile, the title is now rendered *inside the header row itself*, on the leading (RTL right) edge. Same row as the profile pic + bell — occupying the empty space that was previously blank on the right side of the header. That gives the "close to the corner" placement you asked for.
+**After**:
+- **Mobile**: `text-xs` size, `whitespace-nowrap` so it stays on one line, and uses 3-letter month abbreviations (`ينا / فبر / مار / أبر / ماي / يون / يول / أغس / سبت / أكت / نوف / دسم`). So "16 يوليو - 31 يوليو" becomes "16 يول - 31 يول" — half the width, always one line.
+- **Desktop**: full `text-lg` with full month names — unchanged.
 
-Change:
-- `Header.jsx` now accepts a `title` prop and renders it in the header row with `md:hidden` (mobile only) styling: `text-lg font-bold tracking-tight`, truncates with ellipsis for long titles like "المستحقات المالية".
-- `Layout.jsx` passes `title={getViewTitle()}` to Header, and the desktop title row is now `hidden md:flex` — desktop is unchanged, big title still lives in the main padding area at `text-3xl`.
+Also fixed the range label logic for the new rolling 30-day month mode: it used to show just "يوليو 2026" but that's now misleading because the range crosses month boundaries. All modes now show `{startDay} {month} – {endDay} {month}` format.
 
-Subtitle isn't shown on mobile — most view subtitles are decorative context ("إدارة التأجير اليومي والأسبوعي والشهري بدقة") not core info. Skipping them keeps the header lean.
+### 2. Filter button icon-only on mobile
 
-**Bonus cleanup**: while I was in Header.jsx, I also fixed two remaining hex leaks (`text-[#a1a1aa]`, `bg-[#242424]`) that had been missed in the sweep — now `text-body-dark` and `bg-hairline-dark`.
+The button had `<Filter icon> + "كل الوحدات" text`. The text alone is ~80px wide. On mobile that was pushing the button off the left edge.
 
-### 2. Availability: rolling 30-day view instead of calendar month 1-30
+Now: text is `hidden md:inline` — button becomes icon-only on mobile (~40px), full "Filter كل الوحدات" on desktop. `aria-label` still carries the label for screen readers.
 
-Your idea: past bookings don't matter much on the availability view; the near future does. So the "شهر" (month) mode shouldn't show the calendar month 1-30 — it should show 3 days behind today, then 27 days forward. Rolling window centered slightly on today.
+### 3. Filter dropdown fits within viewport
 
-Implemented in `AvailabilityView.jsx`:
-- `range` useMemo month case: `start = currentDate - 3 days`, then `Array.from({length: 30})` starting there
-- `shiftRange` for month: shift by 30 days (not by calendar month), so navigating ← / → moves you a full 30-day chunk at a time
+The dropdown was `w-72` (288px) with `absolute left-0`. On mobile where the button is at the far left of the header, the dropdown extended off screen.
 
-So today (July 19), month mode shows July 16 → August 14. Tap →, you get August 15 → September 13. Consistent 30-day window that always shows a few days of "grounding context" plus the actionable near future.
+Now: width is `w-[calc(100vw-3rem)] md:w-72 max-w-[320px]`. So on mobile it's `viewport width - 48px` (24px on each side for breathing room), capped at 320px so it doesn't get absurdly wide on landscape phones or tablets. Desktop: 288px as before.
 
-### 3. Availability view mode selector on mobile — dropdown instead of clipping pills
+### Bonus tightening
 
-The `nav-pill-group` with أسبوع / نصف شهر / شهر was fine on desktop but clipped off the left edge on mobile because it was competing with the month label + navigation controls in the same row.
-
-Fix: `hidden md:block` on the pill group, mobile gets a compact `<select>` in the same spot:
-```
-<select> أسبوع | نصف شهر | شهر </select>
-```
-All three options reachable, no clipping. Same behavior on desktop as before.
-
-### 4. Maintenance list header — search + button no longer clip
-
-Your image showed the "بلاغ جديد" green button running off the left edge because the search input was `w-64` (256px) and the title + search + button were fighting for the same horizontal row.
-
-Fix: on mobile the row stacks vertically. Title on top, then search (full-width `flex-1`) + button on the next row. On desktop it stays in one row like before.
-
-**Same fix applied to ResidentsView** — same row structure (title + search bar), same potential clipping issue. Now stacks the same way on mobile.
-
-## Files touched
-
-- `src/components/layout/Header.jsx` — accepts and renders `title` on mobile + 2 hex leak fixes
-- `src/components/layout/Layout.jsx` — passes title to Header, hides desktop title row on mobile
-- `src/components/views/AvailabilityView.jsx` — rolling 30-day + mobile dropdown for view mode
-- `src/components/views/MaintenanceView.jsx` — header row stacks vertically on mobile
-- `src/components/views/ResidentsView.jsx` — same header row stack treatment
+- Navigation controls (`< اليوم >`): 16px chevrons instead of 18px, `px-2` on "اليوم" instead of `px-4` on mobile
+- Right margin dropped: `mr-0 md:mr-4` — no gap between navigation and view mode on mobile
+- Gap between the three left elements: `space-x-2 md:space-x-4` — tighter on mobile
+- Whole header row gets a `gap-2` for consistent breathing between the two flex groups
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-m4-followup.zip -d .
+unzip -o rentflow-availability-header-fix.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-mobile-m4-followup.zip
+rm -rf patch rentflow-availability-header-fix.zip
 
 git add -A
-git commit -m "mobile(m4 followup): titles in header + availability rolling window + clipping fixes"
+git commit -m "mobile: availability header — short labels, icon-only filter, viewport-fit dropdown"
 git push origin design-md-changes
 ```
 
+Just one file: `src/components/views/AvailabilityView.jsx`.
+
 ## After deploy — what to check on phone
 
-1. **Every tab** — page title should be right up in the header row next to your profile pic. Not floating below with a gap.
-2. **Availability tab in "شهر" mode** — if today is 19th, you should see dates starting at 16, ending at ~14 of next month. Tap the next-range arrow → jumps by 30 days.
-3. **Availability view mode** — you should see a small dropdown showing "شهر" (or whichever mode is active) instead of pill buttons. All 3 modes reachable via the dropdown.
-4. **Maintenance page** — the "بلاغ جديد" button should be fully visible, on its own row below the search input.
-5. **Residents page** — same as maintenance: the search input should sit on its own row full-width, not clipping.
+1. **Switch between أسبوع / نصف شهر / شهر** — the range label on the right should now stay on one line in all modes. In half month mode expect to see something like "16 يول - 31 يول" instead of the previous stack.
+2. **Filter button** — you should see just the funnel icon, no "كل الوحدات" text. It should be fully visible, not clipping off the left.
+3. **Tap the filter** — the dropdown panel should open and fit within the phone screen with breathing room on both sides. Calendar picker + units checkboxes should be fully visible.
+4. **Month mode** — label should now show a date range like "17 يول - 15 أغس" instead of just "يوليو 2026", correctly reflecting the rolling 30-day window.
 
-**Desktop**: all views should be identical to before. Titles still large in the main area, pill groups still on availability, search bars still in the header rows.
-
-## What's still open
-
-- **PublicBookingView** (guest-facing) — never touched
-- **Touch-target audit** — some older icon-action buttons may still be smaller than 44px
-
-If neither is bugging you, the mobile pass is done. If you want either, say the word.
+Desktop: no visible change. Range label still `text-lg` with full month names, filter button still shows the text, dropdown still `w-72`.
