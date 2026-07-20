@@ -1,53 +1,62 @@
-# Rent Flow — Fixes: BookingForm Scroll + Availability View Mode
+# Rent Flow — Settings Mobile Fixes
 
-2 files. Two fixes to what you flagged in the last screenshots.
+1 file. Four fixes to the Settings tabs after the sweep you asked for.
 
 ## What changed
 
-### 1. BookingForm now scrolls internally on mobile (the real bug)
+### 1. Sub-tabs — horizontal scroll instead of wrap
 
-**The bug**: after the M3 bottom-sheet migration, `BookingForm` had `overflow-visible` on its shell and no height cap. On mobile with `items-end` (bottom sheet mode), the shell just extended past the viewport with no way to scroll. You could see the date pickers and the top of the guest info form but couldn't reach the submit button — it was permanently below the fold, no matter how you swiped.
+**Before**: The 4 sub-tabs (الهوية والمعلومات / التراخيص والعقود / المصروفات والتشغيل / خيارات النظام) used `nav-pill-group flex-wrap`. On mobile the pills wrapped into 2 rows because 4 Arabic labels don't fit horizontally — looked messy and doubled the header height.
 
-**The fix**:
-- Shell: added `flex flex-col max-h-[92vh] overflow-hidden` so the modal caps at 92% of viewport height. The header (drag handle + title strip) is `shrink-0`. The form body gets `flex-1 overflow-y-auto min-h-0` — it's the scroll container.
-- Backdrop: dropped the old `md:overflow-y-auto md:pt-10 md:pb-32` desktop top-anchored scroll pattern. Both platforms now use the same simple `items-end p-0 md:items-center md:justify-center md:p-4` pattern. Internal scroll works everywhere.
-- Form padding: `p-4 md:p-8` — less padding on mobile so more content fits.
+**After**: horizontal scrolling row on mobile — one line of tabs, users swipe left/right if they need to reach the last one. Added `overflow-x-auto scrollbar-none whitespace-nowrap shrink-0` to the pills and used the negative-margin trick (`-mx-3 px-3`) so the scroll extends past the card padding into the viewport edges for that natural "swipe reveals more" feel. Desktop unchanged.
 
-After this, the booking form should scroll cleanly on both mobile (sheet fills to top of viewport, form scrolls inside) and desktop (modal centered, form scrolls inside if tall).
+Also dropped pill text `text-sm` → `text-xs` on mobile since the tabs are packed together.
 
-### 2. Availability view mode: pills instead of dropdown
+### 2. Salary/Staff table — cards on mobile
 
-**Your ask**: the `<select>` dropdown for view mode was opening a bulky native menu that covered the availability grid content when tapped.
+**Before**: The staff-expenses table under "الرواتب والموظفين" had 4 columns (الاسم / الراتب / النطاق / إجراء). At 375px width it clipped — you could see the last 1-2 columns but not the name.
 
-**The fix**: replaced the `<select>` with the same `nav-pill-group` desktop uses, but ultra-compact on mobile: `text-2xs`, `px-1.5`, `py-1`. All three options (أسبوع / نصف شهر / شهر) are **always visible** as small pills — no dropdown menu to open, nothing gets covered.
+**After**: same pattern I used for ResidentsView — desktop table (`hidden md:block`), mobile card list (`md:hidden`). Each mobile card:
+- Row 1: staff name (leading), delete icon (trailing)
+- Row 2: salary in accent color + `·` + scope description
 
-Trade-off: pills take slightly more horizontal space than a closed select. To make room:
-- Header padding: `p-3 md:p-4` (tighter on mobile)
-- Navigation chevrons: 14px on mobile / 18px desktop
-- "اليوم" pill: `px-1.5` on mobile / `px-4` desktop, `py-0.5` on mobile / `py-1` desktop
-- Filter icon: 14px on mobile / 15px desktop, `h-8` height on mobile / `h-9` desktop
+Empty state also converted to a card-styled "no staff added" message.
 
-Everything now fits comfortably in one row on 375px width.
+### 3. License add row — stacks on mobile
+
+**Before**: The "add license" row in the التراخيص tab had `<text input> + <date input> + <button>` all in one flex row. On mobile the two inputs got squeezed and the icon button became tiny.
+
+**After**: `flex flex-col md:flex-row` — stacks vertically on mobile with full-width inputs and a proper 44px button showing both icon + "إضافة" text. Desktop stays one row as before.
+
+### 4. Bonus fixes
+
+- **Card padding**: `p-3 md:p-6 md:p-8` on the sub-tabs section, `px-3 md:px-8` on the content scroll, `p-3 md:p-8` on the footer — tighter mobile padding so content gets more actual width.
+- **Hex leak**: `dark:bg-[#3a3a3a]` on the push toggle → `dark:bg-hairline-dark-soft`.
+
+## What I checked but didn't touch
+
+- **Identity tab**: two file-upload cards use `grid grid-cols-1 md:grid-cols-2 gap-6` — already stacks properly on mobile. No change needed.
+- **System tab**: forms use compact layouts, push toggle + accent colors both work at mobile widths. Only had the hex leak, now fixed.
+- **Legal tab** (rest): the license list below the add-row is already `flex flex-col gap-2` — vertical cards, works on mobile.
+- **Finance tab** (rest): the expense add form was already `flex flex-col md:flex-row gap-4` — good.
 
 ## Install
 
 ```bash
-unzip -o rentflow-scroll-fix.zip -d .
+unzip -o rentflow-settings-mobile-fixes.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-scroll-fix.zip
+rm -rf patch rentflow-settings-mobile-fixes.zip
 
 git add -A
-git commit -m "mobile fixes: bookingform scroll + availability view mode pills"
+git commit -m "mobile(settings): sub-tab scroll + salary card view + license stack + padding polish"
 git push origin design-md-changes
 ```
 
-Two files: `src/components/ui/BookingForm.jsx` and `src/components/views/AvailabilityView.jsx`.
+## After deploy — what to check
 
-## After deploy — what to check on phone
+1. **Settings sub-tabs** — should be one horizontal row you can swipe if all 4 don't fit. No more 2-row wrap.
+2. **Finance tab → الرواتب والموظفين** — the salary list should be stacked cards (name + salary + scope + delete icon), not a clipped table.
+3. **Legal tab → أضف رقم ترخيص جديد row** — license number, expiration date, and "إضافة" button should stack vertically on mobile with full-width fields.
+4. **Overall padding** — content should have more usable width now (12px card padding instead of 24-32px on mobile).
 
-1. **Tap an empty cell in Availability** — booking form slides up from the bottom, drag handle at top. You should be able to scroll down through: date pickers → guest info → stay details → confirm button. The submit button should be reachable.
-2. **Availability header** — you should see the pill group with أسبوع / نصف شهر / شهر all visible at once (small). Tapping any pill switches view mode instantly. No dropdown menu opens, nothing gets covered.
-3. **Range label** — still on one line with abbreviated months (e.g., "17 يول - 15 أغس").
-4. **Filter button** — still icon-only, still fits.
-
-Desktop: everything should look identical to before. The pills / navigation / filter are unchanged size for `md:` widths.
+Desktop: everything unchanged.

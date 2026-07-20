@@ -225,15 +225,17 @@ export default function SettingsView() {
       ) : (
       <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark flex flex-col flex-1 min-h-0 overflow-hidden mt-4">
 
-        {/* Sub-Navigation for General Settings — nav-pill-group */}
-        <div className="p-6 md:p-8 pb-0 shrink-0">
+        {/* Sub-Navigation for General Settings — nav-pill-group with mobile
+            horizontal-scroll so tabs don't wrap into a messy 2-row grid at
+            phone widths. */}
+        <div className="p-3 md:p-6 md:p-8 pb-0 shrink-0">
           <div className="mb-4 border-b border-hairline-soft dark:border-hairline-dark pb-4">
-            <div className="nav-pill-group flex-wrap">
+            <div className="nav-pill-group -mx-3 md:mx-0 px-3 md:px-0 overflow-x-auto md:overflow-visible scrollbar-none">
               {facilitySubTabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setFacilityTab(tab.id)}
-                  className={`nav-pill text-sm font-semibold ${facilityTab === tab.id ? 'nav-pill-active' : ''}`}
+                  className={`nav-pill text-xs md:text-sm font-semibold shrink-0 whitespace-nowrap ${facilityTab === tab.id ? 'nav-pill-active' : ''}`}
                 >
                   {tab.label}
                 </button>
@@ -243,7 +245,7 @@ export default function SettingsView() {
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 md:px-8 pt-4 pb-6">
+          <div className="flex-1 min-h-0 overflow-y-auto px-3 md:px-8 pt-4 pb-6">
             <div className="space-y-6 max-w-3xl">
               {successMsg && (
                 <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-hairline-dark-soft">
@@ -304,7 +306,7 @@ export default function SettingsView() {
               <div className="space-y-6 animate-in fade-in duration-300">
                 <div>
                   <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">أرقام التراخيص (تراخيص السياحة)</label>
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex flex-col md:flex-row gap-2 mb-4">
                     <input
                       type="text"
                       value={newLicenseNumber}
@@ -323,9 +325,10 @@ export default function SettingsView() {
                     <button
                       type="button"
                       onClick={handleAddLicense}
-                      className="btn-primary h-auto px-5"
+                      className="btn-primary h-11 md:h-auto px-5 shrink-0"
                     >
                       <Plus size={20} />
+                      <span className="md:hidden">إضافة</span>
                     </button>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -404,7 +407,8 @@ export default function SettingsView() {
                     <div className="mt-8 border-t border-hairline dark:border-hairline-dark pt-8">
                       <h3 className="text-base font-semibold text-ink dark:text-white mb-6">الرواتب والموظفين</h3>
 
-                      <div className="mb-6 rounded-lg border border-hairline dark:border-hairline-dark-soft overflow-hidden">
+                      {/* Desktop: table view */}
+                      <div className="mb-6 rounded-lg border border-hairline dark:border-hairline-dark-soft overflow-hidden hidden md:block">
                         <table className="w-full text-right">
                           <thead className="bg-canvas dark:bg-surface-dark border-b border-hairline dark:border-hairline-dark-soft">
                             <tr>
@@ -445,6 +449,43 @@ export default function SettingsView() {
                             )}
                           </tbody>
                         </table>
+                      </div>
+
+                      {/* Mobile: card list — same data, stacked layout so nothing clips */}
+                      <div className="mb-6 md:hidden space-y-2">
+                        {staffExpenses?.length > 0 ? staffExpenses.map(staff => (
+                          <div key={staff.id} className="rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-ink dark:text-white truncate">{staff.name}</p>
+                                <div className="flex items-center gap-1.5 text-xs text-muted dark:text-body-dark mt-1">
+                                  <span className="font-semibold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>{staff.monthlySalary} ر.س</span>
+                                  <span className="text-muted-soft">·</span>
+                                  <span>{staff.scope === 'all' ? 'جميع الوحدات' : staff.scope?.split(',').length + ' وحدات'}</span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await axios.delete(`/api/staff-expenses?id=${staff.id}`);
+                                    fetchStaffExpenses();
+                                    toast.success('تم الحذف بنجاح');
+                                  } catch(e) {
+                                    toast.error('حدث خطأ');
+                                  }
+                                }}
+                                className="icon-action p-2 shrink-0"
+                                aria-label={`حذف ${staff.name}`}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark px-4 py-8 text-center text-sm text-muted dark:text-body-dark">
+                            لا يوجد موظفين مضافين
+                          </div>
+                        )}
                       </div>
 
                       <div className="bg-canvas dark:bg-surface-dark p-4 rounded-lg border border-hairline dark:border-hairline-dark-soft space-y-4">
@@ -577,7 +618,7 @@ export default function SettingsView() {
                       className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${
                         pushStatus === 'granted'
                           ? 'bg-ink dark:bg-white cursor-not-allowed'
-                          : 'bg-surface-strong dark:bg-[#3a3a3a] hover:bg-muted-soft cursor-pointer'
+                          : 'bg-surface-strong dark:bg-hairline-dark-soft hover:bg-muted-soft cursor-pointer'
                       }`}
                     >
                       <span
@@ -687,7 +728,7 @@ export default function SettingsView() {
 
             </div>
           </div>
-          <div className="shrink-0 p-6 md:p-8 border-t border-hairline-soft dark:border-hairline-dark flex justify-start">
+          <div className="shrink-0 p-3 md:p-8 border-t border-hairline-soft dark:border-hairline-dark flex justify-start">
             <button
               type="submit"
             disabled={loading}
