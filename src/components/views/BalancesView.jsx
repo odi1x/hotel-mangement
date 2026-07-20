@@ -190,6 +190,7 @@ export default function BalancesView() {
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0 pb-24 md:pb-0">
+          <div className="scroll-scrim" />
           {dues.length === 0 ? (
             <EmptyState
               icon={Wallet}

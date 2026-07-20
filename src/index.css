@@ -138,6 +138,8 @@
   /* ---- monochrome icon action ---- */
   .icon-action {
     @apply p-2 rounded-md text-muted opacity-80 transition-all
+           min-w-11 min-h-11 md:min-w-0 md:min-h-0
+           inline-flex items-center justify-center shrink-0
            hover:opacity-100 hover:text-ink hover:bg-surface-soft
            dark:hover:text-white dark:hover:bg-surface-dark-elevated;
   }
@@ -154,6 +156,25 @@
      where the sheet pattern applies. --------------------------------- */
   .sheet-handle {
     @apply md:hidden mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-hairline dark:bg-hairline-dark-soft shrink-0;
+  }
+
+  /* ---- Scroll scrim — mobile-only sticky gradient overlay that lives at
+     the top of a scroll container. As content scrolls up, it passes behind
+     this sticky element. The top edge is solid bg-page (matching the
+     header above), the bottom edge is transparent — so content moving up
+     into the sticky area fades out gracefully instead of getting hard-cut
+     by the header. `-mb-*` keeps the scrim from taking vertical space so
+     it doesn't push content down.
+
+     Usage: place as the FIRST child of any `overflow-y-auto` container.
+       <div className="overflow-y-auto">
+         <div className="scroll-scrim" />
+         {content}
+       </div>
+     -------------------------------------------------------------------- */
+  .scroll-scrim {
+    @apply md:hidden sticky top-0 h-6 -mb-6 pointer-events-none z-10
+           bg-gradient-to-b from-page dark:from-surface-dark to-transparent;
   }
 
   /* ---- Modal shells: unified structure ------------------------------------

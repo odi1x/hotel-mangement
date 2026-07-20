@@ -342,6 +342,7 @@ export default function AnalyticsView() {
           one unit. Each card is natural content-height; the scroll happens
           at the page level, not per-card. */}
       <div className="flex-1 overflow-y-auto min-h-0 -mx-1 px-1 pb-24 md:pb-0">
+      <div className="scroll-scrim" />
       <div className="flex flex-col space-y-5 pb-4">
 
       {/* KPI hierarchy:

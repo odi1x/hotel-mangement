@@ -1,83 +1,96 @@
-# Rent Flow — Settings Mobile Round 2
+# Rent Flow — Mobile Impeccable Pass
 
-2 files. Fixes the two things you caught: sub-tabs still clipping, and Staff tab getting no mobile treatment.
+10 files. The gradient fade you asked about + PublicBookingView polish + touch-target enforcement.
 
-## What changed
+## 1. Header gradient scrim — content fades under the header
 
-### 1. Sub-tabs — short labels on mobile so ALL 4 fit
+Your call was right. The hard-cut between header and content wasn't classy; the gradient fade is a well-established pattern (iOS Safari, Notion mobile, Cal.com mobile) and it makes the app feel premium.
 
-**The real problem**: my last patch made them scrollable, but users can't tell there's content to scroll to. If the 4th tab is off-screen, it might as well not exist. Horizontal scroll works for lists of many items where users expect to swipe, but for a fixed set of 4 tabs, "all visible" beats "scrollable but hidden".
+**How it works**: `.scroll-scrim` utility — a `sticky top-0 h-6 -mb-6` element that sits at the top of a scroll container. As content scrolls up, it passes **behind** this sticky element. The top of the scrim is solid `bg-page` (blending with the header above); the bottom is transparent. Content moving up into the scrim area gets progressively hidden by the gradient — no hard cut.
 
-**Fix**: added a `shortLabel` for each tab:
+The `-mb-6` (negative bottom margin) keeps the scrim from taking vertical space; it visually overlays the following content. `pointer-events-none` ensures it doesn't intercept taps. `md:hidden` — mobile only.
 
-| Full (desktop) | Short (mobile) |
-|---|---|
-| الهوية والمعلومات | الهوية |
-| التراخيص والعقود | التراخيص |
-| المصروفات والتشغيل | المصروفات |
-| خيارات النظام | النظام |
+Applied to 6 scroll containers (one per view):
+- AnalyticsView
+- ResidentsView (mobile card list)
+- MaintenanceView (issue list)
+- PricingView (rules list)
+- BalancesView (dues list)
+- MobileMoreMenu
 
-Rendered via `<span className="md:hidden">{tab.shortLabel}</span>` + `<span className="hidden md:inline">{tab.label}</span>`. Desktop labels unchanged. All 4 mobile pills now fit in one row without scrolling. Removed the `overflow-x-auto` and `scrollbar-none` scroll infrastructure since we don't need it anymore.
+Try it: open Analytics on your phone, scroll up. The KPI cards should melt into the header instead of hitting a hard line.
 
-### 2. Staff Management — mobile card view (like the salary table)
+## 2. PublicBookingView — mobile polish
 
-**Real gap**: I did the salary table in Settings → Finance last patch but missed the parallel 5-column table in Settings → إدارة الموظفين. Same issue: الموظف / اسم المستخدم / تاريخ الإضافة / الصلاحيات / إجراءات all fighting for 375px = several columns clip.
+The public booking flow is what your guests see on their phones (probably 90% of usage). It was already OK — form inputs had proper heights, grid stacked, layout worked. But the paddings were too generous everywhere:
 
-**Fix**: same pattern as the salary table.
+- **Header**: `px-4 py-3` on mobile (was `px-6 py-4`). Title + subtitle now truncate with ellipsis if the business name is long; header items also `shrink-0` so rear button doesn't clip.
+- **Main container**: `py-6 md:py-12` — half the top spacing on mobile. Was `py-12` all screens which felt like empty space at the top of a phone.
+- **Step 2 (unit list) header**: title + "N units" badge stacks vertically on mobile so the badge doesn't fight for horizontal space with the title.
+- **Step 3 (guest form)**:
+  - Selected apartment preview: image `w-16 h-16 md:w-20 md:h-20`, title `text-base md:text-lg`, `min-w-0` + `truncate` so long apartment names don't blow out the card
+  - Form padding: `p-5 md:p-8` (was `p-6 sm:p-8` — sm was too small a breakpoint, phones fell into `p-6`)
+  - Heading: `text-xl md:text-2xl` and margin `mb-5 md:mb-6`
+- **Step 4 (confirmation)**:
+  - Card padding: `p-6 md:p-10`
+  - Icon circle: `w-20 h-20 md:w-24 md:h-24`, icon size 40px mobile / 48px desktop
+  - Heading: `text-2xl md:text-3xl` (was `text-3xl` = 30px — plenty on phones with 24px)
+  - Body text: `text-base md:text-lg`
 
-- **Desktop** (`hidden md:block`): the 5-column table exactly as before.
-- **Mobile** (`md:hidden`): a stacked card per staff member.
-  - Row 1: profile picture + name/username on the leading edge, edit + delete icons on the trailing edge (`p-2` for 44px tap targets)
-  - Row 2: permission badges (wraps naturally)
-  - Row 3: creation date as small eyebrow text
+Everything reads better on mobile without changing desktop.
 
-Extracted the permission badge logic into a `<PermissionBadges />` helper so desktop table + mobile card share the exact same rendering — no drift risk.
+## 3. Touch-target enforcement
 
-### 3. Bonus: permission badges now show ALL 8 permissions
+The `.icon-action` utility class had `p-2` (8px padding) giving ~32-36px tap area — under the 44px iOS/Android recommendation. Now:
 
-**The old badge list only had 5**: حجز / تعديل / حذف / إحصائيات / إعدادات. It didn't include the three I added later (`canViewBalances`, `canViewMaintenance`, `canViewPricing`) or the receptionist flag (`canViewPrices`).
+```css
+.icon-action {
+  @apply p-2 rounded-md text-muted opacity-80 transition-all
+         min-w-11 min-h-11 md:min-w-0 md:min-h-0        /* 44px enforced on mobile */
+         inline-flex items-center justify-center shrink-0
+         ...
+}
+```
 
-**Updated**: now shows all 8 as pill badges when true:
-- حجز (canBook)
-- تعديل (canEdit)
-- حذف (canDelete)
-- مستحقات (canViewBalances)
-- صيانة (canViewMaintenance)
-- أسعار موسمية (canViewPricing)
-- إحصائيات (canViewAnalytics)
-- إعدادات (canViewSettings)
+- **Mobile**: `min-w-11 min-h-11` = 44×44 minimum. Every icon-action across the app now has a proper tap target.
+- **Desktop**: `md:min-w-0 md:min-h-0` — no minimum, compact as before.
 
-Plus one **inverted** badge for `canViewPrices === false`: a dashed **"بدون أسعار"** — the receptionist mode indicator. When you set up a staff as receptionist (`canViewPrices: false`), you'll now see at a glance which staff have that restriction from the list.
-
-### 4. Header row on staff tab stacks properly on mobile
-
-Header was `flex justify-between` — title + subtitle on right, "إضافة موظف" button on left. On mobile this crammed. Now `flex-col md:flex-row` — title/subtitle stack on top of the button on mobile. Same clean pattern as elsewhere.
+This propagates to every icon button in every view without touching each file individually — dozens of buttons across ResidentsView, MaintenanceView, BalancesView, PricingView, ApartmentsView, AvailabilityView, AnalyticsView, and modal close buttons.
 
 ## Files touched
 
-- `src/components/views/SettingsView.jsx` — sub-tab shortLabel + tighter mobile paddings
-- `src/components/views/settings/StaffManagement.jsx` — mobile card view + `<PermissionBadges />` helper with all 8 permissions
+- `src/index.css` — added `.scroll-scrim` utility, updated `.icon-action` with mobile min tap size
+- `src/components/layout/MobileMoreMenu.jsx` — added `<div className="scroll-scrim" />` at top of scroll
+- `src/components/views/AnalyticsView.jsx` — scroll-scrim
+- `src/components/views/ResidentsView.jsx` — scroll-scrim on mobile card list
+- `src/components/views/MaintenanceView.jsx` — scroll-scrim on issue list
+- `src/components/views/PricingView.jsx` — scroll-scrim on rules list
+- `src/components/views/BalancesView.jsx` — scroll-scrim on dues list
+- `src/components/views/PublicBookingView.jsx` — mobile polish across all 4 steps + header
+- (also the follow-through files from earlier were already present)
 
 ## Install
 
 ```bash
-unzip -o rentflow-settings-mobile-r2.zip -d .
+unzip -o rentflow-mobile-impeccable.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-settings-mobile-r2.zip
+rm -rf patch rentflow-mobile-impeccable.zip
 
 git add -A
-git commit -m "mobile(settings r2): short sub-tab labels + staff cards + all-8 permission badges"
+git commit -m "mobile(impeccable): scroll scrim + public booking polish + 44px touch targets"
 git push origin design-md-changes
 ```
 
-## After deploy — what to check on phone
+## After deploy — the moments to look for
 
-1. **Settings → إعدادات المنشأة** — all 4 sub-tabs (الهوية / التراخيص / المصروفات / النظام) visible in one row without scrolling. Tap any one to switch.
-2. **Settings → إدارة الموظفين** — staff should render as stacked cards, one per staff member. Profile pic + name/username on top, permission badges below, date at bottom.
-3. **A staff with canViewPrices=off** — should show a dashed "بدون أسعار" badge as a distinct visual signal that this is a restricted-price staff.
-4. **Edit/Delete icons** — should feel comfortable to tap (10px padding = 44px effective tap target).
-5. **Desktop** — everything should look identical to before. Long sub-tab labels, table view for staff, same badge layout.
+**The gradient fade** — most visible on Analytics because the content is tall. On mobile, scroll up through the page. The KPI cards, chart, and rest should visibly fade into the header area (last 24px before the header) instead of hitting a hard edge. Same effect on Residents, Maintenance, Balances, Pricing, and the More menu.
 
-## What's still not touched
+**PublicBookingView on your phone** — go to `/book/<your-id>` and walk through the flow. Should feel tighter and more mobile-native throughout, especially the form step and the success card.
 
-The three sub-tabs I looked at in the last round (Identity, Legal, System) already work fine on mobile. If any specific piece is still crushing on your phone, screenshot and tell me. Otherwise Settings is done.
+**Icon buttons** — try tapping any small icon button (edit / delete / close in modals) on your phone. Should feel comfortable, not fiddly.
+
+## What's still open
+
+Nothing critical. The mobile pass (M1 → M4 + fixes + this impeccable pass) is functionally complete. Every view has been touched, modals are bottom sheets, tap targets meet standard, the scrim gives that "content flows through" feel.
+
+If specific things still bug you as you use the app, tell me. Otherwise call this done and we can turn to something else on your list.

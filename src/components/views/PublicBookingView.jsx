@@ -108,30 +108,30 @@ export default function PublicBookingView() {
   return (
     <div className="min-h-screen bg-surface-soft flex flex-col font-sans" dir="rtl">
       {/* Header */}
-      <header className="bg-canvas border-b border-hairline py-4 px-6 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="bg-canvas border-b border-hairline py-3 md:py-4 px-4 md:px-6 sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {admin?.logoUrl ? (
-              <img src={admin.logoUrl} alt={admin.businessName} className="h-10 w-10 object-contain rounded-md border border-hairline" />
+              <img src={admin.logoUrl} alt={admin.businessName} className="h-10 w-10 shrink-0 object-contain rounded-md border border-hairline" />
             ) : (
-              <div className="h-10 w-10 bg-ink text-white rounded-md flex items-center justify-center font-semibold text-xl">
+              <div className="h-10 w-10 shrink-0 bg-ink text-white rounded-md flex items-center justify-center font-semibold text-xl">
                 {admin?.businessName?.charAt(0) || admin?.name?.charAt(0) || 'م'}
               </div>
             )}
-            <div>
-              <h1 className="font-semibold tracking-tight text-ink text-lg">{admin?.businessName || admin?.name || 'إدارة الأملاك'}</h1>
-              <p className="text-xs text-muted">منصة الحجز الإلكتروني</p>
+            <div className="min-w-0">
+              <h1 className="font-semibold tracking-tight text-ink text-base md:text-lg truncate leading-tight">{admin?.businessName || admin?.name || 'إدارة الأملاك'}</h1>
+              <p className="text-xs text-muted truncate">منصة الحجز الإلكتروني</p>
             </div>
           </div>
           {step > 1 && step < 4 && (
-            <button onClick={() => setStep(step - 1)} className="flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink transition-colors">
+            <button onClick={() => setStep(step - 1)} className="flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink transition-colors shrink-0">
               <ChevronRight size={16} /> رجوع
             </button>
           )}
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center p-4 py-12 w-full max-w-5xl mx-auto">
+      <main className="flex-1 flex flex-col items-center px-4 py-6 md:py-12 w-full max-w-5xl mx-auto">
 
         {/* STEP 1: DATE SELECTION */}
         {step === 1 && (
@@ -162,12 +162,12 @@ export default function PublicBookingView() {
         {/* STEP 2: APARTMENT CATALOG */}
         {step === 2 && (
           <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-end mb-8">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-ink mb-1">الوحدات المتاحة</h2>
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-2 mb-6 md:mb-8">
+              <div className="min-w-0">
+                <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-ink mb-1">الوحدات المتاحة</h2>
                 <p className="text-muted text-sm">من {formatDateForRender(dateRange.startDate)} إلى {formatDateForRender(dateRange.endDate)}</p>
               </div>
-              <span className="badge-pill font-semibold">{availableApartments.length} وحدات</span>
+              <span className="badge-pill font-semibold shrink-0 self-start md:self-auto">{availableApartments.length} وحدات</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -233,19 +233,19 @@ export default function PublicBookingView() {
         {/* STEP 3: CUSTOMER FORM */}
         {step === 3 && selectedApt && (
           <div className="w-full max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-canvas p-4 rounded-lg border border-hairline flex items-center gap-4 mb-6">
+            <div className="bg-canvas p-4 rounded-lg border border-hairline flex items-center gap-3 md:gap-4 mb-6">
               {selectedApt.coverPhoto && (
-                <img src={selectedApt.coverPhoto} alt="cover" className="w-20 h-20 object-cover rounded-md" />
+                <img src={selectedApt.coverPhoto} alt="cover" className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-md shrink-0" />
               )}
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted font-semibold mb-1">الوحدة المختارة</p>
-                <h3 className="font-semibold text-lg tracking-tight text-ink leading-tight">{selectedApt.name}</h3>
+                <h3 className="font-semibold text-base md:text-lg tracking-tight text-ink leading-tight truncate">{selectedApt.name}</h3>
                 <p className="text-ink font-semibold text-sm">{selectedApt.basePrice} ر.س / ليلة</p>
               </div>
             </div>
 
-            <form onSubmit={handleSubmitBooking} className="bg-canvas p-6 sm:p-8 rounded-xl shadow-soft border border-hairline">
-              <h2 className="text-2xl font-semibold tracking-tight text-ink mb-6">بيانات الضيف</h2>
+            <form onSubmit={handleSubmitBooking} className="bg-canvas p-5 md:p-8 rounded-xl shadow-soft border border-hairline">
+              <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-ink mb-5 md:mb-6">بيانات الضيف</h2>
 
               <div className="space-y-5 mb-8">
                 <div>
@@ -302,13 +302,14 @@ export default function PublicBookingView() {
 
         {/* STEP 4: SUCCESS */}
         {step === 4 && (
-          <div className="w-full max-w-md mx-auto text-center animate-in zoom-in-95 duration-500 mt-10">
-            <div className="bg-canvas p-10 rounded-xl shadow-soft border border-hairline flex flex-col items-center">
-              <div className="w-24 h-24 bg-surface-card text-ink rounded-full flex items-center justify-center mb-6">
-                <CheckCircle size={48} />
+          <div className="w-full max-w-md mx-auto text-center animate-in zoom-in-95 duration-500 mt-6 md:mt-10">
+            <div className="bg-canvas p-6 md:p-10 rounded-xl shadow-soft border border-hairline flex flex-col items-center">
+              <div className="w-20 h-20 md:w-24 md:h-24 bg-surface-card text-ink rounded-full flex items-center justify-center mb-5 md:mb-6">
+                <CheckCircle size={40} className="md:hidden" />
+                <CheckCircle size={48} className="hidden md:block" />
               </div>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink mb-3">تم إرسال طلبك بنجاح</h2>
-              <p className="text-muted text-lg mb-8 leading-relaxed">
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-ink mb-3">تم إرسال طلبك بنجاح</h2>
+              <p className="text-muted text-base md:text-lg mb-6 md:mb-8 leading-relaxed">
                 تلقينا طلب الحجز الخاص بك لشقة <span className="font-semibold text-ink">{selectedApt?.name}</span>. <br/>
                 سيتم مراجعة الطلب والتواصل معك قريباً لتأكيد الحجز.
               </p>

@@ -316,6 +316,7 @@ export default function PricingView() {
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0 pb-24 md:pb-0">
+          <div className="scroll-scrim" />
           {pricingRules.length === 0 ? (
             <div className="py-16 text-center">
               <div className="mx-auto h-14 w-14 rounded-full bg-surface-soft dark:bg-surface-dark-elevated flex items-center justify-center mb-4">
