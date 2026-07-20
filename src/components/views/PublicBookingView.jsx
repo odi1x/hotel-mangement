@@ -107,8 +107,15 @@ export default function PublicBookingView() {
 
   return (
     <div className="min-h-screen bg-surface-soft flex flex-col font-sans" dir="rtl">
-      {/* Header */}
-      <header className="bg-canvas border-b border-hairline py-3 md:py-4 px-4 md:px-6 sticky top-0 z-40">
+      {/* Header — sticky at top of scroll. `pt-safe` guards against iOS
+          status-bar clipping when the sticky header meets the notch/status
+          area. `after` element renders a gradient scrim below the header
+          so scrolling content fades under it (matches the app's mobile
+          pattern). */}
+      <header
+        className="bg-canvas border-b border-hairline pb-3 md:pb-4 px-4 md:px-6 sticky top-0 z-40 after:content-[''] after:absolute after:inset-x-0 after:top-full after:h-4 after:pointer-events-none after:bg-gradient-to-b after:from-canvas after:to-transparent md:after:hidden"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+      >
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             {admin?.logoUrl ? (
@@ -200,14 +207,7 @@ export default function PublicBookingView() {
                     </div>
                     <p className="text-muted text-sm line-clamp-2 mb-6 flex-1">{apt.description || 'لا يوجد وصف متاح.'}</p>
 
-                    <div className="flex gap-2 mt-auto">
-                      <button
-                        onClick={() => { setSelectedApt(apt); setShowGallery(true); }}
-                        className="p-3.5 bg-surface-soft hover:bg-surface-card text-body rounded-md transition-colors"
-                        title="عرض التفاصيل"
-                      >
-                        <ImageIcon size={20} />
-                      </button>
+                    <div className="flex mt-auto">
                       <button
                         onClick={() => { setSelectedApt(apt); setStep(3); }}
                         className="btn-primary flex-1 h-auto py-3.5"
@@ -282,9 +282,16 @@ export default function PublicBookingView() {
                 </div>
               </div>
 
+              {/* Cloudflare Turnstile CAPTCHA. The site key comes from
+                  VITE_TURNSTILE_SITE_KEY env var; if not set, we fall back
+                  to Cloudflare's public test key which always shows a
+                  "For testing only" warning bar — that's your signal to
+                  configure a real key in Vercel/Cloudflare settings.
+                  Set VITE_TURNSTILE_SITE_KEY in Vercel env vars to remove
+                  the testing warning in production. */}
               <div className="bg-surface-soft p-4 rounded-lg border border-hairline mb-6 flex justify-center">
                 <Turnstile
-                  siteKey="1x00000000000000000000AA"
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
                   onSuccess={(token) => setTurnstileToken(token)}
                 />
               </div>

@@ -181,7 +181,8 @@ export default function ApartmentsView() {
 
 
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-24 md:pb-0">
+        <div className="scroll-scrim" />
         {apartments.length === 0 ? (
           <EmptyState
             icon={Building2}

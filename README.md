@@ -1,96 +1,81 @@
-# Rent Flow — Mobile Impeccable Pass
+# Rent Flow — Mobile Follow-up: Apartments + Public Booking + Turnstile
 
-10 files. The gradient fade you asked about + PublicBookingView polish + touch-target enforcement.
+4 files. All four things you flagged.
 
-## 1. Header gradient scrim — content fades under the header
+## What changed
 
-Your call was right. The hard-cut between header and content wasn't classy; the gradient fade is a well-established pattern (iOS Safari, Notion mobile, Cal.com mobile) and it makes the app feel premium.
+### 1. Apartments tab — scroll scrim added
 
-**How it works**: `.scroll-scrim` utility — a `sticky top-0 h-6 -mb-6` element that sits at the top of a scroll container. As content scrolls up, it passes **behind** this sticky element. The top of the scrim is solid `bg-page` (blending with the header above); the bottom is transparent. Content moving up into the scrim area gets progressively hidden by the gradient — no hard cut.
+Missed this in the impeccable pass — Apartments tab's scroll container didn't have the gradient scrim. Now it does. Also added `pb-24 md:pb-0` safe-area padding so the last row of apartment cards clears the floating bottom nav.
 
-The `-mb-6` (negative bottom margin) keeps the scrim from taking vertical space; it visually overlays the following content. `pointer-events-none` ensures it doesn't intercept taps. `md:hidden` — mobile only.
+### 2. Public booking header — safe-area padding to fix iOS clipping
 
-Applied to 6 scroll containers (one per view):
-- AnalyticsView
-- ResidentsView (mobile card list)
-- MaintenanceView (issue list)
-- PricingView (rules list)
-- BalancesView (dues list)
-- MobileMoreMenu
+**The bug**: the sticky header was getting clipped at the top on iOS Safari because iOS's notch/status bar area (safe-area-inset-top) was overlapping with the header content. The business name was rendering partially behind the status bar.
 
-Try it: open Analytics on your phone, scroll up. The KPI cards should melt into the header instead of hitting a hard line.
+**Fix**: replaced `py-3 md:py-4` with `paddingTop: 'max(0.75rem, env(safe-area-inset-top))'` inline style. On phones with a notch, the header now has enough top padding to clear the status bar. Older phones without a notch fall back to the 12px minimum.
 
-## 2. PublicBookingView — mobile polish
+Also added a **gradient scrim below the sticky header** — same iOS-style pattern as the app. Implemented as a `::after` pseudo-element (`after:absolute after:top-full after:h-4 after:bg-gradient-to-b after:from-canvas after:to-transparent`) so content scrolling under the header fades classy.
 
-The public booking flow is what your guests see on their phones (probably 90% of usage). It was already OK — form inputs had proper heights, grid stacked, layout worked. But the paddings were too generous everywhere:
+### 3. Removed the redundant image-icon button on apartment cards
 
-- **Header**: `px-4 py-3` on mobile (was `px-6 py-4`). Title + subtitle now truncate with ellipsis if the business name is long; header items also `shrink-0` so rear button doesn't clip.
-- **Main container**: `py-6 md:py-12` — half the top spacing on mobile. Was `py-12` all screens which felt like empty space at the top of a phone.
-- **Step 2 (unit list) header**: title + "N units" badge stacks vertically on mobile so the badge doesn't fight for horizontal space with the title.
-- **Step 3 (guest form)**:
-  - Selected apartment preview: image `w-16 h-16 md:w-20 md:h-20`, title `text-base md:text-lg`, `min-w-0` + `truncate` so long apartment names don't blow out the card
-  - Form padding: `p-5 md:p-8` (was `p-6 sm:p-8` — sm was too small a breakpoint, phones fell into `p-6`)
-  - Heading: `text-xl md:text-2xl` and margin `mb-5 md:mb-6`
-- **Step 4 (confirmation)**:
-  - Card padding: `p-6 md:p-10`
-  - Icon circle: `w-20 h-20 md:w-24 md:h-24`, icon size 40px mobile / 48px desktop
-  - Heading: `text-2xl md:text-3xl` (was `text-3xl` = 30px — plenty on phones with 24px)
-  - Body text: `text-base md:text-lg`
+The apartment card had two buttons at the bottom:
+- Small image-icon button → opened the photo gallery
+- Full "حجز الوحدة" button → went to booking form
 
-Everything reads better on mobile without changing desktop.
+Your point was right: **tapping the card itself already opens the gallery**, so the extra image button is redundant. Removed it. The "حجز الوحدة" button now takes full width, cleaner visual hierarchy.
 
-## 3. Touch-target enforcement
+### 4. Cloudflare Turnstile — configurable via env vars
 
-The `.icon-action` utility class had `p-2` (8px padding) giving ~32-36px tap area — under the 44px iOS/Android recommendation. Now:
+**The bug**: the "For testing only. If seen, report to site owner" banner was showing because both the site key (client) and the secret key (server) were hardcoded to Cloudflare's public test values. Those test keys always succeed but display the warning banner.
 
-```css
-.icon-action {
-  @apply p-2 rounded-md text-muted opacity-80 transition-all
-         min-w-11 min-h-11 md:min-w-0 md:min-h-0        /* 44px enforced on mobile */
-         inline-flex items-center justify-center shrink-0
-         ...
-}
+**Fix**: both keys are now env vars:
+- **Client** (`PublicBookingView.jsx`): `import.meta.env.VITE_TURNSTILE_SITE_KEY` with fallback to the test key
+- **Server** (`api/public.js`): `process.env.TURNSTILE_SECRET_KEY` with fallback to the test secret
+
+**To get rid of the testing banner in production**, add these two env vars in Vercel:
+
+```
+VITE_TURNSTILE_SITE_KEY=<your real site key from Cloudflare>
+TURNSTILE_SECRET_KEY=<your real secret key from Cloudflare>
 ```
 
-- **Mobile**: `min-w-11 min-h-11` = 44×44 minimum. Every icon-action across the app now has a proper tap target.
-- **Desktop**: `md:min-w-0 md:min-h-0` — no minimum, compact as before.
+How to get keys: Cloudflare Dashboard → Turnstile → Add site → choose "managed challenge" mode → copy the site key + secret key.
 
-This propagates to every icon button in every view without touching each file individually — dozens of buttons across ResidentsView, MaintenanceView, BalancesView, PricingView, ApartmentsView, AvailabilityView, AnalyticsView, and modal close buttons.
+If you don't set them, the app keeps working with the test keys and just shows the warning banner (no functionality lost, just visual polish).
 
 ## Files touched
 
-- `src/index.css` — added `.scroll-scrim` utility, updated `.icon-action` with mobile min tap size
-- `src/components/layout/MobileMoreMenu.jsx` — added `<div className="scroll-scrim" />` at top of scroll
-- `src/components/views/AnalyticsView.jsx` — scroll-scrim
-- `src/components/views/ResidentsView.jsx` — scroll-scrim on mobile card list
-- `src/components/views/MaintenanceView.jsx` — scroll-scrim on issue list
-- `src/components/views/PricingView.jsx` — scroll-scrim on rules list
-- `src/components/views/BalancesView.jsx` — scroll-scrim on dues list
-- `src/components/views/PublicBookingView.jsx` — mobile polish across all 4 steps + header
-- (also the follow-through files from earlier were already present)
+- `src/components/views/ApartmentsView.jsx` — scroll-scrim + safe-area padding
+- `src/components/views/PublicBookingView.jsx` — safe-area header + gradient scrim + removed image button + env var Turnstile key
+- `api/public.js` — env var TURNSTILE_SECRET_KEY
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-impeccable.zip -d .
+unzip -o rentflow-mobile-followup2.zip -d .
+cp -r patch/api  ./
 cp -r patch/src  ./
-rm -rf patch rentflow-mobile-impeccable.zip
+rm -rf patch rentflow-mobile-followup2.zip
 
 git add -A
-git commit -m "mobile(impeccable): scroll scrim + public booking polish + 44px touch targets"
+git commit -m "mobile followup: apartments scrim + public booking safe-area + turnstile env vars + remove redundant image button"
 git push origin design-md-changes
 ```
 
-## After deploy — the moments to look for
+## After deploy — the moments to check
 
-**The gradient fade** — most visible on Analytics because the content is tall. On mobile, scroll up through the page. The KPI cards, chart, and rest should visibly fade into the header area (last 24px before the header) instead of hitting a hard edge. Same effect on Residents, Maintenance, Balances, Pricing, and the More menu.
+1. **Apartments tab on phone** — scroll should now show the gradient fade at the top like other views.
+2. **Open the public booking link on your phone** (`/book/<your-id>`).
+   - Header should sit fully below the notch/status bar, no clipping.
+   - As you scroll the apartment list, content should fade into the header (subtle gradient just below the sticky header).
+   - Each apartment card should have only the "حجز الوحدة" button — no separate image button.
+3. **Go through the booking flow to the Turnstile step** — if you haven't set the env vars yet, you'll still see the "For testing only" banner (that's expected until you add the real keys).
 
-**PublicBookingView on your phone** — go to `/book/<your-id>` and walk through the flow. Should feel tighter and more mobile-native throughout, especially the form step and the success card.
+## After you add the real Cloudflare keys
 
-**Icon buttons** — try tapping any small icon button (edit / delete / close in modals) on your phone. Should feel comfortable, not fiddly.
-
-## What's still open
-
-Nothing critical. The mobile pass (M1 → M4 + fixes + this impeccable pass) is functionally complete. Every view has been touched, modals are bottom sheets, tap targets meet standard, the scrim gives that "content flows through" feel.
-
-If specific things still bug you as you use the app, tell me. Otherwise call this done and we can turn to something else on your list.
+1. Cloudflare Dashboard → Turnstile → your site → get keys
+2. Vercel → your project → Settings → Environment Variables → add:
+   - `VITE_TURNSTILE_SITE_KEY` = site key
+   - `TURNSTILE_SECRET_KEY` = secret key
+3. Redeploy (Vercel auto-redeploys on env change if configured)
+4. Test the booking flow — no more "testing only" banner, real bot protection active.
