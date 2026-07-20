@@ -1,62 +1,83 @@
-# Rent Flow — Settings Mobile Fixes
+# Rent Flow — Settings Mobile Round 2
 
-1 file. Four fixes to the Settings tabs after the sweep you asked for.
+2 files. Fixes the two things you caught: sub-tabs still clipping, and Staff tab getting no mobile treatment.
 
 ## What changed
 
-### 1. Sub-tabs — horizontal scroll instead of wrap
+### 1. Sub-tabs — short labels on mobile so ALL 4 fit
 
-**Before**: The 4 sub-tabs (الهوية والمعلومات / التراخيص والعقود / المصروفات والتشغيل / خيارات النظام) used `nav-pill-group flex-wrap`. On mobile the pills wrapped into 2 rows because 4 Arabic labels don't fit horizontally — looked messy and doubled the header height.
+**The real problem**: my last patch made them scrollable, but users can't tell there's content to scroll to. If the 4th tab is off-screen, it might as well not exist. Horizontal scroll works for lists of many items where users expect to swipe, but for a fixed set of 4 tabs, "all visible" beats "scrollable but hidden".
 
-**After**: horizontal scrolling row on mobile — one line of tabs, users swipe left/right if they need to reach the last one. Added `overflow-x-auto scrollbar-none whitespace-nowrap shrink-0` to the pills and used the negative-margin trick (`-mx-3 px-3`) so the scroll extends past the card padding into the viewport edges for that natural "swipe reveals more" feel. Desktop unchanged.
+**Fix**: added a `shortLabel` for each tab:
 
-Also dropped pill text `text-sm` → `text-xs` on mobile since the tabs are packed together.
+| Full (desktop) | Short (mobile) |
+|---|---|
+| الهوية والمعلومات | الهوية |
+| التراخيص والعقود | التراخيص |
+| المصروفات والتشغيل | المصروفات |
+| خيارات النظام | النظام |
 
-### 2. Salary/Staff table — cards on mobile
+Rendered via `<span className="md:hidden">{tab.shortLabel}</span>` + `<span className="hidden md:inline">{tab.label}</span>`. Desktop labels unchanged. All 4 mobile pills now fit in one row without scrolling. Removed the `overflow-x-auto` and `scrollbar-none` scroll infrastructure since we don't need it anymore.
 
-**Before**: The staff-expenses table under "الرواتب والموظفين" had 4 columns (الاسم / الراتب / النطاق / إجراء). At 375px width it clipped — you could see the last 1-2 columns but not the name.
+### 2. Staff Management — mobile card view (like the salary table)
 
-**After**: same pattern I used for ResidentsView — desktop table (`hidden md:block`), mobile card list (`md:hidden`). Each mobile card:
-- Row 1: staff name (leading), delete icon (trailing)
-- Row 2: salary in accent color + `·` + scope description
+**Real gap**: I did the salary table in Settings → Finance last patch but missed the parallel 5-column table in Settings → إدارة الموظفين. Same issue: الموظف / اسم المستخدم / تاريخ الإضافة / الصلاحيات / إجراءات all fighting for 375px = several columns clip.
 
-Empty state also converted to a card-styled "no staff added" message.
+**Fix**: same pattern as the salary table.
 
-### 3. License add row — stacks on mobile
+- **Desktop** (`hidden md:block`): the 5-column table exactly as before.
+- **Mobile** (`md:hidden`): a stacked card per staff member.
+  - Row 1: profile picture + name/username on the leading edge, edit + delete icons on the trailing edge (`p-2` for 44px tap targets)
+  - Row 2: permission badges (wraps naturally)
+  - Row 3: creation date as small eyebrow text
 
-**Before**: The "add license" row in the التراخيص tab had `<text input> + <date input> + <button>` all in one flex row. On mobile the two inputs got squeezed and the icon button became tiny.
+Extracted the permission badge logic into a `<PermissionBadges />` helper so desktop table + mobile card share the exact same rendering — no drift risk.
 
-**After**: `flex flex-col md:flex-row` — stacks vertically on mobile with full-width inputs and a proper 44px button showing both icon + "إضافة" text. Desktop stays one row as before.
+### 3. Bonus: permission badges now show ALL 8 permissions
 
-### 4. Bonus fixes
+**The old badge list only had 5**: حجز / تعديل / حذف / إحصائيات / إعدادات. It didn't include the three I added later (`canViewBalances`, `canViewMaintenance`, `canViewPricing`) or the receptionist flag (`canViewPrices`).
 
-- **Card padding**: `p-3 md:p-6 md:p-8` on the sub-tabs section, `px-3 md:px-8` on the content scroll, `p-3 md:p-8` on the footer — tighter mobile padding so content gets more actual width.
-- **Hex leak**: `dark:bg-[#3a3a3a]` on the push toggle → `dark:bg-hairline-dark-soft`.
+**Updated**: now shows all 8 as pill badges when true:
+- حجز (canBook)
+- تعديل (canEdit)
+- حذف (canDelete)
+- مستحقات (canViewBalances)
+- صيانة (canViewMaintenance)
+- أسعار موسمية (canViewPricing)
+- إحصائيات (canViewAnalytics)
+- إعدادات (canViewSettings)
 
-## What I checked but didn't touch
+Plus one **inverted** badge for `canViewPrices === false`: a dashed **"بدون أسعار"** — the receptionist mode indicator. When you set up a staff as receptionist (`canViewPrices: false`), you'll now see at a glance which staff have that restriction from the list.
 
-- **Identity tab**: two file-upload cards use `grid grid-cols-1 md:grid-cols-2 gap-6` — already stacks properly on mobile. No change needed.
-- **System tab**: forms use compact layouts, push toggle + accent colors both work at mobile widths. Only had the hex leak, now fixed.
-- **Legal tab** (rest): the license list below the add-row is already `flex flex-col gap-2` — vertical cards, works on mobile.
-- **Finance tab** (rest): the expense add form was already `flex flex-col md:flex-row gap-4` — good.
+### 4. Header row on staff tab stacks properly on mobile
+
+Header was `flex justify-between` — title + subtitle on right, "إضافة موظف" button on left. On mobile this crammed. Now `flex-col md:flex-row` — title/subtitle stack on top of the button on mobile. Same clean pattern as elsewhere.
+
+## Files touched
+
+- `src/components/views/SettingsView.jsx` — sub-tab shortLabel + tighter mobile paddings
+- `src/components/views/settings/StaffManagement.jsx` — mobile card view + `<PermissionBadges />` helper with all 8 permissions
 
 ## Install
 
 ```bash
-unzip -o rentflow-settings-mobile-fixes.zip -d .
+unzip -o rentflow-settings-mobile-r2.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-settings-mobile-fixes.zip
+rm -rf patch rentflow-settings-mobile-r2.zip
 
 git add -A
-git commit -m "mobile(settings): sub-tab scroll + salary card view + license stack + padding polish"
+git commit -m "mobile(settings r2): short sub-tab labels + staff cards + all-8 permission badges"
 git push origin design-md-changes
 ```
 
-## After deploy — what to check
+## After deploy — what to check on phone
 
-1. **Settings sub-tabs** — should be one horizontal row you can swipe if all 4 don't fit. No more 2-row wrap.
-2. **Finance tab → الرواتب والموظفين** — the salary list should be stacked cards (name + salary + scope + delete icon), not a clipped table.
-3. **Legal tab → أضف رقم ترخيص جديد row** — license number, expiration date, and "إضافة" button should stack vertically on mobile with full-width fields.
-4. **Overall padding** — content should have more usable width now (12px card padding instead of 24-32px on mobile).
+1. **Settings → إعدادات المنشأة** — all 4 sub-tabs (الهوية / التراخيص / المصروفات / النظام) visible in one row without scrolling. Tap any one to switch.
+2. **Settings → إدارة الموظفين** — staff should render as stacked cards, one per staff member. Profile pic + name/username on top, permission badges below, date at bottom.
+3. **A staff with canViewPrices=off** — should show a dashed "بدون أسعار" badge as a distinct visual signal that this is a restricted-price staff.
+4. **Edit/Delete icons** — should feel comfortable to tap (10px padding = 44px effective tap target).
+5. **Desktop** — everything should look identical to before. Long sub-tab labels, table view for staff, same badge layout.
 
-Desktop: everything unchanged.
+## What's still not touched
+
+The three sub-tabs I looked at in the last round (Identity, Legal, System) already work fine on mobile. If any specific piece is still crushing on your phone, screenshot and tell me. Otherwise Settings is done.

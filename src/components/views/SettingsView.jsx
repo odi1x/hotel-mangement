@@ -190,10 +190,10 @@ export default function SettingsView() {
   };
 
   const facilitySubTabs = [
-    { id: 'identity', label: 'الهوية والمعلومات' },
-    { id: 'legal', label: 'التراخيص والعقود' },
-    { id: 'finance', label: 'المصروفات والتشغيل' },
-    { id: 'system', label: 'خيارات النظام' },
+    { id: 'identity', label: 'الهوية والمعلومات', shortLabel: 'الهوية' },
+    { id: 'legal',    label: 'التراخيص والعقود',   shortLabel: 'التراخيص' },
+    { id: 'finance',  label: 'المصروفات والتشغيل', shortLabel: 'المصروفات' },
+    { id: 'system',   label: 'خيارات النظام',      shortLabel: 'النظام' },
   ];
 
   return (
@@ -225,19 +225,20 @@ export default function SettingsView() {
       ) : (
       <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark flex flex-col flex-1 min-h-0 overflow-hidden mt-4">
 
-        {/* Sub-Navigation for General Settings — nav-pill-group with mobile
-            horizontal-scroll so tabs don't wrap into a messy 2-row grid at
-            phone widths. */}
-        <div className="p-3 md:p-6 md:p-8 pb-0 shrink-0">
+        {/* Sub-Navigation for General Settings — 4 pills fit on mobile using
+            shortened Arabic labels, no scroll needed. Full labels return on
+            desktop where there's plenty of space. */}
+        <div className="p-3 md:p-8 pb-0 shrink-0">
           <div className="mb-4 border-b border-hairline-soft dark:border-hairline-dark pb-4">
-            <div className="nav-pill-group -mx-3 md:mx-0 px-3 md:px-0 overflow-x-auto md:overflow-visible scrollbar-none">
+            <div className="nav-pill-group">
               {facilitySubTabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setFacilityTab(tab.id)}
-                  className={`nav-pill text-xs md:text-sm font-semibold shrink-0 whitespace-nowrap ${facilityTab === tab.id ? 'nav-pill-active' : ''}`}
+                  className={`nav-pill text-xs md:text-sm font-semibold ${facilityTab === tab.id ? 'nav-pill-active' : ''}`}
                 >
-                  {tab.label}
+                  <span className="md:hidden">{tab.shortLabel}</span>
+                  <span className="hidden md:inline">{tab.label}</span>
                 </button>
               ))}
             </div>
