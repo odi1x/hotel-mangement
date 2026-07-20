@@ -289,7 +289,7 @@ export default function AvailabilityView({ openBookingForm }) {
 
   return (
     <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center gap-2 bg-canvas dark:bg-surface-dark">
+      <div className="p-3 md:p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center gap-2 bg-canvas dark:bg-surface-dark">
         <div className="flex items-center space-x-reverse space-x-2 md:space-x-4 min-w-0">
           <h3 className="font-semibold text-ink dark:text-white flex items-center gap-1 md:gap-2 text-xs md:text-lg tracking-tight leading-tight whitespace-nowrap shrink-0">
             <Calendar size={14} className="text-ink dark:text-white shrink-0 md:hidden" />
@@ -297,40 +297,40 @@ export default function AvailabilityView({ openBookingForm }) {
             <span className="md:hidden">{rangeLabelShort}</span>
             <span className="hidden md:inline">{rangeLabel}</span>
           </h3>
-          <div className="flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-1 mr-0 md:mr-4 shrink-0">
-            <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={16} /></button>
-            <button onClick={handleToday} className="px-2 md:px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-1 transition-colors">اليوم</button>
-            <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={16} /></button>
+          <div className="flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-0.5 md:p-1 mr-0 md:mr-4 shrink-0">
+            <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={14} className="md:hidden" /><ChevronRight size={18} className="hidden md:block" /></button>
+            <button onClick={handleToday} className="px-1.5 md:px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-0.5 md:py-1 transition-colors">اليوم</button>
+            <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={14} className="md:hidden" /><ChevronLeft size={18} className="hidden md:block" /></button>
           </div>
-          {/* View mode: desktop shows pill group. Mobile uses a compact
-              <select> so all three options are reachable without clipping
-              off the left edge. */}
-          <div className="hidden md:block nav-pill-group">
+
+          {/* View mode: pills on both platforms. Compact sizing on mobile so
+              all three options stay visible and no dropdown menu covers the
+              availability grid below. */}
+          <div className="nav-pill-group shrink-0">
             {[{ id: 'week', t: 'أسبوع' }, { id: 'half', t: 'نصف شهر' }, { id: 'month', t: 'شهر' }].map(v => (
-              <button key={v.id} onClick={() => setViewMode(v.id)} className={`nav-pill text-xs ${viewMode === v.id ? 'nav-pill-active' : ''}`}>{v.t}</button>
+              <button
+                key={v.id}
+                onClick={() => setViewMode(v.id)}
+                className={`nav-pill text-2xs md:text-xs px-1.5 md:px-3 py-1 md:py-1.5 ${viewMode === v.id ? 'nav-pill-active' : ''}`}
+              >
+                {v.t}
+              </button>
             ))}
           </div>
-          <select
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value)}
-            className="md:hidden input-field h-8 py-0 text-xs w-auto"
-          >
-            <option value="week">أسبوع</option>
-            <option value="half">نصف شهر</option>
-            <option value="month">شهر</option>
-          </select>
         </div>
-        <div className="flex items-center space-x-reverse space-x-4">
+
+        <div className="flex items-center space-x-reverse space-x-4 shrink-0">
           <p className="badge-pill text-muted dark:text-body-dark hidden lg:inline-flex">
             اسحب على الخلايا الفارغة لإنشاء حجز
           </p>
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => { setPickerMonth(new Date(currentDate)); setFilterOpen(o => !o); }}
-              className={`btn-secondary h-9 px-2 md:px-3 text-xs shrink-0 ${filterOpen ? 'border-ink dark:border-white' : ''}`}
+              className={`btn-secondary h-8 md:h-9 px-2 md:px-3 text-xs shrink-0 ${filterOpen ? 'border-ink dark:border-white' : ''}`}
               aria-label={unitFilterLabel}
             >
-              <Filter size={15} />
+              <Filter size={14} className="md:hidden" />
+              <Filter size={15} className="hidden md:block" />
               <span className="hidden md:inline">{unitFilterLabel}</span>
             </button>
 

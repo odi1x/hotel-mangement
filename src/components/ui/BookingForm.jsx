@@ -154,10 +154,10 @@ export default function BookingForm({ onClose, initialData }) {
   const eyebrow = "block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5";
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-start md:justify-center md:p-4 md:overflow-y-auto md:pt-10 md:pb-32" dir="rtl">
-      <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl overflow-visible animate-in zoom-in-95 duration-200">
-        <div className="sheet-handle" />
-        <div className="p-6 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center rounded-t-xl">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
+      <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="sheet-handle shrink-0" />
+        <div className="p-6 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center rounded-t-xl shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent-soft text-accent flex items-center justify-center"><Calendar size={20} /></div>
             <div>
@@ -168,7 +168,7 @@ export default function BookingForm({ onClose, initialData }) {
           <button onClick={onClose} className="icon-action"><X size={20} /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8">
+        <form onSubmit={handleSubmit} className="p-4 md:p-8 flex-1 overflow-y-auto min-h-0">
           {error && (
             <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-hairline-dark-soft flex justify-between items-center">
               <span>{error}</span>

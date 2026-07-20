@@ -1,57 +1,53 @@
-# Rent Flow — Availability Header Fixes
+# Rent Flow — Fixes: BookingForm Scroll + Availability View Mode
 
-1 file. Three related fixes to the availability header row for mobile.
+2 files. Two fixes to what you flagged in the last screenshots.
 
 ## What changed
 
-### 1. Range label — smaller + one-line + abbreviated months
+### 1. BookingForm now scrolls internally on mobile (the real bug)
 
-**Before**: `text-lg` label like "16 يوليو - 31 يوليو" tried to fit next to navigation controls, view mode dropdown, and filter button — all in one row on 375px width. When the range didn't fit horizontally, the text wrapped into 4 vertical lines ("16" / "يوليو" / "-" / "31" / "يوليو"), which made the whole header row taller and pushed everything below down.
+**The bug**: after the M3 bottom-sheet migration, `BookingForm` had `overflow-visible` on its shell and no height cap. On mobile with `items-end` (bottom sheet mode), the shell just extended past the viewport with no way to scroll. You could see the date pickers and the top of the guest info form but couldn't reach the submit button — it was permanently below the fold, no matter how you swiped.
 
-**After**:
-- **Mobile**: `text-xs` size, `whitespace-nowrap` so it stays on one line, and uses 3-letter month abbreviations (`ينا / فبر / مار / أبر / ماي / يون / يول / أغس / سبت / أكت / نوف / دسم`). So "16 يوليو - 31 يوليو" becomes "16 يول - 31 يول" — half the width, always one line.
-- **Desktop**: full `text-lg` with full month names — unchanged.
+**The fix**:
+- Shell: added `flex flex-col max-h-[92vh] overflow-hidden` so the modal caps at 92% of viewport height. The header (drag handle + title strip) is `shrink-0`. The form body gets `flex-1 overflow-y-auto min-h-0` — it's the scroll container.
+- Backdrop: dropped the old `md:overflow-y-auto md:pt-10 md:pb-32` desktop top-anchored scroll pattern. Both platforms now use the same simple `items-end p-0 md:items-center md:justify-center md:p-4` pattern. Internal scroll works everywhere.
+- Form padding: `p-4 md:p-8` — less padding on mobile so more content fits.
 
-Also fixed the range label logic for the new rolling 30-day month mode: it used to show just "يوليو 2026" but that's now misleading because the range crosses month boundaries. All modes now show `{startDay} {month} – {endDay} {month}` format.
+After this, the booking form should scroll cleanly on both mobile (sheet fills to top of viewport, form scrolls inside) and desktop (modal centered, form scrolls inside if tall).
 
-### 2. Filter button icon-only on mobile
+### 2. Availability view mode: pills instead of dropdown
 
-The button had `<Filter icon> + "كل الوحدات" text`. The text alone is ~80px wide. On mobile that was pushing the button off the left edge.
+**Your ask**: the `<select>` dropdown for view mode was opening a bulky native menu that covered the availability grid content when tapped.
 
-Now: text is `hidden md:inline` — button becomes icon-only on mobile (~40px), full "Filter كل الوحدات" on desktop. `aria-label` still carries the label for screen readers.
+**The fix**: replaced the `<select>` with the same `nav-pill-group` desktop uses, but ultra-compact on mobile: `text-2xs`, `px-1.5`, `py-1`. All three options (أسبوع / نصف شهر / شهر) are **always visible** as small pills — no dropdown menu to open, nothing gets covered.
 
-### 3. Filter dropdown fits within viewport
+Trade-off: pills take slightly more horizontal space than a closed select. To make room:
+- Header padding: `p-3 md:p-4` (tighter on mobile)
+- Navigation chevrons: 14px on mobile / 18px desktop
+- "اليوم" pill: `px-1.5` on mobile / `px-4` desktop, `py-0.5` on mobile / `py-1` desktop
+- Filter icon: 14px on mobile / 15px desktop, `h-8` height on mobile / `h-9` desktop
 
-The dropdown was `w-72` (288px) with `absolute left-0`. On mobile where the button is at the far left of the header, the dropdown extended off screen.
-
-Now: width is `w-[calc(100vw-3rem)] md:w-72 max-w-[320px]`. So on mobile it's `viewport width - 48px` (24px on each side for breathing room), capped at 320px so it doesn't get absurdly wide on landscape phones or tablets. Desktop: 288px as before.
-
-### Bonus tightening
-
-- Navigation controls (`< اليوم >`): 16px chevrons instead of 18px, `px-2` on "اليوم" instead of `px-4` on mobile
-- Right margin dropped: `mr-0 md:mr-4` — no gap between navigation and view mode on mobile
-- Gap between the three left elements: `space-x-2 md:space-x-4` — tighter on mobile
-- Whole header row gets a `gap-2` for consistent breathing between the two flex groups
+Everything now fits comfortably in one row on 375px width.
 
 ## Install
 
 ```bash
-unzip -o rentflow-availability-header-fix.zip -d .
+unzip -o rentflow-scroll-fix.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-availability-header-fix.zip
+rm -rf patch rentflow-scroll-fix.zip
 
 git add -A
-git commit -m "mobile: availability header — short labels, icon-only filter, viewport-fit dropdown"
+git commit -m "mobile fixes: bookingform scroll + availability view mode pills"
 git push origin design-md-changes
 ```
 
-Just one file: `src/components/views/AvailabilityView.jsx`.
+Two files: `src/components/ui/BookingForm.jsx` and `src/components/views/AvailabilityView.jsx`.
 
 ## After deploy — what to check on phone
 
-1. **Switch between أسبوع / نصف شهر / شهر** — the range label on the right should now stay on one line in all modes. In half month mode expect to see something like "16 يول - 31 يول" instead of the previous stack.
-2. **Filter button** — you should see just the funnel icon, no "كل الوحدات" text. It should be fully visible, not clipping off the left.
-3. **Tap the filter** — the dropdown panel should open and fit within the phone screen with breathing room on both sides. Calendar picker + units checkboxes should be fully visible.
-4. **Month mode** — label should now show a date range like "17 يول - 15 أغس" instead of just "يوليو 2026", correctly reflecting the rolling 30-day window.
+1. **Tap an empty cell in Availability** — booking form slides up from the bottom, drag handle at top. You should be able to scroll down through: date pickers → guest info → stay details → confirm button. The submit button should be reachable.
+2. **Availability header** — you should see the pill group with أسبوع / نصف شهر / شهر all visible at once (small). Tapping any pill switches view mode instantly. No dropdown menu opens, nothing gets covered.
+3. **Range label** — still on one line with abbreviated months (e.g., "17 يول - 15 أغس").
+4. **Filter button** — still icon-only, still fits.
 
-Desktop: no visible change. Range label still `text-lg` with full month names, filter button still shows the text, dropdown still `w-72`.
+Desktop: everything should look identical to before. The pills / navigation / filter are unchanged size for `md:` widths.
