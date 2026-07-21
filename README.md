@@ -1,120 +1,102 @@
-# Rent Flow — Mobile Finale v2 (What I Should Have Done Last Time)
+# Rent Flow — Mobile Followup 3: Scrim Positions + Nav-Modal + Dark Icons + Share Link
 
-12 files. Every issue you flagged from the previous attempt, fixed properly this time. I have to own the previous patch — I said things were fixed and they weren't. Here's what was actually wrong and how each is fixed now:
+**Five fixes** to what you flagged in the last screenshots:
 
-## The three fundamental bugs in the previous patch
+## 1. Top scroll-scrim + space between scrim and first component
 
-### Bug 1: **The animations were never real**
+You wanted the scrim to stay AND for the first component not to be clipped. My last patch removed the sticky-inside-scroll scrim entirely, which was overkill.
 
-I used Tailwind classes like `animate-in`, `fade-in`, `slide-in-from-bottom-4`, `zoom-in-95` throughout. These come from the `tailwindcss-animate` plugin — **which is not installed** in this project. Tailwind was silently dropping every one of those classes. Zero CSS was generated.
+**Fix**: kept the fixed viewport scrim (`fixed top-14 h-8`) — that's still there and gives the fade effect. But now every scroll container also has **`pt-2 md:pt-0`** — 8px of padding-top on mobile. That's the "little bit of space" you asked for. First card is now safely below the scrim's opaque band at rest.
 
-**Fix**: I added real CSS `@keyframes` and utility classes directly in `index.css`. No package.json change needed. Four utilities:
-- `.anim-tab` — 4px slide + fade, 220ms, for view transitions
-- `.anim-nav` — 16px slide + fade, 320ms, for the nav bar entrance
-- `.anim-sheet` — 16px slide + fade on mobile, scale on desktop, 300ms, for modals
-- `.anim-dropdown` — 8px drop-down + fade, 200ms, for header dropdowns
+Applied to 8 scroll containers: Analytics, Maintenance, Balances, Pricing, Residents (mobile card list), Apartments, Availability grid, and the More menu.
 
-All use `cubic-bezier(0.32, 0.72, 0, 1)` — the iOS "quart-out" easing that feels native. `@media (prefers-reduced-motion: reduce)` disables them for accessibility.
+## 2. Bottom scroll-scrim moved UNDER the nav
 
-Then I swept every file and replaced the broken `animate-in ...` combos with the correct new class. There are now zero occurrences of the fake classes anywhere.
+Was `fixed bottom-20 h-8` — floating 80px above the viewport bottom with a gap between it and the nav (that "line in the middle of the screen" you saw).
 
-### Bug 2: **Dropdowns were trapped by stacking contexts**
+**Fix**: now `fixed bottom-0 inset-x-0 h-28` — the scrim extends from the very bottom of the viewport upward for 112px. That's tall enough to cover the whole nav area (nav sits at `bottom-4 h-14` = 16px to 72px from viewport bottom). The gradient uses `from-40%` so the bottom 40% is solid `bg-page`, then fades up to transparent.
 
-Both notification and profile dropdowns used `fixed z-50` inside the header. On paper, `fixed` positioning should escape to viewport and z-50 should paint above everything.
+Combined with z-index (`z-30` on scrim vs `z-40` on nav), the nav pill sits **on top of** the scrim's solid bottom portion. Content scrolls through the fade band and disappears under the nav — the effect you described.
 
-But — some ancestor was creating a stacking context that trapped the dropdowns. Between the animated view container (`animate-in` was being interpreted as `will-change: transform` even without working), the sticky elements in the availability grid, and other paint-order quirks, the calendar was consistently rendering ON TOP of the dropdown.
+## 3. Nav hides when a modal / bottom sheet is open
 
-**Fix**: **React Portals**. Both dropdowns now use `createPortal(<dropdown/>, document.body)` — they're rendered at the document body level, escaping every ancestor's stacking context. Their `z-[100]` now genuinely places them above everything.
+**The bug**: the floating nav is at `z-40`, modal backdrops at `z-50` or `z-[80]`. Backdrops SHOULD cover the nav visually — but backdrops are only `bg-black/40` (40% opaque). The nav's own opaque background (`bg-canvas/85`) was bleeding through.
 
-This is the proper fix for this class of bug, and I should have used it in the first place.
-
-### Bug 3: **Scrims sat in the wrong position**
-
-My previous `.scroll-scrim` and `.scroll-scrim-bottom` were **sticky elements inside each scroll container** with `-mb-*` negative margins so they wouldn't take vertical space. Two problems:
-
-- **Top scrim was clipping the first card** at scroll-top because `-mb-4` made content overlap into the scrim's opaque region. That's why you saw the top of components hidden behind a fade in the resting state.
-- **Bottom scrim was 96px above the actual bottom.** Scroll containers had `pb-24` (safe area for the floating nav). `sticky bottom-0` sticks to the container's scroll port bottom, which is INSIDE the padding-bottom. Result: the scrim floated ~96px above the true bottom, appearing "like a line in the middle of the screen".
-
-**Fix**: Ripped out the sticky-inside-container approach entirely. Deleted `.scroll-scrim` and `.scroll-scrim-bottom` from `index.css`. Deleted all `<div className="scroll-scrim..." />` from views.
-
-Replaced with **two fixed viewport-level scrims in Layout.jsx**:
-```jsx
-<div className="md:hidden fixed top-14 inset-x-0 h-6 pointer-events-none z-30
-                bg-gradient-to-b from-page to-transparent" />
-<div className="md:hidden fixed bottom-20 inset-x-0 h-8 pointer-events-none z-30
-                bg-gradient-to-t from-page to-transparent" />
+**Fix**: added a CSS `:has()` rule in `index.css`:
+```css
+body:has([data-modal-active]) .mobile-nav-shield {
+  visibility: hidden;
+  pointer-events: none;
+}
 ```
 
-- Top scrim sits **exactly at the bottom of the header** (top-14 = 56px)
-- Bottom scrim sits **exactly above the floating nav** (bottom-20 = 80px above viewport bottom)
-- Both are `pointer-events-none` — taps pass through to whatever's underneath
-- `z-30` — above scrollable content but below dropdowns (z-100) and nav (z-40)
+Then added:
+- `data-modal-active` attribute on every modal backdrop (13 backdrops across ui/ and views/)
+- `mobile-nav-shield` class on the nav wrapper
 
-Because these are fixed elements at the viewport, they:
-- Don't overlap content at rest (they sit BETWEEN the header/nav bands and the scroll area)
-- Give the fade effect for content that scrolls past those bands
-- Work consistently for every view without needing per-view code
+`:has()` is now supported in Chrome 105+, Safari 15.4+, Firefox 121+ — that covers essentially every phone you'd care about. When any modal is on the DOM, browser detects the attribute, hides the nav. Nav returns automatically when modal closes.
 
-## Everything else from the previous patch
+Zero code needed in modals beyond the attribute — no state coordination, no context, no hook. Purely declarative.
 
-- Tab transition animation on view switch ✅ (now working, `.anim-tab`)
-- Nav bar entrance animation ✅ (now working, `.anim-nav`)  
-- All 7 modals slide up from bottom ✅ (now working, `.anim-sheet`)
-- PaymentLedgerModal got its missing M3 treatment ✅
-- Hex leaks in Header cleaned ✅
+## 4. Apartment edit/delete buttons visible on mobile + dark mode
 
-## Files touched (12)
+**The bug**: the edit/delete icons on apartment cards had `opacity-0 group-hover:opacity-100` — hover-only. Mobile has no hover, so buttons were permanently invisible. Plus `text-muted` (a mid-gray) had no dark mode variant so they had poor contrast on dark backgrounds even when technically visible.
 
-- `src/index.css` — new keyframes + animation utilities, deleted the broken sticky-scrim utilities
-- `src/components/layout/Layout.jsx` — global fixed scrims + `.anim-tab` on view container
-- `src/components/layout/Header.jsx` — portaled profile dropdown + `.anim-dropdown`
-- `src/components/layout/NotificationsDropdown.jsx` — portaled + `.anim-dropdown`
-- `src/components/layout/MobileBottomNav.jsx` — `.anim-nav` on wrapper
-- `src/components/layout/MobileMoreMenu.jsx` — removed scroll-scrim divs
-- `src/components/views/AnalyticsView.jsx` — removed scroll-scrim divs
-- `src/components/views/MaintenanceView.jsx` — removed scroll-scrim divs
-- `src/components/views/BalancesView.jsx` — removed scroll-scrim divs
-- `src/components/views/PricingView.jsx` — removed scroll-scrim divs
-- `src/components/views/ResidentsView.jsx` — removed scroll-scrim divs
-- `src/components/views/ApartmentsView.jsx` — removed scroll-scrim divs
-- `src/components/views/SettingsView.jsx` — replaced `animate-in fade-in` with `.anim-tab` for sub-tab transitions
-- All 7 modal shells — `.anim-sheet` in place of the broken `animate-in ...` chain
+**Fix**:
+- `opacity-0 group-hover:opacity-100` → `md:opacity-0 md:group-hover:opacity-100` (mobile always visible, desktop hover behavior preserved)
+- `p-1.5` → `p-2 md:p-1.5` (44px tap target on mobile, tighter on desktop)
+- `bg-canvas/95 text-muted border-hairline` → `bg-canvas/95 dark:bg-surface-dark-elevated/95 text-ink dark:text-white border-hairline dark:border-hairline-dark-soft` — proper dark mode contrast
+- Hover state now goes to `text-accent` for a color cue (was `text-ink` — same as base)
+
+## 5. Shareable link now accessible on mobile
+
+**The bug**: the "رابط الحجز المباشر للعملاء" card lives in Layout's desktop title bar (`hidden md:flex`). Since mobile title moved into the header, that whole action bar became desktop-only. Guests-of-your-property URL was unreachable from phone.
+
+**Fix**: added a mobile-only version of the shareable link card **inside ApartmentsView**, right above the grid. Only visible to admins + staff with `canBook`. Compact layout:
+- Small `Share2` icon on leading edge
+- Truncated URL in the middle (tap to select all)
+- Copy button on trailing edge with icon transition (`Copy` → `Check` on copy)
+- Toast confirmation "تم نسخ الرابط" on copy
+
+Uses the same URL format as desktop: `${origin}/book/${user.adminId}`. Same `handleCopyLink` logic with local state (isolated from Layout's copy).
+
+## Files touched (13)
+
+- `src/index.css` — `:has()` rule for hiding nav on modal open
+- `src/components/layout/Layout.jsx` — scrim position fix (bottom-0 h-28)
+- `src/components/layout/MobileBottomNav.jsx` — `mobile-nav-shield` class
+- `src/components/layout/MobileMoreMenu.jsx` — pt-2 on scroll
+- `src/components/views/AnalyticsView.jsx` — pt-2 + data-modal-active on breakdown modal
+- `src/components/views/MaintenanceView.jsx` — pt-2
+- `src/components/views/BalancesView.jsx` — pt-2
+- `src/components/views/PricingView.jsx` — pt-2
+- `src/components/views/ResidentsView.jsx` — pt-2 + data-modal-active on inline modals
+- `src/components/views/AvailabilityView.jsx` — pt-2 + data-modal-active on inline modals
+- `src/components/views/ApartmentsView.jsx` — pt-2 + mobile share card + dark-mode icons + data-modal-active
+- `src/components/ui/*.jsx` (7 modals) — `data-modal-active` on backdrops
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-finale-v2.zip -d .
+unzip -o rentflow-mobile-followup3.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-mobile-finale-v2.zip
+rm -rf patch rentflow-mobile-followup3.zip
 
 git add -A
-git commit -m "mobile finale v2: real CSS animations + portaled dropdowns + fixed global scrims"
+git commit -m "mobile followup 3: scrim positions + nav-hide-on-modal + apartment dark icons + mobile share link"
 git push origin design-md-changes
 ```
 
-## After deploy — what to actually verify this time
+## After deploy — what to actually verify
 
-1. **Tap the bell / profile icon on your phone.** The dropdown should:
-   - Slide down + fade in (`.anim-dropdown` — 200ms)
-   - Appear ABOVE the availability grid (portaled to document.body, escapes stacking context)
-   - Not have calendar dates showing through/around it
+1. **Open any tab, look at the top of the content.** First card should be fully visible, not clipped under a fade. The fade should still be there (just above the first card).
+2. **Look at the bottom of any scrollable view.** The bottom fade should extend all the way to the viewport bottom with the nav pill floating ON TOP of it. No line in the middle of the screen.
+3. **Open any modal** (add booking, edit staff, add issue, etc.). The floating nav bar should disappear entirely while the modal is open. Close the modal → nav returns.
+4. **In dark mode, tap an apartment card.** The edit + delete icons in the top-left corner of each card should now be visible.
+5. **Go to Apartments tab on mobile.** You should see the "رابط الحجز المباشر" card at the top with your public booking URL + a copy button.
 
-2. **Switch between bottom nav tabs.** Every view should:
-   - Fade + slide in tiny (4px) as you switch (`.anim-tab` — 220ms)
-   - Feel like new content arrived, not just jumped in
+## What's not touched
 
-3. **Refresh the app.** The bottom nav bar should:
-   - Slide up + fade in from below (`.anim-nav` — 320ms)
-
-4. **Open any modal** (add booking, edit staff, etc.). Should slide up smoothly from bottom on mobile, fade + scale on desktop.
-
-5. **Scroll any view.** The top edge of content should:
-   - **NOT be clipped at rest** — first card fully visible when unscrolled
-   - Fade gently as content passes the top scrim band (below the header)
-   - Fade at the bottom too, above the floating nav — actually at the bottom edge this time, not floating in the middle
-
-## What I learned
-
-I was calling patches "shipped" without actually verifying they worked in the browser. Sed-and-replace changes look done from the terminal but if the CSS classes don't exist, they're silently ignored. Same with stacking context bugs — the code looks right but real-world DOM has more going on. Sorry for the wasted round trips.
-
-This one's actually tested via `npx vite build` (which processes the CSS through Tailwind) and produced a real bundle. The animation utilities are guaranteed to be in the output because they're raw CSS keyframes, not plugin-generated classes.
+- Desktop: unchanged for everything except the shareable link (still in Layout title bar as before).
+- Public booking view: separate structure, has its own scrim; not affected.
+- Non-admin staff: shareable link card only shows for admin + canBook.

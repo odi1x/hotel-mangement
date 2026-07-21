@@ -341,7 +341,7 @@ export default function AnalyticsView() {
       {/* One scrollable content zone — the whole analytics page scrolls as
           one unit. Each card is natural content-height; the scroll happens
           at the page level, not per-card. */}
-      <div className="flex-1 overflow-y-auto min-h-0 -mx-1 px-1 pb-24 md:pb-0">
+      <div className="flex-1 overflow-y-auto min-h-0 pt-2 md:pt-0 -mx-1 px-1 pb-24 md:pb-0">
       <div className="flex flex-col space-y-5 pb-4">
 
       {/* KPI hierarchy:
@@ -588,7 +588,7 @@ export default function AnalyticsView() {
 
       {/* Breakdown Modal */}
       {breakdownModal && (
-        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4">
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-hairline-dark-soft">
             <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">

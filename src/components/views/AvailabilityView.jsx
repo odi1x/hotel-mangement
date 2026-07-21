@@ -431,7 +431,7 @@ export default function AvailabilityView({ openBookingForm }) {
         const neutralBorder = darkMode ? '#33302c' : '#e5e7eb';
 
         return (
-          <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none pb-24 md:pb-0">
+          <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none pt-2 md:pt-0 pb-24 md:pb-0">
             <div style={{ display: 'grid', gridTemplateColumns: `${unitCol}px repeat(${N}, minmax(${minCol}px, 1fr))`, minWidth: 'min-content' }}>
               {/* corner */}
               <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center justify-center text-xs font-semibold text-muted dark:text-body-dark" style={{ gridColumn: 1, gridRow: 1, height: 46, ...frozenShadow }}>
@@ -544,7 +544,7 @@ export default function AvailabilityView({ openBookingForm }) {
 
       {/* First Modal: List of bookings for the selected day */}
       {selectedDayBookings && !selectedBookingDetails && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">حجوزات يوم {formatDateAr(selectedDayBookings.date)}</h2>
@@ -608,7 +608,7 @@ export default function AvailabilityView({ openBookingForm }) {
 
       {/* Second Modal: Specific Booking Details */}
       {selectedBookingDetails && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col">
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">تفاصيل الحجز</h2>

@@ -189,7 +189,7 @@ export default function BalancesView() {
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0 pb-24 md:pb-0">
+        <div className="flex-1 overflow-y-auto min-h-0 pt-2 md:pt-0 pb-24 md:pb-0">
           {dues.length === 0 ? (
             <EmptyState
               icon={Wallet}

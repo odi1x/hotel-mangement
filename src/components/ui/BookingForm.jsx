@@ -154,7 +154,7 @@ export default function BookingForm({ onClose, initialData }) {
   const eyebrow = "block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5";
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
       <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl flex flex-col max-h-[92vh] overflow-hidden anim-sheet">
         <div className="sheet-handle shrink-0" />
         <div className="p-6 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center rounded-t-xl shrink-0">

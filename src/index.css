@@ -211,6 +211,21 @@
     }
   }
 
+  /* ---- Hide the mobile floating nav when a modal / bottom sheet is open.
+     Modals mark themselves with `data-modal-active`. When the browser
+     detects any such element in the DOM (via CSS :has()), it hides the
+     nav wrapper. This prevents the nav from showing through the modal
+     backdrop's semi-transparent overlay.
+
+     :has() is supported in Chrome 105+, Safari 15.4+, Firefox 121+ —
+     good enough for our target audience (modern mobile browsers).
+     Falls back to nav still showing on very old browsers, which is
+     the same as the current behavior — no regression. */
+  body:has([data-modal-active]) .mobile-nav-shield {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   /* ---- Modal shells: unified structure ------------------------------------
      Use these together to compose a consistent modal:
        .modal-backdrop → the fixed backdrop that covers the viewport

@@ -76,7 +76,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
+    <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
       <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl anim-sheet w-full max-w-2xl shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col max-h-[90vh]">
         <div className="sheet-handle" />
 

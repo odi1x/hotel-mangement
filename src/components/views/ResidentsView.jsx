@@ -328,7 +328,7 @@ export default function ResidentsView({ openBookingForm }) {
             same data as stacked cards: name + status on top, unit + dates in
             the middle, actions at the bottom. One direction of layout per
             section, matching the mobile pattern. */}
-        <div className="md:hidden flex-1 overflow-y-auto pb-24 md:pb-0 divide-y divide-hairline-soft dark:divide-hairline-dark">
+        <div className="md:hidden flex-1 overflow-y-auto pt-2 md:pt-0 pb-24 md:pb-0 divide-y divide-hairline-soft dark:divide-hairline-dark">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, idx) => (
               <div key={`skeleton-mobile-${idx}`} className="animate-pulse p-4">
@@ -511,7 +511,7 @@ export default function ResidentsView({ openBookingForm }) {
       )}
 
       {editingNoteId && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col">
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white flex items-center">
@@ -573,7 +573,7 @@ export default function ResidentsView({ openBookingForm }) {
         const remainingAfter = newTotal - paid;
 
         return (
-        <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4">
+        <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-lg overflow-hidden border border-hairline dark:border-hairline-dark-soft max-h-[92vh] flex flex-col">
             <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
@@ -749,7 +749,7 @@ export default function ResidentsView({ openBookingForm }) {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4">
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
             <div className="p-6 text-center">
@@ -783,7 +783,7 @@ export default function ResidentsView({ openBookingForm }) {
 
       {/* Print Options Modal */}
       {printSelectorBooking && (
-        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4">
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => setPrintSelectorBooking(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
             <div className="px-6 py-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">

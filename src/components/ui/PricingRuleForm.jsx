@@ -122,7 +122,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
+    <div className="fixed inset-0 z-[80] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
       <div className="absolute inset-0" onClick={onClose}></div>
 
       <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl anim-sheet shadow-soft w-full max-w-2xl overflow-hidden border border-hairline dark:border-[#2e2e2e] flex flex-col max-h-[92vh]">

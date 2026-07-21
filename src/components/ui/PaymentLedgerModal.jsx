@@ -84,6 +84,7 @@ export default function PaymentLedgerModal({ booking, apartment, onClose }) {
     <div
       className="fixed inset-0 z-[80] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4"
       dir="rtl"
+      data-modal-active
     >
       <div className="absolute inset-0" onClick={onClose}></div>
 

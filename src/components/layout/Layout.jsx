@@ -196,17 +196,18 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* Mobile-only fade scrims — positioned as viewport-fixed elements so
-          they don't overlap content at rest (the old sticky-inside-scroll
-          approach had the top scrim hiding first content and the bottom scrim
-          floating 96px above the actual bottom due to safe-area padding).
-          These sit RIGHT below the header and RIGHT above the nav, at
-          exactly the right height, giving the gradient fade effect for
-          content that scrolls past those bands.
-          z-30 keeps them above scrollable content but below dropdowns (z-100)
+      {/* Mobile-only fade scrims — fixed at viewport level:
+          - TOP scrim: right below the header (top-14), gradient fades DOWN.
+            Content scrolling into the top of the view fades under it.
+          - BOTTOM scrim: extends from viewport bottom UP through the nav
+            area (bottom-0 h-28). Gradient fades UP, opaque at the very
+            bottom. The floating nav pill (z-40) sits ON TOP of the scrim's
+            solid bottom portion — creates the effect of content flowing
+            through the scrim and disappearing under the nav.
+          z-30 keeps them above scroll content but below dropdowns (z-100)
           and the nav (z-40). */}
-      <div className="md:hidden fixed top-14 inset-x-0 h-6 pointer-events-none z-30 bg-gradient-to-b from-page dark:from-surface-dark to-transparent" />
-      <div className="md:hidden fixed bottom-20 inset-x-0 h-8 pointer-events-none z-30 bg-gradient-to-t from-page dark:from-surface-dark to-transparent" />
+      <div className="md:hidden fixed top-14 inset-x-0 h-8 pointer-events-none z-30 bg-gradient-to-b from-page dark:from-surface-dark to-transparent" />
+      <div className="md:hidden fixed bottom-0 inset-x-0 h-28 pointer-events-none z-30 bg-gradient-to-t from-page from-40% dark:from-surface-dark to-transparent" />
 
       {/* Mobile bottom nav — floating pill + separated FAB. Hidden on desktop
           (md:hidden inside the component). */}

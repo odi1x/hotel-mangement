@@ -19,6 +19,20 @@ export default function ApartmentsView() {
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Shareable public booking link — duplicated from Layout for mobile
+  // display. On desktop the link lives in Layout's title bar (hidden on
+  // mobile), on mobile we render it as its own card above the grid.
+  const [isCopied, setIsCopied] = useState(false);
+  const shareableLink = typeof window !== 'undefined'
+    ? `${window.location.origin}/book/${user?.adminId || user?.id}`
+    : '';
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareableLink);
+    setIsCopied(true);
+    toast.success('تم نسخ الرابط');
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
   const itemsPerPage = 11;
   const [formData, setFormData] = useState({
       name: '', type: defaultType, description: '', basePrice: '',
@@ -179,9 +193,38 @@ export default function ApartmentsView() {
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
 
+      {/* Mobile-only shareable link card. On desktop this lives in Layout's
+          title bar (hidden on mobile), so guests-of-your-property URL still
+          needs to be reachable from the phone. Admins + staff-with-canBook
+          get to copy it. */}
+      {(user?.role === 'admin' || user?.permissions?.canBook) && (
+        <div className="md:hidden bg-canvas dark:bg-surface-dark-elevated p-2.5 rounded-lg border border-hairline dark:border-hairline-dark-soft flex items-center gap-2 mb-3 shrink-0">
+          <div className="bg-surface-card dark:bg-hairline-dark p-1.5 rounded-md text-ink dark:text-white shrink-0">
+            <Share2 size={14} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-2xs text-muted dark:text-body-dark leading-none mb-0.5">رابط الحجز المباشر</p>
+            <input
+              type="text"
+              readOnly
+              value={shareableLink}
+              className="w-full text-xs bg-transparent border-none outline-none text-body dark:text-body-dark text-left truncate p-0"
+              dir="ltr"
+              onFocus={(e) => e.target.select()}
+            />
+          </div>
+          <button
+            onClick={handleCopyLink}
+            className={`p-2 rounded-md font-semibold shrink-0 transition-colors ${isCopied ? 'bg-primary-active text-white' : 'bg-primary text-white hover:bg-primary-active'}`}
+            title="نسخ الرابط"
+            aria-label={isCopied ? 'تم النسخ' : 'نسخ الرابط'}
+          >
+            {isCopied ? <Check size={14} /> : <Copy size={14} />}
+          </button>
+        </div>
+      )}
 
-
-      <div className="flex-1 overflow-y-auto pb-24 md:pb-0">
+      <div className="flex-1 overflow-y-auto pt-2 md:pt-0 pb-24 md:pb-0">
         {apartments.length === 0 ? (
           <EmptyState
             icon={Building2}
@@ -243,12 +286,13 @@ export default function ApartmentsView() {
                   )}
                 </div>
 
-                {/* Edit / delete — trailing edge, on hover */}
-                <div className="absolute top-3 left-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Edit / delete — trailing edge. Always visible on mobile
+                    (touch devices don't hover); revealed on hover on desktop. */}
+                <div className="absolute top-3 left-3 flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     {(user?.role === 'admin' || user?.permissions?.canEdit) && (
                     <button
                         onClick={(e) => { e.stopPropagation(); handleOpenModal(apt); }}
-                        className="p-1.5 rounded-md bg-canvas/95 text-muted hover:text-ink border border-hairline backdrop-blur-sm transition-colors"
+                        className="p-2 md:p-1.5 rounded-md bg-canvas/95 dark:bg-surface-dark-elevated/95 text-ink dark:text-white hover:text-accent border border-hairline dark:border-hairline-dark-soft backdrop-blur-sm transition-colors"
                         title="تعديل"
                     >
                         <Edit3 size={15} />
@@ -257,7 +301,7 @@ export default function ApartmentsView() {
                     {(user?.role === 'admin' || user?.permissions?.canDelete) && (
                     <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(apt.id); }}
-                        className="p-1.5 rounded-md bg-canvas/95 text-muted hover:text-ink border border-hairline backdrop-blur-sm transition-colors"
+                        className="p-2 md:p-1.5 rounded-md bg-canvas/95 dark:bg-surface-dark-elevated/95 text-ink dark:text-white hover:text-accent border border-hairline dark:border-hairline-dark-soft backdrop-blur-sm transition-colors"
                         title="حذف"
                     >
                         <Trash2 size={15} />
@@ -327,7 +371,7 @@ export default function ApartmentsView() {
         </div>
       )}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
           <form onSubmit={handleSave} className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl overflow-hidden anim-sheet flex flex-col max-h-[90vh]">
             {/* header */}
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">

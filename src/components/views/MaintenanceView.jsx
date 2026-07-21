@@ -284,7 +284,7 @@ export default function MaintenanceView() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0 pb-24 md:pb-0">
+        <div className="flex-1 overflow-y-auto min-h-0 pt-2 md:pt-0 pb-24 md:pb-0">
           {filtered.length === 0 ? (
             <div className="py-20 text-center">
               <div className="mx-auto h-14 w-14 rounded-full bg-surface-soft dark:bg-surface-dark-elevated flex items-center justify-center mb-4">
@@ -409,7 +409,7 @@ export default function MaintenanceView() {
       )}
 
       {confirmDelete && (
-        <div className="fixed inset-0 z-[90] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
+        <div className="fixed inset-0 z-[90] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
           <div className="absolute inset-0" onClick={() => setConfirmDelete(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
             <div className="p-6 text-center">

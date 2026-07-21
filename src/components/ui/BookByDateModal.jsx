@@ -30,7 +30,7 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
   }, [apartments, bookings, dateValue.startDate, dateValue.endDate, hasRange]);
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
       <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl anim-sheet w-full max-w-2xl shadow-soft border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[90vh]">
         <div className="sheet-handle" />
         <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center rounded-t-xl">

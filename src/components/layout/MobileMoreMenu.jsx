@@ -32,7 +32,7 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
     : 0;
 
   return (
-    <div className="h-full overflow-y-auto pb-32 -mx-1 px-1">
+    <div className="h-full overflow-y-auto pt-2 md:pt-0 pb-32 -mx-1 px-1">
       <div className="space-y-2">
         {/* Profile card — tap opens profile settings */}
         <button
