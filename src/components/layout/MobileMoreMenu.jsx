@@ -33,7 +33,6 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
 
   return (
     <div className="h-full overflow-y-auto pb-32 -mx-1 px-1">
-      <div className="scroll-scrim" />
       <div className="space-y-2">
         {/* Profile card — tap opens profile settings */}
         <button
@@ -89,7 +88,6 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
           isDestructive
         />
       </div>
-      <div className="scroll-scrim-bottom" />
     </div>
   );
 }

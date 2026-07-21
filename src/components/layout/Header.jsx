@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { User as UserIcon, Settings, LogOut } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -59,8 +60,8 @@ export default function Header({ openStaffSettings, onNavigate, title }) {
           </div>
         </button>
 
-        {dropdownOpen && (
-          <div className="fixed md:absolute inset-x-3 top-16 md:inset-auto md:top-full md:left-0 md:mt-2 w-auto md:w-48 max-w-md md:max-w-none bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft py-1 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        {dropdownOpen && createPortal(
+          <div className="fixed md:absolute inset-x-3 top-16 md:inset-auto md:top-full md:left-0 md:mt-2 w-auto md:w-48 max-w-md md:max-w-none bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft py-1 overflow-hidden z-[100] anim-dropdown" ref={dropdownRef}>
             <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark-soft sm:hidden">
               <p className="text-sm font-semibold text-ink dark:text-white truncate">{user?.name || user?.username}</p>
               <p className="text-xs text-muted dark:text-body-dark">{user?.role === 'admin' ? 'مدير النظام' : 'موظف'}</p>
@@ -84,7 +85,8 @@ export default function Header({ openStaffSettings, onNavigate, title }) {
               <LogOut className="w-4 h-4" />
               <span>تسجيل الخروج</span>
             </button>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
       </div>

@@ -182,7 +182,6 @@ export default function ApartmentsView() {
 
 
       <div className="flex-1 overflow-y-auto pb-24 md:pb-0">
-        <div className="scroll-scrim" />
         {apartments.length === 0 ? (
           <EmptyState
             icon={Building2}
@@ -304,7 +303,6 @@ export default function ApartmentsView() {
         )}
       </div>
         )}
-        <div className="scroll-scrim-bottom" />
       {totalPages > 1 && (
         <div className="flex justify-center items-center py-4 border-t border-hairline-soft dark:border-hairline-dark shrink-0">
           <div className="nav-pill-group">
@@ -330,7 +328,7 @@ export default function ApartmentsView() {
       )}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-center md:justify-center md:p-4" dir="rtl">
-          <form onSubmit={handleSave} className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+          <form onSubmit={handleSave} className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl overflow-hidden anim-sheet flex flex-col max-h-[90vh]">
             {/* header */}
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
               <div className="flex items-center gap-3">

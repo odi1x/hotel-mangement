@@ -87,7 +87,7 @@ export default function PaymentLedgerModal({ booking, apartment, onClose }) {
     >
       <div className="absolute inset-0" onClick={onClose}></div>
 
-      <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-2xl overflow-hidden border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[92vh] animate-in fade-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 md:zoom-in-95 duration-300">
+      <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-2xl overflow-hidden border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[92vh] anim-sheet">
         <div className="sheet-handle" />
 
         {/* Header */}

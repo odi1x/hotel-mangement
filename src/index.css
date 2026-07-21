@@ -158,28 +158,57 @@
     @apply md:hidden mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-hairline dark:bg-hairline-dark-soft shrink-0;
   }
 
-  /* ---- Scroll scrims — mobile-only gradient overlays for scroll containers.
-     The top scrim lives at the top edge, the bottom scrim at the bottom edge.
-     Together they create the "content flows behind chrome" effect that iOS
-     Safari and Notion mobile use. Each is `sticky` inside a scroll container
-     with no negative margins — so they visually sit ABOVE the scroll content
-     without clipping it in the resting state, while still fading content that
-     scrolls into their band.
-
-     Usage: place at the top / bottom of any `overflow-y-auto` container.
-       <div className="overflow-y-auto">
-         <div className="scroll-scrim" />
-         {content}
-         <div className="scroll-scrim-bottom" />
-       </div>
+  /* ---- Motion utilities — these replace the tailwindcss-animate plugin
+     which wasn't installed. Custom keyframes give us the same iOS-feeling
+     transitions (soft ease-out cubic-bezier, small travel) without adding
+     a dependency to package.json. Each utility is self-contained: it sets
+     opacity/transform initial state via animation, so no need for wrapper
+     classes. `both` on animation-fill-mode keeps the end state after the
+     animation completes.
      -------------------------------------------------------------------- */
-  .scroll-scrim {
-    @apply md:hidden sticky top-0 h-4 -mb-4 pointer-events-none z-10
-           bg-gradient-to-b from-page from-30% dark:from-surface-dark to-transparent;
+  @keyframes anim-fade-up-sm {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
-  .scroll-scrim-bottom {
-    @apply md:hidden sticky bottom-0 h-6 -mt-6 pointer-events-none z-10
-           bg-gradient-to-t from-page from-30% dark:from-surface-dark to-transparent;
+  @keyframes anim-fade-up-md {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes anim-fade-down-sm {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes anim-fade-zoom {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* View tab transition — subtle 4px slide + fade */
+  .anim-tab {
+    animation: anim-fade-up-sm 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  /* Mobile nav entrance — larger 16px slide + fade on first load */
+  .anim-nav {
+    animation: anim-fade-up-md 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  /* Bottom sheet / modal entrance — slide up 16px on mobile, zoom in on desktop */
+  .anim-sheet {
+    animation: anim-fade-up-md 300ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  @media (min-width: 768px) {
+    .anim-sheet {
+      animation: anim-fade-zoom 220ms ease-out both;
+    }
+  }
+  /* Dropdown entrance — small drop-down + fade */
+  .anim-dropdown {
+    animation: anim-fade-down-sm 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  /* Respect reduced motion — no animations if user opted out */
+  @media (prefers-reduced-motion: reduce) {
+    .anim-tab, .anim-nav, .anim-sheet, .anim-dropdown {
+      animation: none;
+    }
   }
 
   /* ---- Modal shells: unified structure ------------------------------------

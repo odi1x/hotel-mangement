@@ -173,10 +173,10 @@ export default function Layout() {
 
           {/* Wrapping with `key={view}` forces React to remount the view
               subtree when switching tabs, which triggers the fade+slide-up
-              enter animation from Tailwind's animate-in family. Subtle but
+              enter animation from our custom .anim-tab keyframe. Subtle but
               gives the mobile tab-swap a native feel. Desktop looks the
               same since duration is quick and translate is tiny. */}
-          <div key={view} className="flex-1 min-h-0 h-full flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-200">
+          <div key={view} className="flex-1 min-h-0 h-full flex flex-col anim-tab">
             {view === 'availability' && <AvailabilityView openBookingForm={handleOpenBookingForm} />}
             {view === 'requests' && <RequestsView openBookingForm={handleOpenBookingForm} />}
             {view === 'apartments' && <ApartmentsView />}
@@ -195,6 +195,18 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Mobile-only fade scrims — positioned as viewport-fixed elements so
+          they don't overlap content at rest (the old sticky-inside-scroll
+          approach had the top scrim hiding first content and the bottom scrim
+          floating 96px above the actual bottom due to safe-area padding).
+          These sit RIGHT below the header and RIGHT above the nav, at
+          exactly the right height, giving the gradient fade effect for
+          content that scrolls past those bands.
+          z-30 keeps them above scrollable content but below dropdowns (z-100)
+          and the nav (z-40). */}
+      <div className="md:hidden fixed top-14 inset-x-0 h-6 pointer-events-none z-30 bg-gradient-to-b from-page dark:from-surface-dark to-transparent" />
+      <div className="md:hidden fixed bottom-20 inset-x-0 h-8 pointer-events-none z-30 bg-gradient-to-t from-page dark:from-surface-dark to-transparent" />
 
       {/* Mobile bottom nav — floating pill + separated FAB. Hidden on desktop
           (md:hidden inside the component). */}

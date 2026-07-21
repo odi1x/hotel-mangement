@@ -256,7 +256,7 @@ export default function SettingsView() {
 
           {/* Identity Tab */}
           {facilityTab === 'identity' && (
-              <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="space-y-6 anim-tab">
                 <div>
                   <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">اسم المنشأة / العقار</label>
                   <input
@@ -304,7 +304,7 @@ export default function SettingsView() {
 
           {/* Legal & Licenses Tab */}
           {facilityTab === 'legal' && (
-              <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="space-y-6 anim-tab">
                 <div>
                   <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">أرقام التراخيص (تراخيص السياحة)</label>
                   <div className="flex flex-col md:flex-row gap-2 mb-4">
@@ -399,7 +399,7 @@ export default function SettingsView() {
 
           {/* Finance Tab */}
           {facilityTab === 'finance' && (
-              <div className="space-y-6 animate-in fade-in duration-300 flex flex-col min-h-[400px]">
+              <div className="space-y-6 anim-tab flex flex-col min-h-[400px]">
                 <div className="bg-surface-soft dark:bg-surface-dark-elevated p-6 rounded-lg border border-hairline dark:border-hairline-dark-soft">
                   <h3 className="text-sm font-semibold text-ink dark:text-white mb-6 flex items-center border-b border-hairline dark:border-hairline-dark-soft pb-3">التكاليف والمصروفات التشغيلية الثابتة (شهرياً)</h3>
 
@@ -601,7 +601,7 @@ export default function SettingsView() {
 
           {/* System Tab */}
           {facilityTab === 'system' && (
-              <div className="space-y-8 animate-in fade-in duration-300">
+              <div className="space-y-8 anim-tab">
 
                   {/* Push Notifications Toggle */}
                   <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg flex justify-between items-center mb-6">

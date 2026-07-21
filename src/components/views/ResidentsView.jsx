@@ -329,7 +329,6 @@ export default function ResidentsView({ openBookingForm }) {
             the middle, actions at the bottom. One direction of layout per
             section, matching the mobile pattern. */}
         <div className="md:hidden flex-1 overflow-y-auto pb-24 md:pb-0 divide-y divide-hairline-soft dark:divide-hairline-dark">
-          <div className="scroll-scrim" />
           {isLoading ? (
             Array.from({ length: 6 }).map((_, idx) => (
               <div key={`skeleton-mobile-${idx}`} className="animate-pulse p-4">
@@ -451,7 +450,6 @@ export default function ResidentsView({ openBookingForm }) {
               );
             })
           )}
-          <div className="scroll-scrim-bottom" />
         </div>
 
         {/* Pagination Controls — Cal.com capsule group */}
