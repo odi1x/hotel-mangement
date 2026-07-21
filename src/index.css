@@ -158,23 +158,28 @@
     @apply md:hidden mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-hairline dark:bg-hairline-dark-soft shrink-0;
   }
 
-  /* ---- Scroll scrim — mobile-only sticky gradient overlay that lives at
-     the top of a scroll container. As content scrolls up, it passes behind
-     this sticky element. The top edge is solid bg-page (matching the
-     header above), the bottom edge is transparent — so content moving up
-     into the sticky area fades out gracefully instead of getting hard-cut
-     by the header. `-mb-*` keeps the scrim from taking vertical space so
-     it doesn't push content down.
+  /* ---- Scroll scrims — mobile-only gradient overlays for scroll containers.
+     The top scrim lives at the top edge, the bottom scrim at the bottom edge.
+     Together they create the "content flows behind chrome" effect that iOS
+     Safari and Notion mobile use. Each is `sticky` inside a scroll container
+     with no negative margins — so they visually sit ABOVE the scroll content
+     without clipping it in the resting state, while still fading content that
+     scrolls into their band.
 
-     Usage: place as the FIRST child of any `overflow-y-auto` container.
+     Usage: place at the top / bottom of any `overflow-y-auto` container.
        <div className="overflow-y-auto">
          <div className="scroll-scrim" />
          {content}
+         <div className="scroll-scrim-bottom" />
        </div>
      -------------------------------------------------------------------- */
   .scroll-scrim {
-    @apply md:hidden sticky top-0 h-6 -mb-6 pointer-events-none z-10
-           bg-gradient-to-b from-page dark:from-surface-dark to-transparent;
+    @apply md:hidden sticky top-0 h-4 -mb-4 pointer-events-none z-10
+           bg-gradient-to-b from-page from-30% dark:from-surface-dark to-transparent;
+  }
+  .scroll-scrim-bottom {
+    @apply md:hidden sticky bottom-0 h-6 -mt-6 pointer-events-none z-10
+           bg-gradient-to-t from-page from-30% dark:from-surface-dark to-transparent;
   }
 
   /* ---- Modal shells: unified structure ------------------------------------

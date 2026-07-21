@@ -171,7 +171,12 @@ export default function Layout() {
           )}
         </div>
 
-          <div className="flex-1 min-h-0 h-full flex flex-col">
+          {/* Wrapping with `key={view}` forces React to remount the view
+              subtree when switching tabs, which triggers the fade+slide-up
+              enter animation from Tailwind's animate-in family. Subtle but
+              gives the mobile tab-swap a native feel. Desktop looks the
+              same since duration is quick and translate is tiny. */}
+          <div key={view} className="flex-1 min-h-0 h-full flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-200">
             {view === 'availability' && <AvailabilityView openBookingForm={handleOpenBookingForm} />}
             {view === 'requests' && <RequestsView openBookingForm={handleOpenBookingForm} />}
             {view === 'apartments' && <ApartmentsView />}

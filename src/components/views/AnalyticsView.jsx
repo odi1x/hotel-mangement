@@ -584,6 +584,7 @@ export default function AnalyticsView() {
       {/* End of main content — modal is moved OUTSIDE the scroll wrapper so
           it renders as viewport-fixed, not inside the scrolling area. */}
       </div>{/* /space-y flow wrapper */}
+      <div className="scroll-scrim-bottom" />
       </div>{/* /scroll zone */}
       </div>{/* /outer h-full flex flex-col */}
 

@@ -304,6 +304,7 @@ export default function ApartmentsView() {
         )}
       </div>
         )}
+        <div className="scroll-scrim-bottom" />
       {totalPages > 1 && (
         <div className="flex justify-center items-center py-4 border-t border-hairline-soft dark:border-hairline-dark shrink-0">
           <div className="nav-pill-group">

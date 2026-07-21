@@ -451,6 +451,7 @@ export default function ResidentsView({ openBookingForm }) {
               );
             })
           )}
+          <div className="scroll-scrim-bottom" />
         </div>
 
         {/* Pagination Controls — Cal.com capsule group */}

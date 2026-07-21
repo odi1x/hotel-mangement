@@ -407,6 +407,7 @@ export default function PricingView() {
               })}
             </ul>
           )}
+          <div className="scroll-scrim-bottom" />
         </div>
       </div>
 

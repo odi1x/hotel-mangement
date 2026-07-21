@@ -279,6 +279,7 @@ export default function BalancesView() {
               })}
             </ul>
           )}
+          <div className="scroll-scrim-bottom" />
         </div>
       </div>
 

@@ -398,6 +398,7 @@ export default function MaintenanceView() {
               })}
             </ul>
           )}
+          <div className="scroll-scrim-bottom" />
         </div>
       </div>
 

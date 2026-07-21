@@ -60,15 +60,15 @@ export default function Header({ openStaffSettings, onNavigate, title }) {
         </button>
 
         {dropdownOpen && (
-          <div className="absolute left-0 mt-2 w-48 bg-canvas dark:bg-surface-dark-elevated rounded-lg shadow-soft border border-hairline dark:border-[#2e2e2e] py-1 overflow-hidden z-50">
-            <div className="px-4 py-3 border-b border-hairline-soft dark:border-[#2e2e2e] sm:hidden">
+          <div className="fixed md:absolute inset-x-3 top-16 md:inset-auto md:top-full md:left-0 md:mt-2 w-auto md:w-48 max-w-md md:max-w-none bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft py-1 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark-soft sm:hidden">
               <p className="text-sm font-semibold text-ink dark:text-white truncate">{user?.name || user?.username}</p>
-              <p className="text-xs text-muted dark:text-[#a1a1aa]">{user?.role === 'admin' ? 'مدير النظام' : 'موظف'}</p>
+              <p className="text-xs text-muted dark:text-body-dark">{user?.role === 'admin' ? 'مدير النظام' : 'موظف'}</p>
             </div>
 
             <button
               onClick={handleOpenSettings}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-[#242424] hover:text-ink dark:hover:text-white transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white transition-colors"
             >
               <Settings className="w-4 h-4" />
               <span>إعدادات الحساب</span>

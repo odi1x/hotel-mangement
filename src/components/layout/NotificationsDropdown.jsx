@@ -87,7 +87,7 @@ export default function NotificationsDropdown({ onNavigate }) {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-80 sm:w-96 bg-canvas dark:bg-surface-dark-elevated rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden z-50 transform origin-top-left transition-all">
+        <div className="fixed md:absolute inset-x-3 top-16 md:inset-auto md:top-full md:left-0 md:mt-2 w-auto md:w-80 lg:w-96 max-w-md md:max-w-none mx-auto md:mx-0 bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden z-50 transform origin-top transition-all animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark-soft flex justify-between items-center">
             <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2">
               الإشعارات

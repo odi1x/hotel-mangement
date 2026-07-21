@@ -89,6 +89,7 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
           isDestructive
         />
       </div>
+      <div className="scroll-scrim-bottom" />
     </div>
   );
 }
