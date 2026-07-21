@@ -183,9 +183,21 @@
     to   { opacity: 1; transform: scale(1); }
   }
 
-  /* View tab transition — subtle 4px slide + fade */
+  /* View tab transition — opacity-only fade. Deliberately no transform:
+     if the view container has any non-none transform in its final state
+     (even translateY(0)), it becomes a "containing block" for descendant
+     `fixed` elements. That means modals rendered from inside a view
+     (MaintenanceIssueForm, PricingRuleForm, inline analytics modal, etc.)
+     get trapped inside the view container's box and can't reach the
+     viewport — which means they can't cover the header, and the header
+     doesn't get blurred by their backdrop. Opacity has no such side
+     effect. */
+  @keyframes anim-fade-only {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
   .anim-tab {
-    animation: anim-fade-up-sm 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+    animation: anim-fade-only 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
   }
   /* Mobile nav entrance — larger 16px slide + fade on first load */
   .anim-nav {
@@ -211,17 +223,14 @@
     }
   }
 
-  /* ---- Hide the mobile floating nav when a modal / bottom sheet is open.
-     Modals mark themselves with `data-modal-active`. When the browser
-     detects any such element in the DOM (via CSS :has()), it hides the
-     nav wrapper. This prevents the nav from showing through the modal
-     backdrop's semi-transparent overlay.
-
-     :has() is supported in Chrome 105+, Safari 15.4+, Firefox 121+ —
-     good enough for our target audience (modern mobile browsers).
-     Falls back to nav still showing on very old browsers, which is
-     the same as the current behavior — no regression. */
-  body:has([data-modal-active]) .mobile-nav-shield {
+  /* ---- Hide the mobile floating nav AND the fade scrims when a modal /
+     bottom sheet is open. Modals mark themselves with `data-modal-active`.
+     When the browser detects any such element in the DOM (via CSS :has()),
+     it hides both the nav wrapper and the scrims. Prevents the nav from
+     showing through the modal backdrop and the scrims from leaking through
+     the semi-transparent backdrop overlay. */
+  body:has([data-modal-active]) .mobile-nav-shield,
+  body:has([data-modal-active]) .mobile-scrim-shield {
     visibility: hidden;
     pointer-events: none;
   }

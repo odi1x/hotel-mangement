@@ -196,18 +196,18 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* Mobile-only fade scrims — fixed at viewport level:
-          - TOP scrim: right below the header (top-14), gradient fades DOWN.
-            Content scrolling into the top of the view fades under it.
-          - BOTTOM scrim: extends from viewport bottom UP through the nav
-            area (bottom-0 h-28). Gradient fades UP, opaque at the very
-            bottom. The floating nav pill (z-40) sits ON TOP of the scrim's
-            solid bottom portion — creates the effect of content flowing
-            through the scrim and disappearing under the nav.
-          z-30 keeps them above scroll content but below dropdowns (z-100)
-          and the nav (z-40). */}
-      <div className="md:hidden fixed top-14 inset-x-0 h-8 pointer-events-none z-30 bg-gradient-to-b from-page dark:from-surface-dark to-transparent" />
-      <div className="md:hidden fixed bottom-0 inset-x-0 h-28 pointer-events-none z-30 bg-gradient-to-t from-page from-40% dark:from-surface-dark to-transparent" />
+      {/* Mobile-only fade scrims — fixed at viewport level, aligned to
+          exactly the header bottom / nav top. Both get `mobile-scrim-shield`
+          so the CSS :has() rule hides them when any modal is open.
+          - TOP: right below header (top-14 h-6 = 24px band). Ends at y=80.
+            Content starts at y=80 too (main pt-4 + scroll pt-2 = 24px below
+            header). No overlap at rest → no clipping. When scrolled,
+            content moves up into the scrim and fades gracefully.
+          - BOTTOM: extends from viewport bottom (bottom-0 h-28). Solid
+            bottom 40%, fades up. Nav pill (z-40) sits ON TOP of scrim
+            (z-30) — content flows through and disappears under the nav. */}
+      <div className="md:hidden fixed top-14 inset-x-0 h-6 pointer-events-none z-30 bg-gradient-to-b from-page dark:from-surface-dark to-transparent mobile-scrim-shield" />
+      <div className="md:hidden fixed bottom-0 inset-x-0 h-28 pointer-events-none z-30 bg-gradient-to-t from-page from-40% dark:from-surface-dark to-transparent mobile-scrim-shield" />
 
       {/* Mobile bottom nav — floating pill + separated FAB. Hidden on desktop
           (md:hidden inside the component). */}
