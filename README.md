@@ -1,110 +1,88 @@
-# Rent Flow — Mobile Followup 6: Portal All Modals (Header Blur Fix, App-Wide)
+# Rent Flow — Mobile Nav FAB Morph Animation
 
-You were right — the header-blur issue affected every modal in the app, not just Analytics. Each one needed the same portal treatment I applied to the breakdown modal.
+1 file. The FAB now morphs in/out smoothly when transitioning between "primary content" tabs (with FAB visible) and "more" (no FAB).
 
-## What went wrong before
+## What changed
 
-Even after removing the `transform` from `.anim-tab`, the modals rendered from inside views were still trapped in some ancestor stacking context. I don't know exactly which one — could be `overflow-hidden` interacting with iOS Safari, could be an implicit `will-change` from any animated ancestor, could be something else. The debugging rabbit hole is deep.
+The FAB used to just appear/disappear instantly (`{showFAB && <button/>}`). Now it's always in the DOM but its width, margin, opacity, and scale all transition together — feels like the circle is being absorbed into the pill nav bar.
 
-## What I did instead
+### Before
 
-Portaled **all 14 modals** to `document.body`. This bypasses every ancestor's stacking context by rendering the modal at the root of the document. `fixed inset-0` reaches the true viewport regardless of what's above in the DOM. Same technique that fixed the analytics modal and the notification/profile dropdowns.
-
-## Modals portaled
-
-**Standalone modal components (7):**
-- `BookingForm.jsx` — the main "add/edit booking" form
-- `BookByDateModal.jsx` — the "new booking" flow triggered by FAB
-- `MaintenanceIssueForm.jsx` — used in image 1
-- `PricingRuleForm.jsx` — used in image 2
-- `StaffFormModal.jsx` — used in Settings → Staff
-- `ProfileSettingsModal.jsx` — profile editor
-- `PaymentLedgerModal.jsx` — payment history
-
-**Inline modals in views (7):**
-- `AnalyticsView` — breakdown modal (already portaled last patch)
-- `ApartmentsView` — apartment edit modal (image 3)
-- `AvailabilityView` — day-bookings list + booking detail (2 modals)
-- `MaintenanceView` — delete confirm
-- `PricingView` — delete confirm
-- `ResidentsView` — checkout modal (image 4-adjacent), note modal (image 4), delete confirm, print selector (image 5)
-
-Total: 14 modals now portal to document.body.
-
-Also cleaned up one leftover hex leak (`border-[#2e2e2e]` in MaintenanceIssueForm → `border-hairline-dark-soft`).
-
-## How this looks in code
-
-Standalone modal:
 ```jsx
-import { createPortal } from 'react-dom';
-
-export default function MyModal({...}) {
-  return createPortal(
-    <div className="fixed inset-0 ...">
-      ...
-    </div>,
-    document.body
-  );
-}
-```
-
-Inline conditional modal:
-```jsx
-{isOpen && createPortal(
-  <div className="fixed inset-0 ...">
-    ...
-  </div>,
-  document.body
+{showFAB && (
+  <button className="w-14 h-14 ...">
+    <Plus />
+  </button>
 )}
 ```
 
-## Files touched (13)
+Conditional render. FAB pops in/out. Nav pill snaps to new width. Jarring.
 
-- `src/components/ui/BookingForm.jsx`
-- `src/components/ui/BookByDateModal.jsx`
-- `src/components/ui/MaintenanceIssueForm.jsx`
-- `src/components/ui/PricingRuleForm.jsx`
-- `src/components/ui/StaffFormModal.jsx`
-- `src/components/ui/ProfileSettingsModal.jsx`
-- `src/components/ui/PaymentLedgerModal.jsx`
-- `src/components/views/ApartmentsView.jsx`
-- `src/components/views/AvailabilityView.jsx`
-- `src/components/views/MaintenanceView.jsx`
-- `src/components/views/PricingView.jsx`
-- `src/components/views/ResidentsView.jsx`
+### After
 
-(AnalyticsView + ShareLinkModal were already portaled in previous patches — unchanged this round.)
+```jsx
+<button
+  className={`h-14 rounded-full ... transition-[width,margin,opacity,transform]
+              duration-[350ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
+    showFAB
+      ? 'w-14 mr-3 opacity-100 scale-100'
+      : 'w-0 mr-0 opacity-0 scale-75 pointer-events-none'
+  }`}
+>
+  <Plus />
+</button>
+```
+
+Always rendered. The 4 animated properties:
+
+| Property | Visible | Hidden |
+|---|---|---|
+| `width` | 56px | 0px |
+| `margin-right` | 12px | 0px |
+| `opacity` | 1 | 0 |
+| `scale` | 100% | 75% |
+
+- **Width + margin collapsing together** frees up 68px of horizontal space — the pill's `flex-1` naturally expands into it, so the pill smoothly widens as the FAB shrinks. No manual math required.
+- **Opacity** fades the icon out so it doesn't sit as a visible thin sliver during the collapse.
+- **Scale-75** during collapse makes the FAB feel like it's being pulled into the pill's edge rather than getting squished.
+- **`overflow-hidden`** on the button keeps the `Plus` icon from spilling out when width shrinks below icon size.
+- **`pointer-events-none`** when hidden means you can't accidentally tap the invisible button.
+- **`aria-hidden={!showFAB}` + `tabIndex={-1}`** when hidden — proper accessibility, screen readers ignore it.
+
+### The visual effect
+
+**Going to More** (pressing المزيد from any primary tab):
+1. FAB starts shrinking + fading + scaling down
+2. Pill expands to fill the freed space (via flex-1)
+3. Circle disappears into the pill's leading edge
+
+**Going back from More** (pressing any primary tab):
+1. Pill starts compressing
+2. FAB grows from a small dot + fades in + scales up
+3. Circle emerges from underneath the pill's leading edge
+
+Both directions take 350ms with iOS-quality quart-out easing (`cubic-bezier(0.32, 0.72, 0, 1)`). Feels snappy but intentional — same easing curve I use for the modal `.anim-sheet` and the tab `.anim-tab` transitions.
+
+## Files touched
+
+- `src/components/layout/MobileBottomNav.jsx` — only file
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-followup6.zip -d .
+unzip -o rentflow-nav-morph.zip -d .
 cp -r patch/src  ./
-rm -rf patch rentflow-mobile-followup6.zip
+rm -rf patch rentflow-nav-morph.zip
 
 git add -A
-git commit -m "mobile followup 6: portal every modal — fixes header-blur app-wide"
+git commit -m "mobile: FAB morph animation on nav transition"
 git push origin design-md-changes
 ```
 
-## After deploy — what to verify
+## After deploy — what to look at
 
-Open **any** modal on mobile and check:
-- The header (profile pic, bell, title) should be blurred behind the backdrop
-- The floating nav should be hidden
-- The bottom scrim should be hidden
-- No visible calendar/content peeking around the modal edges
-
-Specifically test the ones from your screenshots:
-1. **Maintenance** → tap "بلاغ جديد" (image 1)
-2. **Pricing** → tap "قاعدة جديدة" (image 2)
-3. **Apartments** → tap edit on any apartment (image 3)
-4. **Residents** → tap "ملاحظات" on a booking (image 4)
-5. **Residents** → tap print icon on a booking (image 5)
-
-All should now blur the header consistently.
-
-## What I learned
-
-Portals are the right primitive for modals period. I should have applied them to every modal in the initial mobile pass rather than fighting stacking context issues after the fact. Now the app is more resilient — if someone adds a new transformed ancestor later (for animations or visual effects), modals won't break.
+1. On mobile, from any primary tab (Availability / Requests / Residents), tap **المزيد**.
+2. Watch the "+" circle — it should shrink, fade, and scale down as the pill nav expands into its space. Feels like one continuous morph.
+3. From the More menu, tap any other tab.
+4. Watch the pill nav — it should compress as the FAB emerges + fades in + scales up from its leading edge.
+5. Try tapping fast between tabs — the animations should interrupt gracefully (Tailwind's `transition-*` on the class change means each transition starts from wherever the previous one left off).

@@ -47,7 +47,7 @@ export default function MobileBottomNav({ view, setView, onNewBooking }) {
   const showFAB = primaryContentTabs.includes(view);
 
   return (
-    <div className="md:hidden fixed bottom-4 inset-x-4 z-40 flex items-center gap-3 anim-nav mobile-nav-shield">
+    <div className="md:hidden fixed bottom-4 inset-x-4 z-40 flex items-center anim-nav mobile-nav-shield">
       <div className="flex-1 flex items-center gap-1 bg-canvas/85 dark:bg-surface-dark/85 backdrop-blur-lg border border-hairline/60 dark:border-hairline-dark/60 rounded-full h-14 shadow-lift px-1">
         <TabItem
           icon={CalendarDays}
@@ -77,15 +77,28 @@ export default function MobileBottomNav({ view, setView, onNewBooking }) {
         />
       </div>
 
-      {showFAB && (
-        <button
-          onClick={onNewBooking}
-          className="w-14 h-14 shrink-0 rounded-full bg-accent text-white shadow-lift flex items-center justify-center hover:bg-accent-strong transition-colors active:scale-95"
-          aria-label="حجز جديد"
-        >
-          <Plus size={26} strokeWidth={2.5} />
-        </button>
-      )}
+      {/* FAB always renders but morphs its size / opacity / scale based on
+          whether it should show. When collapsing (view→more): width shrinks
+          from 56px to 0, right-margin shrinks from 12px to 0, opacity fades,
+          scale down slightly — feels like the circle is "absorbed" into
+          the pill. When expanding back: reverse — circle pops out of the
+          pill's left edge as it compresses. Pill's flex-1 auto-fills the
+          reclaimed space smoothly during either transition.
+          iOS-quality easing (quart-out). 350ms — long enough to feel
+          intentional, short enough to feel snappy. */}
+      <button
+        onClick={onNewBooking}
+        aria-label="حجز جديد"
+        aria-hidden={!showFAB}
+        tabIndex={showFAB ? 0 : -1}
+        className={`shrink-0 h-14 rounded-full bg-accent text-white shadow-lift flex items-center justify-center overflow-hidden transition-[width,margin,opacity,transform] duration-[350ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-accent-strong active:scale-95 ${
+          showFAB
+            ? 'w-14 mr-3 opacity-100 scale-100'
+            : 'w-0 mr-0 opacity-0 scale-75 pointer-events-none'
+        }`}
+      >
+        <Plus size={26} strokeWidth={2.5} className="shrink-0" />
+      </button>
     </div>
   );
 }
