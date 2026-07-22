@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { User as UserIcon, Settings, LogOut } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
-import ImageUpload from '../ui/ImageUpload';
-import toast from 'react-hot-toast';
 
-export default function Header({ openStaffSettings, onNavigate }) {
+export default function Header({ openStaffSettings, onNavigate, title }) {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -26,7 +25,19 @@ export default function Header({ openStaffSettings, onNavigate }) {
   };
 
   return (
-    <header className="bg-canvas dark:bg-surface-dark border-b border-hairline dark:border-[#242424] py-3 px-8 flex justify-end items-center gap-4 relative z-20">
+    <header className="bg-page dark:bg-surface-dark py-2 px-4 md:px-8 flex justify-between md:justify-end items-center gap-3 relative z-20">
+      {/* Mobile title on the leading (RTL right) edge — this is what puts the
+          page heading right next to the top corner, instead of buried 24px+
+          below in the main content area. Truncates with ellipsis for long
+          titles ("المستحقات المالية" etc.). Hidden on desktop where the big
+          title in main padding still owns the visual hierarchy. */}
+      {title && (
+        <h1 className="md:hidden text-lg font-bold tracking-tight text-ink dark:text-white leading-tight truncate min-w-0 flex-1">
+          {title}
+        </h1>
+      )}
+
+      <div className="flex items-center gap-4 shrink-0">
       <NotificationsDropdown onNavigate={onNavigate} />
       <div className="relative" ref={dropdownRef}>
         <button
@@ -35,7 +46,7 @@ export default function Header({ openStaffSettings, onNavigate }) {
         >
           <div className="text-left hidden sm:block">
             <p className="text-sm font-semibold text-ink dark:text-white">{user?.name || user?.username}</p>
-            <p className="text-xs text-muted dark:text-[#a1a1aa]">
+            <p className="text-xs text-muted dark:text-body-dark">
               {user?.role === 'admin' ? 'مدير النظام' : 'موظف'}
             </p>
           </div>
@@ -44,21 +55,21 @@ export default function Header({ openStaffSettings, onNavigate }) {
             {user?.profilePicture ? (
               <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-              <UserIcon className="w-5 h-5 text-muted dark:text-[#a1a1aa]" />
+              <UserIcon className="w-5 h-5 text-muted dark:text-body-dark" />
             )}
           </div>
         </button>
 
-        {dropdownOpen && (
-          <div className="absolute left-0 mt-2 w-48 bg-canvas dark:bg-surface-dark-elevated rounded-lg shadow-soft border border-hairline dark:border-[#2e2e2e] py-1 overflow-hidden z-50">
-            <div className="px-4 py-3 border-b border-hairline-soft dark:border-[#2e2e2e] sm:hidden">
+        {dropdownOpen && createPortal(
+          <div className="fixed md:absolute inset-x-3 top-16 md:inset-auto md:top-full md:left-0 md:mt-2 w-auto md:w-48 max-w-md md:max-w-none bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft py-1 overflow-hidden z-[100] anim-dropdown" ref={dropdownRef}>
+            <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark-soft sm:hidden">
               <p className="text-sm font-semibold text-ink dark:text-white truncate">{user?.name || user?.username}</p>
-              <p className="text-xs text-muted dark:text-[#a1a1aa]">{user?.role === 'admin' ? 'مدير النظام' : 'موظف'}</p>
+              <p className="text-xs text-muted dark:text-body-dark">{user?.role === 'admin' ? 'مدير النظام' : 'موظف'}</p>
             </div>
 
             <button
               onClick={handleOpenSettings}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-[#242424] hover:text-ink dark:hover:text-white transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white transition-colors"
             >
               <Settings className="w-4 h-4" />
               <span>إعدادات الحساب</span>
@@ -69,13 +80,15 @@ export default function Header({ openStaffSettings, onNavigate }) {
                 setDropdownOpen(false);
                 logout();
               }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-[#242424] hover:text-ink dark:hover:text-white transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span>تسجيل الخروج</span>
             </button>
-          </div>
+          </div>,
+          document.body
         )}
+      </div>
       </div>
     </header>
   );

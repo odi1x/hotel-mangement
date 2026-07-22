@@ -14,48 +14,55 @@ export const DataProvider = ({ children }) => {
   const [bookings, setBookings] = useState([]);
   const [licenses, setLicenses] = useState([]);
   const [staffExpenses, setStaffExpenses] = useState([]);
+  const [maintenanceIssues, setMaintenanceIssues] = useState([]);
+  const [pricingRules, setPricingRules] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
   const [loading] = useState(false);
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
 
-  const API_BASE_URL = '/api'; // Configured via Vite proxy locally or direct path on Vercel
+  const API_BASE_URL = '/api';
 
   const fetchApartments = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/apartments`);
       setApartments(res.data);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
-
 
   const fetchStaffExpenses = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/staff-expenses`);
       setStaffExpenses(res.data);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const fetchLicenses = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/licenses`);
       setLicenses(res.data);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const fetchBookings = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/bookings`);
       setBookings(res.data);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchMaintenance = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=maintenance`);
+      setMaintenanceIssues(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchPricingRules = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=pricing-rules`);
+      setPricingRules(res.data);
+    } catch (err) { console.error(err); }
   };
 
   const fetchAnalytics = async () => {
@@ -71,31 +78,23 @@ export const DataProvider = ({ children }) => {
       }
       const res = await axios.get(`${API_BASE_URL}/analytics`, { params });
       setAnalytics(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAnalyticsLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setIsAnalyticsLoading(false); }
   };
 
   useEffect(() => {
     if (token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchApartments();
-
       fetchBookings();
-
       fetchLicenses();
-
       fetchStaffExpenses();
+      fetchMaintenance();
+      fetchPricingRules();
     }
   }, [token]);
 
   useEffect(() => {
-    if (token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchAnalytics();
-    }
+    if (token) fetchAnalytics();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, analyticsFilter, bookings]);
 
@@ -103,9 +102,7 @@ export const DataProvider = ({ children }) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/apartments`, apartmentData);
       setApartments([res.data, ...apartments]);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const addLicense = async (licenseNumber, expirationDate) => {
@@ -113,10 +110,7 @@ export const DataProvider = ({ children }) => {
       const res = await axios.post(`${API_BASE_URL}/licenses`, { licenseNumber, expirationDate });
       setLicenses([res.data, ...licenses]);
       toast.success('تمت إضافة الترخيص بنجاح');
-    } catch (err) {
-      console.error(err);
-      toast.error('حدث خطأ أثناء إضافة الترخيص');
-    }
+    } catch (err) { console.error(err); toast.error('حدث خطأ أثناء إضافة الترخيص'); }
   };
 
   const deleteLicense = async (id) => {
@@ -124,50 +118,36 @@ export const DataProvider = ({ children }) => {
       await axios.delete(`${API_BASE_URL}/licenses?id=${id}`);
       setLicenses(licenses.filter(l => l.id !== id));
       toast.success('تم حذف الترخيص بنجاح');
-    } catch (err) {
-      console.error(err);
-      toast.error('حدث خطأ أثناء حذف الترخيص');
-    }
+    } catch (err) { console.error(err); toast.error('حدث خطأ أثناء حذف الترخيص'); }
   };
 
   const updateApartment = async (apartmentData) => {
     try {
       const res = await axios.put(`${API_BASE_URL}/apartments`, apartmentData);
       setApartments(apartments.map(a => a.id === apartmentData.id ? res.data : a));
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const deleteApartment = async (id) => {
     try {
       await axios.delete(`${API_BASE_URL}/apartments?id=${id}`);
       setApartments(apartments.filter(a => a.id !== id));
-      // Re-fetch bookings as cascading delete happens on server
       fetchBookings();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const addBooking = async (bookingData) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/bookings`, bookingData);
       setBookings([res.data, ...bookings]);
-    } catch (err) {
-      console.error(err);
-      throw err; // Re-throw to allow form to catch and display error
-    }
+    } catch (err) { console.error(err); throw err; }
   };
 
   const updateBooking = async (bookingData) => {
-      try {
-        const res = await axios.put(`${API_BASE_URL}/bookings`, bookingData);
-        setBookings(bookings.map(b => b.id === bookingData.id ? res.data : b));
-      } catch (err) {
-        console.error(err);
-        throw err;
-      }
+    try {
+      const res = await axios.put(`${API_BASE_URL}/bookings`, bookingData);
+      setBookings(bookings.map(b => b.id === bookingData.id ? res.data : b));
+    } catch (err) { console.error(err); throw err; }
   };
 
   const checkoutBooking = async (id) => {
@@ -175,24 +155,137 @@ export const DataProvider = ({ children }) => {
       const res = await axios.put(`${API_BASE_URL}/bookings`, { id, isCheckout: true });
       setBookings(bookings.map(b => b.id === id ? res.data : b));
       toast.success('تم تسجيل الخروج المبكر بنجاح');
-      fetchApartments(); // re-fetch apartments to update needsCleaning status
-    } catch (err) {
-      console.error(err);
-      toast.error('حدث خطأ أثناء تسجيل الخروج');
-      throw err;
-    }
+      fetchApartments();
+    } catch (err) { console.error(err); toast.error('حدث خطأ أثناء تسجيل الخروج'); throw err; }
   };
 
   const deleteBooking = async (id) => {
     try {
       await axios.delete(`${API_BASE_URL}/bookings?id=${id}`);
       setBookings(bookings.filter(b => b.id !== id));
+    } catch (err) { console.error(err); }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /*  Payments                                                          */
+  /* ------------------------------------------------------------------ */
+
+  const addPayment = async (bookingId, paymentData) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/payments`, { bookingId, ...paymentData });
+      setBookings(prev => prev.map(b => (
+        b.id === bookingId
+          ? { ...b, payments: [res.data, ...(b.payments || [])] }
+          : b
+      )));
+      toast.success('تم تسجيل الدفعة');
+      return res.data;
     } catch (err) {
       console.error(err);
+      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء تسجيل الدفعة');
+      throw err;
     }
   };
 
+  const deletePayment = async (bookingId, paymentId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/payments?id=${paymentId}`);
+      setBookings(prev => prev.map(b => (
+        b.id === bookingId
+          ? { ...b, payments: (b.payments || []).filter(p => p.id !== paymentId) }
+          : b
+      )));
+      toast.success('تم حذف الدفعة');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء الحذف');
+      throw err;
+    }
+  };
 
+  /* ------------------------------------------------------------------ */
+  /*  Maintenance                                                       */
+  /* ------------------------------------------------------------------ */
+
+  const addMaintenanceIssue = async (data) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=maintenance`, data);
+      setMaintenanceIssues(prev => [res.data, ...prev]);
+      toast.success('تم إضافة البلاغ');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في إضافة البلاغ');
+      throw err;
+    }
+  };
+
+  const updateMaintenanceIssue = async (data) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=maintenance`, data);
+      setMaintenanceIssues(prev => prev.map(i => i.id === data.id ? res.data : i));
+      toast.success('تم تحديث البلاغ');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في تحديث البلاغ');
+      throw err;
+    }
+  };
+
+  const deleteMaintenanceIssue = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=maintenance&id=${id}`);
+      setMaintenanceIssues(prev => prev.filter(i => i.id !== id));
+      toast.success('تم حذف البلاغ');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الحذف');
+      throw err;
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /*  Pricing rules                                                     */
+  /* ------------------------------------------------------------------ */
+
+  const addPricingRule = async (data) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=pricing-rules`, data);
+      setPricingRules(prev => [...prev, res.data].sort((a, b) => new Date(a.startDate) - new Date(b.startDate)));
+      toast.success('تم إنشاء القاعدة السعرية');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في إنشاء القاعدة');
+      throw err;
+    }
+  };
+
+  const updatePricingRule = async (data) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=pricing-rules`, data);
+      setPricingRules(prev => prev.map(r => r.id === data.id ? res.data : r));
+      toast.success('تم حفظ التعديلات');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الحفظ');
+      throw err;
+    }
+  };
+
+  const deletePricingRule = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=pricing-rules&id=${id}`);
+      setPricingRules(prev => prev.filter(r => r.id !== id));
+      toast.success('تم حذف القاعدة');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الحذف');
+      throw err;
+    }
+  };
 
   return (
     <DataContext.Provider value={{
@@ -215,6 +308,21 @@ export const DataProvider = ({ children }) => {
       fetchApartments,
       staffExpenses,
       fetchStaffExpenses,
+      addPayment,
+      deletePayment,
+
+      maintenanceIssues,
+      fetchMaintenance,
+      addMaintenanceIssue,
+      updateMaintenanceIssue,
+      deleteMaintenanceIssue,
+
+      pricingRules,
+      fetchPricingRules,
+      addPricingRule,
+      updatePricingRule,
+      deletePricingRule,
+
       loading,
       isAnalyticsLoading
     }}>

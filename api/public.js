@@ -66,13 +66,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'Turnstile token required' });
       }
 
-      // Validate Turnstile token with Cloudflare
+      // Validate Turnstile token with Cloudflare.
+      // TURNSTILE_SECRET_KEY comes from Vercel env vars. If not set, we use
+      // Cloudflare's public test secret which pairs with the test site key
+      // and always succeeds — that's why users see the "For testing only"
+      // banner. Set both VITE_TURNSTILE_SITE_KEY (client) and
+      // TURNSTILE_SECRET_KEY (server) in Vercel to enable real bot protection.
+      const secret = process.env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
       const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `secret=1x0000000000000000000000000000000AA&response=${turnstileToken}`,
+        body: `secret=${secret}&response=${turnstileToken}`,
       });
 
       const verifyData = await verifyRes.json();

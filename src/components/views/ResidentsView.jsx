@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
+import EmptyState from '../ui/EmptyState';
+import { computeBookingTotals } from '../../lib/paymentUtils';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
@@ -170,36 +173,36 @@ export default function ResidentsView({ openBookingForm }) {
 
   return (
     <>
-      <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-[#242424] overflow-hidden flex flex-col min-h-0">
-        <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
-          <h3 className="font-semibold tracking-tight text-ink dark:text-white">سجلات الحجز الكاملة</h3>
-          <div className="relative w-64">
+      <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
+        <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+          <h3 className="font-semibold tracking-tight text-ink dark:text-white shrink-0">سجلات الحجز الكاملة</h3>
+          <div className="relative flex-1 md:w-64 md:flex-none">
             <input
               type="text"
               placeholder="البحث بالاسم أو رقم الجوال..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              className="input-field pl-10 pr-4 py-2"
+              className="input-field pl-10 pr-4 py-2 w-full"
             />
             <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
           </div>
         </div>
-        <div className="overflow-x-auto overflow-y-auto flex-1 h-full min-h-0">
+        <div className="overflow-x-auto overflow-y-auto flex-1 h-full min-h-0 hidden md:block">
           <table className="w-full text-right">
             <thead>
-              <tr className="text-xs font-semibold text-muted dark:text-[#a1a1aa] border-b border-gray-100 dark:border-[#242424]">
-                <th className="px-6 py-4">معلومات النزيل</th>
-                <th className="px-6 py-4">الاتصال والهوية</th>
-                <th className="px-6 py-4">الوحدة / السعر</th>
+              <tr className="text-xs font-semibold text-muted dark:text-body-dark border-b border-hairline-soft dark:border-hairline-dark">
+                <th className="px-6 py-4">النزيل</th>
+                <th className="px-6 py-4">الاتصال</th>
+                <th className="px-6 py-4">الوحدة</th>
                 <th className="px-6 py-4">الفترة</th>
                 <th className="px-6 py-4">الحالة</th>
                 <th className="px-6 py-4 text-center">الإجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-[#242424] flex-1">
+            <tbody className="divide-y divide-hairline-soft dark:divide-hairline-dark flex-1">
               {isLoading ? (
                 Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
-                  <tr key={`skeleton-${idx}`} className="animate-pulse border-b border-gray-100 dark:border-[#242424]">
+                  <tr key={`skeleton-${idx}`} className="animate-pulse border-b border-hairline-soft dark:border-hairline-dark">
                     <td className="px-6 py-4"><div className="h-4 bg-surface-card dark:bg-surface-dark-elevated rounded w-24"></div></td>
                     <td className="px-6 py-4">
                       <div className="h-4 bg-surface-card dark:bg-surface-dark-elevated rounded w-32 mb-2"></div>
@@ -225,32 +228,34 @@ export default function ResidentsView({ openBookingForm }) {
                         {booking.residentName}
 
                       </div>
-                      <div className="text-[10px] text-muted-soft mt-0.5">عبر: {booking.source}</div>
+                      <div className="text-2xs text-muted-soft mt-0.5">عبر: {booking.source}</div>
                       {booking.creatorName && (
-                        <div className="text-[10px] text-muted mt-0.5">بواسطة: {booking.creatorName}</div>
+                        <div className="text-2xs text-muted mt-0.5">بواسطة: {booking.creatorName}</div>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium flex items-center text-body dark:text-[#a1a1aa]"><Phone size={14} className="ml-1.5 text-muted-soft"/> {booking.phone}</div>
-                      <div className="text-xs text-muted dark:text-[#898989] mt-1">هوية: {booking.residentId}</div>
+                      <div className="text-sm font-medium flex items-center text-body dark:text-body-dark"><Phone size={14} className="ml-1.5 text-muted-soft"/> {booking.phone}</div>
+                      <div className="text-xs text-muted dark:text-body-dark mt-1">هوية: {booking.residentId}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-ink dark:text-white">{apt?.name || 'وحدة محذوفة'}</div>
-                      <div className="text-xs text-accent font-semibold mt-1">{booking.pricePerNight} ر.س / ليلة</div>
+                      {(user?.role === 'admin' || user?.permissions?.canViewPrices !== false) && (
+                        <div className="text-xs text-accent font-semibold mt-1">{booking.pricePerNight} ر.س / ليلة</div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-xs font-medium text-body dark:text-[#a1a1aa]">{formatDate(booking.startDate)} <span className="mx-1 text-muted-soft">←</span> {formatDate(booking.endDate)}</div>
-                      <div className="badge-pill text-[10px] font-semibold mt-1">{calculateNights(booking.startDate, booking.endDate)} ليالي</div>
+                      <div className="text-xs font-medium text-body dark:text-body-dark">{formatDate(booking.startDate)} <span className="mx-1 text-muted-soft">←</span> {formatDate(booking.endDate)}</div>
+                      <div className="badge-pill text-2xs font-semibold mt-1">{calculateNights(booking.startDate, booking.endDate)} ليالي</div>
                     </td>
                     <td className="px-6 py-4">
                       {booking.status === 'checked_out_early' ? (
-                          <span className="badge-pill badge-dashed text-[11px] font-semibold">خروج مبكر</span>
+                          <span className="badge-pill badge-dashed text-xs font-semibold">خروج مبكر</span>
                       ) : isCurrent ? (
-                        <span className="badge-pill badge-solid text-[11px] font-semibold">مقيم حالياً</span>
+                        <span className="badge-pill badge-solid text-xs font-semibold">مقيم حالياً</span>
                       ) : isFuture ? (
-                        <span className="badge-pill badge-outline text-[11px] font-semibold">متوقع وصوله</span>
+                        <span className="badge-pill badge-outline text-xs font-semibold">متوقع وصوله</span>
                       ) : (
-                        <span className="badge-pill badge-ghost text-[11px] font-semibold">مغادر</span>
+                        <span className="badge-pill badge-ghost text-xs font-semibold">مغادر</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -307,16 +312,150 @@ export default function ResidentsView({ openBookingForm }) {
               ))}
               {!isLoading && currentBookings.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-muted font-medium">لا توجد حجوزات مطابقة</td>
+                  <td colSpan="6" className="px-6 py-4">
+                    <EmptyState
+                      icon={Users}
+                      title="لا توجد حجوزات مطابقة"
+                      subtitle="جرّب تعديل الفلاتر أو مصطلح البحث للعثور على النزلاء."
+                    />
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
 
+        {/* Mobile card view — replaces the 6-column desktop table. Renders the
+            same data as stacked cards: name + status on top, unit + dates in
+            the middle, actions at the bottom. One direction of layout per
+            section, matching the mobile pattern. */}
+        <div className="md:hidden flex-1 overflow-y-auto pt-2 md:pt-0 pb-24 md:pb-0 divide-y divide-hairline-soft dark:divide-hairline-dark">
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, idx) => (
+              <div key={`skeleton-mobile-${idx}`} className="animate-pulse p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex-1">
+                    <div className="h-4 bg-surface-card dark:bg-surface-dark-elevated rounded w-32 mb-2"></div>
+                    <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-24"></div>
+                  </div>
+                  <div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-20 shrink-0"></div>
+                </div>
+                <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-full"></div>
+              </div>
+            ))
+          ) : currentBookings.length === 0 ? (
+            <div className="p-4">
+              <EmptyState
+                icon={Users}
+                title="لا توجد حجوزات مطابقة"
+                subtitle="جرّب تعديل الفلاتر أو مصطلح البحث للعثور على النزلاء."
+              />
+            </div>
+          ) : (
+            currentBookings.map(booking => {
+              const apt = apartments.find(a => a.id === booking.apartmentId);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const startDate = new Date(booking.startDate);
+              startDate.setHours(0, 0, 0, 0);
+              const endDate = new Date(booking.endDate);
+              endDate.setHours(0, 0, 0, 0);
+              const isCurrent = booking.status !== 'checked_out_early' && today >= startDate && today < endDate;
+              const isFuture = booking.status !== 'checked_out_early' && today < startDate;
+
+              return (
+                <div key={booking.id} className="p-4 hover:bg-surface-soft/40 dark:hover:bg-surface-dark-elevated/40 transition-colors">
+                  {/* Header row: name + status */}
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink dark:text-white truncate leading-tight">
+                        {booking.residentName}
+                      </p>
+                      <p className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5">
+                        <Phone size={12} className="text-muted-soft shrink-0" />
+                        <span className="truncate">{booking.phone}</span>
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      {booking.status === 'checked_out_early' ? (
+                        <span className="badge-pill badge-dashed text-xs font-semibold">خروج مبكر</span>
+                      ) : isCurrent ? (
+                        <span className="badge-pill badge-solid text-xs font-semibold">مقيم حالياً</span>
+                      ) : isFuture ? (
+                        <span className="badge-pill badge-outline text-xs font-semibold">متوقع</span>
+                      ) : (
+                        <span className="badge-pill badge-ghost text-xs font-semibold">مغادر</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Meta row: unit + dates + nights */}
+                  <div className="flex items-center gap-1.5 text-xs text-body dark:text-body-dark mb-2 flex-wrap">
+                    <span className="font-semibold text-ink dark:text-white">{apt?.name || 'وحدة محذوفة'}</span>
+                    <span className="text-muted-soft">·</span>
+                    <span>{formatDate(booking.startDate)} ← {formatDate(booking.endDate)}</span>
+                    <span className="text-muted-soft">·</span>
+                    <span>{calculateNights(booking.startDate, booking.endDate)} ليالي</span>
+                  </div>
+
+                  {/* Price line — only when canViewPrices */}
+                  {(user?.role === 'admin' || user?.permissions?.canViewPrices !== false) && (
+                    <p className="text-xs text-accent font-semibold mb-3">
+                      {booking.pricePerNight} ر.س / ليلة
+                    </p>
+                  )}
+
+                  {/* Actions — trailing, tap-target sized */}
+                  <div className="flex items-center gap-1 justify-end -mr-2">
+                    {isCurrent && booking.status !== 'checked_out_early' && (
+                      <button
+                        onClick={() => handleCheckout(booking)}
+                        className="icon-action p-2.5 hover:text-accent"
+                        title="تسجيل خروج مبكر"
+                      >
+                        <LogOut size={18} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setPrintSelectorBooking(booking)}
+                      className="icon-action p-2.5 hover:text-accent"
+                      title="طباعة العقد"
+                    >
+                      <Printer size={18} />
+                    </button>
+                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                      <button
+                        onClick={() => openNoteModal(booking)}
+                        className={`icon-action p-2.5 hover:text-accent ${booking.notes && booking.notes.trim() !== '' ? 'opacity-100 text-accent' : ''}`}
+                        title="ملاحظات النزيل"
+                      >
+                        <MessageSquare size={18} />
+                      </button>
+                    )}
+                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+                      <button
+                        onClick={() => openBookingForm(booking)}
+                        className="icon-action p-2.5 hover:text-accent"
+                        title="تعديل الحجز"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    )}
+                    {(user?.role === 'admin' || user?.permissions?.canDelete) && (
+                      <button onClick={() => handleDelete(booking.id)} className="icon-action p-2.5 hover:text-accent" title="حذف الحجز">
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
         {/* Pagination Controls — Cal.com capsule group */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-hairline-soft dark:border-[#242424] mt-auto shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-t border-hairline-soft dark:border-hairline-dark mt-auto shrink-0">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
@@ -346,7 +485,7 @@ export default function ResidentsView({ openBookingForm }) {
                     disabled={page === '...'}
                     className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-semibold transition-colors ${
                       currentPage === page
-                        ? 'bg-canvas text-ink shadow-pill dark:bg-[#2e2e2e] dark:text-white'
+                        ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
                         : page === '...'
                         ? 'text-muted-soft cursor-default'
                         : 'text-muted hover:text-ink dark:hover:text-white'
@@ -372,10 +511,10 @@ export default function ResidentsView({ openBookingForm }) {
         <PrintAgreement booking={printBooking.booking} documentType={printBooking.type} onClose={() => setPrintBooking(null)} />
       )}
 
-      {editingNoteId && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-[#2e2e2e] overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+      {editingNoteId && createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
+          <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white flex items-center">
                 <MessageSquare className="ml-2 text-muted" size={20} />
                 ملاحظات النزيل
@@ -391,7 +530,7 @@ export default function ResidentsView({ openBookingForm }) {
               ></textarea>
             </div>
 
-            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex space-x-reverse space-x-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex space-x-reverse space-x-3">
               <button
                 onClick={handleSaveNote}
                 className="btn-primary flex-1"
@@ -407,14 +546,38 @@ export default function ResidentsView({ openBookingForm }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Checkout Modal */}
-      {checkoutModalOpen && checkoutData.booking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      {checkoutModalOpen && checkoutData.booking && (() => {
+        // Live math for the modal — computed on each render so the preview
+        // updates instantly as the user changes the day count.
+        const bk = checkoutData.booking;
+        // computeBookingTotals returns { totalDue, totalReceived, balanceDue, status, nights }
+        // Alias locally to the names used in the modal below.
+        const { totalDue: totalOwed, totalReceived: paid } = computeBookingTotals(bk);
+        const startDate = new Date(bk.startDate);
+        const now = new Date();
+        const nightsStayedActual = Math.max(1, Math.ceil((now - startDate) / (1000 * 60 * 60 * 24)));
+
+        const newTotal = checkoutData.option === 'recalculate'
+          ? Number(checkoutData.days || 0) * Number(bk.pricePerNight)
+          : Number(totalOwed);
+
+        // If the guest already paid more than the new total, we'll auto-refund the difference.
+        const refundAmount = checkoutData.option === 'recalculate' && paid > newTotal
+          ? paid - newTotal
+          : 0;
+
+        // If the new total is less than what they've paid, they overpaid.
+        // If greater, guest still owes.
+        const remainingAfter = newTotal - paid;
+
+        return createPortal(
+        <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-lg overflow-hidden border border-hairline dark:border-[#2e2e2e]">
-            <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-lg overflow-hidden border border-hairline dark:border-hairline-dark-soft max-h-[92vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
                 <LogOut size={20} />
                 تأكيد مغادرة مبكرة
@@ -424,15 +587,46 @@ export default function ResidentsView({ openBookingForm }) {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-5 overflow-y-auto min-h-0">
               <div className="bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-lg text-sm font-medium">
                 أنت على وشك تسجيل خروج للنزيل ({checkoutData.booking.residentName}) قبل موعده. هذا الإجراء سيقوم بإتاحة الشقة فوراً.
               </div>
 
+              {/* Financial context — the operator needs this to make an informed choice */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-surface-soft/60 dark:bg-surface-dark-elevated rounded-md p-3">
+                  <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-1 flex items-center gap-1">
+                    <Wallet size={10} />
+                    مدفوع حتى الآن
+                  </p>
+                  <p className="text-sm font-bold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {paid.toLocaleString()} <span className="text-2xs text-muted-soft font-medium">ر.س</span>
+                  </p>
+                </div>
+                <div className="bg-surface-soft/60 dark:bg-surface-dark-elevated rounded-md p-3">
+                  <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-1 flex items-center gap-1">
+                    <CalendarDays size={10} />
+                    ليالٍ مقضية
+                  </p>
+                  <p className="text-sm font-bold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {nightsStayedActual}
+                  </p>
+                </div>
+                <div className="bg-surface-soft/60 dark:bg-surface-dark-elevated rounded-md p-3">
+                  <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-1 flex items-center gap-1">
+                    <ArrowLeftRight size={10} />
+                    إجمالي الحجز
+                  </p>
+                  <p className="text-sm font-bold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {Number(totalOwed).toLocaleString()} <span className="text-2xs text-muted-soft font-medium">ر.س</span>
+                  </p>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-semibold text-body dark:text-[#a1a1aa] mb-3">خيارات احتساب المبلغ:</label>
+                <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">خيارات احتساب المبلغ:</label>
                 <div className="space-y-3">
-                  <label className="flex items-center gap-3 p-3 border border-hairline dark:border-[#2e2e2e] rounded-md cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
+                  <label className="flex items-center gap-3 p-3 border border-hairline dark:border-hairline-dark-soft rounded-md cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
                     <input
                       type="radio"
                       name="financialOption"
@@ -443,7 +637,7 @@ export default function ResidentsView({ openBookingForm }) {
                     />
                     <span className="text-sm font-semibold text-ink dark:text-white">الاحتفاظ بالمبلغ كامل (القيمة الأصلية)</span>
                   </label>
-                  <label className="flex items-center gap-3 p-3 border border-hairline dark:border-[#2e2e2e] rounded-md cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
+                  <label className="flex items-center gap-3 p-3 border border-hairline dark:border-hairline-dark-soft rounded-md cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
                     <input
                       type="radio"
                       name="financialOption"
@@ -458,20 +652,73 @@ export default function ResidentsView({ openBookingForm }) {
               </div>
 
               {checkoutData.option === 'recalculate' && (
-                <div className="animate-fade-in">
-                  <label className="block text-xs font-semibold text-body dark:text-[#a1a1aa] mb-2">عدد الأيام الفعلية:</label>
-                  <input
-                    type="number"
-                    value={checkoutData.days}
-                    onChange={(e) => setCheckoutData({...checkoutData, days: e.target.value})}
-                    className="input-field"
-                  />
-                  <p className="text-[11px] text-muted mt-2">السعر الإجمالي الجديد سيكون: <span className="font-semibold text-ink dark:text-white">{Number(checkoutData.days || 0) * Number(checkoutData.booking.pricePerNight)} ر.س</span></p>
+                <div className="animate-fade-in space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-body dark:text-body-dark mb-2">عدد الأيام الفعلية:</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={checkoutData.days}
+                        onChange={(e) => setCheckoutData({...checkoutData, days: e.target.value})}
+                        className="input-field"
+                        min="1"
+                      />
+                      {Number(checkoutData.days) !== nightsStayedActual && (
+                        <button
+                          type="button"
+                          onClick={() => setCheckoutData({...checkoutData, days: String(nightsStayedActual)})}
+                          className="text-xs text-accent-strong font-semibold hover:underline whitespace-nowrap"
+                          title="الأيام الفعلية المقضية من تاريخ الوصول حتى اليوم"
+                        >
+                          استخدم {nightsStayedActual}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted mt-2">
+                      السعر الإجمالي الجديد:{' '}
+                      <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {Number(newTotal).toLocaleString()} ر.س
+                      </span>
+                    </p>
+                  </div>
+
+                  {/* Refund / owing summary — the whole point of the enhancement */}
+                  {refundAmount > 0 && (
+                    <div className="border border-dashed border-accent/60 bg-accent-soft rounded-md p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="p-1.5 rounded-md bg-accent/15 text-accent-strong shrink-0 mt-0.5">
+                          <ArrowLeftRight size={12} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-accent-strong mb-0.5">
+                            سيتم إنشاء استرداد تلقائي
+                          </p>
+                          <p className="text-xs text-body dark:text-body-dark">
+                            المدفوع ({paid.toLocaleString()} ر.س) أكبر من الإجمالي الجديد ({Number(newTotal).toLocaleString()} ر.س).
+                            سيُسجَّل استرداد بمقدار{' '}
+                            <span className="font-bold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              {refundAmount.toLocaleString()} ر.س
+                            </span>{' '}
+                            في سجل المدفوعات.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {refundAmount === 0 && remainingAfter > 0 && (
+                    <div className="border border-hairline dark:border-hairline-dark-soft rounded-md p-3 text-xs text-muted dark:text-body-dark">
+                      لا استرداد. النزيل لا يزال مديناً بـ{' '}
+                      <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {remainingAfter.toLocaleString()} ر.س
+                      </span>{' '}
+                      بعد المغادرة.
+                    </div>
+                  )}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-body dark:text-[#a1a1aa] mb-2">سبب المغادرة المبكرة:</label>
+                <label className="block text-xs font-semibold text-body dark:text-body-dark mb-2">سبب المغادرة المبكرة:</label>
                 <textarea
                   value={checkoutData.notes}
                   onChange={(e) => setCheckoutData({...checkoutData, notes: e.target.value})}
@@ -482,7 +729,7 @@ export default function ResidentsView({ openBookingForm }) {
               </div>
             </div>
 
-            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex justify-end gap-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex justify-end gap-3 shrink-0">
               <button
                 onClick={() => { setCheckoutModalOpen(false); setCheckoutData({ id: null, option: 'keep', days: '', notes: '', booking: null }); }}
                 className="btn-secondary h-10 px-5"
@@ -497,14 +744,16 @@ export default function ResidentsView({ openBookingForm }) {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+        );
+      })()}
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      {deleteConfirmId && createPortal(
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-[#2e2e2e] transform transition-all">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
             <div className="p-6 text-center">
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-5">
                 <AlertTriangle className="h-8 w-8 text-ink dark:text-white" />
@@ -512,11 +761,11 @@ export default function ResidentsView({ openBookingForm }) {
               <h3 className="text-xl font-semibold tracking-tight text-ink dark:text-white mb-2">
                 تأكيد الحذف
               </h3>
-              <p className="text-sm text-muted dark:text-[#a1a1aa] font-medium">
+              <p className="text-sm text-muted dark:text-body-dark font-medium">
                 هل أنت متأكد من حذف هذا النزيل؟ لا يمكن التراجع عن هذا الإجراء.
               </p>
             </div>
-            <div className="p-4 border-t border-hairline-soft dark:border-[#242424] flex space-x-reverse space-x-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex space-x-reverse space-x-3">
               <button
                 onClick={confirmDelete}
                 className="btn-primary flex-1"
@@ -532,14 +781,14 @@ export default function ResidentsView({ openBookingForm }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Print Options Modal */}
-      {printSelectorBooking && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      {printSelectorBooking && createPortal(
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => setPrintSelectorBooking(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-[#2e2e2e] transform transition-all">
-            <div className="px-6 py-5 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+            <div className="px-6 py-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
                 <Printer size={20} className="text-ink dark:text-white" />
                 خيارات الطباعة
@@ -555,13 +804,13 @@ export default function ResidentsView({ openBookingForm }) {
                   setPrintBooking({ booking: printSelectorBooking, type: 'voucher' });
                   setPrintSelectorBooking(null);
                 }}
-                className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-[#242424] text-ink dark:text-white rounded-lg transition-colors group"
+                className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="flex flex-col text-right">
                   <span className="font-semibold text-lg mb-1 tracking-tight">طباعة تقرير مالي</span>
-                  <span className="text-sm text-muted dark:text-[#a1a1aa]">سند قبض للمبالغ المدفوعة</span>
+                  <span className="text-sm text-muted dark:text-body-dark">سند قبض للمبالغ المدفوعة</span>
                 </div>
-                <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-[#2e2e2e]">
+                <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
                   <Printer size={24} />
                 </div>
               </button>
@@ -571,20 +820,20 @@ export default function ResidentsView({ openBookingForm }) {
                   setPrintBooking({ booking: printSelectorBooking, type: 'confirmation' });
                   setPrintSelectorBooking(null);
                 }}
-                className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-[#242424] text-ink dark:text-white rounded-lg transition-colors group"
+                className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="flex flex-col text-right">
                   <span className="font-semibold text-lg mb-1 tracking-tight">طباعة تأكيد الحجز</span>
-                  <span className="text-sm text-muted dark:text-[#a1a1aa]">تفاصيل الحجز وشروطه</span>
+                  <span className="text-sm text-muted dark:text-body-dark">تفاصيل الحجز وشروطه</span>
                 </div>
-                <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-[#2e2e2e]">
+                <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
                   <Printer size={24} />
                 </div>
               </button>
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
     </>
   );

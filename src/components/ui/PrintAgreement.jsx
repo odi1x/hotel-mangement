@@ -123,7 +123,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
             </section>
 
             {documentType !== 'voucher' && (<section className="pt-10 border-t-2 border-dashed border-gray-200 mt-10">
-                <p className="text-[11px] text-gray-500 font-medium leading-relaxed text-justify whitespace-pre-wrap">
+                <p className="text-xs text-gray-500 font-medium leading-relaxed text-justify whitespace-pre-wrap">
                     {user?.customTerms
                       ? user.customTerms
                       : 'يقر المستأجر بموجب هذا العقد بالالتزام بكافة لوائح المبنى والحفاظ على الوحدة السكنية بحالة جيدة وإخلائها في موعد تسجيل الخروج المحدد. أي تلفيات تلحق بالوحدة سيتحمل المستأجر تكاليف إصلاحها. تم إعداد هذا العقد لتوثيق فترة الإقامة وحقوق الطرفين.'}

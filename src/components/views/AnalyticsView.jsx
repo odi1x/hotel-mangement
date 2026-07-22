@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, Star, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import DatePickerCal from '../ui/DatePickerCal';
 import { getAccent } from '../../lib/accent';
 import axios from 'axios';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-
-// Monochrome data palette — near-black to hairline gray (DESIGN-cal.md color scarcity rule)
-const COLORS = ['#111111', '#374151', '#6b7280', '#9ca3af', '#c4c9d0', '#d1d5db', '#e5e7eb'];
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 export default function AnalyticsView() {
   const accentHex = getAccent().hex;
@@ -186,9 +184,9 @@ export default function AnalyticsView() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
           {[1,2,3,4].map(i => (
             <div key={i} className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg h-28 flex flex-col justify-center">
-              <div className="h-4 w-20 bg-surface-strong dark:bg-[#242424] rounded mb-3"></div>
-              <div className="h-8 w-32 bg-surface-strong dark:bg-[#242424] rounded mb-2"></div>
-              <div className="h-3 w-24 bg-surface-strong/60 dark:bg-[#242424] rounded"></div>
+              <div className="h-4 w-20 bg-surface-strong dark:bg-hairline-dark rounded mb-3"></div>
+              <div className="h-8 w-32 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
+              <div className="h-3 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
             </div>
           ))}
         </div>
@@ -197,37 +195,37 @@ export default function AnalyticsView() {
           {/* Top Performers and Pie Chart Skeleton */}
           <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
             <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col">
-               <div className="h-5 w-24 bg-surface-strong dark:bg-[#242424] rounded mb-2"></div>
-               <div className="h-3 w-32 bg-surface-strong/60 dark:bg-[#242424] rounded mb-4"></div>
+               <div className="h-5 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
+               <div className="h-3 w-32 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-4"></div>
                <div className="flex-1 flex flex-col gap-3 justify-center">
                   {[1,2,3].map(i => (
                     <div key={i} className="flex justify-between items-center">
-                       <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-surface-strong dark:bg-[#242424]"></div><div className="h-4 w-20 bg-surface-strong dark:bg-[#242424] rounded"></div></div>
-                       <div className="h-6 w-16 bg-surface-strong dark:bg-[#242424] rounded"></div>
+                       <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-surface-strong dark:bg-hairline-dark"></div><div className="h-4 w-20 bg-surface-strong dark:bg-hairline-dark rounded"></div></div>
+                       <div className="h-6 w-16 bg-surface-strong dark:bg-hairline-dark rounded"></div>
                     </div>
                   ))}
                </div>
             </div>
 
             <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col items-center justify-center">
-              <div className="self-start h-5 w-24 bg-surface-strong dark:bg-[#242424] rounded mb-2"></div>
-              <div className="self-start h-3 w-32 bg-surface-strong/60 dark:bg-[#242424] rounded mb-4"></div>
-              <div className="w-32 h-32 rounded-full border-8 border-surface-strong dark:border-[#242424] mt-4"></div>
+              <div className="self-start h-5 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
+              <div className="self-start h-3 w-32 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-4"></div>
+              <div className="w-32 h-32 rounded-full border-8 border-surface-strong dark:border-hairline-dark mt-4"></div>
             </div>
           </div>
 
           {/* Area Chart Skeleton */}
           <div className="lg:col-span-2 bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-5 flex flex-col h-full min-h-0">
             <div className="flex justify-between items-center mb-6">
-              <div className="h-5 w-40 bg-surface-strong dark:bg-[#242424] rounded"></div>
-              <div className="h-8 w-48 bg-surface-strong/60 dark:bg-[#242424] rounded-full"></div>
+              <div className="h-5 w-40 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+              <div className="h-8 w-48 bg-surface-strong/60 dark:bg-hairline-dark rounded-full"></div>
             </div>
             <div className="flex gap-6 mb-6">
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-[#242424] rounded"></div>
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-[#242424] rounded"></div>
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-[#242424] rounded"></div>
+               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
             </div>
-            <div className="flex-1 w-full bg-surface-soft dark:bg-[#242424] rounded-lg"></div>
+            <div className="flex-1 w-full bg-surface-soft dark:bg-hairline-dark rounded-lg"></div>
           </div>
         </div>
       </div>
@@ -235,56 +233,41 @@ export default function AnalyticsView() {
   }
 
   return (
-    <div className="h-full overflow-hidden flex flex-col space-y-5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-        <div className="flex gap-2">
-          <button
-            onClick={() => exportToExcel(false)}
-            className="btn-primary text-sm"
-          >
-            <Download size={18} />
-            <span>تحميل التقرير الشامل (Excel)</span>
-          </button>
-
-          {hasActiveFilters && (
-            <button
-              onClick={() => exportToExcel(true)}
-              className="btn-secondary text-sm"
-            >
-              <Download size={18} />
-              <span>تحميل التقرير المصفى</span>
-            </button>
-          )}
-        </div>
-
-        <div className="relative flex items-center gap-2">
+    <>
+    <div className="h-full flex flex-col">
+      {/* Compact action strip — filter chip + Excel export. Was two full-size
+          button rows (~130px total). Now a single ~36px row so the analytics
+          content below gets that vertical space back. */}
+      <div className="flex justify-between items-center mb-5 gap-3 shrink-0">
+        <div className="relative flex items-center gap-1.5">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`btn-secondary text-sm ${
-              (analyticsFilter.apartmentIds?.length > 0 || analyticsFilter.startDate)
-                ? 'border-ink text-ink dark:border-white dark:text-white'
-                : ''
+            className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold transition-colors border ${
+              hasActiveFilters
+                ? 'bg-accent-soft text-accent-strong border-accent/40'
+                : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark dark:hover:text-white'
             }`}
           >
-            <Filter size={18} />
-            <span>تصفية التحليلات</span>
-            <ChevronDown size={16} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+            <Filter size={13} />
+            <span>تصفية</span>
+            {hasActiveFilters && <span className="w-1.5 h-1.5 bg-accent rounded-full mx-0.5"></span>}
+            <ChevronDown size={13} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {hasActiveFilters && (
             <button
               onClick={() => { const empty = { apartmentIds: [], startDate: null, endDate: null }; setAnalyticsFilter(empty); setTempFilter(empty); setIsFilterOpen(false); }}
-              className="icon-action opacity-100"
+              className="icon-action opacity-100 h-8 w-8"
               title="إلغاء التصفية"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           )}
 
           {isFilterOpen && (
-            <div className="absolute top-full left-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-[#2e2e2e] rounded-lg shadow-soft z-50 p-4">
+            <div className="absolute top-full right-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
               <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-[#a1a1aa] mb-2">الفترة الزمنية:</span>
+                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الفترة الزمنية:</span>
                 <DatePickerCal
                   value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
                   onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
@@ -292,12 +275,12 @@ export default function AnalyticsView() {
               </div>
 
               <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-[#a1a1aa] mb-2">الوحدات:</span>
+                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الوحدات:</span>
                 <div className="max-h-48 overflow-y-auto space-y-1.5 p-1">
                   {apartments.map(a => {
                       const isChecked = tempFilter.apartmentIds?.includes(a.id);
                       return (
-                          <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-body dark:text-[#a1a1aa] hover:bg-surface-soft dark:hover:bg-surface-dark-elevated p-2 rounded-md transition-colors">
+                          <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated p-2 rounded-md transition-colors">
                               <input
                                   type="checkbox"
                                   checked={isChecked || false}
@@ -318,7 +301,7 @@ export default function AnalyticsView() {
               </div>
 
               {hasFilterChanges() && (
-                <div className="pt-3 border-t border-hairline-soft dark:border-[#242424] flex justify-end">
+                <div className="pt-3 border-t border-hairline-soft dark:border-hairline-dark flex justify-end">
                   <button
                     onClick={handleApplyFilter}
                     className="btn-primary h-9 px-4 text-sm"
@@ -331,117 +314,203 @@ export default function AnalyticsView() {
             </div>
           )}
         </div>
+
+        {/* Excel export — trailing side (RTL end) */}
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <button
+              onClick={() => exportToExcel(true)}
+              className="btn-secondary h-9 px-3 text-xs"
+              title="تحميل التقرير المصفى"
+            >
+              <Download size={14} />
+              <span>المصفى</span>
+            </button>
+          )}
+          <button
+            onClick={() => exportToExcel(false)}
+            className="btn-primary h-9 px-3 text-xs"
+            title="تحميل التقرير الشامل"
+          >
+            <Download size={14} />
+            <span>Excel</span>
+          </button>
+        </div>
       </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 shrink-0">
+      {/* One scrollable content zone — the whole analytics page scrolls as
+          one unit. Each card is natural content-height; the scroll happens
+          at the page level, not per-card. */}
+      <div className="flex-1 overflow-y-auto min-h-0 pt-2 md:pt-0 -mx-1 px-1 pb-24 md:pb-0">
+      <div className="flex flex-col space-y-5 pb-4">
+
+      {/* KPI hierarchy:
+          Net Profit is the PRIMARY — the one number that actually captures
+          whether the business is winning. Given a hero treatment with the
+          scarce emerald accent + an accent bar on the leading edge. The
+          three supporting metrics (Revenue, Occupancy, Nights) render at
+          a subordinate weight in a strict 3-column grid below so the eye
+          reads them as "context for the primary" rather than "four peers". */}
+
+      <div
+        onClick={() => fetchBreakdown('profit')}
+        className="relative card-surface p-6 md:p-7 group cursor-pointer transition-all hover:shadow-soft overflow-hidden"
+      >
+        {/* Signature: accent bar on the leading (right-side, RTL) edge */}
+        <span className="absolute right-0 top-6 bottom-6 w-[3px] rounded-l-full bg-accent"></span>
+
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pr-3">
+          <div className="min-w-0">
+            <p className="eyebrow mb-2">صافي الأرباح</p>
+            <h3 className="text-4xl md:text-5xl font-bold text-accent tracking-tightest leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {Math.round(analytics.netProfit).toLocaleString()}
+              <span className="text-lg md:text-xl font-semibold text-muted-soft mr-2">ر.س</span>
+            </h3>
+            <p className="text-xs text-muted-soft mt-3">
+              الإيرادات ناقص كل المصروفات خلال الفترة المحددة
+            </p>
+          </div>
+
+          {/* Math breakdown — turns the abstract profit number into a story:
+              you can literally see it's revenue minus expenses. */}
+          <div className="hidden md:flex items-center gap-8 pl-2">
+            <div className="text-right">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-1">الإيرادات</p>
+              <p className="text-lg font-bold text-ink dark:text-white tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {analytics.totalRevenue.toLocaleString()}
+                <span className="text-xs font-semibold text-muted-soft mr-1">ر.س</span>
+              </p>
+            </div>
+            <div className="text-muted-soft text-2xl leading-none">−</div>
+            <div className="text-right">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-1">المصروفات</p>
+              <p className="text-lg font-bold text-ink dark:text-white tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {Math.round(analytics.totalExpenses || (analytics.totalRevenue - analytics.netProfit)).toLocaleString()}
+                <span className="text-xs font-semibold text-muted-soft mr-1">ر.س</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div
           onClick={() => fetchBreakdown('revenue')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">إجمالي الإيرادات</p>
-          <h3 className="text-3xl font-bold text-accent tracking-tightest">{analytics.totalRevenue.toLocaleString()} <span className="text-sm font-semibold text-muted-soft">ر.س</span></h3>
-        </div>
-
-        <div
-          onClick={() => fetchBreakdown('profit')}
-          className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
-        >
-          <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">صافي الأرباح</p>
-          <h3 className="text-3xl font-bold text-accent tracking-tightest">{Math.round(analytics.netProfit).toLocaleString()} <span className="text-sm font-semibold text-muted-soft">ر.س</span></h3>
+          <p className="eyebrow mb-2">إجمالي الإيرادات</p>
+          <h3 className="text-2xl font-bold text-ink dark:text-white tracking-tightest" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {analytics.totalRevenue.toLocaleString()}
+            <span className="text-xs font-semibold text-muted-soft mr-1.5">ر.س</span>
+          </h3>
+          <p className="text-xs text-muted-soft mt-1.5">عبر {analytics.count} حجز</p>
         </div>
 
         <div
           onClick={() => fetchBreakdown('occupancy')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">معدل الإشغال</p>
-          <h3 className="text-3xl font-bold text-ink dark:text-white tracking-tightest">{Math.round(analytics.occupancyRate)}<span className="text-sm font-semibold text-muted">%</span></h3>
-          <p className="text-xs text-muted-soft mt-2 font-medium">من إجمالي الأيام المتاحة</p>
+          <p className="eyebrow mb-2">معدل الإشغال</p>
+          <h3 className="text-2xl font-bold text-ink dark:text-white tracking-tightest" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {Math.round(analytics.occupancyRate)}<span className="text-xs font-semibold text-muted mr-0.5">%</span>
+          </h3>
+          <p className="text-xs text-muted-soft mt-1.5">من إجمالي الأيام المتاحة</p>
         </div>
 
         <div
           onClick={() => fetchBreakdown('nights')}
           className="card-surface p-5 group cursor-pointer transition-all hover:shadow-soft"
         >
-          <p className="text-sm text-muted dark:text-[#a1a1aa] font-semibold mb-2">الليالي المؤجرة</p>
-          <h3 className="text-3xl font-bold text-ink dark:text-white tracking-tightest">{analytics.totalNights} <span className="text-sm font-semibold text-muted">ليلة</span></h3>
-          <p className="text-xs text-muted-soft mt-2 font-medium">عبر {analytics.count} حجز</p>
+          <p className="eyebrow mb-2">الليالي المؤجرة</p>
+          <h3 className="text-2xl font-bold text-ink dark:text-white tracking-tightest" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {analytics.totalNights} <span className="text-xs font-semibold text-muted mr-0.5">ليلة</span>
+          </h3>
+          <p className="text-xs text-muted-soft mt-1.5">عبر {analytics.count} حجز</p>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 w-full overflow-y-auto lg:overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-5 pb-2">
-        <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
-            <div className="card-surface p-5 flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="shrink-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-1 flex flex-col gap-5">
+            {/* Top performers — natural content-height. Page scrolls, not the
+                card. Matches the single-scroll model of the whole view. */}
+            <div className="card-surface p-5">
+            <div>
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
                 <Star size={18} className="ml-2 text-muted" /> الأعلى أداءً
               </h4>
               <p className="text-xs text-muted mb-3">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
             </div>
 
-            <div className="flex-1 flex flex-col justify-center gap-2 pr-1">
-                {topUnits.length > 0 ? topUnits.map((unit, idx) => (
-                    <div key={unit.id} className="flex items-center justify-between p-2 rounded-md hover:bg-canvas dark:hover:bg-[#242424] transition-colors">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${idx === 0 ? 'bg-accent text-white' : 'bg-surface-card text-ink dark:bg-surface-dark dark:text-white'}`}>
+            <div>
+                {topUnits.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  {topUnits.slice(0, 5).map((unit, idx) => (
+                    <div key={unit.id} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-surface-soft/60 dark:hover:bg-hairline-dark transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${idx === 0 ? 'bg-accent text-white' : 'bg-surface-card text-ink dark:bg-surface-dark dark:text-white'}`}>
                                 #{idx + 1}
                             </div>
-                            <div>
-                                <p className="text-sm font-semibold text-ink dark:text-white">{unit.name}</p>
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-ink dark:text-white truncate">{unit.name}</p>
                                 <p className="text-xs text-muted">{unit.nights} ليلة مؤجرة</p>
                             </div>
                         </div>
-                        <div className="text-left">
-                            <p className="text-lg font-semibold tracking-tight text-ink dark:text-white leading-none">{unit.revenue.toLocaleString()}</p>
-                            <p className="text-[10px] text-muted-soft mt-0.5">ر.س</p>
+                        <div className="text-left shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            <p className="text-base font-bold tracking-tight text-ink dark:text-white leading-none">{unit.revenue.toLocaleString()}</p>
+                            <p className="text-2xs text-muted-soft mt-0.5">ر.س</p>
                         </div>
                     </div>
-                )) : <div className="text-center py-10 text-muted font-medium">لا توجد بيانات كافية</div>}
+                  ))}
+                </div>
+                ) : <div className="text-center py-8 text-muted font-medium">لا توجد بيانات كافية</div>}
             </div>
           </div>
 
-            <div className="card-surface p-5 flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="shrink-0">
+            <div className="card-surface p-5">
+            <div>
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center"><Globe size={18} className="ml-2 text-muted" /> مصادر التسويق</h4>
-              <p className="text-xs text-muted mb-2">توزيع الحجوزات حسب المنصات</p>
+              <p className="text-xs text-muted mb-4">توزيع الحجوزات حسب المنصات</p>
             </div>
 
-            <div className="flex-1 min-h-0 w-full relative overflow-hidden" dir="ltr">
-              {sourceChartData.length > 0 ? (
-                <div className="absolute inset-0 pb-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={sourceChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
-                        paddingAngle={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {sourceChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontFamily: 'inherit' }}
-                        labelStyle={{ fontWeight: '600', color: '#111111', marginBottom: '8px' }}
-                      />
-                      <Legend verticalAlign="bottom" height={24} wrapperStyle={{ fontFamily: 'inherit', fontSize: '11px', paddingTop: '10px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                  <div className="h-full flex items-center justify-center text-muted font-medium">لا توجد بيانات كافية</div>
-              )}
+            <div>
+            {sourceChartData.length > 0 ? (() => {
+              const total = sourceChartData.reduce((s, x) => s + x.value, 0) || 1;
+              const sorted = [...sourceChartData].sort((a, b) => b.value - a.value);
+              return (
+                <ul className="space-y-3.5">
+                  {sorted.map((source, idx) => {
+                    const pct = Math.round((source.value / total) * 100);
+                    const isTop = idx === 0;
+                    return (
+                      <li key={source.name}>
+                        <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                          <span className="text-sm font-semibold text-ink dark:text-white truncate">
+                            {source.name}
+                          </span>
+                          <span className="text-2xs font-semibold text-muted-soft shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {source.value} حجز · {pct}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-surface-card dark:bg-surface-dark-elevated overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${isTop ? 'bg-accent' : 'bg-muted-soft/60 dark:bg-body-dark/60'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              );
+            })() : (
+              <div className="py-8 text-center text-muted font-medium">لا توجد بيانات كافية</div>
+            )}
             </div>
           </div>
         </div>
 
-        <div className="card-surface p-5 lg:col-span-2 flex flex-col h-full min-h-0">
+        <div className="card-surface p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[320px] md:min-h-[440px]">
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
             <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">
@@ -458,7 +527,7 @@ export default function AnalyticsView() {
                 <button
                   key={opt.id}
                   onClick={() => setChartFilter(opt.id)}
-                  className={`nav-pill px-3 py-1.5 text-xs font-semibold ${chartFilter === opt.id ? 'nav-pill-active bg-surface-card dark:bg-[#2e2e2e]' : ''}`}
+                  className={`nav-pill px-3 py-1.5 text-xs font-semibold ${chartFilter === opt.id ? 'nav-pill-active bg-surface-card dark:bg-hairline-dark-soft' : ''}`}
                 >
                   {opt.label}
                 </button>
@@ -466,22 +535,22 @@ export default function AnalyticsView() {
             </div>
           </div>
 
-          <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-[#242424] pb-4">
+          <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-hairline-dark pb-4">
             <div>
-              <p className="text-[10px] font-semibold text-muted-soft mb-1">إجمالي الإيرادات</p>
-              <p className="font-bold text-accent">{chartKPIs.revenue.toLocaleString()} <span className="text-[10px] text-muted-soft">ر.س</span></p>
+              <p className="text-2xs font-semibold text-muted-soft mb-1">إجمالي الإيرادات</p>
+              <p className="font-bold text-accent">{chartKPIs.revenue.toLocaleString()} <span className="text-2xs text-muted-soft">ر.س</span></p>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-muted-soft mb-1">إجمالي المصروفات</p>
-              <p className="font-semibold text-muted dark:text-[#a1a1aa]">{chartKPIs.expenses.toLocaleString()} <span className="text-[10px]">ر.س</span></p>
+              <p className="text-2xs font-semibold text-muted-soft mb-1">إجمالي المصروفات</p>
+              <p className="font-semibold text-muted dark:text-body-dark">{chartKPIs.expenses.toLocaleString()} <span className="text-2xs">ر.س</span></p>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-muted-soft mb-1">صافي الأرباح</p>
-              <p className="text-lg font-bold tracking-tight text-accent leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-[10px] text-muted-soft">ر.س</span></p>
+              <p className="text-2xs font-semibold text-muted-soft mb-1">صافي الأرباح</p>
+              <p className="text-lg font-bold tracking-tight text-accent leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-2xs text-muted-soft">ر.س</span></p>
             </div>
           </div>
 
-          <div className="flex-1 w-full min-h-[250px] lg:min-h-0 relative overflow-hidden" dir="ltr">
+          <div className="flex-1 w-full min-h-[280px] relative overflow-hidden" dir="ltr">
             <div className="absolute inset-0 pb-8 pr-4">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
@@ -512,12 +581,20 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      {/* Breakdown Modal */}
-      {breakdownModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm m-0 border-0 outline-none">
+      {/* End of main content — modal is moved OUTSIDE the scroll wrapper so
+          it renders as viewport-fixed, not inside the scrolling area. */}
+      </div>{/* /space-y flow wrapper */}
+      </div>{/* /scroll zone */}
+      </div>{/* /outer h-full flex flex-col */}
+
+      {/* Breakdown Modal — portaled to document.body so its `fixed inset-0`
+          reaches the true viewport and blurs the header, no matter what
+          stacking context our view ancestors have. */}
+      {breakdownModal && createPortal(
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-[#2e2e2e]">
-            <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-hairline-dark-soft">
+            <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
               <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
                 {breakdownModal === 'revenue' && 'تفصيل الإيرادات حسب الوحدة'}
                 {breakdownModal === 'profit' && 'سجل المصروفات والأرباح'}
@@ -540,16 +617,16 @@ export default function AnalyticsView() {
                   {breakdownModal === 'profit' ? (
                      <table className="w-full text-sm text-right">
                         <thead>
-                          <tr className="text-muted dark:text-[#a1a1aa]">
+                          <tr className="text-muted dark:text-body-dark">
                             <th className="pb-3 font-semibold">البند</th>
                             <th className="pb-3 font-semibold">المبلغ (ر.س)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {breakdownData.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors border-t border-gray-100 dark:border-[#242424]">
+                            <tr key={idx} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors border-t border-hairline-soft dark:border-hairline-dark">
                               <td className="py-3 font-semibold text-ink dark:text-white">{item.category}</td>
-                              <td className={`py-3 font-semibold ${item.type === 'income' ? 'text-ink dark:text-white' : 'text-muted dark:text-[#a1a1aa]'}`}>
+                              <td className={`py-3 font-semibold ${item.type === 'income' ? 'text-ink dark:text-white' : 'text-muted dark:text-body-dark'}`}>
                                 {item.type === 'expense' ? '- ' : ''}{item.amount.toLocaleString()}
                               </td>
                             </tr>
@@ -565,7 +642,7 @@ export default function AnalyticsView() {
                   ) : (
                     <table className="w-full text-sm text-right">
                       <thead>
-                        <tr className="text-muted dark:text-[#a1a1aa]">
+                        <tr className="text-muted dark:text-body-dark">
                           <th className="pb-3 font-semibold">الوحدة</th>
                           {breakdownModal === 'revenue' && (
                             <>
@@ -585,21 +662,21 @@ export default function AnalyticsView() {
                       </thead>
                       <tbody>
                         {breakdownData.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors border-t border-gray-100 dark:border-[#242424]">
+                          <tr key={idx} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors border-t border-hairline-soft dark:border-hairline-dark">
                             <td className="py-3 font-semibold text-ink dark:text-white">{item.name}</td>
 
                             {breakdownModal === 'revenue' && (
                               <>
                                 <td className="py-3 font-semibold text-ink dark:text-white">{item.revenue.toLocaleString()}</td>
-                                <td className="py-3 font-medium text-body dark:text-[#a1a1aa]">{item.percentage}%</td>
-                                <td className="py-3 font-medium text-body dark:text-[#a1a1aa]">{item.count}</td>
+                                <td className="py-3 font-medium text-body dark:text-body-dark">{item.percentage}%</td>
+                                <td className="py-3 font-medium text-body dark:text-body-dark">{item.count}</td>
                               </>
                             )}
 
                             {(breakdownModal === 'occupancy' || breakdownModal === 'nights') && (
                               <>
                                 <td className="py-3 font-semibold text-ink dark:text-white">{item.nights}</td>
-                                <td className="py-3 font-medium text-body dark:text-[#a1a1aa]">{item.availableNights}</td>
+                                <td className="py-3 font-medium text-body dark:text-body-dark">{item.availableNights}</td>
                                 <td className="py-3 font-semibold text-ink dark:text-white">{item.occupancy}%</td>
                               </>
                             )}
@@ -612,9 +689,10 @@ export default function AnalyticsView() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 
 }
