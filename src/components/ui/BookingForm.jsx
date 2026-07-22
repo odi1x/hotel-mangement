@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar, Pencil, AlertTriangle, TagsIcon, Wrench } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -153,7 +154,7 @@ export default function BookingForm({ onClose, initialData }) {
 
   const eyebrow = "block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5";
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
       <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl flex flex-col max-h-[92vh] overflow-hidden anim-sheet">
         <div className="sheet-handle shrink-0" />
@@ -386,5 +387,7 @@ export default function BookingForm({ onClose, initialData }) {
         </form>
       </div>
     </div>
+  ,
+    document.body
   );
 }

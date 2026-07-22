@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -348,7 +349,7 @@ export default function ApartmentsView() {
           </div>
         </div>
       )}
-      {isModalOpen && (
+      {isModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
           <form onSubmit={handleSave} className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-2xl overflow-hidden anim-sheet flex flex-col max-h-[90vh]">
             {/* header */}
@@ -502,7 +503,7 @@ export default function ApartmentsView() {
             </div>
           </form>
         </div>
-      )}
+      , document.body)}
 
       {isShareOpen && (
         <ShareLinkModal

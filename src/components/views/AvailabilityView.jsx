@@ -1,4 +1,5 @@
 import {  useState, useMemo , useRef, useLayoutEffect, useEffect, Fragment } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare, Filter, Check } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -543,7 +544,7 @@ export default function AvailabilityView({ openBookingForm }) {
       })()}
 
       {/* First Modal: List of bookings for the selected day */}
-      {selectedDayBookings && !selectedBookingDetails && (
+      {selectedDayBookings && !selectedBookingDetails && createPortal(
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
@@ -604,10 +605,10 @@ export default function AvailabilityView({ openBookingForm }) {
             )}
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Second Modal: Specific Booking Details */}
-      {selectedBookingDetails && (
+      {selectedBookingDetails && createPortal(
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col">
             <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
@@ -698,7 +699,7 @@ export default function AvailabilityView({ openBookingForm }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }

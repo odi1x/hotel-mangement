@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, TagsIcon, Pencil, Trash2, AlertTriangle, Calendar, Home, ArrowLeftRight } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { formatRuleValue, summarizeDaysOfWeek } from '../../lib/pricingUtils';
@@ -414,7 +415,7 @@ export default function PricingView() {
         <PricingRuleForm onClose={() => setEditRule(null)} initialData={editRule} />
       )}
 
-      {confirmDelete && (
+      {confirmDelete && createPortal(
         <div className="fixed inset-0 z-[90] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
           <div className="absolute inset-0" onClick={() => setConfirmDelete(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
@@ -442,7 +443,7 @@ export default function PricingView() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }

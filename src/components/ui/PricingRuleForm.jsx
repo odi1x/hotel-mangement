@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, TagsIcon, CalendarDays } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import DatePickerCal from './DatePickerCal';
@@ -121,7 +122,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
     finally { setSubmitting(false); }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[80] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
       <div className="absolute inset-0" onClick={onClose}></div>
 
@@ -403,5 +404,7 @@ export default function PricingRuleForm({ onClose, initialData }) {
         </div>
       </div>
     </div>
+  ,
+    document.body
   );
 }

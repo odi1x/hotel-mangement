@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CalendarPlus, Home } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -29,7 +30,7 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
     return apartments.filter(apt => isAvailable(apt.id));
   }, [apartments, bookings, dateValue.startDate, dateValue.endDate, hasRange]);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
       <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl anim-sheet w-full max-w-2xl shadow-soft border border-hairline dark:border-hairline-dark-soft flex flex-col max-h-[90vh]">
         <div className="sheet-handle" />
@@ -119,5 +120,7 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
         </div>
       </div>
     </div>
+  ,
+    document.body
   );
 }
