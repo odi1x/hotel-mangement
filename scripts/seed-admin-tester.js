@@ -41,7 +41,7 @@ async function main() {
     where: {
       OR: [
         { username: TARGET_USERNAME },
-        { name: TARGET_USERNAME } // In case the prompt meant name
+        { name: TARGET_USERNAME }
       ]
     },
   });
@@ -55,6 +55,7 @@ async function main() {
 
   console.log('Wiping existing data for this user...');
   await prisma.maintenanceIssue.deleteMany({ where: { userId: user.id } });
+  await prisma.pricingRule.deleteMany({ where: { userId: user.id } });
 
   // Get apartments to delete bookings first due to FKs
   const userApartments = await prisma.apartment.findMany({ where: { userId: user.id } });
@@ -78,26 +79,108 @@ async function main() {
 
   console.log('Creating new apartments...');
   const createdApartments = [];
-  for (const template of APARTMENT_TEMPLATES) {
-    const apt = await prisma.apartment.create({
-      data: {
-        userId: user.id,
-        name: template.name,
-        type: template.type,
-        basePrice: template.basePrice,
-        rentCost: template.rentCost,
-        cleaningCost: template.cleaningCost,
-        otherExpenseLabel: 'WiFi & Utilities',
-        otherExpenseAmount: template.wifiCost,
-      }
-    });
-    createdApartments.push(apt);
+  // Generate 12 apartments (3 sets of 4)
+  for (let i = 1; i <= 3; i++) {
+    for (const template of APARTMENT_TEMPLATES) {
+      const apt = await prisma.apartment.create({
+        data: {
+          userId: user.id,
+          name: `${template.name} - Unit ${i}0${randomInt(1,9)}`,
+          type: template.type,
+          basePrice: template.basePrice,
+          rentCost: template.rentCost,
+          cleaningCost: template.cleaningCost,
+          otherExpenseLabel: 'WiFi & Utilities',
+          otherExpenseAmount: template.wifiCost,
+        }
+      });
+      createdApartments.push(apt);
+    }
   }
 
-  console.log('Generating bookings & payments...');
+  console.log(`Created ${createdApartments.length} apartments.`);
+
+  console.log('Creating pricing rules...');
   const now = new Date();
   const sixMonthsAgo = new Date(now.getTime() - SIX_MONTHS_MS);
 
+  const pricingRulesData = [
+    // Global weekend rule (Friday, Saturday)
+    {
+      userId: user.id,
+      label: 'Weekend Rate',
+      startDate: sixMonthsAgo,
+      endDate: new Date(now.getTime() + SIX_MONTHS_MS),
+      priceMode: 'multiplier',
+      value: 1.2,
+      priority: 50,
+      daysOfWeek: [5, 6],
+      color: '#3b82f6'
+    },
+    // Global holiday rule (Past holiday)
+    {
+      userId: user.id,
+      label: 'Spring Holiday',
+      startDate: new Date(sixMonthsAgo.getTime() + 60 * 24 * 60 * 60 * 1000), // ~2 months in
+      endDate: new Date(sixMonthsAgo.getTime() + 75 * 24 * 60 * 60 * 1000),
+      priceMode: 'multiplier',
+      value: 1.5,
+      priority: 80,
+      daysOfWeek: [],
+      color: '#ef4444'
+    },
+    // Global summer rule (Future)
+    {
+      userId: user.id,
+      label: 'Summer Peak',
+      startDate: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000),
+      endDate: new Date(now.getTime() + 40 * 24 * 60 * 60 * 1000),
+      priceMode: 'multiplier',
+      value: 1.3,
+      priority: 70,
+      daysOfWeek: [],
+      color: '#f59e0b'
+    }
+  ];
+
+  const createdRules = [];
+  for (const rule of pricingRulesData) {
+      const createdRule = await prisma.pricingRule.create({ data: rule });
+      createdRules.push(createdRule);
+  }
+  console.log(`Created ${createdRules.length} pricing rules.`);
+
+  function calculatePriceForDate(date, basePrice) {
+      let finalMultiplier = 1.0;
+      let highestPriority = -1;
+
+      const dayOfWeek = date.getDay(); // 0 (Sun) - 6 (Sat)
+
+      for (const rule of createdRules) {
+          if (date >= rule.startDate && date <= rule.endDate) {
+              const appliesToDay = rule.daysOfWeek.length === 0 || rule.daysOfWeek.includes(dayOfWeek);
+              if (appliesToDay && rule.priority > highestPriority) {
+                  highestPriority = rule.priority;
+                  finalMultiplier = Number(rule.value);
+              }
+          }
+      }
+      return basePrice * finalMultiplier;
+  }
+
+  function calculateBookingPrice(startDate, endDate, basePrice) {
+      let total = 0;
+      let currentDate = new Date(startDate);
+      // Don't count checkout day for pricing
+      const end = new Date(endDate);
+      while(currentDate < end) {
+          total += calculatePriceForDate(currentDate, basePrice);
+          currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+      }
+      return total;
+  }
+
+  console.log('Generating bookings & payments...');
   for (const apt of createdApartments) {
     const numBookings = randomInt(5, 12);
     let currentStartDate = new Date(sixMonthsAgo);
@@ -106,7 +189,7 @@ async function main() {
       // Add a gap between bookings
       currentStartDate = new Date(currentStartDate.getTime() + randomInt(1, 10) * 24 * 60 * 60 * 1000);
 
-      if (currentStartDate > new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+      if (currentStartDate > new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)) {
           break; // Don't go too far into the future
       }
 
@@ -114,13 +197,14 @@ async function main() {
       const endDate = new Date(currentStartDate.getTime() + stayDurationDays * 24 * 60 * 60 * 1000);
 
       const guest = randomChoice(GUESTS);
-      const totalPrice = stayDurationDays * Number(apt.basePrice);
+      const calculatedTotalPrice = calculateBookingPrice(currentStartDate, endDate, Number(apt.basePrice));
+      const avgPricePerNight = calculatedTotalPrice / stayDurationDays;
 
       let status = 'completed';
       if (currentStartDate <= now && endDate >= now) {
           status = 'active';
       } else if (currentStartDate > now) {
-          status = 'pending'; // or confirmed depending on your app's logic
+          status = 'pending';
       }
 
       // Random cancellation
@@ -135,8 +219,8 @@ async function main() {
           residentName: guest.residentName,
           residentId: guest.residentId,
           phone: guest.phone,
-          pricePerNight: apt.basePrice,
-          totalPrice: totalPrice,
+          pricePerNight: avgPricePerNight, // average for display
+          totalPrice: calculatedTotalPrice,
           startDate: currentStartDate,
           endDate: endDate,
           status: status,
@@ -150,7 +234,7 @@ async function main() {
              data: {
                  bookingId: booking.id,
                  userId: user.id,
-                 amount: totalPrice,
+                 amount: calculatedTotalPrice,
                  date: booking.createdAt,
                  type: 'payment',
                  method: randomChoice(['cash', 'card', 'transfer'])
@@ -163,7 +247,7 @@ async function main() {
                  data: {
                      bookingId: booking.id,
                      userId: user.id,
-                     amount: totalPrice,
+                     amount: calculatedTotalPrice,
                      date: booking.createdAt,
                      type: 'payment',
                      method: randomChoice(['card', 'transfer'])
@@ -173,7 +257,7 @@ async function main() {
                  data: {
                      bookingId: booking.id,
                      userId: user.id,
-                     amount: -totalPrice,
+                     amount: -calculatedTotalPrice,
                      date: currentStartDate,
                      type: 'refund',
                      method: 'transfer'
