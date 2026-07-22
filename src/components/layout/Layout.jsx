@@ -16,7 +16,8 @@ import PricingView from '../views/PricingView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
-import { Plus, CalendarSearch, Share2, Copy, Check } from 'lucide-react';
+import ShareLinkModal from '../ui/ShareLinkModal';
+import { Plus, CalendarSearch, Share2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 // Permission-gated views. If a staff member's permission for one of these
@@ -35,7 +36,7 @@ export default function Layout() {
   const [view, setViewRaw] = useState('availability');
   const [isAddingBooking, setIsAddingBooking] = useState(false);
   const [isBookingByDate, setIsBookingByDate] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [initialBookingData, setInitialBookingData] = useState({});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -55,14 +56,11 @@ export default function Layout() {
     // else: silently ignore — the sidebar shouldn't have exposed this option anyway
   };
 
-  const shareableLink = `${window.location.origin}/book/${user?.adminId || user?.id}`;
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareableLink);
-    setIsCopied(true);
-    toast.success('تم نسخ الرابط!');
-    setTimeout(() => setIsCopied(false), 2000);
-  };
+  // Public booking URL — computed here so both the Share icon (in the
+  // toolbar) and any other consumer can pass it to ShareLinkModal.
+  const shareableLink = typeof window !== 'undefined'
+    ? `${window.location.origin}/book/${user?.adminId || user?.id}`
+    : '';
 
   const handleOpenBookingForm = (initialData = {}) => {
     setInitialBookingData(initialData);
@@ -133,29 +131,14 @@ export default function Layout() {
             <div className="hidden md:flex items-center space-x-reverse space-x-3 shrink-0">
 
               {view === 'apartments' && (
-                <div className="bg-canvas dark:bg-surface-dark-elevated p-1.5 rounded-md border border-hairline dark:border-hairline-dark-soft flex items-center gap-2 max-w-[300px]">
-                  <div className="bg-surface-card dark:bg-hairline-dark p-1.5 rounded-md text-ink dark:text-white">
-                    <Share2 size={16} />
-                  </div>
-                  <div className="flex-1 overflow-hidden hidden md:block">
-                    <p className="text-2xs text-muted dark:text-body-dark mb-0.5 truncate">رابط الحجز المباشر للعملاء</p>
-                    <input
-                      type="text"
-                      readOnly
-                      value={shareableLink}
-                      className="w-full text-xs bg-transparent border-none outline-none text-body dark:text-body-dark text-left truncate"
-                      dir="ltr"
-                    />
-                  </div>
-                  <button
-                    onClick={handleCopyLink}
-                    className={`p-1.5 rounded-md font-semibold flex items-center gap-1 transition-colors ${isCopied ? 'bg-primary-active text-white' : 'bg-primary text-white hover:bg-primary-active'}`}
-                    title="نسخ الرابط"
-                  >
-                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                    <span className="text-xs hidden lg:inline">{isCopied ? 'تم' : 'نسخ الرابط'}</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => setIsShareOpen(true)}
+                  className="inline-flex items-center gap-2 h-10 px-3.5 rounded-md bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:border-ink dark:hover:border-white transition-colors text-sm font-semibold"
+                  title="مشاركة رابط الحجز"
+                >
+                  <Share2 size={16} />
+                  <span>مشاركة الرابط</span>
+                </button>
               )}
 
               {view !== 'balances' && view !== 'maintenance' && view !== 'pricing' && view !== 'more' && (
@@ -232,6 +215,14 @@ export default function Layout() {
         <BookByDateModal
           onClose={() => setIsBookingByDate(false)}
           onSelectApartment={handleSelectApartmentByDate}
+        />
+      )}
+
+      {isShareOpen && (
+        <ShareLinkModal
+          link={shareableLink}
+          businessName={user?.businessName || user?.name}
+          onClose={() => setIsShareOpen(false)}
         />
       )}
     </div>

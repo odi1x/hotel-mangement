@@ -5,6 +5,7 @@ import { useData } from '../../context/DataContext';
 import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check, Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
+import ShareLinkModal from '../ui/ShareLinkModal';
 export default function ApartmentsView() {
   const { apartments, addApartment, updateApartment, deleteApartment, licenses, refreshData } = useData();
   const { user } = useAuth();
@@ -19,19 +20,14 @@ export default function ApartmentsView() {
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Shareable public booking link — duplicated from Layout for mobile
-  // display. On desktop the link lives in Layout's title bar (hidden on
-  // mobile), on mobile we render it as its own card above the grid.
-  const [isCopied, setIsCopied] = useState(false);
+  // Public booking URL — computed inline so the mobile Share button
+  // in this view can pass it to ShareLinkModal. Isolated from Layout's
+  // desktop instance (they render the same modal component with the
+  // same data, just triggered independently).
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const shareableLink = typeof window !== 'undefined'
     ? `${window.location.origin}/book/${user?.adminId || user?.id}`
     : '';
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareableLink);
-    setIsCopied(true);
-    toast.success('تم نسخ الرابط');
-    setTimeout(() => setIsCopied(false), 2000);
-  };
 
   const itemsPerPage = 11;
   const [formData, setFormData] = useState({
@@ -193,35 +189,17 @@ export default function ApartmentsView() {
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
 
-      {/* Mobile-only shareable link card. On desktop this lives in Layout's
-          title bar (hidden on mobile), so guests-of-your-property URL still
-          needs to be reachable from the phone. Admins + staff-with-canBook
-          get to copy it. */}
+      {/* Mobile-only share button. Opens ShareLinkModal (same component
+          the desktop Share button opens). Sits above the grid, only for
+          admin + canBook. Clean icon+label button — no ugly inline card. */}
       {(user?.role === 'admin' || user?.permissions?.canBook) && (
-        <div className="md:hidden bg-canvas dark:bg-surface-dark-elevated p-2.5 rounded-lg border border-hairline dark:border-hairline-dark-soft flex items-center gap-2 mb-3 shrink-0">
-          <div className="bg-surface-card dark:bg-hairline-dark p-1.5 rounded-md text-ink dark:text-white shrink-0">
-            <Share2 size={14} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-2xs text-muted dark:text-body-dark leading-none mb-0.5">رابط الحجز المباشر</p>
-            <input
-              type="text"
-              readOnly
-              value={shareableLink}
-              className="w-full text-xs bg-transparent border-none outline-none text-body dark:text-body-dark text-left truncate p-0"
-              dir="ltr"
-              onFocus={(e) => e.target.select()}
-            />
-          </div>
-          <button
-            onClick={handleCopyLink}
-            className={`p-2 rounded-md font-semibold shrink-0 transition-colors ${isCopied ? 'bg-primary-active text-white' : 'bg-primary text-white hover:bg-primary-active'}`}
-            title="نسخ الرابط"
-            aria-label={isCopied ? 'تم النسخ' : 'نسخ الرابط'}
-          >
-            {isCopied ? <Check size={14} /> : <Copy size={14} />}
-          </button>
-        </div>
+        <button
+          onClick={() => setIsShareOpen(true)}
+          className="md:hidden inline-flex items-center gap-2 h-10 px-3.5 rounded-md bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white transition-colors text-sm font-semibold mb-3 shrink-0 self-start"
+        >
+          <Share2 size={15} />
+          <span>مشاركة رابط الحجز</span>
+        </button>
       )}
 
       <div className="flex-1 overflow-y-auto pt-2 md:pt-0 pb-24 md:pb-0">
@@ -524,6 +502,14 @@ export default function ApartmentsView() {
             </div>
           </form>
         </div>
+      )}
+
+      {isShareOpen && (
+        <ShareLinkModal
+          link={shareableLink}
+          businessName={user?.businessName || user?.name}
+          onClose={() => setIsShareOpen(false)}
+        />
       )}
     </div>
     </div>
