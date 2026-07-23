@@ -1,141 +1,108 @@
-# Rent Flow — Expenses Feature (Phase 1b): Migration + Integrations
+# Rent Flow — Expenses Phase 2a: Per-Unit P&L
 
-Phase 1a shipped the core Expenses feature. Phase 1b brings your existing data over, wires up maintenance-to-expense auto-linking, updates Analytics to read from the new table, and cleans up Settings.
+The insight your data was hiding. Every unit now shows its actual profit after costs — not just revenue, but revenue minus direct expenses minus its share of business overhead.
 
-Also: **removed the "branch" concept** from Phase 1a. I mixed contexts with the football academy — Rent Flow doesn't have branches. Scope is now just `global | unit`.
+## Why this matters
 
-## 7 things this patch does
+You've been looking at revenue-per-unit forever. Which is useful, but it's not the same as "which unit is making me money." A high-revenue unit that eats maintenance calls and has expensive rent isn't necessarily profitable. A quiet unit with low costs might quietly out-earn the busy ones.
 
-### 1. Branch removed from Phase 1a
+Per-unit P&L exposes that. The math is:
 
-- Schema: `Expense.branch` field dropped
-- ExpenseForm: no more "فرع محدد" scope option, no branch text input
-- ExpensesView: no branch display in row metadata
-- API: no branch in POST/PUT
-- Scope is now just: **كل الأنشطة** (global) or **وحدة محددة** (unit)
+```
+Net Profit = Revenue − (Direct Unit Expenses + Share of Global Expenses)
+```
 
-### 2. Auto-migration on first Expenses page load
+**Direct unit expenses** = every Expense with `scope='unit'` and `apartmentId=this` (rent, salaried cleaning, maintenance costs, per-unit misc).
 
-When you open the Expenses tab for the first time after this deploys, the API detects you have zero Expense records and automatically seeds from your existing data:
+**Share of global expenses** = total scope='global' expenses ÷ number of filtered apartments. Equal split. Fair for fixed overhead like insurance, admin salaries, marketing that doesn't attribute to a specific unit.
 
-- **Each `StaffExpense`** → Expense row (category=staff, isRecurring=monthly, sourceType=migration)
-- **Apartment.rentCost** → Expense (category=rent, scope=unit, isRecurring, sourceType=migration)
-- **Apartment.cleaningCost** (only if type='salaried') → Expense (category=supplies, scope=unit, isRecurring)
-- **Apartment.otherExpenseAmount** → Expense (category=other, scope=unit, isRecurring)
-- **Every resolved maintenance issue with cost > 0** → Expense (category=maintenance, dated on `resolvedAt`, sourceType=maintenance, sourceRefId=issue.id) — this backfills your maintenance history
+**Recurring expenses** are prorated by period (monthly rent × period_days / 30).
 
-Idempotency: the seed only runs when `count() === 0` for the user, so it can't run twice. If you delete all your expenses later, it will trigger again on next load. That's a feature, not a bug (safety net).
+## What you'll see
 
-The recurring migrated rows are dated **today** with `isRecurring=true`. They don't backfill 6 months of history because that would generate synthetic data. Phase 2's cron will generate future months automatically.
+New section in Analytics: **الربحية حسب الوحدة** (Profitability by Unit).
 
-Per-booking variable costs (per_booking cleaning, percentage platform fee) stay on the Apartment model — they're transaction-specific, not fixed monthly expenses.
+**Desktop**: dense table with columns
+- # rank (top-1 profit gets accent chip)
+- Unit name
+- Revenue
+- Expenses (tooltip on hover shows the direct/global split)
+- Net Profit (loss shows as accent-strong)
+- Margin %
+- Occupancy %
 
-### 3. Maintenance → Expense auto-link
+**Mobile**: card list. Profit is the headline; revenue + expenses are supporting stats. Rank chip in top-right. Loss units also render in accent-strong.
 
-New helper `syncMaintenanceExpense(issue)` runs on every maintenance POST/PUT. It maintains this invariant:
+Sorted by net profit descending — money-makers first, cash-bleeders last.
 
-> Every resolved MaintenanceIssue with `cost > 0` has exactly one linked Expense row.
+## Design choices worth mentioning
 
-Behavior:
-- Issue marked resolved with cost → creates Expense (category=maintenance, scope=unit, apartmentId, sourceType=maintenance, sourceRefId=issue.id)
-- Issue's cost changes → updates the linked Expense to match
-- Issue re-opened (status changes from resolved) → **deletes** the linked Expense (money didn't actually go out)
-- Issue's cost cleared to null → also deletes
+**No red for losses.** In a monochrome design with a green accent, red would feel out of place and unnecessarily alarming. Loss units use `text-accent-strong` (deeper green) — signals "attention" without accusing. The negative sign carries the actual meaning.
 
-Vendor + notes flow through: `issue.contractor` → `expense.vendor`, `issue.description` → `expense.notes`.
+**Rank chip only on top-1 with positive profit.** If every unit is losing money, no gold star for "best of a bad bunch." The chip communicates "this one's your winner" — meaningless if there's no winning.
 
-You'll see maintenance-linked expenses in the ExpensesView list mixed with your manual ones. They open the maintenance issue on tap (Phase 2 will polish that link).
+**Equal-split apportionment for global costs.** Not by nights, not by revenue. Rationale: fixed overhead (rent for HQ, admin salaries, marketing that promotes the brand) doesn't scale with how much each unit gets used. Alternative apportionment schemes are configurable later (Phase 2b if you want).
 
-### 4. Analytics reads from Expense table post-migration
+**Tabular numerics everywhere.** Every number uses `font-variant-numeric: tabular-nums` so digits line up in columns. Standard accounting-software convention.
 
-`api/analytics.js` now checks: does this user have any Expense records? If yes (`useExpenseTable=true`), it treats the Expense table as the source of truth:
+**Per-unit table is full-width, not squeezed into a sidebar.** This is the payoff data of the whole expense system. Deserves the space.
 
-- **Skipped**: staff payroll apportionment from StaffExpense, apartment.rentCost apportionment, MaintenanceIssue cost read (all their data is in Expense table now)
-- **Added**: sum of Expense rows with proper scope handling:
-  - `scope='unit'` rows: only counted if the unit is in the current filter (or filter is unfiltered)
-  - `scope='global'` rows: apportioned by the filter ratio (same as old global overhead)
-  - `isRecurring=true` monthly: prorated as `amount × (periodDays / 30) × scopeRatio`
-  - `isRecurring=true` yearly: prorated as `amount × (periodDays / 365) × scopeRatio`
-  - One-time: only counted if date falls in the analytics period
+## What this doesn't include yet
 
-Result: after migration, Analytics numbers should stay consistent with what they were before. If you notice a drift, it's likely because per-booking cleaning/platform fees are still handled separately (as they should be — they're per-transaction, not fixed monthly overhead).
+- **Per-booking variable costs** (per_booking cleaning fee, percentage platform fee): still calculated per-booking in the main total but not attributed per-unit in this breakdown. Reason: they're already inside `revenue` calculation for the booking's month. Adding them again per-unit would double-count.
+- **Direct comparison to last period**: no "this vs previous quarter" for units yet. Could add.
+- **Drill-down**: clicking a unit's row doesn't yet open its full expense list. Should probably deep-link to ExpensesView filtered by that apartment. Phase 2b if useful.
 
-Pre-migration users get the old behavior unchanged.
+## Only works post-migration
 
-### 5. Settings finance tab removed
+Per-unit P&L requires the Expense table as source of truth. Pre-migration users (haven't opened the Expenses tab yet) get an empty `perUnitPnL` array from the API and the section doesn't render. Once they visit Expenses, migration runs, and the section appears next time they refresh Analytics.
 
-The "المصروفات والتشغيل" sub-tab under facility settings is gone. Users default to "الهوية" tab. All the salary + operational cost editing that used to live there now happens in the top-level Expenses tab.
+If you're already post-migration (Phase 1b deployed and Expenses opened), this section shows immediately.
 
-Dead code removed:
-- The `finance` entry in `facilitySubTabs`
-- The entire `{facilityTab === 'finance' && …}` render block (~200 lines)
-- Unused `staffExpenses` + `fetchStaffExpenses` from `useData()` destructuring in SettingsView
+## Files touched (2)
 
-### 6. Migration is safe and reversible
-
-- StaffExpense table stays in schema (backward compat — the migration reads from it, doesn't delete)
-- Apartment financial fields stay in schema
-- If you wanted to roll back to Phase 1a, you'd need to delete all Expense records with `sourceType='migration'` OR `sourceType='maintenance'` and revert the code. The old data sources are still intact.
-
-### 7. Every mutation still respects ownership
-
-All Expense CRUD checks `userId` before allowing the mutation. Same pattern as maintenance + pricing. No user can see or modify another user's expenses.
-
-## Files touched (7)
-
-- `prisma/schema.prisma` — dropped `Expense.branch` field, added `@@index([sourceRefId])` for the maintenance-link lookup
-- `api/admin-resources.js` — removed branch from expense CRUD, added `runInitialMigration()` helper (called from GET), added `syncMaintenanceExpense()` helper (called from maintenance POST/PUT)
-- `api/analytics.js` — added `useExpenseTable` detection, gated legacy staff/rent/maintenance sources on `!useExpenseTable`, added Expense-table sum with proper scope + recurring handling
-- `src/lib/expenseUtils.js` — dropped `branch` from `EXPENSE_SCOPES`
-- `src/components/ui/ExpenseForm.jsx` — dropped branch state, branch input field, branch payload
-- `src/components/views/ExpensesView.jsx` — dropped branch display in list metadata
-- `src/components/views/SettingsView.jsx` — removed `finance` sub-tab entry, removed the entire finance render block, dropped unused staffExpenses import
+- `api/analytics.js` — added `perUnitPnL` computation after the main revenue/expense loops. Only computed when `useExpenseTable` is true. ~90 new lines. Includes proper handling of recurring vs one-time expenses, scope-based filtering, and equal-split apportionment for global overhead
+- `src/components/views/AnalyticsView.jsx` — added `perUnitPnL` derived memo, added the profitability section between the top-performers row and the trend chart. Desktop table + mobile card list
 
 ## Install
 
 ```bash
-unzip -o rentflow-expenses-phase1b.zip -d .
-cp -r patch/prisma  ./
-cp -r patch/api     ./
-cp -r patch/src     ./
-rm -rf patch rentflow-expenses-phase1b.zip
+unzip -o rentflow-pnl-phase2a.zip -d .
+cp -r patch/api  ./
+cp -r patch/src  ./
+rm -rf patch rentflow-pnl-phase2a.zip
 
 git add -A
-git commit -m "expenses phase 1b: auto-migration + maintenance link + analytics cutover + settings cleanup"
+git commit -m "expenses phase 2a: per-unit P&L in analytics"
 git push origin design-md-changes
 ```
 
-Vercel auto-runs `prisma db push` on deploy — the `branch` column drop happens automatically. No data loss (branch was empty for everyone since Phase 1a only just shipped).
+No schema changes. No migration needed. Just deploys.
 
 ## After deploy — what to verify
 
-1. **First time you open المصروفات after deploy** — you should see all your existing staff salaries + apartment rent costs + resolved maintenance history already there. Rows tagged as recurring show the شهري / سنوي pill. Maintenance rows show under the maintenance category with the issue title.
+1. **Open Analytics** — you should see a new section "الربحية حسب الوحدة" between the top-performers/sources row and the trend chart.
+2. **Check the top row** — should be your most profitable unit. If it's surprising (i.e., a unit you didn't think was your best), that's exactly the insight this section exists to surface.
+3. **Check the bottom rows** — losing units render in accent-strong. If any of your units are unexpectedly losing money, dig into why (maintenance-heavy? rent too high vs occupancy?).
+4. **Try filtering by apartment** — the P&L should show only the selected units, with global expenses re-apportioned across just those.
+5. **Try different time ranges** — recurring monthly expenses will prorate correctly.
+6. **Mobile** — card layout should be readable, no clipping.
 
-2. **Toggle to "الكل" time filter** — you should see maintenance rows going back historically (they're dated `resolvedAt`), plus a bunch of today-dated recurring rows for salaries and apartment rents.
+## What questions this should answer for you
 
-3. **Open a maintenance issue and mark it resolved with a cost** — go to ExpensesView, should see it appear as a new maintenance-category row. Edit the cost or reopen the issue → expense updates or disappears accordingly.
+- Which specific units are actually making you money?
+- Is any unit consistently losing money after full costs?
+- Does your top-revenue unit stay top after expenses?
+- What margin % are you running per unit? (Healthy vacation rental margins are typically 20-40% after all costs)
+- Are you profitable overall, and if so, which units are subsidizing which?
 
-4. **Check Analytics** — totalExpenses should be roughly the same as before Phase 1a. If it's way different, tell me the delta and I'll debug. Some drift is expected because scope=unit expenses only count when the unit is in filter (previously staff and rent got apportioned differently).
+If the numbers make you rethink anything about your unit mix, pricing, or per-unit costs — this section did its job.
 
-5. **Open Settings** — you should NOT see the "المصروفات والتشغيل" tab anymore. Just الهوية / التراخيص / النظام.
+## What Phase 2b could bring next (based on what you find useful)
 
-6. **Try Expenses on mobile** — the whole feature should work with the mobile design language from the earlier work (bottom-sheet form, portaled modals, blurred header, hidden nav during modal, etc.).
+- **Deep-link from a P&L row → ExpensesView filtered by that unit** (Phase 1a already supports `?apartmentId=` filter param, needs UI plumbing)
+- **Comparison vs previous period** — mini-sparkline next to each unit
+- **Per-category breakdown within a unit** — "this unit's costs are 60% maintenance, 30% rent"
+- **Break-even nights calculator** — "you need X nights/month to break even on this unit"
 
-## What's deferred to Phase 2
-
-- **Recurring generation cron** — Vercel Cron job that runs daily and creates the next occurrence of each recurring expense when it's due (currently they show up in analytics via proration, but no actual monthly records get created)
-- **Per-unit + per-branch P&L** in the Analytics view (uses expense.scope) — the data model supports this, the analytics UI just doesn't render it yet
-- **Budget per category** with alerts when approaching
-- **Vendor spend analysis** (uses expense.vendor)
-- **Receipt upload UI** (field exists on model, upload widget not wired)
-- **Bill reminders / renewals** (uses recurringUntil)
-
-## Feedback loop
-
-Try it for a day or two with your real data. Things I'd want to know:
-- Are the migrated categories right? (Did rent get labeled properly? Salaries?)
-- Are the totals in Analytics close to what they were before?
-- Is anything missing from Expenses that used to be somewhere in the old finance tab?
-- Do maintenance-linked expenses feel useful, or annoying (they can't be manually edited — they mirror the issue)?
-
-Based on your answers, Phase 2 gets planned more precisely.
+Try Phase 2a first, tell me which of these would actually be useful vs which sound useful but you'd never open.

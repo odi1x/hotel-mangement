@@ -68,6 +68,16 @@ export default function AnalyticsView() {
     }));
   }, [analytics.topUnits, apartments]);
 
+  // Per-unit P&L breakdown — populated post-migration by the API. Empty
+  // for pre-migration users (the API can't cleanly separate unit costs
+  // without the Expense table). Sorted by netProfit desc from the server.
+  const perUnitPnL = useMemo(() => {
+    return (analytics.perUnitPnL || []).map(u => ({
+      ...u,
+      name: u.name || apartments.find(a => a.id === u.id)?.name || 'وحدة',
+    }));
+  }, [analytics.perUnitPnL, apartments]);
+
 
   // Transform data for line chart
   const filteredTrendData = useMemo(() => {
@@ -509,6 +519,159 @@ export default function AnalyticsView() {
             </div>
           </div>
         </div>
+
+        {/* Per-unit P&L — the "which units are actually profitable" section.
+            Only rendered when there's post-migration data (perUnitPnL is
+            empty for pre-migration users). Full-width so the desktop table
+            can breathe; mobile falls back to a card list. Sorted by netProfit
+            descending from the server, so #1 is the money-maker and the
+            bottom row is the one bleeding cash.
+            Rank #1 gets an accent chip, negative-profit units get
+            accent-strong (a subtle color code — red would feel accusatory
+            in a monochrome design, accent-strong stays honest). */}
+        {perUnitPnL.length > 0 && (
+          <div className="card-surface p-4 md:p-5 lg:col-span-3">
+            <div className="mb-4">
+              <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
+                <TrendingUp size={18} className="ml-2 text-muted" />
+                الربحية حسب الوحدة
+              </h4>
+              <p className="text-xs text-muted">
+                الإيرادات ناقص المصروفات المباشرة والحصة من التكاليف العامة —
+                يكشف أي وحدة تربح فعلاً بعد كل التكاليف
+              </p>
+            </div>
+
+            {/* Desktop: dense table. Columns: rank, name, revenue, expenses (with
+                split hover-tooltip showing direct vs shared), net profit, margin,
+                occupancy. Sticky-nothing — the whole page scrolls. */}
+            <div className="hidden md:block overflow-x-auto -mx-1">
+              <table className="w-full text-right text-sm">
+                <thead>
+                  <tr className="text-2xs font-semibold uppercase tracking-wider text-muted-soft border-b border-hairline-soft dark:border-hairline-dark-soft">
+                    <th className="px-3 py-2 text-right">#</th>
+                    <th className="px-3 py-2 text-right">الوحدة</th>
+                    <th className="px-3 py-2 text-left">الإيرادات</th>
+                    <th className="px-3 py-2 text-left">المصروفات</th>
+                    <th className="px-3 py-2 text-left">صافي الربح</th>
+                    <th className="px-3 py-2 text-left">هامش الربح</th>
+                    <th className="px-3 py-2 text-left">الإشغال</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline-soft dark:divide-hairline-dark">
+                  {perUnitPnL.map((u, idx) => {
+                    const isTop = idx === 0 && u.netProfit > 0;
+                    const isLoss = u.netProfit < 0;
+                    return (
+                      <tr key={u.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
+                        <td className="px-3 py-3">
+                          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-2xs font-semibold ${
+                            isTop
+                              ? 'bg-accent text-white'
+                              : 'bg-surface-card text-muted dark:bg-surface-dark dark:text-body-dark'
+                          }`}>
+                            {idx + 1}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 font-semibold text-ink dark:text-white truncate max-w-[180px]">
+                          {u.name}
+                        </td>
+                        <td className="px-3 py-3 text-left text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {Math.round(u.revenue).toLocaleString()}
+                          <span className="text-2xs font-medium text-muted-soft mr-0.5">ر.س</span>
+                        </td>
+                        <td
+                          className="px-3 py-3 text-left text-body dark:text-body-dark"
+                          style={{ fontVariantNumeric: 'tabular-nums' }}
+                          title={`مباشرة: ${Math.round(u.directExpenses).toLocaleString()} · حصة عامة: ${Math.round(u.globalShare).toLocaleString()}`}
+                        >
+                          {Math.round(u.totalExpenses).toLocaleString()}
+                          <span className="text-2xs font-medium text-muted-soft mr-0.5">ر.س</span>
+                        </td>
+                        <td
+                          className={`px-3 py-3 text-left font-bold ${isLoss ? 'text-accent-strong' : 'text-ink dark:text-white'}`}
+                          style={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          {isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}
+                          <span className="text-2xs font-medium text-muted-soft mr-0.5">ر.س</span>
+                        </td>
+                        <td
+                          className={`px-3 py-3 text-left font-semibold ${isLoss ? 'text-accent-strong' : 'text-muted dark:text-body-dark'}`}
+                          style={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          {u.marginPct != null ? `${Math.round(u.marginPct)}%` : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-left text-muted dark:text-body-dark" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {Math.round(u.occupancyPct)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile: cards. Same info, stacked. Prioritizes the profit
+                headline (biggest) with revenue/expenses as small supporting
+                stats. Rank chip in top-right. */}
+            <div className="md:hidden space-y-2">
+              {perUnitPnL.map((u, idx) => {
+                const isTop = idx === 0 && u.netProfit > 0;
+                const isLoss = u.netProfit < 0;
+                return (
+                  <div key={u.id} className="p-3 rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-ink dark:text-white truncate">
+                          {u.name}
+                        </p>
+                        <p className="text-2xs text-muted-soft mt-0.5" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {Math.round(u.occupancyPct)}% إشغال
+                          {u.marginPct != null && (
+                            <> · {Math.round(u.marginPct)}% هامش</>
+                          )}
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-2xs font-semibold shrink-0 ${
+                        isTop
+                          ? 'bg-accent text-white'
+                          : 'bg-surface-card text-muted dark:bg-surface-dark-elevated dark:text-body-dark'
+                      }`}>
+                        {idx + 1}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2 border-t border-hairline-soft dark:border-hairline-dark-soft pt-2">
+                      <div className="min-w-0">
+                        <p className="text-2xs text-muted-soft uppercase tracking-wider font-semibold">
+                          صافي الربح
+                        </p>
+                        <p
+                          className={`text-lg font-bold leading-none mt-0.5 ${isLoss ? 'text-accent-strong' : 'text-ink dark:text-white'}`}
+                          style={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          {isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}
+                          <span className="text-2xs font-medium text-muted-soft mr-0.5">ر.س</span>
+                        </p>
+                      </div>
+                      <div className="text-left" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        <p className="text-2xs text-muted-soft">
+                          إيرادات: <span className="text-ink dark:text-white font-semibold">{Math.round(u.revenue).toLocaleString()}</span>
+                        </p>
+                        <p className="text-2xs text-muted-soft mt-0.5">
+                          مصروفات: <span className="text-body dark:text-body-dark font-semibold">{Math.round(u.totalExpenses).toLocaleString()}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-2xs text-muted-soft mt-3 leading-relaxed">
+              الحصة من التكاليف العامة (مثل التسويق والرواتب) موزعة بالتساوي على الوحدات المفلترة في هذه الفترة.
+            </p>
+          </div>
+        )}
 
         <div className="card-surface p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[320px] md:min-h-[440px]">
 

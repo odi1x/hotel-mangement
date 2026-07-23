@@ -540,6 +540,97 @@ export default async function handler(req, res) {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 3);
 
+    // Per-unit P&L — the "which units are actually making money" question.
+    // Only computed post-migration: without the Expense table as source of
+    // truth, we can't cleanly separate unit-scoped costs from global overhead.
+    // For pre-migration users, this stays empty and the client renders nothing.
+    let perUnitPnL = [];
+    if (useExpenseTable) {
+      // Bring in ALL apartments in scope (including those with zero bookings
+      // in the period — they still have rent, cleaning, etc.), and keep only
+      // those that pass the current filter.
+      const filteredAptList = apartmentIds
+        ? allApartments.filter(a => apartmentIds.split(',').includes(a.id))
+        : allApartments;
+
+      // Refetch expenses for the P&L computation. We already have them from
+      // the main expense loop but not indexed by apartment — a fresh pull
+      // with a small scope filter is cheaper than restructuring the earlier
+      // loop for one downstream use.
+      const allExpensesForPnL = await prisma.expense.findMany({
+        where: { userId: targetUserId }
+      });
+
+      // Compute total global expenses for the period (with recurring proration),
+      // to split equally across the filtered units.
+      let globalPeriodTotal = 0;
+      const rangeStart = startDate ? new Date(startDate) : null;
+      const rangeEnd = endDate ? new Date(endDate) : null;
+      for (const e of allExpensesForPnL) {
+        if (e.scope !== 'global') continue;
+        const amount = Number(e.amount || 0);
+        if (amount <= 0) continue;
+
+        if (e.isRecurring) {
+          let dailyAmount = 0;
+          if (e.recurringPeriod === 'yearly') dailyAmount = amount / 365;
+          else                                dailyAmount = amount / 30;
+          globalPeriodTotal += dailyAmount * periodDays;
+        } else {
+          const eDate = new Date(e.date);
+          if (rangeStart && eDate < rangeStart) continue;
+          if (rangeEnd && eDate > rangeEnd) continue;
+          globalPeriodTotal += amount;
+        }
+      }
+      const globalSharePerUnit = filteredAptList.length > 0
+        ? globalPeriodTotal / filteredAptList.length
+        : 0;
+
+      // Now walk each apartment in scope and compute its P&L.
+      perUnitPnL = filteredAptList.map(apt => {
+        // Revenue + nights from aptStats (built during booking loop above).
+        const revenue = aptStats[apt.id]?.revenue || 0;
+        const nights = aptStats[apt.id]?.nights || 0;
+
+        // Direct expenses: scope=unit rows tied to this apartment, in period.
+        let directExpenses = 0;
+        for (const e of allExpensesForPnL) {
+          if (e.scope !== 'unit' || e.apartmentId !== apt.id) continue;
+          const amount = Number(e.amount || 0);
+          if (amount <= 0) continue;
+
+          if (e.isRecurring) {
+            const dailyAmount = e.recurringPeriod === 'yearly' ? amount / 365 : amount / 30;
+            directExpenses += dailyAmount * periodDays;
+          } else {
+            const eDate = new Date(e.date);
+            if (rangeStart && eDate < rangeStart) continue;
+            if (rangeEnd && eDate > rangeEnd) continue;
+            directExpenses += amount;
+          }
+        }
+
+        const totalUnitExpenses = directExpenses + globalSharePerUnit;
+        const netProfit = revenue - totalUnitExpenses;
+        const marginPct = revenue > 0 ? (netProfit / revenue) * 100 : null;
+        const occupancyPct = periodDays > 0 ? (nights / periodDays) * 100 : 0;
+
+        return {
+          id: apt.id,
+          name: apt.name,
+          revenue,
+          nights,
+          directExpenses,
+          globalShare: globalSharePerUnit,
+          totalExpenses: totalUnitExpenses,
+          netProfit,
+          marginPct,
+          occupancyPct,
+        };
+      }).sort((a, b) => b.netProfit - a.netProfit);
+    }
+
     res.status(200).json({
       totalRevenue,
       totalExpenses,
@@ -549,7 +640,8 @@ export default async function handler(req, res) {
       sourceCounts,
       count: bookings.length,
       dailyTrend,
-      topUnits
+      topUnits,
+      perUnitPnL,
     });
 
   } catch (error) {
