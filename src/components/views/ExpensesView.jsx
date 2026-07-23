@@ -340,12 +340,6 @@ export default function ExpensesView() {
                               </span>
                             </>
                           )}
-                          {row.scope === 'branch' && row.branch && (
-                            <>
-                              <span className="text-hairline">·</span>
-                              <span>{row.branch}</span>
-                            </>
-                          )}
                           {row.isRecurring && (
                             <>
                               <span className="text-hairline">·</span>

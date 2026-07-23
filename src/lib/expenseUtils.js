@@ -21,7 +21,6 @@ export const EXPENSE_CATEGORIES = [
 
 export const EXPENSE_SCOPES = [
   { value: 'global', label: 'كل الأنشطة' },
-  { value: 'branch', label: 'فرع محدد' },
   { value: 'unit',   label: 'وحدة محددة' },
 ];
 

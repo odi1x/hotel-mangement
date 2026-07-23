@@ -214,14 +214,14 @@ model StaffExpense {
 /// The ledger. One row per money-out event. Category is a string (not enum)
 /// so we can add new categories without a schema migration — the UI
 /// translates known categories to Arabic labels, unknowns show as "أخرى".
-/// scope tells us whether this hits the whole business, one branch, or one
-/// unit — needed for accurate per-unit / per-branch profit calculations.
+/// scope tells us whether this hits the whole business or a specific unit
+/// — needed for accurate per-unit profit calculations.
 /// isRecurring + recurringPeriod let us auto-generate rent, salaries, etc.
 /// (generation logic lives elsewhere — a scheduled task, not this model).
 model Expense {
   id               String    @id @default(uuid())
   userId           String    // owner (admin) userId — scopes queries
-  title            String    // e.g. "إيجار الفرع الرئيسي — أغسطس"
+  title            String    // e.g. "إيجار الشقة 91 — أغسطس"
   amount           Decimal
   date             DateTime  // when the expense was incurred (not created)
   category         String    @default("other")
@@ -229,8 +229,7 @@ model Expense {
   //   "utilities" | "staff" | "marketing" | "maintenance" | "licenses"
   //   | "supplies" | "insurance" | "rent" | "zakat" | "other"
   scope            String    @default("global")
-  // "global" (whole business) | "branch" (specific branch) | "unit" (specific apartment)
-  branch           String?   // e.g. "al-nuzhah" | "al-buhayrat" — free-form for now
+  // "global" (whole business) | "unit" (specific apartment)
   apartmentId      String?   // when scope=unit
 
   vendor           String?   // who was paid — for later "vendor spend" analysis
@@ -259,6 +258,7 @@ model Expense {
   @@index([userId, date])
   @@index([userId, category])
   @@index([apartmentId])
+  @@index([sourceRefId])
 }
 
 model Notification {

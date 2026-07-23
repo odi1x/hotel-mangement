@@ -1,155 +1,141 @@
-# Rent Flow — Expenses Feature (Phase 1a): Core Ledger
+# Rent Flow — Expenses Feature (Phase 1b): Migration + Integrations
 
-Expenses is now a first-class feature — its own top-level tab, its own data model, its own page. This is **Phase 1a**: the feature is fully usable for manually tracking any money going out. Phase 1b (next patch) brings over your existing StaffExpense records + fixed-cost config + adds the maintenance-to-expense auto-link.
+Phase 1a shipped the core Expenses feature. Phase 1b brings your existing data over, wires up maintenance-to-expense auto-linking, updates Analytics to read from the new table, and cleans up Settings.
 
-## What's new
+Also: **removed the "branch" concept** from Phase 1a. I mixed contexts with the football academy — Rent Flow doesn't have branches. Scope is now just `global | unit`.
 
-**A new sidebar tab** — **المصروفات** — sits between المستحقات and الصيانة. Financial data groups together at that height in the sidebar. Same on mobile: the tab appears in the More menu with the ArrowDownCircle icon.
+## 7 things this patch does
 
-### The page: a ledger, not a bank statement
+### 1. Branch removed from Phase 1a
 
-The design thesis: numbers get respect, not celebration. Expenses aren't wins — the total doesn't get accent green. The information architecture:
+- Schema: `Expense.branch` field dropped
+- ExpenseForm: no more "فرع محدد" scope option, no branch text input
+- ExpensesView: no branch display in row metadata
+- API: no branch in POST/PUT
+- Scope is now just: **كل الأنشطة** (global) or **وحدة محددة** (unit)
 
-1. **Hero** — "صرفَك هذا الشهر" with the tabular monthly total, a small comparison to last month (up = ink weight, down = accent green), and a 6-month sparkline on the trailing edge (desktop only). The sparkline uses solid ink for the current month, muted surface color for past months. At a glance you see the shape of your spending over time.
+### 2. Auto-migration on first Expenses page load
 
-2. **Category strip** — this is the signature. Horizontal-scroll on mobile, 4/6-column grid on desktop. Each category card shows category name, its total, its share of the month's spending, and delta vs last month. Only non-empty categories appear. Reads like a ticker.
+When you open the Expenses tab for the first time after this deploys, the API detects you have zero Expense records and automatically seeds from your existing data:
 
-3. **The list** — filter chips (This Month / Quarter / Year / All + category selector), search, add button, then the row-by-row ledger. Each row: category icon, title, tabular amount, metadata line (date · category · unit if applicable · recurring badge if applicable · vendor if there is one). Edit/delete actions always visible on mobile, hover-only on desktop.
+- **Each `StaffExpense`** → Expense row (category=staff, isRecurring=monthly, sourceType=migration)
+- **Apartment.rentCost** → Expense (category=rent, scope=unit, isRecurring, sourceType=migration)
+- **Apartment.cleaningCost** (only if type='salaried') → Expense (category=supplies, scope=unit, isRecurring)
+- **Apartment.otherExpenseAmount** → Expense (category=other, scope=unit, isRecurring)
+- **Every resolved maintenance issue with cost > 0** → Expense (category=maintenance, dated on `resolvedAt`, sourceType=maintenance, sourceRefId=issue.id) — this backfills your maintenance history
 
-### Categories
+Idempotency: the seed only runs when `count() === 0` for the user, so it can't run twice. If you delete all your expenses later, it will trigger again on next load. That's a feature, not a bug (safety net).
 
-10 defaults, all identified by string (not enum) so we can add more without schema migrations:
+The recurring migrated rows are dated **today** with `isRecurring=true`. They don't backfill 6 months of history because that would generate synthetic data. Phase 2's cron will generate future months automatically.
 
-- إيجارات (rent)
-- مرافق (utilities)
-- رواتب وموظفين (staff)
-- صيانة (maintenance)
-- تسويق وإعلانات (marketing)
-- تراخيص ورسوم (licenses)
-- مستلزمات وأدوات (supplies)
-- تأمين (insurance)
-- زكاة (zakat)
-- أخرى (other)
+Per-booking variable costs (per_booking cleaning, percentage platform fee) stay on the Apartment model — they're transaction-specific, not fixed monthly expenses.
 
-Each has a dedicated Lucide icon so it's identifiable at a glance in the category strip and the list.
+### 3. Maintenance → Expense auto-link
 
-### Scope
+New helper `syncMaintenanceExpense(issue)` runs on every maintenance POST/PUT. It maintains this invariant:
 
-Every expense is tagged with a scope:
-- **كل الأنشطة** (global) — hits the whole business (marketing, licenses, insurance)
-- **فرع محدد** (branch) — specific to one branch (branch rent, branch utilities)
-- **وحدة محددة** (unit) — specific to one apartment (that apartment's cleaning fee, per-unit repair)
+> Every resolved MaintenanceIssue with `cost > 0` has exactly one linked Expense row.
 
-The scope makes per-branch and per-unit profit calculations possible in Phase 2 analytics. For now the field is stored and displayed; the analytics update comes with Phase 1b.
+Behavior:
+- Issue marked resolved with cost → creates Expense (category=maintenance, scope=unit, apartmentId, sourceType=maintenance, sourceRefId=issue.id)
+- Issue's cost changes → updates the linked Expense to match
+- Issue re-opened (status changes from resolved) → **deletes** the linked Expense (money didn't actually go out)
+- Issue's cost cleared to null → also deletes
 
-### Recurring
+Vendor + notes flow through: `issue.contractor` → `expense.vendor`, `issue.description` → `expense.notes`.
 
-The form has a "مصروف متكرر" toggle. Turning it on schedules the record for monthly or yearly re-generation. Generation itself is deferred to Phase 2 (needs a Vercel Cron job), but the schema and UI are ready.
+You'll see maintenance-linked expenses in the ExpensesView list mixed with your manual ones. They open the maintenance issue on tap (Phase 2 will polish that link).
 
-## Data model
+### 4. Analytics reads from Expense table post-migration
 
-New `Expense` model in Prisma:
+`api/analytics.js` now checks: does this user have any Expense records? If yes (`useExpenseTable=true`), it treats the Expense table as the source of truth:
 
-```prisma
-model Expense {
-  id, userId, title, amount, date
-  category         String    @default("other")
-  scope            String    @default("global")
-  branch           String?
-  apartmentId      String?   // when scope=unit
-  vendor           String?
-  notes            String?
-  receiptUrl       String?
-  isRecurring      Boolean   @default(false)
-  recurringPeriod  String?   // "monthly" | "yearly"
-  recurringUntil   DateTime?
-  sourceType       String    @default("manual")  // "manual" | "maintenance" | "salary-schedule" | "migration"
-  sourceRefId      String?
-  createdAt, updatedAt
-  user, apartment  (relations)
-  @@index([userId]) @@index([userId, date]) @@index([userId, category]) @@index([apartmentId])
-}
-```
+- **Skipped**: staff payroll apportionment from StaffExpense, apartment.rentCost apportionment, MaintenanceIssue cost read (all their data is in Expense table now)
+- **Added**: sum of Expense rows with proper scope handling:
+  - `scope='unit'` rows: only counted if the unit is in the current filter (or filter is unfiltered)
+  - `scope='global'` rows: apportioned by the filter ratio (same as old global overhead)
+  - `isRecurring=true` monthly: prorated as `amount × (periodDays / 30) × scopeRatio`
+  - `isRecurring=true` yearly: prorated as `amount × (periodDays / 365) × scopeRatio`
+  - One-time: only counted if date falls in the analytics period
 
-`sourceType` + `sourceRefId` are the provenance fields. Manual entries default to "manual". Phase 1b/2 will use these to link records that come from resolved maintenance issues, recurring generation, or the one-time migration from StaffExpense.
+Result: after migration, Analytics numbers should stay consistent with what they were before. If you notice a drift, it's likely because per-booking cleaning/platform fees are still handled separately (as they should be — they're per-transaction, not fixed monthly overhead).
 
-## API
+Pre-migration users get the old behavior unchanged.
 
-Added to `admin-resources.js` (same reason as maintenance + pricing — Vercel Hobby has a 12-function cap). The endpoint is `?resource=expenses`:
+### 5. Settings finance tab removed
 
-- `GET`  — list, with optional `?category=&scope=&from=&to=&apartmentId=` filters
-- `POST` — create (validates title + amount + date)
-- `PUT`  — update (validates ownership before applying)
-- `DELETE ?id=` — delete (also validates ownership)
+The "المصروفات والتشغيل" sub-tab under facility settings is gone. Users default to "الهوية" tab. All the salary + operational cost editing that used to live there now happens in the top-level Expenses tab.
 
-Ownership check: every mutation calls `findUnique(id)` first and rejects with 404 if `userId !== targetUserId`. Same pattern as maintenance and pricing.
+Dead code removed:
+- The `finance` entry in `facilitySubTabs`
+- The entire `{facilityTab === 'finance' && …}` render block (~200 lines)
+- Unused `staffExpenses` + `fetchStaffExpenses` from `useData()` destructuring in SettingsView
 
-## Permissions
+### 6. Migration is safe and reversible
 
-Expenses gate on `canViewAnalytics` — financial data groups together. Admins bypass. If you want a separate `canViewExpenses` permission later (to let a bookkeeper see expenses without seeing the full analytics revenue breakdown), it's a single-line change in Layout's `GATED_VIEW_PERM` and StaffFormModal.
+- StaffExpense table stays in schema (backward compat — the migration reads from it, doesn't delete)
+- Apartment financial fields stay in schema
+- If you wanted to roll back to Phase 1a, you'd need to delete all Expense records with `sourceType='migration'` OR `sourceType='maintenance'` and revert the code. The old data sources are still intact.
 
-## What's deferred to Phase 1b (next patch)
+### 7. Every mutation still respects ownership
 
-- **Migration endpoint** that copies existing StaffExpense records → Expense (category=staff, isRecurring=true, monthly)
-- **Migration** of fixed operational costs from user settings → Expense records (category depending on the field)
-- **Migration** of per-apartment costs from advanced financials → Expense records (scope=unit)
-- **Maintenance→expense auto-link** — resolving a maintenance issue with cost>0 creates a linked Expense record (sourceType=maintenance, sourceRefId=issueId)
-- **Analytics update** — the current "totalExpenses" in Analytics reads StaffExpense + user config; update to read from Expense table so totals stay accurate during transition
-- **Settings cleanup** — remove the Rawatib / fixed-costs sub-tabs once migration is done
+All Expense CRUD checks `userId` before allowing the mutation. Same pattern as maintenance + pricing. No user can see or modify another user's expenses.
 
-## What's deferred to Phase 2
+## Files touched (7)
 
-- Vercel Cron job for recurring generation (daily job, checks all recurring records, creates the next occurrence if due)
-- Budget per category (monthly caps + alerts when approaching)
-- Per-branch and per-unit P&L in the Analytics view (uses expense.scope)
-- Vendor spend analytics (uses expense.vendor)
-- Receipt upload (uses expense.receiptUrl — the field exists, UI upload isn't wired yet)
-
-## Files touched (9)
-
-**New:**
-- `prisma/schema.prisma` — added Expense model, User.expenses[] + Apartment.expenses[] relations
-- `src/lib/expenseUtils.js` — category catalog, stat computations, formatting helpers
-- `src/components/ui/ExpenseForm.jsx` — add/edit modal (portaled to body, same design language as PricingRuleForm / MaintenanceIssueForm)
-- `src/components/views/ExpensesView.jsx` — the main view (hero + category strip + list)
-
-**Modified:**
-- `api/admin-resources.js` — added expensesHandler + dispatcher registration
-- `src/context/DataContext.jsx` — added expenses state, fetchExpenses, createExpense, updateExpense, deleteExpense, auto-fetch on mount, provider value
-- `src/components/layout/Layout.jsx` — imported ExpensesView, added 'expenses' view registration, added `canViewAnalytics` gate in GATED_VIEW_PERM
-- `src/components/layout/Sidebar.jsx` — added ArrowDownCircle import + المصروفات sidebar item between المستحقات and الصيانة
-- `src/components/layout/MobileMoreMenu.jsx` — added المصروفات menu item, same position
+- `prisma/schema.prisma` — dropped `Expense.branch` field, added `@@index([sourceRefId])` for the maintenance-link lookup
+- `api/admin-resources.js` — removed branch from expense CRUD, added `runInitialMigration()` helper (called from GET), added `syncMaintenanceExpense()` helper (called from maintenance POST/PUT)
+- `api/analytics.js` — added `useExpenseTable` detection, gated legacy staff/rent/maintenance sources on `!useExpenseTable`, added Expense-table sum with proper scope + recurring handling
+- `src/lib/expenseUtils.js` — dropped `branch` from `EXPENSE_SCOPES`
+- `src/components/ui/ExpenseForm.jsx` — dropped branch state, branch input field, branch payload
+- `src/components/views/ExpensesView.jsx` — dropped branch display in list metadata
+- `src/components/views/SettingsView.jsx` — removed `finance` sub-tab entry, removed the entire finance render block, dropped unused staffExpenses import
 
 ## Install
 
 ```bash
-unzip -o rentflow-expenses-phase1a.zip -d .
+unzip -o rentflow-expenses-phase1b.zip -d .
 cp -r patch/prisma  ./
 cp -r patch/api     ./
 cp -r patch/src     ./
-rm -rf patch rentflow-expenses-phase1a.zip
+rm -rf patch rentflow-expenses-phase1b.zip
 
 git add -A
-git commit -m "expenses phase 1a: schema + API + ExpensesView + ExpenseForm + sidebar integration"
+git commit -m "expenses phase 1b: auto-migration + maintenance link + analytics cutover + settings cleanup"
 git push origin design-md-changes
 ```
 
-Vercel will auto-run `prisma db push` on deploy, so the new `Expense` table gets created on Postgres automatically.
+Vercel auto-runs `prisma db push` on deploy — the `branch` column drop happens automatically. No data loss (branch was empty for everyone since Phase 1a only just shipped).
 
 ## After deploy — what to verify
 
-1. **Sidebar (desktop)** — you should see "المصروفات" between "المستحقات" and "الصيانة" with the ArrowDownCircle icon
-2. **More menu (mobile)** — same tab appears in the More menu
-3. **Empty state** — the page loads with a dashed-empty-state card inviting "إضافة أول مصروف" (add your first expense). Buttons are functional
-4. **Add a test expense** — tap the button, fill title + amount + date, pick a category. Save. It should appear immediately in the ledger, and the monthly total in the hero should update
-5. **Add another with `متكرر` toggled** — should show a "شهري" or "سنوي" badge inline in the list metadata
-6. **Filter chips** — switch between "هذا الشهر / الربع / السنة / الكل" — list should update. Category filter should also work
-7. **Edit / delete** — edit button opens the form pre-populated; delete asks for confirmation
-8. **Mobile** — the category strip should scroll horizontally at the top. Hero adapts. Form modal is a bottom sheet
-9. **Permissions** — as a non-admin staff member without `canViewAnalytics`, the tab should not appear in the sidebar
+1. **First time you open المصروفات after deploy** — you should see all your existing staff salaries + apartment rent costs + resolved maintenance history already there. Rows tagged as recurring show the شهري / سنوي pill. Maintenance rows show under the maintenance category with the issue title.
 
-## What Phase 1b will bring
+2. **Toggle to "الكل" time filter** — you should see maintenance rows going back historically (they're dated `resolvedAt`), plus a bunch of today-dated recurring rows for salaries and apartment rents.
 
-Once you've had a day or two to use this and confirm the basic feel is right, I'll ship 1b with the migration. That way if 1a needs adjustments (different categories, different labels, different layout), we tune before importing the historical data.
+3. **Open a maintenance issue and mark it resolved with a cost** — go to ExpensesView, should see it appear as a new maintenance-category row. Edit the cost or reopen the issue → expense updates or disappears accordingly.
 
-Design and approach questions welcome. If the category list needs different values, or the sparkline should be somewhere else, or you want a different signature — say so, we adjust before Phase 1b.
+4. **Check Analytics** — totalExpenses should be roughly the same as before Phase 1a. If it's way different, tell me the delta and I'll debug. Some drift is expected because scope=unit expenses only count when the unit is in filter (previously staff and rent got apportioned differently).
+
+5. **Open Settings** — you should NOT see the "المصروفات والتشغيل" tab anymore. Just الهوية / التراخيص / النظام.
+
+6. **Try Expenses on mobile** — the whole feature should work with the mobile design language from the earlier work (bottom-sheet form, portaled modals, blurred header, hidden nav during modal, etc.).
+
+## What's deferred to Phase 2
+
+- **Recurring generation cron** — Vercel Cron job that runs daily and creates the next occurrence of each recurring expense when it's due (currently they show up in analytics via proration, but no actual monthly records get created)
+- **Per-unit + per-branch P&L** in the Analytics view (uses expense.scope) — the data model supports this, the analytics UI just doesn't render it yet
+- **Budget per category** with alerts when approaching
+- **Vendor spend analysis** (uses expense.vendor)
+- **Receipt upload UI** (field exists on model, upload widget not wired)
+- **Bill reminders / renewals** (uses recurringUntil)
+
+## Feedback loop
+
+Try it for a day or two with your real data. Things I'd want to know:
+- Are the migrated categories right? (Did rent get labeled properly? Salaries?)
+- Are the totals in Analytics close to what they were before?
+- Is anything missing from Expenses that used to be somewhere in the old finance tab?
+- Do maintenance-linked expenses feel useful, or annoying (they can't be manually edited — they mirror the issue)?
+
+Based on your answers, Phase 2 gets planned more precisely.

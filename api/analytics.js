@@ -259,10 +259,19 @@ export default async function handler(req, res) {
         select: { generalExpenses: true }
     });
 
-        // Fetch StaffExpenses
+        // Fetch StaffExpenses — kept for pre-migration users. Once expenses
+    // are migrated, we read from the Expense table instead.
     const staffExpenses = await prisma.staffExpense.findMany({
         where: { userId: targetUserId }
     });
+
+    // Detect if this user has migrated to the Expense table. If any Expense
+    // row exists with sourceType='migration' or 'maintenance', the migration
+    // has run and we should treat the Expense table as source of truth.
+    const migratedCount = await prisma.expense.count({
+        where: { userId: targetUserId, sourceType: { in: ['migration', 'maintenance', 'manual'] } }
+    });
+    const useExpenseTable = migratedCount > 0;
 
     // Default period for occupancy calculation if no dates provided (assume 30 days)
     let periodDays = 30;
@@ -329,8 +338,9 @@ export default async function handler(req, res) {
                 }
             }
 
-            // Apportion fixed rent cost if not already added for this unit in this filter period
-            if (apt.rentCost && !countedRentApartmentIds.has(apt.id)) {
+            // Apportion fixed rent cost if not already added for this unit in this filter period.
+            // SKIP after migration — rent lives as Expense records post-migration.
+            if (!useExpenseTable && apt.rentCost && !countedRentApartmentIds.has(apt.id)) {
                 let dailyRent = 0;
                 if (apt.rentPeriod === 'monthly') dailyRent = Number(apt.rentCost) / 30;
                 else if (apt.rentPeriod === 'yearly') dailyRent = Number(apt.rentCost) / 365;
@@ -352,7 +362,9 @@ export default async function handler(req, res) {
     });
 
     // Apportion rent for empty apartments that passed the filter but had no bookings!
-    if (apartmentIds) {
+    // SKIP after migration — rent lives as Expense records.
+    if (!useExpenseTable) {
+        if (apartmentIds) {
         const apts = await prisma.apartment.findMany({
             where: { id: { in: apartmentIds.split(',') } }
         });
@@ -380,6 +392,7 @@ export default async function handler(req, res) {
             }
         });
     }
+    } // /if (!useExpenseTable) — empty-apartment rent block
 
     // Add global operational expenses (cleaner salary and general expenses) based on the timeframe
     // Assuming cleaner salary is monthly and general expenses are monthly
@@ -390,8 +403,11 @@ export default async function handler(req, res) {
         const totalAptCount = allApartments.length > 0 ? allApartments.length : 1;
         const ratio = filteredAptCount / totalAptCount;
 
-        // Dynamic Staff Payroll Apportioning
-        if (staffExpenses && staffExpenses.length > 0) {
+        // Dynamic Staff Payroll Apportioning — SKIP when migrated to Expense
+        // table. Post-migration, staff salaries live as Expense records
+        // (category=staff, isRecurring=true) and are summed via the block
+        // below (the Expense-table read). Reading both would double-count.
+        if (!useExpenseTable && staffExpenses && staffExpenses.length > 0) {
             staffExpenses.forEach(staff => {
                 const scopeArr = staff.scope && staff.scope !== 'all' ? staff.scope.split(',') : [];
                 let ratioToUse = ratio; // Default applies to all (meaning we scale it by the general filter ratio)
@@ -418,33 +434,93 @@ export default async function handler(req, res) {
 
     totalExpenses += apportionedGlobalExpenses;
 
-    // Maintenance costs — treat each resolved issue with a cost as an expense
-    // on its resolvedAt date. Filtered by same apartment scope and date range
-    // as the rest of analytics, so it plays nice with filters.
-    const maintFilterMain = { userId: targetUserId, status: 'resolved', cost: { not: null } };
-    if (apartmentIds) maintFilterMain.apartmentId = { in: apartmentIds.split(',') };
-    if (startDate && endDate) {
-        maintFilterMain.resolvedAt = {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
-        };
-    }
-    const maintenanceItems = await prisma.maintenanceIssue.findMany({
-        where: maintFilterMain,
-        select: { cost: true, resolvedAt: true }
-    });
-    let totalMaintenance = 0;
-    maintenanceItems.forEach(m => {
-        const c = m.cost ? Number(m.cost) : 0;
-        if (c <= 0) return;
-        totalMaintenance += c;
-        // Also land it in the correct month bucket for the trend chart
-        if (m.resolvedAt) {
-            const key = `${m.resolvedAt.getFullYear()}-${String(m.resolvedAt.getMonth() + 1).padStart(2, '0')}`;
-            if (dailyTrendMap[key]) dailyTrendMap[key].expenses += c;
+    // Maintenance costs — pre-migration path. Once migrated, maintenance
+    // costs live as Expense records (sourceType='maintenance') and are
+    // summed in the Expense-table block below.
+    if (!useExpenseTable) {
+        const maintFilterMain = { userId: targetUserId, status: 'resolved', cost: { not: null } };
+        if (apartmentIds) maintFilterMain.apartmentId = { in: apartmentIds.split(',') };
+        if (startDate && endDate) {
+            maintFilterMain.resolvedAt = {
+                gte: new Date(startDate),
+                lte: new Date(endDate)
+            };
         }
-    });
-    totalExpenses += totalMaintenance;
+        const maintenanceItems = await prisma.maintenanceIssue.findMany({
+            where: maintFilterMain,
+            select: { cost: true, resolvedAt: true }
+        });
+        let totalMaintenance = 0;
+        maintenanceItems.forEach(m => {
+            const c = m.cost ? Number(m.cost) : 0;
+            if (c <= 0) return;
+            totalMaintenance += c;
+            // Also land it in the correct month bucket for the trend chart
+            if (m.resolvedAt) {
+                const key = `${m.resolvedAt.getFullYear()}-${String(m.resolvedAt.getMonth() + 1).padStart(2, '0')}`;
+                if (dailyTrendMap[key]) dailyTrendMap[key].expenses += c;
+            }
+        });
+        totalExpenses += totalMaintenance;
+    }
+
+    // Post-migration expense read: the Expense table is the source of truth.
+    // We split into two buckets:
+    //   - One-time (non-recurring) expenses dated within the period → summed straight
+    //   - Recurring (monthly / yearly) expenses → prorated over the period days
+    // For scope=unit expenses, we only count if that unit is in the current filter.
+    // For scope=global, we apply the same filter ratio as other overhead.
+    if (useExpenseTable) {
+        const allExpenses = await prisma.expense.findMany({
+            where: { userId: targetUserId }
+        });
+        const totalAptCount = allApartments.length > 0 ? allApartments.length : 1;
+        const globalRatio = filteredAptCount / totalAptCount;
+        const filteredAptSet = apartmentIds ? new Set(apartmentIds.split(',')) : null;
+        const rangeStart = startDate ? new Date(startDate) : null;
+        const rangeEnd = endDate ? new Date(endDate) : null;
+
+        let expenseTableTotal = 0;
+        for (const e of allExpenses) {
+            const amount = Number(e.amount || 0);
+            if (amount <= 0) continue;
+
+            // Apply scope filtering
+            let scopeRatio = 1;
+            if (e.scope === 'unit') {
+                if (!e.apartmentId) continue;
+                if (filteredAptSet && !filteredAptSet.has(e.apartmentId)) continue;
+                scopeRatio = 1; // full amount, this unit is in scope
+            } else {
+                scopeRatio = globalRatio; // global — apportion by filter ratio
+            }
+
+            // Apply time range
+            if (e.isRecurring) {
+                // Recurring: prorate over the period
+                let dailyAmount = 0;
+                if (e.recurringPeriod === 'yearly')  dailyAmount = amount / 365;
+                else                                 dailyAmount = amount / 30; // monthly default
+                expenseTableTotal += dailyAmount * periodDays * scopeRatio;
+                // Distribute into trend map
+                const trendKeys = Object.keys(dailyTrendMap);
+                if (trendKeys.length > 0) {
+                    const perMonth = (dailyAmount * periodDays * scopeRatio) / trendKeys.length;
+                    trendKeys.forEach(k => { dailyTrendMap[k].expenses += perMonth; });
+                }
+            } else {
+                // One-time: include if within range
+                const eDate = new Date(e.date);
+                if (rangeStart && eDate < rangeStart) continue;
+                if (rangeEnd && eDate > rangeEnd) continue;
+                expenseTableTotal += amount * scopeRatio;
+                // Land in the correct month bucket
+                const key = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}`;
+                if (dailyTrendMap[key]) dailyTrendMap[key].expenses += amount * scopeRatio;
+            }
+        }
+        totalExpenses += expenseTableTotal;
+    }
 
     // Distribute the global expenses roughly into the trend map if it has items, otherwise we just leave it out of trend
     const trendKeys = Object.keys(dailyTrendMap);

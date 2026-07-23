@@ -24,7 +24,6 @@ export default function ExpenseForm({ onClose, initialData }) {
     date: initialData?.date ? new Date(initialData.date).toISOString().slice(0, 10) : today,
     category: initialData?.category || 'other',
     scope: initialData?.scope || 'global',
-    branch: initialData?.branch || '',
     apartmentId: initialData?.apartmentId || '',
     vendor: initialData?.vendor || '',
     notes: initialData?.notes || '',
@@ -33,7 +32,7 @@ export default function ExpenseForm({ onClose, initialData }) {
   });
 
   const [showAdvanced, setShowAdvanced] = useState(
-    !!(initialData?.vendor || initialData?.notes || initialData?.branch)
+    !!(initialData?.vendor || initialData?.notes)
   );
   const [saving, setSaving] = useState(false);
 
@@ -52,7 +51,6 @@ export default function ExpenseForm({ onClose, initialData }) {
         date: form.date,
         category: form.category,
         scope: form.scope,
-        branch: form.scope === 'branch' ? (form.branch || null) : null,
         apartmentId: form.scope === 'unit' ? (form.apartmentId || null) : null,
         vendor: form.vendor.trim() || null,
         notes: form.notes.trim() || null,
@@ -189,19 +187,6 @@ export default function ExpenseForm({ onClose, initialData }) {
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
-            </div>
-          )}
-
-          {form.scope === 'branch' && (
-            <div>
-              <label className="block eyebrow mb-1.5">اسم الفرع</label>
-              <input
-                type="text"
-                value={form.branch}
-                onChange={(e) => update('branch', e.target.value)}
-                placeholder="مثال: فرع النزهة"
-                className="input-field w-full"
-              />
             </div>
           )}
 

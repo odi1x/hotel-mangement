@@ -78,6 +78,11 @@ async function maintenanceHandler(req, res, user) {
         }
       });
 
+      // Create-time is rarely 'resolved', but call the sync anyway — it's
+      // a no-op if the issue isn't resolved with cost. Keeps the invariant
+      // "every resolved-with-cost issue has a matching Expense row" true.
+      await syncMaintenanceExpense(issue);
+
       if (user.userId !== targetUserId) {
         const isUrgent = (severity || 'normal') === 'urgent';
         await prisma.notification.create({
@@ -127,6 +132,10 @@ async function maintenanceHandler(req, res, user) {
       delete data.createdAt;
 
       const issue = await prisma.maintenanceIssue.update({ where: { id }, data });
+      // Sync the linked Expense row. Creates it if now resolved with cost,
+      // updates it if already existed, deletes it if issue was unresolved
+      // or cost was cleared. All logic lives in the helper.
+      await syncMaintenanceExpense(issue);
       return res.status(200).json(issue);
     }
 
@@ -302,6 +311,20 @@ async function expensesHandler(req, res, user) {
         if (from) where.date.gte = new Date(from);
         if (to)   where.date.lte = new Date(to);
       }
+
+      // Auto-migration: first time this user reads expenses, seed from
+      // their existing StaffExpense records + apartment financial fields.
+      // Idempotent — the count check means it can't run twice. This is the
+      // simplest UX: user doesn't need to click anything, historical data
+      // just appears the first time they open the Expenses tab.
+      const filterActive = category || scope || apartmentId || from || to;
+      if (!filterActive) {
+        const existingCount = await prisma.expense.count({ where: { userId: targetUserId } });
+        if (existingCount === 0) {
+          await runInitialMigration(targetUserId);
+        }
+      }
+
       const rows = await prisma.expense.findMany({
         where,
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
@@ -312,7 +335,7 @@ async function expensesHandler(req, res, user) {
     if (req.method === 'POST') {
       const {
         title, amount, date, category, scope,
-        branch, apartmentId, vendor, notes, receiptUrl,
+        apartmentId, vendor, notes, receiptUrl,
         isRecurring, recurringPeriod, recurringUntil,
         sourceType, sourceRefId,
       } = req.body || {};
@@ -329,7 +352,6 @@ async function expensesHandler(req, res, user) {
           date: new Date(date),
           category: category || 'other',
           scope: scope || 'global',
-          branch: branch || null,
           apartmentId: (scope === 'unit' && apartmentId) ? apartmentId : null,
           vendor: vendor || null,
           notes: notes || null,
@@ -364,7 +386,6 @@ async function expensesHandler(req, res, user) {
         // Clear apartmentId when scope changes away from 'unit'
         if (data.scope !== 'unit') updateData.apartmentId = null;
       }
-      if ('branch' in data)          updateData.branch = data.branch || null;
       if ('apartmentId' in data)     updateData.apartmentId = data.apartmentId || null;
       if ('vendor' in data)          updateData.vendor = data.vendor || null;
       if ('notes' in data)           updateData.notes = data.notes || null;
@@ -399,5 +420,178 @@ async function expensesHandler(req, res, user) {
   } catch (error) {
     console.error('Expenses handler error:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+/**
+ * One-time migration: seed the Expense table for a user from their existing
+ * data sources. Called from expensesHandler GET when a user has no expenses.
+ *
+ * Sources migrated:
+ *   1. StaffExpense records         → category=staff, isRecurring=monthly
+ *   2. Apartment.rentCost           → category=rent, scope=unit, isRecurring
+ *   3. Apartment.cleaningCost       → category=supplies, scope=unit (only if
+ *                                     cleaningType is 'salaried' — per-booking
+ *                                     cleaning is variable so stays in analytics)
+ *   4. Apartment.otherExpenseAmount → category=other, scope=unit
+ *
+ * Every migrated row is dated TODAY, marked isRecurring so Phase 2's cron
+ * generation will pick it up going forward, and tagged sourceType='migration'
+ * with sourceRefId pointing to the source record (staff.id or apartment.id).
+ *
+ * Idempotency is enforced by the caller (count check). If this function is
+ * ever called on a user with existing records, it'll just add duplicates —
+ * always check count first.
+ */
+async function runInitialMigration(userId) {
+  const now = new Date();
+
+  // 1. Staff expenses → monthly recurring staff category
+  const staff = await prisma.staffExpense.findMany({ where: { userId } });
+  const staffRows = staff.map(s => ({
+    userId,
+    title: s.name,
+    amount: s.monthlySalary,
+    date: now,
+    category: 'staff',
+    scope: 'global',
+    isRecurring: true,
+    recurringPeriod: 'monthly',
+    sourceType: 'migration',
+    sourceRefId: s.id,
+  }));
+
+  // 2. Apartment-level costs → per-unit recurring
+  const apartments = await prisma.apartment.findMany({ where: { userId } });
+  const aptRows = [];
+  for (const a of apartments) {
+    if (a.rentCost && Number(a.rentCost) > 0) {
+      aptRows.push({
+        userId,
+        title: `إيجار ${a.name}`,
+        amount: a.rentCost,
+        date: now,
+        category: 'rent',
+        scope: 'unit',
+        apartmentId: a.id,
+        isRecurring: true,
+        recurringPeriod: a.rentPeriod === 'yearly' ? 'yearly' : 'monthly',
+        sourceType: 'migration',
+        sourceRefId: a.id,
+      });
+    }
+    if (a.cleaningType === 'salaried' && a.cleaningCost && Number(a.cleaningCost) > 0) {
+      aptRows.push({
+        userId,
+        title: `تنظيف ${a.name} (شهري)`,
+        amount: a.cleaningCost,
+        date: now,
+        category: 'supplies',
+        scope: 'unit',
+        apartmentId: a.id,
+        isRecurring: true,
+        recurringPeriod: 'monthly',
+        sourceType: 'migration',
+        sourceRefId: a.id,
+      });
+    }
+    if (a.otherExpenseAmount && Number(a.otherExpenseAmount) > 0) {
+      aptRows.push({
+        userId,
+        title: `${a.otherExpenseLabel || 'مصروف'} — ${a.name}`,
+        amount: a.otherExpenseAmount,
+        date: now,
+        category: 'other',
+        scope: 'unit',
+        apartmentId: a.id,
+        isRecurring: true,
+        recurringPeriod: 'monthly',
+        sourceType: 'migration',
+        sourceRefId: a.id,
+      });
+    }
+  }
+
+  // 3. Historical maintenance-linked expenses. Every resolved issue with
+  // cost > 0 gets a matching Expense record dated on resolvedAt. Going
+  // forward the maintenance PUT/POST handler creates these live via
+  // syncMaintenanceExpense — this backfills the past ones so analytics
+  // can stop reading MaintenanceIssue for expense sums.
+  const maintIssues = await prisma.maintenanceIssue.findMany({
+    where: { userId, status: 'resolved', cost: { not: null } },
+  });
+  const maintRows = [];
+  for (const m of maintIssues) {
+    if (!m.cost || Number(m.cost) <= 0) continue;
+    maintRows.push({
+      userId,
+      title: m.title || 'صيانة',
+      amount: m.cost,
+      date: m.resolvedAt || m.updatedAt || m.createdAt || now,
+      category: 'maintenance',
+      scope: 'unit',
+      apartmentId: m.apartmentId,
+      vendor: m.contractor || null,
+      notes: m.description || null,
+      isRecurring: false,
+      sourceType: 'maintenance',
+      sourceRefId: m.id,
+    });
+  }
+
+  const allRows = [...staffRows, ...aptRows, ...maintRows];
+  if (allRows.length > 0) {
+    await prisma.expense.createMany({ data: allRows });
+  }
+}
+
+/**
+ * Called from maintenanceHandler after a POST/PUT that leaves the issue in
+ * status='resolved' with cost > 0. Ensures there's exactly one Expense row
+ * linked to the issue. Idempotent — if the issue is edited multiple times,
+ * we upsert the linked expense to match current values.
+ *
+ * If the issue is re-opened (status changes away from resolved) or the cost
+ * drops to 0/null, we DELETE the linked expense — the money didn't go out
+ * yet. Design decision: expenses track money that has actually left.
+ */
+export async function syncMaintenanceExpense(issue) {
+  if (!issue?.id || !issue?.userId) return;
+
+  const shouldExist = issue.status === 'resolved' && issue.cost != null && Number(issue.cost) > 0;
+  const existing = await prisma.expense.findFirst({
+    where: {
+      userId: issue.userId,
+      sourceType: 'maintenance',
+      sourceRefId: issue.id,
+    },
+  });
+
+  if (!shouldExist) {
+    if (existing) {
+      await prisma.expense.delete({ where: { id: existing.id } });
+    }
+    return;
+  }
+
+  const data = {
+    userId: issue.userId,
+    title: issue.title || 'صيانة',
+    amount: issue.cost,
+    date: issue.resolvedAt || issue.updatedAt || new Date(),
+    category: 'maintenance',
+    scope: 'unit',
+    apartmentId: issue.apartmentId,
+    vendor: issue.contractor || null,
+    notes: issue.description || null,
+    isRecurring: false,
+    sourceType: 'maintenance',
+    sourceRefId: issue.id,
+  };
+
+  if (existing) {
+    await prisma.expense.update({ where: { id: existing.id }, data });
+  } else {
+    await prisma.expense.create({ data });
   }
 }
