@@ -13,6 +13,7 @@ import RequestsView from '../views/RequestsView';
 import BalancesView from '../views/BalancesView';
 import MaintenanceView from '../views/MaintenanceView';
 import PricingView from '../views/PricingView';
+import ExpensesView from '../views/ExpensesView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
@@ -28,6 +29,7 @@ const GATED_VIEW_PERM = {
   maintenance: 'canViewMaintenance',
   pricing:     'canViewPricing',
   analytics:   'canViewAnalytics',
+  expenses:    'canViewAnalytics',  // expenses are financial data — same permission gate
   settings:    'canViewSettings',
 };
 
@@ -165,6 +167,7 @@ export default function Layout() {
             {view === 'apartments' && <ApartmentsView />}
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
             {view === 'balances' && <BalancesView />}
+            {view === 'expenses' && <ExpensesView />}
             {view === 'maintenance' && <MaintenanceView />}
             {view === 'pricing' && <PricingView />}
             {view === 'analytics' && <AnalyticsView />}

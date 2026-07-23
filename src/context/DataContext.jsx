@@ -16,6 +16,7 @@ export const DataProvider = ({ children }) => {
   const [staffExpenses, setStaffExpenses] = useState([]);
   const [maintenanceIssues, setMaintenanceIssues] = useState([]);
   const [pricingRules, setPricingRules] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
   const [loading] = useState(false);
@@ -65,6 +66,45 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); }
   };
 
+  const fetchExpenses = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=expenses`);
+      setExpenses(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const createExpense = async (data) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=expenses`, data);
+      setExpenses(prev => [res.data, ...prev].sort((a, b) => new Date(b.date) - new Date(a.date)));
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const updateExpense = async (data) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=expenses`, data);
+      setExpenses(prev => prev.map(e => e.id === data.id ? res.data : e));
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const deleteExpense = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=expenses&id=${id}`);
+      setExpenses(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
   const fetchAnalytics = async () => {
     setIsAnalyticsLoading(true);
     try {
@@ -90,6 +130,7 @@ export const DataProvider = ({ children }) => {
       fetchStaffExpenses();
       fetchMaintenance();
       fetchPricingRules();
+      fetchExpenses();
     }
   }, [token]);
 
@@ -322,6 +363,12 @@ export const DataProvider = ({ children }) => {
       addPricingRule,
       updatePricingRule,
       deletePricingRule,
+
+      expenses,
+      fetchExpenses,
+      createExpense,
+      updateExpense,
+      deleteExpense,
 
       loading,
       isAnalyticsLoading

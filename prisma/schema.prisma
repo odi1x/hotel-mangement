@@ -45,6 +45,7 @@ model User {
   bookings          Booking[]
   licenses          License[]
   staffExpenses     StaffExpense[]
+  expenses          Expense[]
   notifications     Notification[]
   pushSubscriptions PushSubscription[]
   maintenanceIssues MaintenanceIssue[]
@@ -90,6 +91,7 @@ model Apartment {
   bookings           Booking[]
   maintenanceIssues  MaintenanceIssue[]
   pricingRules       PricingRule[]
+  expenses           Expense[]
 
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   license       License?  @relation(fields: [licenseId], references: [id], onDelete: SetNull)
@@ -207,6 +209,56 @@ model StaffExpense {
   createdAt     DateTime  @default(now())
 
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// The ledger. One row per money-out event. Category is a string (not enum)
+/// so we can add new categories without a schema migration — the UI
+/// translates known categories to Arabic labels, unknowns show as "أخرى".
+/// scope tells us whether this hits the whole business, one branch, or one
+/// unit — needed for accurate per-unit / per-branch profit calculations.
+/// isRecurring + recurringPeriod let us auto-generate rent, salaries, etc.
+/// (generation logic lives elsewhere — a scheduled task, not this model).
+model Expense {
+  id               String    @id @default(uuid())
+  userId           String    // owner (admin) userId — scopes queries
+  title            String    // e.g. "إيجار الفرع الرئيسي — أغسطس"
+  amount           Decimal
+  date             DateTime  // when the expense was incurred (not created)
+  category         String    @default("other")
+  // Known categories the UI recognizes:
+  //   "utilities" | "staff" | "marketing" | "maintenance" | "licenses"
+  //   | "supplies" | "insurance" | "rent" | "zakat" | "other"
+  scope            String    @default("global")
+  // "global" (whole business) | "branch" (specific branch) | "unit" (specific apartment)
+  branch           String?   // e.g. "al-nuzhah" | "al-buhayrat" — free-form for now
+  apartmentId      String?   // when scope=unit
+
+  vendor           String?   // who was paid — for later "vendor spend" analysis
+  notes            String?
+  receiptUrl       String?   // uploaded receipt image / PDF
+
+  isRecurring      Boolean   @default(false)
+  recurringPeriod  String?   // "monthly" | "yearly" — null when isRecurring=false
+  recurringUntil   DateTime? // optional end date for recurring — null = forever
+
+  // Provenance: how this record came into existence.
+  //   "manual" — user added it directly (default)
+  //   "maintenance" — auto-created from a resolved maintenance issue
+  //   "salary-schedule" — auto-created by recurring generation
+  //   "migration" — created by one-time migration from StaffExpense / user config
+  sourceType       String    @default("manual")
+  sourceRefId      String?   // link to the originating record (nullable)
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apartment        Apartment? @relation(fields: [apartmentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([userId, category])
+  @@index([apartmentId])
 }
 
 model Notification {
