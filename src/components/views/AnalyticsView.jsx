@@ -7,7 +7,7 @@ import { getAccent } from '../../lib/accent';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
-export default function AnalyticsView() {
+export default function AnalyticsView({ setView }) {
   const accentHex = getAccent().hex;
   const { apartments, bookings, analytics, analyticsFilter, setAnalyticsFilter, isAnalyticsLoading } = useData();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -562,8 +562,14 @@ export default function AnalyticsView() {
                   {perUnitPnL.map((u, idx) => {
                     const isTop = idx === 0 && u.netProfit > 0;
                     const isLoss = u.netProfit < 0;
+                    const clickable = typeof setView === 'function';
                     return (
-                      <tr key={u.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
+                      <tr
+                        key={u.id}
+                        onClick={clickable ? () => setView('expenses', { apartmentId: u.id }) : undefined}
+                        className={`hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors ${clickable ? 'cursor-pointer' : ''}`}
+                        title={clickable ? 'شاهد مصروفات هذه الوحدة' : undefined}
+                      >
                         <td className="px-3 py-3">
                           <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-2xs font-semibold ${
                             isTop
@@ -618,8 +624,13 @@ export default function AnalyticsView() {
               {perUnitPnL.map((u, idx) => {
                 const isTop = idx === 0 && u.netProfit > 0;
                 const isLoss = u.netProfit < 0;
+                const clickable = typeof setView === 'function';
                 return (
-                  <div key={u.id} className="p-3 rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark">
+                  <div
+                    key={u.id}
+                    onClick={clickable ? () => setView('expenses', { apartmentId: u.id }) : undefined}
+                    className={`p-3 rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark ${clickable ? 'cursor-pointer active:bg-surface-soft/60 dark:active:bg-surface-dark-elevated/40 transition-colors' : ''}`}
+                  >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-ink dark:text-white truncate">

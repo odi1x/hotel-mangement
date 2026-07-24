@@ -44,7 +44,6 @@ model User {
   apartments        Apartment[]
   bookings          Booking[]
   licenses          License[]
-  staffExpenses     StaffExpense[]
   expenses          Expense[]
   notifications     Notification[]
   pushSubscriptions PushSubscription[]
@@ -73,16 +72,14 @@ model Apartment {
   needsCleaning Boolean   @default(false)
   lastCleanedAt DateTime  @default(now())
 
-  rentCost           Decimal?
-  rentPeriod         String?
-  cleaningType       String?   @default("salaried")
-  cleaningCost       Decimal?
+  // Per-booking fees — these are pricing parameters, not expenses.
+  // Applied to each booking's math; not tracked separately in the ledger.
+  cleaningFeePerStay Decimal?
   platformFeeType    String?
   platformFee        Decimal?
+
   images             String[]  @default([])
   coverPhoto         String?
-  otherExpenseLabel  String?
-  otherExpenseAmount Decimal?
 
   licenseId     String?
 
@@ -198,17 +195,6 @@ model PricingRule {
   @@index([userId])
   @@index([apartmentId])
   @@index([startDate, endDate])
-}
-
-model StaffExpense {
-  id            String    @id @default(uuid())
-  userId        String
-  name          String
-  monthlySalary Decimal
-  scope         String?
-  createdAt     DateTime  @default(now())
-
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// The ledger. One row per money-out event. Category is a string (not enum)

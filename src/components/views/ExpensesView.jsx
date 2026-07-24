@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Plus, Search, Filter, Wallet, Home, Zap, Users, Wrench, Megaphone,
   Shield, Package, ShieldCheck, HandCoins, MoreHorizontal, TrendingUp, TrendingDown,
-  Pencil, Trash2, Repeat, Building2,
+  Pencil, Trash2, Repeat, Building2, X,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -35,7 +35,7 @@ function fmtDate(d) {
   });
 }
 
-export default function ExpensesView() {
+export default function ExpensesView({ initialFilter = null }) {
   const { expenses, apartments, deleteExpense } = useData();
   const { user } = useAuth();
 
@@ -44,12 +44,21 @@ export default function ExpensesView() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [timeFilter, setTimeFilter] = useState('month'); // month | quarter | year | all
+  // When arriving via deep-link (e.g. from ApartmentsView or AnalyticsView P&L),
+  // default to 'all' time so the user sees everything for that unit, and
+  // apply the apartment filter. Otherwise default to 'month'.
+  const [timeFilter, setTimeFilter] = useState(initialFilter?.apartmentId ? 'all' : 'month');
+  const [apartmentFilter, setApartmentFilter] = useState(initialFilter?.apartmentId || null);
 
   const canEdit = user?.role === 'admin' || user?.permissions?.canEdit;
   const canDelete = user?.role === 'admin' || user?.permissions?.canDelete;
 
   const stats = useMemo(() => computeExpenseStats(expenses), [expenses]);
+
+  // Look up the pinned apartment (for the chip label).
+  const pinnedApartment = apartmentFilter
+    ? apartments.find(a => a.id === apartmentFilter)
+    : null;
 
   // Apply active filters to the list. Time filter also drives the header
   // stats, but we recompute here for the row-level display so filters can
@@ -69,6 +78,7 @@ export default function ExpensesView() {
     return (expenses || [])
       .filter(e => (from ? new Date(e.date) >= from : true))
       .filter(e => (categoryFilter === 'all' ? true : e.category === categoryFilter))
+      .filter(e => (apartmentFilter ? e.apartmentId === apartmentFilter : true))
       .filter(e => {
         if (!search) return true;
         const s = search.toLowerCase();
@@ -78,7 +88,7 @@ export default function ExpensesView() {
           categoryLabel(e.category).includes(search)
         );
       });
-  }, [expenses, timeFilter, categoryFilter, search]);
+  }, [expenses, timeFilter, categoryFilter, search, apartmentFilter]);
 
   const filteredTotal = filtered.reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
@@ -272,6 +282,17 @@ export default function ExpensesView() {
                 <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
+            {pinnedApartment && (
+              <button
+                onClick={() => setApartmentFilter(null)}
+                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-ink dark:bg-white text-white dark:text-ink text-2xs font-semibold shrink-0 hover:opacity-90 transition-opacity"
+                title="إزالة تصفية الوحدة"
+              >
+                <Building2 size={11} />
+                <span>{pinnedApartment.name}</span>
+                <X size={11} />
+              </button>
+            )}
           </div>
         </div>
 

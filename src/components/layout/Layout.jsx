@@ -36,6 +36,10 @@ const GATED_VIEW_PERM = {
 export default function Layout() {
   const { user } = useAuth();
   const [view, setViewRaw] = useState('availability');
+  // viewFilter is optional per-view context (e.g. { apartmentId: 'abc' }
+  // when navigating to Expenses filtered to a specific unit). Cleared on
+  // any navigation that doesn't pass a filter argument.
+  const [viewFilter, setViewFilter] = useState(null);
   const [isAddingBooking, setIsAddingBooking] = useState(false);
   const [isBookingByDate, setIsBookingByDate] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -46,14 +50,20 @@ export default function Layout() {
   // Wrap setView so unauthorized navigation is blocked at the source.
   // Admin bypasses gating. Non-gated views (availability, apartments,
   // requests, residents) pass straight through.
-  const setView = (newView) => {
+  //
+  // Second arg is an optional filter payload — used for deep-linking, e.g.
+  // setView('expenses', { apartmentId: id }) to open Expenses filtered.
+  // Passing no second arg clears any prior filter.
+  const setView = (newView, filter = null) => {
     if (user?.role === 'admin' || !GATED_VIEW_PERM[newView]) {
       setViewRaw(newView);
+      setViewFilter(filter);
       return;
     }
     const permKey = GATED_VIEW_PERM[newView];
     if (user?.permissions?.[permKey]) {
       setViewRaw(newView);
+      setViewFilter(filter);
     }
     // else: silently ignore — the sidebar shouldn't have exposed this option anyway
   };
@@ -164,13 +174,13 @@ export default function Layout() {
           <div key={view} className="flex-1 min-h-0 h-full flex flex-col anim-tab">
             {view === 'availability' && <AvailabilityView openBookingForm={handleOpenBookingForm} />}
             {view === 'requests' && <RequestsView openBookingForm={handleOpenBookingForm} />}
-            {view === 'apartments' && <ApartmentsView />}
+            {view === 'apartments' && <ApartmentsView setView={setView} />}
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
             {view === 'balances' && <BalancesView />}
-            {view === 'expenses' && <ExpensesView />}
+            {view === 'expenses' && <ExpensesView initialFilter={viewFilter} />}
             {view === 'maintenance' && <MaintenanceView />}
             {view === 'pricing' && <PricingView />}
-            {view === 'analytics' && <AnalyticsView />}
+            {view === 'analytics' && <AnalyticsView setView={setView} />}
             {view === 'settings' && <SettingsView />}
             {view === 'more' && (
               <MobileMoreMenu

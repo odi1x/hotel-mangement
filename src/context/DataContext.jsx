@@ -13,7 +13,6 @@ export const DataProvider = ({ children }) => {
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [licenses, setLicenses] = useState([]);
-  const [staffExpenses, setStaffExpenses] = useState([]);
   const [maintenanceIssues, setMaintenanceIssues] = useState([]);
   const [pricingRules, setPricingRules] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -28,13 +27,6 @@ export const DataProvider = ({ children }) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/apartments`);
       setApartments(res.data);
-    } catch (err) { console.error(err); }
-  };
-
-  const fetchStaffExpenses = async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/staff-expenses`);
-      setStaffExpenses(res.data);
     } catch (err) { console.error(err); }
   };
 
@@ -127,7 +119,6 @@ export const DataProvider = ({ children }) => {
       fetchApartments();
       fetchBookings();
       fetchLicenses();
-      fetchStaffExpenses();
       fetchMaintenance();
       fetchPricingRules();
       fetchExpenses();
@@ -347,8 +338,6 @@ export const DataProvider = ({ children }) => {
       checkoutBooking,
       fetchBookings,
       fetchApartments,
-      staffExpenses,
-      fetchStaffExpenses,
       addPayment,
       deletePayment,
 

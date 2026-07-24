@@ -312,16 +312,26 @@ async function expensesHandler(req, res, user) {
         if (to)   where.date.lte = new Date(to);
       }
 
-      // Auto-migration: first time this user reads expenses, seed from
-      // their existing StaffExpense records + apartment financial fields.
-      // Idempotent — the count check means it can't run twice. This is the
-      // simplest UX: user doesn't need to click anything, historical data
-      // just appears the first time they open the Expenses tab.
+      // Backfill maintenance-linked expenses when needed. Only triggers if
+      // there are resolved maintenance issues with cost > 0 that don't yet
+      // have their linked Expense row. This is idempotent — the helper
+      // skips issues that already have a linked expense.
       const filterActive = category || scope || apartmentId || from || to;
       if (!filterActive) {
-        const existingCount = await prisma.expense.count({ where: { userId: targetUserId } });
-        if (existingCount === 0) {
-          await runInitialMigration(targetUserId);
+        const unlinkableCount = await prisma.maintenanceIssue.count({
+          where: {
+            userId: targetUserId,
+            status: 'resolved',
+            cost: { not: null },
+          },
+        });
+        if (unlinkableCount > 0) {
+          const linkedCount = await prisma.expense.count({
+            where: { userId: targetUserId, sourceType: 'maintenance' },
+          });
+          if (linkedCount < unlinkableCount) {
+            await runInitialMigration(targetUserId);
+          }
         }
       }
 
@@ -424,105 +434,38 @@ async function expensesHandler(req, res, user) {
 }
 
 /**
- * One-time migration: seed the Expense table for a user from their existing
- * data sources. Called from expensesHandler GET when a user has no expenses.
+ * Backfill maintenance-linked expenses for a user. Legacy migration (from
+ * StaffExpense and Apartment.rentCost) is DONE — those tables/fields no
+ * longer exist after Phase 2b. What remains is: any resolved maintenance
+ * issue whose linked Expense record wasn't created (edge case for issues
+ * resolved before the maintenance-to-expense auto-link shipped).
  *
- * Sources migrated:
- *   1. StaffExpense records         → category=staff, isRecurring=monthly
- *   2. Apartment.rentCost           → category=rent, scope=unit, isRecurring
- *   3. Apartment.cleaningCost       → category=supplies, scope=unit (only if
- *                                     cleaningType is 'salaried' — per-booking
- *                                     cleaning is variable so stays in analytics)
- *   4. Apartment.otherExpenseAmount → category=other, scope=unit
- *
- * Every migrated row is dated TODAY, marked isRecurring so Phase 2's cron
- * generation will pick it up going forward, and tagged sourceType='migration'
- * with sourceRefId pointing to the source record (staff.id or apartment.id).
- *
- * Idempotency is enforced by the caller (count check). If this function is
- * ever called on a user with existing records, it'll just add duplicates —
- * always check count first.
+ * Idempotency is enforced by the caller: only runs when the user has zero
+ * Expense records with sourceType='maintenance' AND unresolved maintenance
+ * with cost > 0 exists. Safe to call any time.
  */
 async function runInitialMigration(userId) {
   const now = new Date();
 
-  // 1. Staff expenses → monthly recurring staff category
-  const staff = await prisma.staffExpense.findMany({ where: { userId } });
-  const staffRows = staff.map(s => ({
-    userId,
-    title: s.name,
-    amount: s.monthlySalary,
-    date: now,
-    category: 'staff',
-    scope: 'global',
-    isRecurring: true,
-    recurringPeriod: 'monthly',
-    sourceType: 'migration',
-    sourceRefId: s.id,
-  }));
-
-  // 2. Apartment-level costs → per-unit recurring
-  const apartments = await prisma.apartment.findMany({ where: { userId } });
-  const aptRows = [];
-  for (const a of apartments) {
-    if (a.rentCost && Number(a.rentCost) > 0) {
-      aptRows.push({
-        userId,
-        title: `إيجار ${a.name}`,
-        amount: a.rentCost,
-        date: now,
-        category: 'rent',
-        scope: 'unit',
-        apartmentId: a.id,
-        isRecurring: true,
-        recurringPeriod: a.rentPeriod === 'yearly' ? 'yearly' : 'monthly',
-        sourceType: 'migration',
-        sourceRefId: a.id,
-      });
-    }
-    if (a.cleaningType === 'salaried' && a.cleaningCost && Number(a.cleaningCost) > 0) {
-      aptRows.push({
-        userId,
-        title: `تنظيف ${a.name} (شهري)`,
-        amount: a.cleaningCost,
-        date: now,
-        category: 'supplies',
-        scope: 'unit',
-        apartmentId: a.id,
-        isRecurring: true,
-        recurringPeriod: 'monthly',
-        sourceType: 'migration',
-        sourceRefId: a.id,
-      });
-    }
-    if (a.otherExpenseAmount && Number(a.otherExpenseAmount) > 0) {
-      aptRows.push({
-        userId,
-        title: `${a.otherExpenseLabel || 'مصروف'} — ${a.name}`,
-        amount: a.otherExpenseAmount,
-        date: now,
-        category: 'other',
-        scope: 'unit',
-        apartmentId: a.id,
-        isRecurring: true,
-        recurringPeriod: 'monthly',
-        sourceType: 'migration',
-        sourceRefId: a.id,
-      });
-    }
-  }
-
-  // 3. Historical maintenance-linked expenses. Every resolved issue with
+  // Historical maintenance-linked expenses. Every resolved issue with
   // cost > 0 gets a matching Expense record dated on resolvedAt. Going
   // forward the maintenance PUT/POST handler creates these live via
-  // syncMaintenanceExpense — this backfills the past ones so analytics
-  // can stop reading MaintenanceIssue for expense sums.
+  // syncMaintenanceExpense — this backfills any that predate that flow.
   const maintIssues = await prisma.maintenanceIssue.findMany({
     where: { userId, status: 'resolved', cost: { not: null } },
   });
+
+  // Skip issues that already have a linked expense (idempotency at row level).
+  const existingRefs = await prisma.expense.findMany({
+    where: { userId, sourceType: 'maintenance' },
+    select: { sourceRefId: true },
+  });
+  const alreadyLinked = new Set(existingRefs.map(e => e.sourceRefId));
+
   const maintRows = [];
   for (const m of maintIssues) {
     if (!m.cost || Number(m.cost) <= 0) continue;
+    if (alreadyLinked.has(m.id)) continue;
     maintRows.push({
       userId,
       title: m.title || 'صيانة',
@@ -539,10 +482,8 @@ async function runInitialMigration(userId) {
     });
   }
 
-  const allRows = [...staffRows, ...aptRows, ...maintRows];
-  if (allRows.length > 0) {
-    await prisma.expense.createMany({ data: allRows });
-  }
+  if (maintRows.length > 0) {
+    await prisma.expense.createMany({ data: maintRows });
 }
 
 /**

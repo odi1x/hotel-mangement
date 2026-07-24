@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useData } from '../../context/DataContext';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check, Building2 } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check, Building2, ArrowDownCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
 import ShareLinkModal from '../ui/ShareLinkModal';
-export default function ApartmentsView() {
+export default function ApartmentsView({ setView }) {
   const { apartments, addApartment, updateApartment, deleteApartment, licenses, refreshData } = useData();
   const { user } = useAuth();
   const customTypes = user?.apartmentTypes ? user.apartmentTypes.split(',').map(t => t.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة', 'استوديو', 'شقة'];
@@ -33,9 +33,9 @@ export default function ApartmentsView() {
   const itemsPerPage = 11;
   const [formData, setFormData] = useState({
       name: '', type: defaultType, description: '', basePrice: '',
-      rentCost: '', rentPeriod: 'monthly', cleaningType: 'salaried', cleaningCost: '',
+      cleaningFeePerStay: '',
       platformFeeType: 'percentage', platformFee: '',
-      otherExpenseLabel: '', otherExpenseAmount: '', licenseId: ''
+      licenseId: ''
   });
 
 
@@ -120,19 +120,19 @@ export default function ApartmentsView() {
     if (apt) {
       setFormData({
           ...apt,
-          rentCost: apt.rentCost || '',
-          rentPeriod: apt.rentPeriod || 'monthly',
-          cleaningType: apt.cleaningType || 'salaried',
-          cleaningCost: apt.cleaningCost || '',
+          cleaningFeePerStay: apt.cleaningFeePerStay || '',
           platformFeeType: apt.platformFeeType || 'percentage',
           platformFee: apt.platformFee || '',
-          otherExpenseLabel: apt.otherExpenseLabel || '',
-          otherExpenseAmount: apt.otherExpenseAmount || '',
           licenseId: apt.licenseId || ''
       });
       setEditingId(apt.id);
     } else {
-      setFormData({ name: '', type: defaultType, description: '', basePrice: '' });
+      setFormData({
+          name: '', type: defaultType, description: '', basePrice: '',
+          cleaningFeePerStay: '',
+          platformFeeType: 'percentage', platformFee: '',
+          licenseId: ''
+      });
       setEditingId(null);
     }
     setIsModalOpen(true);
@@ -438,41 +438,31 @@ export default function ApartmentsView() {
                 )}
               </section>
 
-              {/* Financials (collapsible) */}
+              {/* Pricing (collapsible) — per-booking fees only. Fixed monthly
+                  costs like rent and salaried cleaning moved to the Expenses
+                  tab in Phase 2. */}
               <section>
                 <button type="button" onClick={() => setShowAdvancedFinancials(!showAdvancedFinancials)}
                   className="w-full flex justify-between items-center text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">
-                  <span>التكاليف والمالية (إعدادات متقدمة)</span>
+                  <span>التسعير والرسوم لكل حجز</span>
                   <ChevronLeft size={16} className={`transition-transform ${showAdvancedFinancials ? '-rotate-90' : ''}`} />
                 </button>
                 <div className={`transition-all duration-300 overflow-hidden ${showAdvancedFinancials ? 'max-h-[1000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
                   <div className="space-y-4 bg-surface-soft dark:bg-surface-dark-elevated/50 border border-hairline-soft dark:border-hairline-dark rounded-lg p-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">تكلفة الإيجار</label>
-                        <div className="flex space-x-reverse space-x-2">
-                          <input type="number" placeholder="المبلغ" className="input-field w-2/3" value={formData.rentCost} onChange={(e) => setFormData({ ...formData, rentCost: e.target.value })} />
-                          <select className="input-field w-1/3 px-2" value={formData.rentPeriod} onChange={(e) => setFormData({ ...formData, rentPeriod: e.target.value })}>
-                            <option value="monthly">شهري</option>
-                            <option value="yearly">سنوي</option>
-                          </select>
-                        </div>
+                        <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">رسوم التنظيف لكل حجز</label>
+                        <input
+                          type="number"
+                          placeholder="مثال: 50"
+                          className="input-field w-full"
+                          value={formData.cleaningFeePerStay}
+                          onChange={(e) => setFormData({ ...formData, cleaningFeePerStay: e.target.value })}
+                        />
+                        <p className="text-2xs text-muted-soft leading-relaxed mt-1.5">
+                          يُضاف تلقائياً لكل حجز. إن كان لديك عامل نظافة براتب شهري، سجّله كمصروف متكرر في تبويب المصروفات بدلاً من هنا.
+                        </p>
                       </div>
-                      <div>
-                        <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">نوع النظافة والتكلفة</label>
-                        <div className="nav-pill-group w-full mb-3">
-                          <button type="button" onClick={() => setFormData({ ...formData, cleaningType: 'salaried' })} className={`nav-pill flex-1 text-xs font-semibold ${formData.cleaningType === 'salaried' ? 'nav-pill-active' : ''}`}>موظف براتب</button>
-                          <button type="button" onClick={() => setFormData({ ...formData, cleaningType: 'per_booking' })} className={`nav-pill flex-1 text-xs font-semibold ${formData.cleaningType === 'per_booking' ? 'nav-pill-active' : ''}`}>رسوم لكل حجز</button>
-                        </div>
-                        {formData.cleaningType === 'per_booking' && (
-                          <input type="number" placeholder="تكلفة التنظيف للحجز (مثال: 50)" className="input-field" value={formData.cleaningCost} onChange={(e) => setFormData({ ...formData, cleaningCost: e.target.value })} />
-                        )}
-                        {formData.cleaningType === 'salaried' && (
-                          <p className="text-2xs text-muted-soft leading-relaxed">تُحتسب التكلفة من راتب النظافة الشهري في الإعدادات العامة، ولن تُخصم رسوم تنظيف إضافية لهذه الوحدة عند الحجز.</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">عمولات المنصات (لكل حجز)</label>
                         <div className="flex space-x-reverse space-x-2">
@@ -483,14 +473,38 @@ export default function ApartmentsView() {
                           </select>
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">مصاريف أخرى (لكل حجز)</label>
-                        <div className="flex space-x-reverse space-x-2">
-                          <input type="text" placeholder="الاسم (مثال: ضيافة)" className="input-field w-1/2 px-3" value={formData.otherExpenseLabel} onChange={(e) => setFormData({ ...formData, otherExpenseLabel: e.target.value })} />
-                          <input type="number" placeholder="المبلغ" className="input-field w-1/2 px-3" value={formData.otherExpenseAmount} onChange={(e) => setFormData({ ...formData, otherExpenseAmount: e.target.value })} />
-                        </div>
-                      </div>
                     </div>
+
+                    {/* Link to filtered expenses for this unit. Only rendered
+                        when editing an existing apartment (creating one → no
+                        id yet, nothing to filter by). */}
+                    {editingId && (
+                      <div className="pt-3 border-t border-hairline-soft dark:border-hairline-dark-soft">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsModalOpen(false);
+                            if (typeof setView === 'function') {
+                              setView('expenses', { apartmentId: editingId });
+                            }
+                          }}
+                          className="flex items-center justify-between w-full p-3 rounded-lg border border-hairline dark:border-hairline-dark-soft hover:bg-surface-card dark:hover:bg-surface-dark transition-colors group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <ArrowDownCircle size={16} className="text-muted dark:text-body-dark shrink-0" />
+                            <div className="text-right min-w-0">
+                              <p className="text-sm font-semibold text-ink dark:text-white leading-tight">
+                                شاهد مصروفات هذه الوحدة
+                              </p>
+                              <p className="text-2xs text-muted-soft mt-0.5">
+                                إيجار، صيانة، مستلزمات — كل ما يخص هذه الوحدة
+                              </p>
+                            </div>
+                          </div>
+                          <ChevronLeft size={16} className="text-muted-soft group-hover:text-ink dark:group-hover:text-white transition-colors shrink-0" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>
