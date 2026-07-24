@@ -1,75 +1,70 @@
-# Rent Flow — Expenses Phase 2c: Recurring records visibility fix
+# Rent Flow — Hotfix: /api/admin-resources 500 errors
 
-Small, focused patch. Fixes the discrepancy where salaries showed up in Analytics but not in the Expenses tab.
+Critical hotfix. Phase 2b left a syntax error in `api/admin-resources.js` that caused the entire endpoint to return 500 for every request. Symptoms:
+
+- ExpensesView shows "لا مصروفات بعد" empty state even when data exists
+- Maintenance tab fails silently
+- Pricing rules tab fails silently
+- All three break because they share the same admin-resources endpoint
 
 ## The bug
 
-Migrated recurring records (salaries, rent, etc.) were dated on the day migration ran — typically weeks or months ago by now. Two components read them differently:
+When I rewrote the `runInitialMigration` function in Phase 2b via a Python script, the replacement left the function body unclosed:
 
-- **Analytics** correctly prorated them across the current period (a monthly salary counts every month, regardless of when the record was created)
-- **ExpensesView** filtered them by literal `date` field only — so a July-dated salary record didn't appear under "This Month" in August
+```js
+async function runInitialMigration(userId) {
+  // ...
+  if (maintRows.length > 0) {
+    await prisma.expense.createMany({ data: maintRows });
+}   // <-- this closes the if, but the function has no closing brace
 
-Result: Analytics said "you spent X this month", but the Expenses tab list showed a smaller number and no salaries at all.
+/**
+ * Called from maintenanceHandler...
+ */
+export async function syncMaintenanceExpense(issue) {
+  // ...
+}
+```
 
-## The mental model correction
+That's still technically parseable as JavaScript at module scope, but the two functions became structurally intertwined and any call to `runInitialMigration` (which happens on every GET /expenses request) threw at runtime.
 
-Recurring records aren't ledger events — they're **rules**. A "monthly rent" record represents an ongoing obligation, not a specific payment on a specific day. It applies to every month between its start (`date`) and its optional end (`recurringUntil`).
+## The fix
 
-One-time records still work the old way — filter them by date, they represent single events.
+One missing closing brace:
 
-## What this patch does
+```js
+  if (maintRows.length > 0) {
+    await prisma.expense.createMany({ data: maintRows });
+  }
+}   // <-- function properly closed
+```
 
-1. **New helper `contributionInPeriod(expense, start, end)` in `expenseUtils.js`** — computes how much a single expense contributes to a given period. Same math as `analytics.js`:
-   - Recurring monthly: `(amount / 30) × periodDays`
-   - Recurring yearly: `(amount / 365) × periodDays`
-   - Respects `recurringUntil` (rule stops applying after that date) and `date` (rule hasn't started yet if it's in the future)
-   - One-time: literal amount if date falls in range, else 0
+That's it. One file, one line change.
 
-2. **New helper `computePeriodTotal(expenses, start, end)`** — sums all contributions. Building block for stats.
+## Files touched (1)
 
-3. **`computeExpenseStats` rewritten** to use these — so hero total, category breakdown, and 6-month sparkline all prorate correctly.
-
-4. **`ExpensesView` list filter** — recurring records now always appear (regardless of time filter) as long as they're active in the selected period. One-time still filters by date.
-
-5. **`filteredTotal`** in the toolbar — now uses proration so it matches the hero and analytics. On "all" filter it just sums literal amounts (no proration makes sense when there's no period).
-
-## Numbers now agree
-
-After deploy:
-- Expenses hero "صرفَك هذا الشهر" = Analytics `totalExpenses` for this month's filter
-- Expenses list total for a period = same math
-- Category breakdown = matches Analytics breakdown modal
-- 6-month sparkline = matches Analytics trend chart
-
-## Files touched (2)
-
-- `src/lib/expenseUtils.js` — added `contributionInPeriod` + `computePeriodTotal` helpers, rewrote `computeExpenseStats` to use them
-- `src/components/views/ExpensesView.jsx` — updated `filtered` memo to treat recurring as always-active, updated `filteredTotal` to use proration
-
-No schema changes. No API changes.
+- `api/admin-resources.js`
 
 ## Install
 
 ```bash
-unzip -o rentflow-expenses-phase2c.zip -d .
-cp -r patch/src  ./
-rm -rf patch rentflow-expenses-phase2c.zip
+unzip -o rentflow-hotfix-admin-resources.zip -d .
+cp -r patch/api  ./
+rm -rf patch rentflow-hotfix-admin-resources.zip
 
 git add -A
-git commit -m "expenses phase 2c: fix recurring records visibility in expenses tab"
+git commit -m "hotfix: close runInitialMigration function properly (was causing 500 on admin-resources)"
 git push origin design-md-changes
 ```
 
 ## After deploy — what to verify
 
-1. **Open المصروفات — salaries and rent rows now appear** even on the "This Month" filter. The شهري / سنوي badge in each row's metadata makes it clear they're recurring.
-2. **Hero total** should match what Analytics has been showing you all along.
-3. **Filter by category → رواتب وموظفين** — should show your staff salary rows now, always visible.
-4. **Filter by unit** (deep-link from apartment or P&L) — unit-scoped recurring like rent shows regardless of time filter.
-5. **Filter by "الكل"** (all time) — everything shows, no proration (literal amounts).
+1. **Open المصروفات** — you should now see your actual data. Salaries and rent should appear (from Phase 1b's auto-migration + Phase 2c's recurring visibility fix)
+2. **Check the browser console** — no more 500 errors on `/api/admin-resources`
+3. **Open الصيانة and الأسعار الموسمية** — those should also work again if they were broken
 
-## Why the record dates still say "May" or "June" etc.
+## Apology / retro
 
-The migrated records still carry their original creation date. That's correct — it tells you when the rule was created. Once Phase 3's recurring cron ships, it'll generate a new record every month with the correct date for that month, and the old records will represent the historical rule origin.
+I should have run a proper build test before shipping Phase 2b instead of trusting the Python script's output. The vite build catches these instantly. My mistake.
 
-For now, treat the date on a recurring row as "since when this rule has been active" rather than "when this exact payment happened."
+For future patches — I'll always run `npx vite build` end-to-end before packaging, regardless of how confident I am in the changes. This one was preventable.

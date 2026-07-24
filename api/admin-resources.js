@@ -484,6 +484,7 @@ async function runInitialMigration(userId) {
 
   if (maintRows.length > 0) {
     await prisma.expense.createMany({ data: maintRows });
+  }
 }
 
 /**
