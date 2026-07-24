@@ -13,6 +13,7 @@ import {
   EXPENSE_CATEGORIES,
   categoryLabel,
   computeExpenseStats,
+  contributionInPeriod,
   formatSAR,
 } from '../../lib/expenseUtils';
 
@@ -60,23 +61,42 @@ export default function ExpensesView({ initialFilter = null }) {
     ? apartments.find(a => a.id === apartmentFilter)
     : null;
 
-  // Apply active filters to the list. Time filter also drives the header
-  // stats, but we recompute here for the row-level display so filters can
-  // be layered (time + category + search).
+  // Apply active filters to the list. Recurring records are RULES (ongoing
+  // obligations) not events — they always appear regardless of the time
+  // filter. Non-recurring records filter by date normally. This matches
+  // how analytics.js computes totals (proration for recurring), so the
+  // hero total, the filtered total below, and analytics all agree.
   const filtered = useMemo(() => {
     const now = new Date();
     let from = null;
+    let to = null;
     if (timeFilter === 'month') {
       from = new Date(now.getFullYear(), now.getMonth(), 1);
+      to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     } else if (timeFilter === 'quarter') {
       const q = Math.floor(now.getMonth() / 3);
       from = new Date(now.getFullYear(), q * 3, 1);
+      to = new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
     } else if (timeFilter === 'year') {
       from = new Date(now.getFullYear(), 0, 1);
+      to = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
 
     return (expenses || [])
-      .filter(e => (from ? new Date(e.date) >= from : true))
+      .filter(e => {
+        // Recurring rules: always visible (unless recurringUntil has passed
+        // and we're looking at the current period). Simpler: just show them.
+        if (e.isRecurring) {
+          if (!from) return true;
+          // If the rule's start date is after the period end, it hasn't started yet
+          if (new Date(e.date) > to) return false;
+          // If recurringUntil ended before the period start, rule no longer applies
+          if (e.recurringUntil && new Date(e.recurringUntil) < from) return false;
+          return true;
+        }
+        // One-time: filter by date
+        return from ? new Date(e.date) >= from : true;
+      })
       .filter(e => (categoryFilter === 'all' ? true : e.category === categoryFilter))
       .filter(e => (apartmentFilter ? e.apartmentId === apartmentFilter : true))
       .filter(e => {
@@ -90,7 +110,27 @@ export default function ExpensesView({ initialFilter = null }) {
       });
   }, [expenses, timeFilter, categoryFilter, search, apartmentFilter]);
 
-  const filteredTotal = filtered.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  // Total for the current filter selection — uses proration for recurring
+  // so the number matches the hero and analytics.
+  const filteredTotal = useMemo(() => {
+    const now = new Date();
+    let from, to;
+    if (timeFilter === 'month') {
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+      to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (timeFilter === 'quarter') {
+      const q = Math.floor(now.getMonth() / 3);
+      from = new Date(now.getFullYear(), q * 3, 1);
+      to = new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
+    } else if (timeFilter === 'year') {
+      from = new Date(now.getFullYear(), 0, 1);
+      to = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else {
+      // 'all' — just sum literal amounts (no proration makes sense here)
+      return filtered.reduce((s, e) => s + Number(e.amount || 0), 0);
+    }
+    return filtered.reduce((s, e) => s + contributionInPeriod(e, from, to), 0);
+  }, [filtered, timeFilter]);
 
   return (
     <>
