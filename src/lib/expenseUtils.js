@@ -112,14 +112,19 @@ export function contributionInPeriod(expense, periodStart, periodEnd) {
     return (d >= periodStart && d <= periodEnd) ? amount : 0;
   }
 
-  // Recurring: clip the rule's active window against the period.
+  // Recurring: clip the rule's active window against the period AND today.
+  // Effective end is min(rule end, period end, today) — never counts future
+  // occurrences (you haven't paid August salary yet in July).
   const ruleStart = new Date(expense.date);
   const ruleEnd = expense.recurringUntil ? new Date(expense.recurringUntil) : null;
   if (ruleEnd && ruleEnd < periodStart) return 0;
   if (ruleStart > periodEnd) return 0;
 
+  const today = new Date();
   const effStart = ruleStart > periodStart ? ruleStart : periodStart;
-  const effEnd = ruleEnd && ruleEnd < periodEnd ? ruleEnd : periodEnd;
+  let effEnd = periodEnd;
+  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
+  if (today < effEnd) effEnd = today;
   const months = Math.max(0, calendarMonthsInRange(effStart, effEnd));
 
   if (expense.recurringPeriod === 'yearly') {

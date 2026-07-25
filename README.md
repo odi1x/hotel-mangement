@@ -1,98 +1,87 @@
-# Rent Flow — Analytics Phase 2e: Layout redesign + trend bug fix
+# Rent Flow — Analytics Phase 2f: Structural + math fixes
 
-Executes the plan we discussed: unified page-level period filter, removed the redundant "top performers" card, restructured the grid so no empty space, and fixed the trend chart bug where expenses showed 0.
+Three real problems in Phase 2e. All fixed here.
 
-## 1. Bug fix — trend chart expenses = 0
+## 1. Broken layout — everything nested inside the trend chart
 
-**What was wrong:** in Phase 2d I distributed recurring expenses into the trend map assuming keys were formatted `"YYYY-MM"`. They're actually `"MMM YYYY"` (e.g., `"Jul 2026"`) — from `toLocaleDateString('en-CA', {month:'short', year:'numeric'})`. My `key.split('-')` returned a single-element array, `parseInt("Jul 2026")` = NaN, `new Date(NaN)` = Invalid Date, and `expenseContributionInPeriod` returned 0 for every trend cell. So the trend showed 0 expenses even when P&L (which uses a separate code path) showed actual costs.
+**What happened:** my Python reordering script in Phase 2e didn't correctly extract the trend chart's outer div bounds. Result: the Sources card and Per-Unit P&L got pasted *inside* the trend chart's title `<div>`. The trend chart's own body (KPI strip + AreaChart) ended up orphaned somewhere below, still rendered but structurally wrong. Layout looked visibly broken with everything cramped into one card.
 
-**Fix:** parse the actual format properly with a month-abbreviation lookup. Now `"Jul 2026"` → month=6, year=2026 → correct bounds.
+**Fix:** deleted the entire scrambled section and hand-wrote it cleanly. Two cells in a 3-col grid: trend chart (2/3) + sources (1/3). Per-unit P&L as its own full-width card below the grid. Every div properly opened and closed.
 
-## 2. Unified period filter
+## 2. Chips were on their own row, wasting space
 
-**Before:** two separate filters — an advanced modal (تصفية) that set the actual API date range, and a chart-local chip strip (1m/3m/6m/1y) that just sliced already-fetched data. They didn't agree, and the local chips could misrepresent totals.
+**What happened:** in Phase 2e I put the period chips on a separate row below the action strip. That row was ~40px of dedicated space for what should have been inline with the filter button.
 
-**After:** one page-level chip strip mirrors the Expenses tab exactly (شهر / ربع / سنة / كل). It drives `analyticsFilter.startDate/endDate`, which triggers a proper API refetch. Every card on the page — KPIs, trend, P&L, sources — reflects the same period.
+**Fix:** chips moved inline with the "تصفية" button in the top action strip. Same row. Wraps on narrow screens (`flex-wrap`), stays one line on wider. No dedicated row anymore.
 
-**Default: yearly** — gives the trend chart enough data to be meaningful. Different from Expenses (which defaults to month) because Analytics is about "how am I doing over time," Expenses is about "what did I spend recently."
-
-**The advanced modal (تصفية) is kept** for its unique responsibilities:
-- Filter by specific apartments (chips can't do this)
-- Custom date ranges (e.g., "Ramadan-to-Eid")
-
-Chip = quick period, modal = advanced refinement. If both are used, the modal's dates take precedence — mount-time chip application only fires when no custom range is set.
-
-## 3. Removed "الأعلى أداءً"
-
-Was a strict subset of "الربحية حسب الوحدة" (per-unit P&L):
-- Top performers: ranked top 3 by revenue, showed name + nights + revenue
-- P&L: ranks ALL units by profit, shows name + revenue + expenses + profit + margin + occupancy
-
-Same visual weight for less information → removed. If you want a "top 3 revenue" glance, the P&L's rank chips + revenue column do it (just sort mentally by revenue instead of profit).
-
-## 4. Grid redesign — no more empty spaces
-
-**Before (rough):**
+Layout now:
 ```
-[Top Performers 1/3] [Empty]         [Empty]
-[Sources 1/3      ]  [Empty]         [Empty]
-                     [Per-unit P&L (spans 3)]
-                     [Trend chart (spans 2)]
+[تصفية] [هذا الشهر] [الربع] [السنة ✓] [الكل]              [Excel]
 ```
 
-The col-span combinations left visual holes on desktop.
+## 3. Yearly profit less than monthly profit (the confusing one)
 
-**After:**
+**What was wrong:** for a 1000 SAR/month salary that started July 23, 2026:
+- "This month" filter → 1,000 in expenses ✓
+- "This year" filter → **6,000** in expenses ✗ (counting Jul + Aug + Sep + Oct + Nov + Dec = 6 months)
+- "All" filter → 1,000 ✓
+
+Yearly showed 6× the monthly because my proration counted the rule's future occurrences (Aug through Dec). But you haven't paid August salary yet — it's July. Future months shouldn't be in a P&L, they're projections.
+
+Concrete: revenue for the year is 10,540 (real bookings). Expenses shown 6,000 (5 future months of imaginary salary payments). Net: 4,540. Less than "this month" which showed 7,650 profit (revenue 8,650 - expenses 1,000). Nonsense.
+
+**Fix:** effective end of a recurring rule is now capped at `min(rule end, period end, TODAY)`. Future months of recurring rules don't count until they actually happen.
+
+Verified with a test:
 ```
-[Trend chart (spans 2)] [Sources (1/3)]
-[Per-unit P&L (full width, outside grid)]
+1000/month salary started Jul 23, today = Jul 25
+  This month (July):  1,000  ✓
+  This year (2026):   1,000  ✓  (only 1 month has actually passed)
+  All time:           1,000  ✓
 ```
 
-Two cells side-by-side (2/3 + 1/3) fills the row cleanly. P&L moves out of the grid entirely and becomes a full-width block below. Same on mobile — everything stacks single-column.
+All three periods now agree, as they should.
 
-## 5. Chart KPI strip now honest
+**Consequence:** each period's expense number represents money **actually spent** in that period, not projected obligations. If you want a "what will this year cost me" projection, that's a separate concept — not what analytics should show by default.
 
-The three little numbers inside the trend card (إجمالي الإيرادات / إجمالي المصروفات / صافي الأرباح) used to sum from a client-side slice, which could disagree with the main KPI cards above.
+## Files touched (3)
 
-Now they pull straight from `analytics.totalRevenue` / `totalExpenses` / `netProfit`. Numbers always agree.
-
-## Files touched (2)
-
-- `api/analytics.js` — trend key parsing fix
-- `src/components/views/AnalyticsView.jsx` — the whole redesign
+- `src/components/views/AnalyticsView.jsx` — layout rebuild + chips inline
+- `api/analytics.js` — today-cap in `expenseContributionInPeriod`
+- `src/lib/expenseUtils.js` — same fix in the frontend helper
 
 ## Install
 
 ```bash
-unzip -o rentflow-analytics-phase2e.zip -d .
+unzip -o rentflow-analytics-phase2f.zip -d .
 cp -r patch/api  ./
 cp -r patch/src  ./
-rm -rf patch rentflow-analytics-phase2e.zip
+rm -rf patch rentflow-analytics-phase2f.zip
 
 git add -A
-git commit -m "analytics phase 2e: unified period filter + grid redesign + trend key bug fix"
+git commit -m "analytics phase 2f: fix broken layout + inline chips + cap recurring at today"
 git push origin design-md-changes
 ```
 
 ## After deploy — what to verify
 
-1. **Period chips** appear right below the title/filter row — `هذا الشهر / الربع الحالي / هذه السنة / الكل`. Default: `هذه السنة`.
-2. **Click a chip** → the whole page updates. Trend chart, KPIs, P&L, sources — all reflect the new period.
-3. **Trend chart no longer has its own filter chips.** Just the title.
-4. **إجمالي المصروفات inside the trend chart** now shows the correct value (matches the main KPI cards + P&L totals).
-5. **الأعلى أداءً card is gone.** Only Sources sits alongside the trend chart.
-6. **Per-unit P&L is full-width below** the chart+sources row.
-7. **Advanced modal still works** — تصفية opens a picker with apartments + custom dates. Applying it overrides the chip selection.
+1. **Layout is clean**: KPI hero at top, then 3 KPI cards, then trend chart (left, 2/3) + sources (right, 1/3) side-by-side, then per-unit P&L full-width below. No overlapping or nesting.
 
-## What comes next
+2. **Chips are inline with تصفية**: everything on one row at top: `[تصفية] [chip] [chip] [chip] [chip]              [Excel]`.
 
-You're now at a pretty complete state:
-- Ledger works, migrated, deep-linked
-- Analytics is coherent, filter-consistent, no dead sections
-- Numbers agree everywhere
+3. **Numbers finally consistent across periods:**
+   - Your 1,000 salary should show 1,000 in **all** period filters (until August starts).
+   - Net profit should be roughly equal or higher for longer periods (all ≥ year ≥ quarter ≥ month, since longer periods can only have more revenue).
+   - No more "yearly profit less than monthly".
 
-Real next steps depending on how the app feels:
-- **Recurring cron generation** — turns virtual monthly prorations into concrete monthly rows in the ledger
-- **Category comparison sparklines** — "is my maintenance spend trending up?"
-- **Break-even nights calculator per unit** — uses your P&L math
-- Or step away for a week, use it, then tell me what actually annoys you
+4. **Excel export button** stays in its old spot on the right side of the action strip.
+
+## Retro (again)
+
+I've made two mistakes in a row:
+- Phase 2b: closing brace missing → 500 errors
+- Phase 2e: Python script scrambled the DOM → visibly broken layout
+
+Both were "trusted the script output without spot-checking the rendered result." Going forward, when I do structural rewrites via scripts, I'll `view` the affected file at three points (start, middle, end of the changed region) and count divs before declaring done. Slower, safer.
+
+Sorry for the round-trip.

@@ -17,6 +17,12 @@ function calendarMonthsInRange(start, end) {
  * rules count by calendar unit (1 monthly rule × 1 month = amount), not
  * by days. Yearly rules spread evenly across 12 months. Non-recurring
  * count only if their date falls in range.
+ *
+ * For recurring rules, the effective end is capped at TODAY. You haven't
+ * paid August salary in July — the P&L should reflect money actually out,
+ * not projected obligations. Otherwise "this year" would count Jul-Dec
+ * for a rule started Jul 23, giving 6× the amount for a rule that's only
+ * been active 1 month.
  */
 function expenseContributionInPeriod(e, periodStart, periodEnd) {
   const amount = Number(e.amount || 0);
@@ -32,8 +38,13 @@ function expenseContributionInPeriod(e, periodStart, periodEnd) {
   if (ruleEnd && ruleEnd < periodStart) return 0;
   if (ruleStart > periodEnd) return 0;
 
+  const today = new Date();
   const effStart = ruleStart > periodStart ? ruleStart : periodStart;
-  const effEnd = ruleEnd && ruleEnd < periodEnd ? ruleEnd : periodEnd;
+  // Effective end: earliest of (rule end, period end, today) — never counts
+  // future occurrences of the rule.
+  let effEnd = periodEnd;
+  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
+  if (today < effEnd) effEnd = today;
   const months = Math.max(0, calendarMonthsInRange(effStart, effEnd));
 
   if (e.recurringPeriod === 'yearly') return (amount / 12) * months;

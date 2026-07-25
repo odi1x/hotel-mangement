@@ -283,8 +283,8 @@ export default function AnalyticsView({ setView }) {
       {/* Compact action strip — filter chip + Excel export. Was two full-size
           button rows (~130px total). Now a single ~36px row so the analytics
           content below gets that vertical space back. */}
-      <div className="flex justify-between items-center mb-5 gap-3 shrink-0">
-        <div className="relative flex items-center gap-1.5">
+      <div className="flex justify-between items-center mb-5 gap-3 shrink-0 flex-wrap">
+        <div className="relative flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold transition-colors border ${
@@ -308,6 +308,27 @@ export default function AnalyticsView({ setView }) {
               <X size={14} />
             </button>
           )}
+
+          {/* Period chips — inline with تصفية. Mirrors the Expenses tab
+              pattern. Changing a chip updates analyticsFilter's date range,
+              which triggers a refetch — every card on the page reflects
+              the same period. */}
+          <div className="nav-pill-group shrink-0">
+            {[
+              { id: 'month',   label: 'هذا الشهر' },
+              { id: 'quarter', label: 'الربع الحالي' },
+              { id: 'year',    label: 'هذه السنة' },
+              { id: 'all',     label: 'الكل' },
+            ].map(o => (
+              <button
+                key={o.id}
+                onClick={() => handlePeriodChange(o.id)}
+                className={`nav-pill text-xs ${periodFilter === o.id ? 'nav-pill-active' : ''}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
 
           {isFilterOpen && (
             <div className="absolute top-full right-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
@@ -382,31 +403,6 @@ export default function AnalyticsView({ setView }) {
           </button>
         </div>
       </div>
-
-      {/* Period chip row — mirrors the Expenses tab pattern. Changing a chip
-          updates analyticsFilter's date range which triggers a refetch, so
-          every card on the page (KPIs, trend chart, per-unit P&L, sources)
-          reflects the same period. The advanced modal above still handles
-          apartment selection + custom date ranges. */}
-      <div className="flex items-center gap-2 mb-4 shrink-0 overflow-x-auto scrollbar-none -mx-1 px-1">
-        <div className="nav-pill-group shrink-0">
-          {[
-            { id: 'month',   label: 'هذا الشهر' },
-            { id: 'quarter', label: 'الربع الحالي' },
-            { id: 'year',    label: 'هذه السنة' },
-            { id: 'all',     label: 'الكل' },
-          ].map(o => (
-            <button
-              key={o.id}
-              onClick={() => handlePeriodChange(o.id)}
-              className={`nav-pill text-xs ${periodFilter === o.id ? 'nav-pill-active' : ''}`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
 
       {/* One scrollable content zone — the whole analytics page scrolls as
           one unit. Each card is natural content-height; the scroll happens
@@ -504,69 +500,107 @@ export default function AnalyticsView({ setView }) {
           subset of the per-unit P&L below (P&L ranks by profit AND shows
           revenue AND margin AND occupancy). Removed. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Trend chart — col-span-2 on desktop */}
         <div className="card-surface p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[320px] md:min-h-[440px]">
-
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
+          <div className="mb-4 shrink-0">
             <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">
-                <TrendingUp size={18} className="ml-2 text-muted" />
-                اتجاه الإيرادات والمصروفات
+              <TrendingUp size={18} className="ml-2 text-muted" />
+              اتجاه الإيرادات والمصروفات
             </h4>
-            <div className="lg:col-span-1 flex flex-col gap-5">
-            <div className="card-surface p-5">
-            <div>
-              <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center"><Globe size={18} className="ml-2 text-muted" /> مصادر التسويق</h4>
-              <p className="text-xs text-muted mb-4">توزيع الحجوزات حسب المنصات</p>
-            </div>
+          </div>
 
+          <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-hairline-dark pb-4">
             <div>
-            {sourceChartData.length > 0 ? (() => {
-              const total = sourceChartData.reduce((s, x) => s + x.value, 0) || 1;
-              const sorted = [...sourceChartData].sort((a, b) => b.value - a.value);
-              return (
-                <ul className="space-y-3.5">
-                  {sorted.map((source, idx) => {
-                    const pct = Math.round((source.value / total) * 100);
-                    const isTop = idx === 0;
-                    return (
-                      <li key={source.name}>
-                        <div className="flex items-baseline justify-between gap-3 mb-1.5">
-                          <span className="text-sm font-semibold text-ink dark:text-white truncate">
-                            {source.name}
-                          </span>
-                          <span className="text-2xs font-semibold text-muted-soft shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {source.value} حجز · {pct}%
-                          </span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-surface-card dark:bg-surface-dark-elevated overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${isTop ? 'bg-accent' : 'bg-muted-soft/60 dark:bg-body-dark/60'}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              );
-            })() : (
-              <div className="py-8 text-center text-muted font-medium">لا توجد بيانات كافية</div>
-            )}
+              <p className="text-2xs font-semibold text-muted-soft mb-1">إجمالي الإيرادات</p>
+              <p className="font-bold text-accent">{chartKPIs.revenue.toLocaleString()} <span className="text-2xs text-muted-soft">ر.س</span></p>
+            </div>
+            <div>
+              <p className="text-2xs font-semibold text-muted-soft mb-1">إجمالي المصروفات</p>
+              <p className="font-semibold text-muted dark:text-body-dark">{chartKPIs.expenses.toLocaleString()} <span className="text-2xs">ر.س</span></p>
+            </div>
+            <div>
+              <p className="text-2xs font-semibold text-muted-soft mb-1">صافي الأرباح</p>
+              <p className="text-lg font-bold tracking-tight text-accent leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-2xs text-muted-soft">ر.س</span></p>
+            </div>
+          </div>
+
+          <div className="flex-1 w-full min-h-[280px] relative overflow-hidden" dir="ltr">
+            <div className="absolute inset-0 pb-8 pr-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={accentHex} stopOpacity={0.16}/>
+                      <stop offset="95%" stopColor={accentHex} stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.12}/>
+                      <stop offset="95%" stopColor="#9ca3af" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#898989', fontSize: 12}} dy={15} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#898989', fontSize: 12}} dx={-10} tickFormatter={(val) => `${val/1000}k`} />
+                  <RechartsTooltip
+                    formatter={(value) => [`${value.toLocaleString()} ر.س`]}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontFamily: 'inherit' }}
+                    labelStyle={{ fontWeight: '600', color: '#111111', marginBottom: '8px' }}
+                  />
+                  <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke={accentHex} strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
+                  <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#9ca3af" strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#colorExpenses)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        {/* Per-unit P&L — the "which units are actually profitable" section.
-            Only rendered when there's post-migration data (perUnitPnL is
-            empty for pre-migration users). Full-width so the desktop table
-            can breathe; mobile falls back to a card list. Sorted by netProfit
-            descending from the server, so #1 is the money-maker and the
-            bottom row is the one bleeding cash.
-            Rank #1 gets an accent chip, negative-profit units get
-            accent-strong (a subtle color code — red would feel accusatory
-            in a monochrome design, accent-strong stays honest). */}
+        {/* Sources — col-span-1 on desktop */}
+        <div className="card-surface p-5 lg:col-span-1">
+          <div className="mb-4">
+            <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
+              <Globe size={18} className="ml-2 text-muted" /> مصادر التسويق
+            </h4>
+            <p className="text-xs text-muted">توزيع الحجوزات حسب المنصات</p>
+          </div>
+
+          {sourceChartData.length > 0 ? (() => {
+            const total = sourceChartData.reduce((s, x) => s + x.value, 0) || 1;
+            const sorted = [...sourceChartData].sort((a, b) => b.value - a.value);
+            return (
+              <ul className="space-y-3.5">
+                {sorted.map((source, idx) => {
+                  const pct = Math.round((source.value / total) * 100);
+                  const isTop = idx === 0;
+                  return (
+                    <li key={source.name}>
+                      <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                        <span className="text-sm font-semibold text-ink dark:text-white truncate">
+                          {source.name}
+                        </span>
+                        <span className="text-2xs font-semibold text-muted-soft shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {source.value} حجز · {pct}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-surface-card dark:bg-surface-dark-elevated overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${isTop ? 'bg-accent' : 'bg-muted-soft/60 dark:bg-body-dark/60'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          })() : (
+            <div className="py-8 text-center text-muted font-medium">لا توجد بيانات كافية</div>
+          )}
+        </div>
       </div>
 
-        {perUnitPnL.length > 0 && (
+      {/* Per-unit P&L — outside the grid so it can be full-width without
+          fighting col-span math. */}
+{perUnitPnL.length > 0 && (
           <div className="card-surface p-4 md:p-5">
             <div className="mb-4">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
@@ -721,52 +755,6 @@ export default function AnalyticsView({ setView }) {
           </div>
         )}
 
-
-          <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-hairline-dark pb-4">
-            <div>
-              <p className="text-2xs font-semibold text-muted-soft mb-1">إجمالي الإيرادات</p>
-              <p className="font-bold text-accent">{chartKPIs.revenue.toLocaleString()} <span className="text-2xs text-muted-soft">ر.س</span></p>
-            </div>
-            <div>
-              <p className="text-2xs font-semibold text-muted-soft mb-1">إجمالي المصروفات</p>
-              <p className="font-semibold text-muted dark:text-body-dark">{chartKPIs.expenses.toLocaleString()} <span className="text-2xs">ر.س</span></p>
-            </div>
-            <div>
-              <p className="text-2xs font-semibold text-muted-soft mb-1">صافي الأرباح</p>
-              <p className="text-lg font-bold tracking-tight text-accent leading-none">{chartKPIs.profit.toLocaleString()} <span className="text-2xs text-muted-soft">ر.س</span></p>
-            </div>
-          </div>
-
-          <div className="flex-1 w-full min-h-[280px] relative overflow-hidden" dir="ltr">
-            <div className="absolute inset-0 pb-8 pr-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={accentHex} stopOpacity={0.16}/>
-                      <stop offset="95%" stopColor={accentHex} stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#9ca3af" stopOpacity={0.12}/>
-                      <stop offset="95%" stopColor="#9ca3af" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#898989', fontSize: 12}} dy={15} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#898989', fontSize: 12}} dx={-10} tickFormatter={(val) => `${val/1000}k`} />
-                  <RechartsTooltip
-                    formatter={(value) => [`${value.toLocaleString()} ر.س`]}
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontFamily: 'inherit' }}
-                    labelStyle={{ fontWeight: '600', color: '#111111', marginBottom: '8px' }}
-                  />
-                                    <Area type="monotone" dataKey="revenue" name="الإيرادات" stroke={accentHex} strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
-                  <Area type="monotone" dataKey="expenses" name={analytics.totalExpenses > 0 ? "المصروفات" : "لا توجد مصروفات"} stroke="#9ca3af" strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#colorExpenses)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* End of main content — modal is moved OUTSIDE the scroll wrapper so
           it renders as viewport-fixed, not inside the scrolling area. */}
