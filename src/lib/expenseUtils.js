@@ -77,35 +77,57 @@ export function sumAmounts(expenses) {
  *   - monthTrend : [{ monthKey, total }] last 6 months including this one
  */
 /**
- * Compute the contribution a single expense makes to a given period.
- *   - Recurring records are rules, not events. A monthly recurring rent
- *     contributes (amount / 30) × periodDays to any period. A yearly one
- *     contributes (amount / 365) × periodDays. `recurringUntil` closes the
- *     rule off after a date.
- *   - Non-recurring records are one-time events — only contribute if their
- *     date falls inside [start, end].
+ * How many *occurrences* of a recurring rule fall inside a given period?
  *
- * This is the same math analytics.js uses. Both files agreeing is the
- * whole point — the Expenses tab hero should match the Analytics total.
+ * Design decision: recurring is counted by calendar unit, NOT prorated by days.
+ * A "monthly" rule generates 1 occurrence per calendar month it's active in.
+ * A "yearly" rule contributes amount/12 per calendar month (so it plays nice
+ * with month/quarter filters — otherwise a yearly rent would show 0 for
+ * 11 months and its full annual cost in one month, which is bewildering).
+ *
+ * Why not days-based proration? Because "monthly rent 1000" should show
+ * exactly 1000 in any calendar month. Days-based math gives 1000×31/30 =
+ * 1033 in July and 1000×28/30 = 933 in February. Averages out over a year
+ * but each individual month looks wrong.
+ */
+function calendarMonthsInRange(start, end) {
+  if (end < start) return 0;
+  return (end.getFullYear() - start.getFullYear()) * 12 +
+         (end.getMonth() - start.getMonth()) + 1;
+}
+
+/**
+ * Contribution a single expense makes to a given period. Returns 0 if the
+ * expense doesn't apply to this period (rule not started yet, ended, or
+ * one-time date outside range).
+ *
+ * Analytics.js uses the same logic — both files agreeing is the whole point.
  */
 export function contributionInPeriod(expense, periodStart, periodEnd) {
   const amount = Number(expense.amount || 0);
   if (amount <= 0) return 0;
 
-  if (expense.isRecurring) {
-    // Respect recurringUntil — the rule stops applying after that date.
-    if (expense.recurringUntil && new Date(expense.recurringUntil) < periodStart) return 0;
-    // Rules with a `date` in the future haven't started yet.
-    const ruleStart = new Date(expense.date);
-    if (ruleStart > periodEnd) return 0;
-    const periodDays = Math.max(1, Math.ceil((periodEnd - periodStart) / (1000 * 60 * 60 * 24)) + 1);
-    const daily = expense.recurringPeriod === 'yearly' ? amount / 365 : amount / 30;
-    return daily * periodDays;
+  if (!expense.isRecurring) {
+    const d = new Date(expense.date);
+    return (d >= periodStart && d <= periodEnd) ? amount : 0;
   }
 
-  const d = new Date(expense.date);
-  if (d < periodStart || d > periodEnd) return 0;
-  return amount;
+  // Recurring: clip the rule's active window against the period.
+  const ruleStart = new Date(expense.date);
+  const ruleEnd = expense.recurringUntil ? new Date(expense.recurringUntil) : null;
+  if (ruleEnd && ruleEnd < periodStart) return 0;
+  if (ruleStart > periodEnd) return 0;
+
+  const effStart = ruleStart > periodStart ? ruleStart : periodStart;
+  const effEnd = ruleEnd && ruleEnd < periodEnd ? ruleEnd : periodEnd;
+  const months = Math.max(0, calendarMonthsInRange(effStart, effEnd));
+
+  if (expense.recurringPeriod === 'yearly') {
+    // Yearly rule spread evenly across 12 months — matches "one twelfth per month"
+    return (amount / 12) * months;
+  }
+  // Monthly (default)
+  return amount * months;
 }
 
 /**

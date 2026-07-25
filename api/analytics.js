@@ -1,6 +1,45 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 
+/**
+ * Number of calendar months a date range spans (inclusive of both endpoints'
+ * months). July 1 → July 31 = 1. July 15 → Sep 20 = 3. Same math as
+ * expenseUtils.js — both files must agree.
+ */
+function calendarMonthsInRange(start, end) {
+  if (end < start) return 0;
+  return (end.getFullYear() - start.getFullYear()) * 12 +
+         (end.getMonth() - start.getMonth()) + 1;
+}
+
+/**
+ * How much a single Expense row contributes to a given period. Recurring
+ * rules count by calendar unit (1 monthly rule × 1 month = amount), not
+ * by days. Yearly rules spread evenly across 12 months. Non-recurring
+ * count only if their date falls in range.
+ */
+function expenseContributionInPeriod(e, periodStart, periodEnd) {
+  const amount = Number(e.amount || 0);
+  if (amount <= 0) return 0;
+
+  if (!e.isRecurring) {
+    const d = new Date(e.date);
+    return (d >= periodStart && d <= periodEnd) ? amount : 0;
+  }
+
+  const ruleStart = new Date(e.date);
+  const ruleEnd = e.recurringUntil ? new Date(e.recurringUntil) : null;
+  if (ruleEnd && ruleEnd < periodStart) return 0;
+  if (ruleStart > periodEnd) return 0;
+
+  const effStart = ruleStart > periodStart ? ruleStart : periodStart;
+  const effEnd = ruleEnd && ruleEnd < periodEnd ? ruleEnd : periodEnd;
+  const months = Math.max(0, calendarMonthsInRange(effStart, effEnd));
+
+  if (e.recurringPeriod === 'yearly') return (amount / 12) * months;
+  return amount * months;
+}
+
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -156,16 +195,8 @@ export default async function handler(req, res) {
                if (!e.apartmentId) continue;
                if (filteredAptSet && !filteredAptSet.has(e.apartmentId)) continue;
             }
-            let contribution = 0;
-            if (e.isRecurring) {
-               const daily = e.recurringPeriod === 'yearly' ? amount / 365 : amount / 30;
-               contribution = daily * periodDays;
-            } else {
-               const eDate = new Date(e.date);
-               if (rangeStart && eDate < rangeStart) continue;
-               if (rangeEnd && eDate > rangeEnd) continue;
-               contribution = amount;
-            }
+            const contribution = expenseContributionInPeriod(e, rangeStart || new Date(0), rangeEnd || new Date());
+            if (contribution <= 0) continue;
             const cat = catBucket[e.category] != null ? e.category : 'other';
             catBucket[cat] += contribution;
          }
@@ -340,23 +371,21 @@ export default async function handler(req, res) {
                 scopeRatio = globalRatio;
             }
 
-            // Time range
-            if (e.isRecurring) {
-                const dailyAmount = e.recurringPeriod === 'yearly' ? amount / 365 : amount / 30;
-                expenseTableTotal += dailyAmount * periodDays * scopeRatio;
-                // Trend distribution
-                const trendKeys = Object.keys(dailyTrendMap);
-                if (trendKeys.length > 0) {
-                    const perMonth = (dailyAmount * periodDays * scopeRatio) / trendKeys.length;
-                    trendKeys.forEach(k => { dailyTrendMap[k].expenses += perMonth; });
+            // Total contribution over the whole period.
+            const totalContribution = expenseContributionInPeriod(e, rangeStart || new Date(0), rangeEnd || new Date()) * scopeRatio;
+            expenseTableTotal += totalContribution;
+
+            // Distribute into trend chart by computing per-month contribution.
+            const trendKeys = Object.keys(dailyTrendMap);
+            for (const key of trendKeys) {
+                // Reconstruct month bounds from key (YYYY-MM)
+                const [yStr, mStr] = key.split('-');
+                const monthStart = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1, 1);
+                const monthEnd = new Date(parseInt(yStr, 10), parseInt(mStr, 10), 0, 23, 59, 59, 999);
+                const monthContribution = expenseContributionInPeriod(e, monthStart, monthEnd) * scopeRatio;
+                if (monthContribution > 0) {
+                    dailyTrendMap[key].expenses += monthContribution;
                 }
-            } else {
-                const eDate = new Date(e.date);
-                if (rangeStart && eDate < rangeStart) continue;
-                if (rangeEnd && eDate > rangeEnd) continue;
-                expenseTableTotal += amount * scopeRatio;
-                const key = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}`;
-                if (dailyTrendMap[key]) dailyTrendMap[key].expenses += amount * scopeRatio;
             }
         }
         totalExpenses += expenseTableTotal;
@@ -392,27 +421,16 @@ export default async function handler(req, res) {
         where: { userId: targetUserId }
       });
 
-      // Compute total global expenses for the period (with recurring proration),
-      // to split equally across the filtered units.
+      // Compute total global expenses for the period, to split equally
+      // across the filtered units.
       let globalPeriodTotal = 0;
       const rangeStart = startDate ? new Date(startDate) : null;
       const rangeEnd = endDate ? new Date(endDate) : null;
+      const pnlStart = rangeStart || new Date(0);
+      const pnlEnd = rangeEnd || new Date();
       for (const e of allExpensesForPnL) {
         if (e.scope !== 'global') continue;
-        const amount = Number(e.amount || 0);
-        if (amount <= 0) continue;
-
-        if (e.isRecurring) {
-          let dailyAmount = 0;
-          if (e.recurringPeriod === 'yearly') dailyAmount = amount / 365;
-          else                                dailyAmount = amount / 30;
-          globalPeriodTotal += dailyAmount * periodDays;
-        } else {
-          const eDate = new Date(e.date);
-          if (rangeStart && eDate < rangeStart) continue;
-          if (rangeEnd && eDate > rangeEnd) continue;
-          globalPeriodTotal += amount;
-        }
+        globalPeriodTotal += expenseContributionInPeriod(e, pnlStart, pnlEnd);
       }
       const globalSharePerUnit = filteredAptList.length > 0
         ? globalPeriodTotal / filteredAptList.length
@@ -428,18 +446,7 @@ export default async function handler(req, res) {
         let directExpenses = 0;
         for (const e of allExpensesForPnL) {
           if (e.scope !== 'unit' || e.apartmentId !== apt.id) continue;
-          const amount = Number(e.amount || 0);
-          if (amount <= 0) continue;
-
-          if (e.isRecurring) {
-            const dailyAmount = e.recurringPeriod === 'yearly' ? amount / 365 : amount / 30;
-            directExpenses += dailyAmount * periodDays;
-          } else {
-            const eDate = new Date(e.date);
-            if (rangeStart && eDate < rangeStart) continue;
-            if (rangeEnd && eDate > rangeEnd) continue;
-            directExpenses += amount;
-          }
+          directExpenses += expenseContributionInPeriod(e, pnlStart, pnlEnd);
         }
 
         const totalUnitExpenses = directExpenses + globalSharePerUnit;
