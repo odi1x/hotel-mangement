@@ -1,97 +1,98 @@
-# Rent Flow — Fix: prorated math for recurring expenses
+# Rent Flow — Analytics Phase 2e: Layout redesign + trend bug fix
 
-Two stacked bugs made your salary appear as **1,067** instead of **1,000**. Both fixed here.
+Executes the plan we discussed: unified page-level period filter, removed the redundant "top performers" card, restructured the grid so no empty space, and fixed the trend chart bug where expenses showed 0.
 
-## Bug 1 (immediate): +1 off-by-two
+## 1. Bug fix — trend chart expenses = 0
 
-My periodDays calculation had a stray `+ 1`:
+**What was wrong:** in Phase 2d I distributed recurring expenses into the trend map assuming keys were formatted `"YYYY-MM"`. They're actually `"MMM YYYY"` (e.g., `"Jul 2026"`) — from `toLocaleDateString('en-CA', {month:'short', year:'numeric'})`. My `key.split('-')` returned a single-element array, `parseInt("Jul 2026")` = NaN, `new Date(NaN)` = Invalid Date, and `expenseContributionInPeriod` returned 0 for every trend cell. So the trend showed 0 expenses even when P&L (which uses a separate code path) showed actual costs.
 
-```js
-const periodDays = Math.max(1, Math.ceil((periodEnd - periodStart) / 86400000) + 1);
+**Fix:** parse the actual format properly with a month-abbreviation lookup. Now `"Jul 2026"` → month=6, year=2026 → correct bounds.
+
+## 2. Unified period filter
+
+**Before:** two separate filters — an advanced modal (تصفية) that set the actual API date range, and a chart-local chip strip (1m/3m/6m/1y) that just sliced already-fetched data. They didn't agree, and the local chips could misrepresent totals.
+
+**After:** one page-level chip strip mirrors the Expenses tab exactly (شهر / ربع / سنة / كل). It drives `analyticsFilter.startDate/endDate`, which triggers a proper API refetch. Every card on the page — KPIs, trend, P&L, sources — reflects the same period.
+
+**Default: yearly** — gives the trend chart enough data to be meaningful. Different from Expenses (which defaults to month) because Analytics is about "how am I doing over time," Expenses is about "what did I spend recently."
+
+**The advanced modal (تصفية) is kept** for its unique responsibilities:
+- Filter by specific apartments (chips can't do this)
+- Custom date ranges (e.g., "Ramadan-to-Eid")
+
+Chip = quick period, modal = advanced refinement. If both are used, the modal's dates take precedence — mount-time chip application only fires when no custom range is set.
+
+## 3. Removed "الأعلى أداءً"
+
+Was a strict subset of "الربحية حسب الوحدة" (per-unit P&L):
+- Top performers: ranked top 3 by revenue, showed name + nights + revenue
+- P&L: ranks ALL units by profit, shows name + revenue + expenses + profit + margin + occupancy
+
+Same visual weight for less information → removed. If you want a "top 3 revenue" glance, the P&L's rank chips + revenue column do it (just sort mentally by revenue instead of profit).
+
+## 4. Grid redesign — no more empty spaces
+
+**Before (rough):**
+```
+[Top Performers 1/3] [Empty]         [Empty]
+[Sources 1/3      ]  [Empty]         [Empty]
+                     [Per-unit P&L (spans 3)]
+                     [Trend chart (spans 2)]
 ```
 
-For July (31 days), this returned 32. Then `1000 × 32 / 30 = 1066.67`. The extra 67 SAR you saw.
+The col-span combinations left visual holes on desktop.
 
-## Bug 2 (deeper): days-based proration doesn't fit calendar months
-
-Even with the `+ 1` removed, `amount × days / 30` would give:
-- July (31 days): 1000 × 31/30 = **1,033**
-- February (28 days): 1000 × 28/30 = **933**
-- Average across a year is 1000, but individual months look wrong
-
-Analytics.js had the same subtle over-count for yearly recurring (12,167 for a full year of a 1000/month rule, instead of exactly 12,000).
-
-## The fix
-
-**Recurring rules count by calendar unit, not days.**
-
-- Monthly rule: contributes `amount` per calendar month it's active in
-- Yearly rule: contributes `amount / 12` per calendar month it's active in
-- One-time: contributes `amount` if its date is in the period, else 0
-
-Verified with a sanity test:
+**After:**
 ```
-Monthly 1000 (started Jul 23), July filter:  1,000  ✓
-Monthly 1000, Q3 filter:                     3,000  ✓
-Monthly 1000, 2026 filter:                   6,000  ✓  (Jul-Dec = 6 months)
-Monthly 1000, Feb (before rule started):         0  ✓
-Yearly 12000, July filter:                   1,000  ✓
-Yearly 12000, 2026 filter:                  12,000  ✓
-One-time 500 (Jul 15), July filter:            500  ✓
-One-time 500 (Jul 15), Q2 filter:                0  ✓
+[Trend chart (spans 2)] [Sources (1/3)]
+[Per-unit P&L (full width, outside grid)]
 ```
 
-## Why calendar units, not days
+Two cells side-by-side (2/3 + 1/3) fills the row cleanly. P&L moves out of the grid entirely and becomes a full-width block below. Same on mobile — everything stacks single-column.
 
-A monthly rent of 1000 SAR is a *fact*, not an average. It doesn't become 1033 in July because July has 31 days. It's 1000 in every month it applies.
+## 5. Chart KPI strip now honest
 
-Days-based proration only makes sense for partial-month calculations (e.g. "rent from July 15 to Aug 20"). Rent Flow's filters are all whole calendar units — this month, this quarter, this year, all time. Calendar counting is the natural fit.
+The three little numbers inside the trend card (إجمالي الإيرادات / إجمالي المصروفات / صافي الأرباح) used to sum from a client-side slice, which could disagree with the main KPI cards above.
 
-## Where the fix applies
-
-Same math in both places, so numbers agree everywhere:
-
-**`src/lib/expenseUtils.js`** — the frontend helper used by Expenses tab:
-- `contributionInPeriod(expense, start, end)` — rewritten to use `calendarMonthsInRange` for monthly, `amount / 12 × months` for yearly
-
-**`api/analytics.js`** — the backend used by Analytics:
-- New `expenseContributionInPeriod` helper at module scope (mirrors expenseUtils)
-- Main expense-table sum uses it
-- Per-unit P&L global share uses it
-- Per-unit P&L direct expenses use it
-- Breakdown handler uses it
-- Trend distribution now computes per-month contribution instead of dividing period total by month count
+Now they pull straight from `analytics.totalRevenue` / `totalExpenses` / `netProfit`. Numbers always agree.
 
 ## Files touched (2)
 
-- `src/lib/expenseUtils.js`
-- `api/analytics.js`
-
-No schema changes. No API contract changes.
+- `api/analytics.js` — trend key parsing fix
+- `src/components/views/AnalyticsView.jsx` — the whole redesign
 
 ## Install
 
 ```bash
-unzip -o rentflow-expenses-phase2d.zip -d .
+unzip -o rentflow-analytics-phase2e.zip -d .
 cp -r patch/api  ./
 cp -r patch/src  ./
-rm -rf patch rentflow-expenses-phase2d.zip
+rm -rf patch rentflow-analytics-phase2e.zip
 
 git add -A
-git commit -m "expenses phase 2d: calendar-month proration for recurring expenses"
+git commit -m "analytics phase 2e: unified period filter + grid redesign + trend key bug fix"
 git push origin design-md-changes
 ```
 
 ## After deploy — what to verify
 
-1. **Your 1,000 SAR salary** should now show **1,000** in the "هذا الشهر" hero. Not 1,067, not 1,033.
-2. **Category card** for رواتب وموظفين should also show 1,000
-3. **List total** in the ledger toolbar should show 1,000
-4. **Analytics totalExpenses** should agree with the Expenses hero
-5. **Try switching filters** — "الربع الحالي" should show 3× the monthly amount, "هذه السنة" should show N× the monthly amount where N = months from rule start to end of year
+1. **Period chips** appear right below the title/filter row — `هذا الشهر / الربع الحالي / هذه السنة / الكل`. Default: `هذه السنة`.
+2. **Click a chip** → the whole page updates. Trend chart, KPIs, P&L, sources — all reflect the new period.
+3. **Trend chart no longer has its own filter chips.** Just the title.
+4. **إجمالي المصروفات inside the trend chart** now shows the correct value (matches the main KPI cards + P&L totals).
+5. **الأعلى أداءً card is gone.** Only Sources sits alongside the trend chart.
+6. **Per-unit P&L is full-width below** the chart+sources row.
+7. **Advanced modal still works** — تصفية opens a picker with apartments + custom dates. Applying it overrides the chip selection.
 
-## Retro on process
+## What comes next
 
-I should have run these sanity tests before shipping Phase 2c. The formula came from analytics.js which had the same subtle bug, so "matching analytics" only meant "same wrong number". A basic test — "1000/month rent should show 1000 in July" — would have caught it immediately.
+You're now at a pretty complete state:
+- Ledger works, migrated, deep-linked
+- Analytics is coherent, filter-consistent, no dead sections
+- Numbers agree everywhere
 
-For future patches involving arithmetic on user data, I'll write a quick verification script before packaging. Prevents these round-trips.
+Real next steps depending on how the app feels:
+- **Recurring cron generation** — turns virtual monthly prorations into concrete monthly rows in the ledger
+- **Category comparison sparklines** — "is my maintenance spend trending up?"
+- **Break-even nights calculator per unit** — uses your P&L math
+- Or step away for a week, use it, then tell me what actually annoys you

@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, Star, X } from 'lucide-react';
+import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, X } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import DatePickerCal from '../ui/DatePickerCal';
 import { getAccent } from '../../lib/accent';
@@ -15,7 +15,12 @@ export default function AnalyticsView({ setView }) {
   const [breakdownModal, setBreakdownModal] = useState(null);
   const [breakdownData, setBreakdownData] = useState([]);
   const [isBreakdownLoading, setIsBreakdownLoading] = useState(false);
-  const [chartFilter, setChartFilter] = useState('6m');
+  // Page-level period filter — mirrors the Expenses tab chip pattern
+  // (month / quarter / year / all). Default 'year' gives the trend chart
+  // enough data to be interesting. Changing this chip drives the API
+  // request (via setAnalyticsFilter dates); the trend chart just displays
+  // whatever came back — no separate chart-local filter anymore.
+  const [periodFilter, setPeriodFilter] = useState('year');
 
   const hasFilterChanges = () => {
     const startDiffers = tempFilter.startDate !== analyticsFilter.startDate;
@@ -31,6 +36,52 @@ export default function AnalyticsView({ setView }) {
   const handleApplyFilter = () => {
     setAnalyticsFilter({ ...tempFilter });
     setIsFilterOpen(false);
+  };
+
+  // Compute the date range implied by a period chip. Returns null dates for
+  // 'all' (analytics API treats missing dates as "no time filter").
+  const rangeForPeriod = (period) => {
+    const now = new Date();
+    if (period === 'month') {
+      return {
+        startDate: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString(),
+      };
+    }
+    if (period === 'quarter') {
+      const q = Math.floor(now.getMonth() / 3);
+      return {
+        startDate: new Date(now.getFullYear(), q * 3, 1).toISOString(),
+        endDate: new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999).toISOString(),
+      };
+    }
+    if (period === 'year') {
+      return {
+        startDate: new Date(now.getFullYear(), 0, 1).toISOString(),
+        endDate: new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999).toISOString(),
+      };
+    }
+    return { startDate: null, endDate: null };
+  };
+
+  // Apply period chip → analyticsFilter. Runs once on mount (unless the user
+  // already has a custom range set via the advanced modal), and again every
+  // time the chip changes. The modal's Apply button still wins — if the user
+  // picks a custom range, we don't overwrite it.
+  useEffect(() => {
+    // First mount with no active custom filter: apply the default (year).
+    // If custom dates already present, respect them.
+    if (analyticsFilter.startDate && analyticsFilter.endDate) return;
+    const range = rangeForPeriod(periodFilter);
+    setAnalyticsFilter(prev => ({ ...prev, ...range }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Chip click handler — updates state + dates in one shot.
+  const handlePeriodChange = (period) => {
+    setPeriodFilter(period);
+    const range = rangeForPeriod(period);
+    setAnalyticsFilter(prev => ({ ...prev, ...range }));
   };
 
 
@@ -60,14 +111,6 @@ export default function AnalyticsView({ setView }) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
 
-  // Extract top performing units directly from backend analytics payload
-  const topUnits = useMemo(() => {
-    return (analytics.topUnits || []).map(u => ({
-      ...u,
-      name: u.name || apartments.find(a => a.id === (u.id || u.apartmentId))?.name || 'وحدة'
-    }));
-  }, [analytics.topUnits, apartments]);
-
   // Per-unit P&L breakdown — populated post-migration by the API. Empty
   // for pre-migration users (the API can't cleanly separate unit costs
   // without the Expense table). Sorted by netProfit desc from the server.
@@ -79,44 +122,36 @@ export default function AnalyticsView({ setView }) {
   }, [analytics.perUnitPnL, apartments]);
 
 
-  // Transform data for line chart
-  const filteredTrendData = useMemo(() => {
-      let data = [];
-      if (analytics.dailyTrend && analytics.dailyTrend.length > 0) {
-          data = [...analytics.dailyTrend];
-      }
+  // Trend data — comes straight from the API, which already applied the
+  // date range implied by the current period chip. No client-side slicing.
+  const trendData = useMemo(() => {
+    return analytics.dailyTrend && analytics.dailyTrend.length > 0
+      ? [...analytics.dailyTrend]
+      : [];
+  }, [analytics.dailyTrend]);
 
-      // Filter by time range from the end
-      if (chartFilter === '1m') data = data.slice(-1);
-      else if (chartFilter === '3m') data = data.slice(-3);
-      else if (chartFilter === '6m') data = data.slice(-6);
-      else if (chartFilter === '1y') data = data.slice(-12);
-
-      return data;
-  }, [analytics.dailyTrend, chartFilter]);
-
-  const chartKPIs = useMemo(() => {
-    let rev = 0, exp = 0;
-    filteredTrendData.forEach(item => {
-      rev += item.revenue;
-      exp += item.expenses;
-    });
-    return { revenue: rev, expenses: exp, profit: rev - exp };
-  }, [filteredTrendData]);
-
+  // Chart KPI strip — pulls straight from the analytics totals so it agrees
+  // with the main KPI cards above. Previously summed from a client-side
+  // sliced trend, which drifted from the API total whenever the slice
+  // didn't cover the full period.
+  const chartKPIs = useMemo(() => ({
+    revenue: analytics.totalRevenue || 0,
+    expenses: analytics.totalExpenses || 0,
+    profit: analytics.netProfit || 0,
+  }), [analytics.totalRevenue, analytics.totalExpenses, analytics.netProfit]);
 
   const displayTrendData = useMemo(() => {
-    if (filteredTrendData.length === 1) {
+    if (trendData.length === 1) {
       // Pad with dummy data to force area fill
-      const item = filteredTrendData[0];
+      const item = trendData[0];
       return [
         { ...item, name: ' ' },
         item,
         { ...item, name: '  ' }
       ];
     }
-    return filteredTrendData;
-  }, [filteredTrendData]);
+    return trendData;
+  }, [trendData]);
 
 
   // Transform source counts for pie chart
@@ -348,6 +383,30 @@ export default function AnalyticsView({ setView }) {
         </div>
       </div>
 
+      {/* Period chip row — mirrors the Expenses tab pattern. Changing a chip
+          updates analyticsFilter's date range which triggers a refetch, so
+          every card on the page (KPIs, trend chart, per-unit P&L, sources)
+          reflects the same period. The advanced modal above still handles
+          apartment selection + custom date ranges. */}
+      <div className="flex items-center gap-2 mb-4 shrink-0 overflow-x-auto scrollbar-none -mx-1 px-1">
+        <div className="nav-pill-group shrink-0">
+          {[
+            { id: 'month',   label: 'هذا الشهر' },
+            { id: 'quarter', label: 'الربع الحالي' },
+            { id: 'year',    label: 'هذه السنة' },
+            { id: 'all',     label: 'الكل' },
+          ].map(o => (
+            <button
+              key={o.id}
+              onClick={() => handlePeriodChange(o.id)}
+              className={`nav-pill text-xs ${periodFilter === o.id ? 'nav-pill-active' : ''}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
 
       {/* One scrollable content zone — the whole analytics page scrolls as
           one unit. Each card is natural content-height; the scroll happens
@@ -440,43 +499,19 @@ export default function AnalyticsView({ setView }) {
         </div>
       </div>
 
+      {/* Chart + Sources row — trend chart takes 2/3 width, sources take 1/3.
+          The old "top performers" card lived here too but was strictly a
+          subset of the per-unit P&L below (P&L ranks by profit AND shows
+          revenue AND margin AND occupancy). Removed. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-1 flex flex-col gap-5">
-            {/* Top performers — natural content-height. Page scrolls, not the
-                card. Matches the single-scroll model of the whole view. */}
-            <div className="card-surface p-5">
-            <div>
-              <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
-                <Star size={18} className="ml-2 text-muted" /> الأعلى أداءً
-              </h4>
-              <p className="text-xs text-muted mb-3">الوحدات الأكثر تحقيقاً للإيرادات خلال الفترة</p>
-            </div>
+        <div className="card-surface p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[320px] md:min-h-[440px]">
 
-            <div>
-                {topUnits.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
-                  {topUnits.slice(0, 5).map((unit, idx) => (
-                    <div key={unit.id} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-surface-soft/60 dark:hover:bg-hairline-dark transition-colors">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${idx === 0 ? 'bg-accent text-white' : 'bg-surface-card text-ink dark:bg-surface-dark dark:text-white'}`}>
-                                #{idx + 1}
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-sm font-semibold text-ink dark:text-white truncate">{unit.name}</p>
-                                <p className="text-xs text-muted">{unit.nights} ليلة مؤجرة</p>
-                            </div>
-                        </div>
-                        <div className="text-left shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                            <p className="text-base font-bold tracking-tight text-ink dark:text-white leading-none">{unit.revenue.toLocaleString()}</p>
-                            <p className="text-2xs text-muted-soft mt-0.5">ر.س</p>
-                        </div>
-                    </div>
-                  ))}
-                </div>
-                ) : <div className="text-center py-8 text-muted font-medium">لا توجد بيانات كافية</div>}
-            </div>
-          </div>
-
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
+            <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">
+                <TrendingUp size={18} className="ml-2 text-muted" />
+                اتجاه الإيرادات والمصروفات
+            </h4>
+            <div className="lg:col-span-1 flex flex-col gap-5">
             <div className="card-surface p-5">
             <div>
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center"><Globe size={18} className="ml-2 text-muted" /> مصادر التسويق</h4>
@@ -529,8 +564,10 @@ export default function AnalyticsView({ setView }) {
             Rank #1 gets an accent chip, negative-profit units get
             accent-strong (a subtle color code — red would feel accusatory
             in a monochrome design, accent-strong stays honest). */}
+      </div>
+
         {perUnitPnL.length > 0 && (
-          <div className="card-surface p-4 md:p-5 lg:col-span-3">
+          <div className="card-surface p-4 md:p-5">
             <div className="mb-4">
               <h4 className="font-semibold tracking-tight text-ink dark:text-white mb-1 flex items-center">
                 <TrendingUp size={18} className="ml-2 text-muted" />
@@ -684,30 +721,6 @@ export default function AnalyticsView({ setView }) {
           </div>
         )}
 
-        <div className="card-surface p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[320px] md:min-h-[440px]">
-
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 shrink-0">
-            <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">
-                <TrendingUp size={18} className="ml-2 text-muted" />
-                اتجاه الإيرادات والمصروفات
-            </h4>
-            <div className="nav-pill-group bg-canvas dark:bg-surface-dark">
-              {[
-                { id: '1m', label: '1 شهر' },
-                { id: '3m', label: '3 أشهر' },
-                { id: '6m', label: '6 أشهر' },
-                { id: '1y', label: 'السنة' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => setChartFilter(opt.id)}
-                  className={`nav-pill px-3 py-1.5 text-xs font-semibold ${chartFilter === opt.id ? 'nav-pill-active bg-surface-card dark:bg-hairline-dark-soft' : ''}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-hairline-dark pb-4">
             <div>

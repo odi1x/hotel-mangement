@@ -376,12 +376,20 @@ export default async function handler(req, res) {
             expenseTableTotal += totalContribution;
 
             // Distribute into trend chart by computing per-month contribution.
+            // dailyTrendMap keys are formatted "MMM YYYY" (via toLocaleDateString
+            // with locale en-CA, options month:'short' + year:'numeric'). We need
+            // to reconstruct the month bounds from that string to know what
+            // period each key represents.
+            const MONTH_ABBR = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
             const trendKeys = Object.keys(dailyTrendMap);
             for (const key of trendKeys) {
-                // Reconstruct month bounds from key (YYYY-MM)
-                const [yStr, mStr] = key.split('-');
-                const monthStart = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1, 1);
-                const monthEnd = new Date(parseInt(yStr, 10), parseInt(mStr, 10), 0, 23, 59, 59, 999);
+                const parts = key.split(' ');
+                if (parts.length !== 2) continue;
+                const m = MONTH_ABBR[parts[0]];
+                const y = parseInt(parts[1], 10);
+                if (m === undefined || Number.isNaN(y)) continue;
+                const monthStart = new Date(y, m, 1);
+                const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
                 const monthContribution = expenseContributionInPeriod(e, monthStart, monthEnd) * scopeRatio;
                 if (monthContribution > 0) {
                     dailyTrendMap[key].expenses += monthContribution;
