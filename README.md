@@ -1,27 +1,60 @@
-# Rent Flow — DatePicker NaN fix
+# Rent Flow — DatePicker NaN fix (real fix this time)
 
-Small follow-up: opening the "تصفية" modal after navigating away from Analytics showed "undefined NaN" in the date picker until you refreshed the page.
+Previous "datepicker-fix" fixed a related but different bug (snapshot timing on modal open). This one fixes the actual NaN cause.
 
-## Cause
+## What was really happening
 
-`tempFilter` was initialized with `useState({ ...analyticsFilter })`. That initializer only runs ONCE — on first mount. If `analyticsFilter` was still empty at that moment (the mount-sync effect runs slightly later to populate it), `tempFilter` was permanently `{}`. When you opened the modal, DatePicker received `undefined` startDate/endDate → NaN.
+`rangeForPeriod` (the function that computes date ranges when you click a period chip) was returning full ISO datetimes:
+
+```js
+"2026-11-01T00:00:00.000Z"
+```
+
+But `DatePickerCal` expects **YYYY-MM-DD** format only. It parses like this:
+
+```js
+const parse = (s) => { const [y, m, dd] = s.split('-').map(Number); return new Date(y, m-1, dd); };
+```
+
+Split `"2026-11-01T00:00:00.000Z"` on `-` gives `["2026", "11", "01T00:00:00.000Z"]`. Then `Number("01T00:00:00.000Z")` returns **NaN** (unlike `parseInt`, `Number` is strict about non-numeric characters). So `new Date(2026, 10, NaN)` is Invalid Date, and every `.getMonth()` / `.getDate()` call downstream returns NaN.
+
+That's why the picker showed "undefined NaN" — the month name lookup and day number both failed.
+
+## Why the previous patch didn't catch it
+
+My previous patch made `tempFilter` snapshot `analyticsFilter` on open. That works IF `analyticsFilter` has properly-formatted dates. But when you'd used a period chip, the dates were in the wrong format (ISO), so the snapshot just handed the bad data to the picker.
+
+Verified in isolation:
+```
+OLD (ISO):     Invalid Date
+NEW (Y-M-D):   Sun Nov 01 2026 ✓
+```
 
 ## Fix
 
-Snapshot `analyticsFilter` into `tempFilter` at the moment the filter button is clicked. Every open gets a fresh copy of the current state. Same behavior for closing (just toggles state, no snapshot needed).
+`rangeForPeriod` now emits `YYYY-MM-DD` strings via a small helper:
+
+```js
+const toDateStr = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+```
+
+This matches what the DatePicker's own `toStr` emits when the user picks dates, so everything stays consistent — modal path and chip path use the same format now.
+
+The API server accepts either format via `new Date()`, so this is backward-compatible.
 
 ## Install
 
 ```bash
-unzip -o rentflow-datepicker-fix.zip -d .
+unzip -o rentflow-datepicker-fix-r2.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-datepicker-fix.zip
+rm -rf patch rentflow-datepicker-fix-r2.zip
 
 git add -A
-git commit -m "fix: snapshot analyticsFilter into tempFilter on modal open (was stale after nav)"
+git commit -m "fix: emit YYYY-MM-DD from rangeForPeriod so DatePickerCal parses correctly"
 git push origin design-md-changes
 ```
 
 ## Verify
 
-Navigate away from Analytics, come back, click تصفية. The date picker should show today's month with the current period's dates already selected — no NaN, no undefined.
+Click any of the period chips (Month/Quarter/Year), then navigate to Expenses, then back to Analytics. Open تصفية. The date picker should show real dates matching the current period — no more NaN.

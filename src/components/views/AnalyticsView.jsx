@@ -40,25 +40,32 @@ export default function AnalyticsView({ setView }) {
 
   // Compute the date range implied by a period chip. Returns null dates for
   // 'all' (analytics API treats missing dates as "no time filter").
+  //
+  // Format is YYYY-MM-DD (not ISO datetime with the Z suffix) because
+  // DatePickerCal expects this format — it parses via s.split('-').map(Number),
+  // which returns NaN for the day segment if there's a "T00:00:00.000Z" tail.
+  // The API server also accepts either format via new Date(), so this is safe.
   const rangeForPeriod = (period) => {
     const now = new Date();
+    const toDateStr = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (period === 'month') {
       return {
-        startDate: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
-        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString(),
+        startDate: toDateStr(new Date(now.getFullYear(), now.getMonth(), 1)),
+        endDate:   toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
       };
     }
     if (period === 'quarter') {
       const q = Math.floor(now.getMonth() / 3);
       return {
-        startDate: new Date(now.getFullYear(), q * 3, 1).toISOString(),
-        endDate: new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999).toISOString(),
+        startDate: toDateStr(new Date(now.getFullYear(), q * 3, 1)),
+        endDate:   toDateStr(new Date(now.getFullYear(), q * 3 + 3, 0)),
       };
     }
     if (period === 'year') {
       return {
-        startDate: new Date(now.getFullYear(), 0, 1).toISOString(),
-        endDate: new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999).toISOString(),
+        startDate: toDateStr(new Date(now.getFullYear(), 0, 1)),
+        endDate:   toDateStr(new Date(now.getFullYear(), 11, 31)),
       };
     }
     return { startDate: null, endDate: null };
