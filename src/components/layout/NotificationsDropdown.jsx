@@ -118,11 +118,29 @@ export default function NotificationsDropdown({ onNavigate }) {
           style={(() => {
             const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
             if (isDesktop && buttonRect) {
-              return {
+              // Auto-flip: if the button is on the LEFT half of the viewport
+              // (which is the natural bell position in an RTL header), extend
+              // the dropdown to the RIGHT — otherwise anchor it to the button's
+              // right edge and extend LEFT. Clamp to viewport edges either way.
+              const dropdownWidth = window.innerWidth >= 1024 ? 384 : 320; // md:w-80 / lg:w-96
+              const gap = 12;
+              const buttonOnLeftHalf = buttonRect.left < window.innerWidth / 2;
+              const style = {
                 position: 'fixed',
                 top: Math.round(buttonRect.bottom + 8),
-                right: Math.round(window.innerWidth - buttonRect.right),
               };
+              if (buttonOnLeftHalf) {
+                // Extend rightward from the button's LEFT edge.
+                const proposedLeft = Math.round(buttonRect.left);
+                const maxLeft = window.innerWidth - dropdownWidth - gap;
+                style.left = Math.max(gap, Math.min(proposedLeft, maxLeft));
+              } else {
+                // Extend leftward, aligning dropdown's right edge to button's.
+                const proposedRight = Math.round(window.innerWidth - buttonRect.right);
+                const maxRight = window.innerWidth - dropdownWidth - gap;
+                style.right = Math.max(gap, Math.min(proposedRight, maxRight));
+              }
+              return style;
             }
             return {
               position: 'fixed',

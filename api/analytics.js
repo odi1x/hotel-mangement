@@ -2,27 +2,47 @@ import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 
 /**
- * Number of calendar months a date range spans (inclusive of both endpoints'
- * months). July 1 → July 31 = 1. July 15 → Sep 20 = 3. Same math as
- * expenseUtils.js — both files must agree.
+ * Count occurrences of a recurring rule that fall in a given period AND
+ * have already happened (are on or before today). Same logic as
+ * expenseUtils.js — both files MUST agree, so the Expenses tab hero and
+ * Analytics totals stay consistent.
+ *
+ * Example: rule dated Oct 15 (monthly), today = Nov 3
+ *   Occurrences: Oct 15 (past ✓), Nov 15 (future ✗)
+ *   "This year" filter: 1 occurrence → 1× amount
  */
-function calendarMonthsInRange(start, end) {
-  if (end < start) return 0;
-  return (end.getFullYear() - start.getFullYear()) * 12 +
-         (end.getMonth() - start.getMonth()) + 1;
+function occurrencesInPeriod(rule, periodStart, periodEnd) {
+  const ruleStart = new Date(rule.date);
+  const ruleEnd = rule.recurringUntil ? new Date(rule.recurringUntil) : null;
+  const today = new Date();
+
+  let effEnd = periodEnd;
+  if (today < effEnd) effEnd = today;
+  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
+  if (ruleStart > effEnd) return 0;
+
+  const stepMonths = rule.recurringPeriod === 'yearly' ? 12 : 1;
+  const cursor = new Date(ruleStart);
+  let count = 0;
+  let iterations = 0;
+  const MAX_ITERATIONS = 1200;
+  while (cursor <= effEnd && iterations < MAX_ITERATIONS) {
+    if (cursor >= periodStart) count++;
+    cursor.setMonth(cursor.getMonth() + stepMonths);
+    iterations++;
+  }
+  return count;
 }
 
 /**
  * How much a single Expense row contributes to a given period. Recurring
- * rules count by calendar unit (1 monthly rule × 1 month = amount), not
- * by days. Yearly rules spread evenly across 12 months. Non-recurring
+ * rules use occurrence counting (see occurrencesInPeriod). Non-recurring
  * count only if their date falls in range.
  *
- * For recurring rules, the effective end is capped at TODAY. You haven't
- * paid August salary in July — the P&L should reflect money actually out,
- * not projected obligations. Otherwise "this year" would count Jul-Dec
- * for a rule started Jul 23, giving 6× the amount for a rule that's only
- * been active 1 month.
+ * Previously used calendar-month counting, but that over-counted at month
+ * boundaries: a rule dated Oct 15 with today = Nov 3 would show as 2 months
+ * (Oct + Nov) × amount, even though only the Oct 15 payment had been made.
+ * Occurrence counting matches what shows up on a bank statement.
  */
 function expenseContributionInPeriod(e, periodStart, periodEnd) {
   const amount = Number(e.amount || 0);
@@ -33,22 +53,7 @@ function expenseContributionInPeriod(e, periodStart, periodEnd) {
     return (d >= periodStart && d <= periodEnd) ? amount : 0;
   }
 
-  const ruleStart = new Date(e.date);
-  const ruleEnd = e.recurringUntil ? new Date(e.recurringUntil) : null;
-  if (ruleEnd && ruleEnd < periodStart) return 0;
-  if (ruleStart > periodEnd) return 0;
-
-  const today = new Date();
-  const effStart = ruleStart > periodStart ? ruleStart : periodStart;
-  // Effective end: earliest of (rule end, period end, today) — never counts
-  // future occurrences of the rule.
-  let effEnd = periodEnd;
-  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
-  if (today < effEnd) effEnd = today;
-  const months = Math.max(0, calendarMonthsInRange(effStart, effEnd));
-
-  if (e.recurringPeriod === 'yearly') return (amount / 12) * months;
-  return amount * months;
+  return amount * occurrencesInPeriod(e, periodStart, periodEnd);
 }
 
 export default async function handler(req, res) {

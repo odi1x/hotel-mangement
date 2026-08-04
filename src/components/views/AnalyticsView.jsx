@@ -64,14 +64,33 @@ export default function AnalyticsView({ setView }) {
     return { startDate: null, endDate: null };
   };
 
-  // Apply period chip → analyticsFilter. Runs once on mount (unless the user
-  // already has a custom range set via the advanced modal), and again every
-  // time the chip changes. The modal's Apply button still wins — if the user
-  // picks a custom range, we don't overwrite it.
+  // Sync period chip ↔ analyticsFilter on mount. Since analyticsFilter is
+  // stored in DataContext, it persists across navigation. But this component's
+  // periodFilter state is fresh on every mount (defaults to 'year'). Without
+  // sync, the user could leave Analytics on "month" and come back to see the
+  // "year" chip highlighted while the underlying data still reflects month
+  // range — visibly inconsistent.
+  //
+  // Behavior:
+  //   - No dates set in analyticsFilter → apply the default (year) chip.
+  //   - Dates match a known chip's range → highlight that chip.
+  //   - Dates don't match any chip (custom via modal) → leave chip state
+  //     alone; the "advanced filter" indicator handles that case.
   useEffect(() => {
-    // First mount with no active custom filter: apply the default (year).
-    // If custom dates already present, respect them.
-    if (analyticsFilter.startDate && analyticsFilter.endDate) return;
+    if (analyticsFilter.startDate && analyticsFilter.endDate) {
+      for (const chip of ['month', 'quarter', 'year']) {
+        const r = rangeForPeriod(chip);
+        if (r.startDate === analyticsFilter.startDate && r.endDate === analyticsFilter.endDate) {
+          setPeriodFilter(chip);
+          return;
+        }
+      }
+      // No chip matches — must be a custom range from the modal. Leave
+      // periodFilter at its default; hasActiveFilters will highlight the
+      // advanced filter indicator so the user sees why no chip is active.
+      return;
+    }
+    // No dates: apply default period.
     const range = rangeForPeriod(periodFilter);
     setAnalyticsFilter(prev => ({ ...prev, ...range }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
