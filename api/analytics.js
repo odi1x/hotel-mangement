@@ -1,6 +1,56 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 
+/**
+ * Number of calendar months a date range spans (inclusive of both endpoints'
+ * months). July 1 → July 31 = 1. July 15 → Sep 20 = 3. Same math as
+ * expenseUtils.js — both files must agree.
+ */
+function calendarMonthsInRange(start, end) {
+  if (end < start) return 0;
+  return (end.getFullYear() - start.getFullYear()) * 12 +
+         (end.getMonth() - start.getMonth()) + 1;
+}
+
+/**
+ * How much a single Expense row contributes to a given period. Recurring
+ * rules count by calendar unit (1 monthly rule × 1 month = amount), not
+ * by days. Yearly rules spread evenly across 12 months. Non-recurring
+ * count only if their date falls in range.
+ *
+ * For recurring rules, the effective end is capped at TODAY. You haven't
+ * paid August salary in July — the P&L should reflect money actually out,
+ * not projected obligations. Otherwise "this year" would count Jul-Dec
+ * for a rule started Jul 23, giving 6× the amount for a rule that's only
+ * been active 1 month.
+ */
+function expenseContributionInPeriod(e, periodStart, periodEnd) {
+  const amount = Number(e.amount || 0);
+  if (amount <= 0) return 0;
+
+  if (!e.isRecurring) {
+    const d = new Date(e.date);
+    return (d >= periodStart && d <= periodEnd) ? amount : 0;
+  }
+
+  const ruleStart = new Date(e.date);
+  const ruleEnd = e.recurringUntil ? new Date(e.recurringUntil) : null;
+  if (ruleEnd && ruleEnd < periodStart) return 0;
+  if (ruleStart > periodEnd) return 0;
+
+  const today = new Date();
+  const effStart = ruleStart > periodStart ? ruleStart : periodStart;
+  // Effective end: earliest of (rule end, period end, today) — never counts
+  // future occurrences of the rule.
+  let effEnd = periodEnd;
+  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
+  if (today < effEnd) effEnd = today;
+  const months = Math.max(0, calendarMonthsInRange(effStart, effEnd));
+
+  if (e.recurringPeriod === 'yearly') return (amount / 12) * months;
+  return amount * months;
+}
+
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -100,17 +150,22 @@ export default async function handler(req, res) {
          // We can recalculate or fetch from the same logic used in the main endpoint.
          // For brevity and scalability, we will simulate the categorized ledger calculation based on the same logic.
 
+         // Post-Phase-2b: breakdown reads from Expense table + booking-level
+         // variable fees (platform + per-stay cleaning). No more legacy Apartment
+         // rentCost / cleaningCost salaried apportionment.
+
+         // Revenue from bookings.
          const bookings = await prisma.booking.findMany({
             where: filter,
-            select: { totalPrice: true, pricePerNight: true, startDate: true, endDate: true, apartment: { select: { id: true, rentCost: true, rentPeriod: true, cleaningType: true, cleaningCost: true, platformFeeType: true, platformFee: true, otherExpenseAmount: true } } }
+            select: {
+               totalPrice: true, pricePerNight: true, startDate: true, endDate: true,
+               apartment: { select: { id: true, cleaningFeePerStay: true, platformFeeType: true, platformFee: true } }
+            }
          });
 
          let rev = 0;
-                  let platform = 0;
-         let other = 0;
-         let rent = 0;
-
-         const countedRent = new Set();
+         let platform = 0;
+         let cleaning = 0;
 
          bookings.forEach(b => {
             const s = new Date(b.startDate);
@@ -121,84 +176,60 @@ export default async function handler(req, res) {
 
             const apt = b.apartment;
             if (apt) {
-                              if (apt.otherExpenseAmount) other += Number(apt.otherExpenseAmount);
+               if (apt.cleaningFeePerStay) cleaning += Number(apt.cleaningFeePerStay);
                if (apt.platformFee) {
-                   if (apt.platformFeeType === 'percentage') platform += (r * (Number(apt.platformFee) / 100));
-                   else platform += Number(apt.platformFee);
-               }
-               if (apt.rentCost && !countedRent.has(apt.id)) {
-                   let dRent = 0;
-                   if (apt.rentPeriod === 'monthly') dRent = Number(apt.rentCost) / 30;
-                   else if (apt.rentPeriod === 'yearly') dRent = Number(apt.rentCost) / 365;
-                   rent += dRent * periodDays;
-                   countedRent.add(apt.id);
+                  if (apt.platformFeeType === 'percentage') platform += (r * (Number(apt.platformFee) / 100));
+                  else platform += Number(apt.platformFee);
                }
             }
          });
 
-         const allApts = await prisma.apartment.findMany({
-          where: apartmentIds ? { id: { in: apartmentIds.split(',') } } : { userId: targetUserId },
-          select: { id: true, rentCost: true, rentPeriod: true }
+         // Sum Expense rows per category.
+         const rangeStart = startDate ? new Date(startDate) : null;
+         const rangeEnd = endDate ? new Date(endDate) : null;
+         const filteredAptSet = apartmentIds ? new Set(apartmentIds.split(',')) : null;
+
+         const allExpensesForBreakdown = await prisma.expense.findMany({
+            where: { userId: targetUserId }
          });
 
-         allApts.forEach(apt => {
-            if (apt.rentCost && !countedRent.has(apt.id)) {
-                   let dRent = 0;
-                   if (apt.rentPeriod === 'monthly') dRent = Number(apt.rentCost) / 30;
-                   else if (apt.rentPeriod === 'yearly') dRent = Number(apt.rentCost) / 365;
-                   rent += dRent * periodDays;
-                   countedRent.add(apt.id);
+         const catBucket = {
+            rent: 0, staff: 0, maintenance: 0, marketing: 0,
+            licenses: 0, supplies: 0, insurance: 0, utilities: 0,
+            zakat: 0, other: 0,
+         };
+
+         for (const e of allExpensesForBreakdown) {
+            const amount = Number(e.amount || 0);
+            if (amount <= 0) continue;
+            if (e.scope === 'unit') {
+               if (!e.apartmentId) continue;
+               if (filteredAptSet && !filteredAptSet.has(e.apartmentId)) continue;
             }
-         });
-
-         // Staff and Global
-         let global = 0;
-         let staffExp = 0;
-         const userSettings = await prisma.user.findUnique({ where: { id: targetUserId }, select: { generalExpenses: true } });
-         const staffList = await prisma.staffExpense.findMany({ where: { userId: targetUserId } });
-
-         const ratio = (apartmentIds ? apartmentIds.split(',').length : allApts.length) / (allApts.length || 1);
-         if (userSettings && userSettings.generalExpenses) {
-             global += ((Number(userSettings.generalExpenses) / 30) * periodDays) * ratio;
+            const contribution = expenseContributionInPeriod(e, rangeStart || new Date(0), rangeEnd || new Date());
+            if (contribution <= 0) continue;
+            const cat = catBucket[e.category] != null ? e.category : 'other';
+            catBucket[cat] += contribution;
          }
 
-         if (staffList) {
-             staffList.forEach(st => {
-                 staffExp += ((Number(st.monthlySalary) / 30) * periodDays) * ratio; // simplified scope for breakdown
-             });
-         }
-
-         // Maintenance costs — resolved issues with a cost value, filtered by
-         // the date range (resolvedAt is when the money was actually spent) and
-         // apartment scope. Show as a separate ledger line so operators can see
-         // maintenance spend at a glance.
-         const maintFilter = { userId: targetUserId, status: 'resolved', cost: { not: null } };
-         if (apartmentIds) maintFilter.apartmentId = { in: apartmentIds.split(',') };
-         if (startDate && endDate) {
-             maintFilter.resolvedAt = {
-                 gte: new Date(startDate),
-                 lte: new Date(endDate)
-             };
-         }
-         const maintenanceIssues = await prisma.maintenanceIssue.findMany({
-             where: maintFilter,
-             select: { cost: true }
-         });
-         const maintenance = maintenanceIssues.reduce((s, m) => s + (m.cost ? Number(m.cost) : 0), 0);
+         const generalAndOther =
+            catBucket.marketing + catBucket.licenses + catBucket.supplies +
+            catBucket.insurance + catBucket.utilities + catBucket.zakat + catBucket.other;
 
          return res.status(200).json({
-             data: [
-                 { category: 'إجمالي الإيرادات', amount: rev, type: 'income' },
-                 { category: 'تكاليف الإيجار', amount: rent, type: 'expense' },
-                 { category: 'رسوم المنصات', amount: platform, type: 'expense' },
-                 { category: 'رواتب الموظفين', amount: staffExp, type: 'expense' },
-                 { category: 'تكاليف الصيانة', amount: maintenance, type: 'expense' },
-                 { category: 'مصروفات عامة وأخرى', amount: global + other, type: 'expense' },
-             ]
+            data: [
+               { category: 'إجمالي الإيرادات',       amount: rev,               type: 'income'  },
+               { category: 'تكاليف الإيجار',         amount: catBucket.rent,    type: 'expense' },
+               { category: 'رسوم المنصات',           amount: platform,          type: 'expense' },
+               { category: 'رسوم التنظيف',           amount: cleaning,          type: 'expense' },
+               { category: 'رواتب الموظفين',         amount: catBucket.staff,   type: 'expense' },
+               { category: 'تكاليف الصيانة',         amount: catBucket.maintenance, type: 'expense' },
+               { category: 'مصروفات عامة وأخرى',     amount: generalAndOther,   type: 'expense' },
+            ]
          });
       }
 
-      return res.status(400).json({ message: 'Invalid breakdown type' });
+      
     } catch (err) {
       console.error(err);
       return res.status(500).json({ message: 'Error fetching breakdown' });
@@ -236,12 +267,9 @@ export default async function handler(req, res) {
             apartment: {
                 select: {
                     id: true,
-                    rentCost: true,
-                    rentPeriod: true,
-                    cleaningCost: true,
+                    cleaningFeePerStay: true,
                     platformFeeType: true,
                     platformFee: true,
-                    otherExpenseAmount: true
                 }
             }
         }
@@ -251,17 +279,6 @@ export default async function handler(req, res) {
     const allApartments = await prisma.apartment.findMany({
         where: { userId: targetUserId },
         select: { id: true }
-    });
-
-    // Get user global settings for staff and general expenses
-    const userSettings = await prisma.user.findUnique({
-        where: { id: targetUserId },
-        select: { generalExpenses: true }
-    });
-
-        // Fetch StaffExpenses
-    const staffExpenses = await prisma.staffExpense.findMany({
-        where: { userId: targetUserId }
     });
 
     // Default period for occupancy calculation if no dates provided (assume 30 days)
@@ -282,9 +299,6 @@ export default async function handler(req, res) {
     const sourceCounts = {};
     const dailyTrendMap = {}; // { 'YYYY-MM': { name: 'YYYY-MM', revenue: 0, expenses: 0 } }
     const aptStats = {};
-
-    // Keep track of which apartments we've already counted rent for in this period to avoid over-counting rent
-    const countedRentApartmentIds = new Set();
 
     bookings.forEach(booking => {
         const s = new Date(booking.startDate);
@@ -315,11 +329,12 @@ export default async function handler(req, res) {
 
         let bookingExpenses = 0;
 
-        // Calculate variable costs per booking
+        // Calculate variable costs per booking — pricing/fees only.
+        // Fixed unit costs (rent, salaried cleaning, other) live in Expense
+        // table and are summed in the Expense-table block below.
         const apt = booking.apartment;
         if (apt) {
-            if (apt.cleaningType === 'per_booking' && apt.cleaningCost) bookingExpenses += Number(apt.cleaningCost);
-            if (apt.otherExpenseAmount) bookingExpenses += Number(apt.otherExpenseAmount);
+            if (apt.cleaningFeePerStay) bookingExpenses += Number(apt.cleaningFeePerStay);
 
             if (apt.platformFee) {
                 if (apt.platformFeeType === 'percentage') {
@@ -327,21 +342,6 @@ export default async function handler(req, res) {
                 } else {
                     bookingExpenses += Number(apt.platformFee);
                 }
-            }
-
-            // Apportion fixed rent cost if not already added for this unit in this filter period
-            if (apt.rentCost && !countedRentApartmentIds.has(apt.id)) {
-                let dailyRent = 0;
-                if (apt.rentPeriod === 'monthly') dailyRent = Number(apt.rentCost) / 30;
-                else if (apt.rentPeriod === 'yearly') dailyRent = Number(apt.rentCost) / 365;
-
-                const apportionedRent = dailyRent * periodDays;
-                totalExpenses += apportionedRent;
-
-                // For trend chart, distribute rent across months roughly (this is simplified to add to the booking's month)
-                dailyTrendMap[dateStr].expenses += apportionedRent;
-
-                countedRentApartmentIds.add(apt.id);
             }
         }
 
@@ -351,118 +351,142 @@ export default async function handler(req, res) {
         sourceCounts[booking.source] = (sourceCounts[booking.source] || 0) + 1;
     });
 
-    // Apportion rent for empty apartments that passed the filter but had no bookings!
-    if (apartmentIds) {
-        const apts = await prisma.apartment.findMany({
-            where: { id: { in: apartmentIds.split(',') } }
+    // Expense table is the single source of truth for expenses (post-Phase-2b).
+    // Read every Expense row, filter by scope and time, and add to the total.
+    //   - scope='unit' rows only count if the apartment is in the current filter
+    //   - scope='global' rows are apportioned by the filter ratio
+    //   - isRecurring rows prorate over the period days
+    //   - non-recurring rows count if the date falls in the range
+    {
+        const allExpenses = await prisma.expense.findMany({
+            where: { userId: targetUserId }
         });
-        apts.forEach(apt => {
-            if (apt.rentCost && !countedRentApartmentIds.has(apt.id)) {
-                let dailyRent = 0;
-                if (apt.rentPeriod === 'monthly') dailyRent = Number(apt.rentCost) / 30;
-                else if (apt.rentPeriod === 'yearly') dailyRent = Number(apt.rentCost) / 365;
-                totalExpenses += dailyRent * periodDays;
-                countedRentApartmentIds.add(apt.id);
-            }
-        });
-    } else {
-        // Using Promise.all with map is better, but since it's just id lookups we can fetch them all
-        const uncountedApts = await prisma.apartment.findMany({
-            where: { id: { in: allApartments.map(a => a.id).filter(id => !countedRentApartmentIds.has(id)) } }
-        });
-        uncountedApts.forEach(apt => {
-            if (apt.rentCost) {
-                let dailyRent = 0;
-                if (apt.rentPeriod === 'monthly') dailyRent = Number(apt.rentCost) / 30;
-                else if (apt.rentPeriod === 'yearly') dailyRent = Number(apt.rentCost) / 365;
-                totalExpenses += dailyRent * periodDays;
-                countedRentApartmentIds.add(apt.id);
-            }
-        });
-    }
-
-    // Add global operational expenses (cleaner salary and general expenses) based on the timeframe
-    // Assuming cleaner salary is monthly and general expenses are monthly
-    let apportionedGlobalExpenses = 0;
-    if (userSettings) {
-        // Calculate the ratio of selected apartments vs total apartments owned by user
-        // This ensures if someone filters 1 apartment out of 10, they only see 1/10th of the global overhead.
         const totalAptCount = allApartments.length > 0 ? allApartments.length : 1;
-        const ratio = filteredAptCount / totalAptCount;
+        const globalRatio = filteredAptCount / totalAptCount;
+        const filteredAptSet = apartmentIds ? new Set(apartmentIds.split(',')) : null;
+        const rangeStart = startDate ? new Date(startDate) : null;
+        const rangeEnd = endDate ? new Date(endDate) : null;
 
-        // Dynamic Staff Payroll Apportioning
-        if (staffExpenses && staffExpenses.length > 0) {
-            staffExpenses.forEach(staff => {
-                const scopeArr = staff.scope && staff.scope !== 'all' ? staff.scope.split(',') : [];
-                let ratioToUse = ratio; // Default applies to all (meaning we scale it by the general filter ratio)
+        let expenseTableTotal = 0;
+        for (const e of allExpenses) {
+            const amount = Number(e.amount || 0);
+            if (amount <= 0) continue;
 
-                if (scopeArr.length > 0) {
-                    let scopedAptCount = scopeArr.length;
-                    let activeScopedUnits = scopeArr.length;
+            // Scope filtering
+            let scopeRatio = 1;
+            if (e.scope === 'unit') {
+                if (!e.apartmentId) continue;
+                if (filteredAptSet && !filteredAptSet.has(e.apartmentId)) continue;
+                scopeRatio = 1;
+            } else {
+                scopeRatio = globalRatio;
+            }
 
-                    if (apartmentIds) {
-                        const filteredArr = apartmentIds.split(',');
-                        activeScopedUnits = filteredArr.filter(id => scopeArr.includes(id)).length;
-                    }
+            // Total contribution over the whole period.
+            const totalContribution = expenseContributionInPeriod(e, rangeStart || new Date(0), rangeEnd || new Date()) * scopeRatio;
+            expenseTableTotal += totalContribution;
 
-                    ratioToUse = scopedAptCount > 0 ? (activeScopedUnits / scopedAptCount) : 0;
+            // Distribute into trend chart by computing per-month contribution.
+            // dailyTrendMap keys are formatted "MMM YYYY" (via toLocaleDateString
+            // with locale en-CA, options month:'short' + year:'numeric'). We need
+            // to reconstruct the month bounds from that string to know what
+            // period each key represents.
+            const MONTH_ABBR = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
+            const trendKeys = Object.keys(dailyTrendMap);
+            for (const key of trendKeys) {
+                const parts = key.split(' ');
+                if (parts.length !== 2) continue;
+                const m = MONTH_ABBR[parts[0]];
+                const y = parseInt(parts[1], 10);
+                if (m === undefined || Number.isNaN(y)) continue;
+                const monthStart = new Date(y, m, 1);
+                const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
+                const monthContribution = expenseContributionInPeriod(e, monthStart, monthEnd) * scopeRatio;
+                if (monthContribution > 0) {
+                    dailyTrendMap[key].expenses += monthContribution;
                 }
-
-                apportionedGlobalExpenses += ((Number(staff.monthlySalary) / 30) * periodDays) * ratioToUse;
-            });
+            }
         }
-        if (userSettings.generalExpenses) {
-             apportionedGlobalExpenses += ((Number(userSettings.generalExpenses) / 30) * periodDays) * ratio;
-        }
+        totalExpenses += expenseTableTotal;
     }
 
-    totalExpenses += apportionedGlobalExpenses;
-
-    // Maintenance costs — treat each resolved issue with a cost as an expense
-    // on its resolvedAt date. Filtered by same apartment scope and date range
-    // as the rest of analytics, so it plays nice with filters.
-    const maintFilterMain = { userId: targetUserId, status: 'resolved', cost: { not: null } };
-    if (apartmentIds) maintFilterMain.apartmentId = { in: apartmentIds.split(',') };
-    if (startDate && endDate) {
-        maintFilterMain.resolvedAt = {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
-        };
-    }
-    const maintenanceItems = await prisma.maintenanceIssue.findMany({
-        where: maintFilterMain,
-        select: { cost: true, resolvedAt: true }
-    });
-    let totalMaintenance = 0;
-    maintenanceItems.forEach(m => {
-        const c = m.cost ? Number(m.cost) : 0;
-        if (c <= 0) return;
-        totalMaintenance += c;
-        // Also land it in the correct month bucket for the trend chart
-        if (m.resolvedAt) {
-            const key = `${m.resolvedAt.getFullYear()}-${String(m.resolvedAt.getMonth() + 1).padStart(2, '0')}`;
-            if (dailyTrendMap[key]) dailyTrendMap[key].expenses += c;
-        }
-    });
-    totalExpenses += totalMaintenance;
-
-    // Distribute the global expenses roughly into the trend map if it has items, otherwise we just leave it out of trend
-    const trendKeys = Object.keys(dailyTrendMap);
-    if (trendKeys.length > 0 && apportionedGlobalExpenses > 0) {
-        const perMonthExpense = apportionedGlobalExpenses / trendKeys.length;
-        trendKeys.forEach(k => {
-            dailyTrendMap[k].expenses += perMonthExpense;
-        });
-    }
+    // Trend rendering — the Expense-table read above already distributed
+    // recurring/global expenses across the trend map.
+    const dailyTrend = Object.values(dailyTrendMap).sort((a, b) => new Date(a.name) - new Date(b.name));
 
     const netProfit = totalRevenue - totalExpenses;
     const occupancyRate = totalAvailableNights > 0 ? (totalNights / totalAvailableNights) * 100 : 0;
 
-    const dailyTrend = Object.values(dailyTrendMap).sort((a, b) => new Date(a.name) - new Date(b.name));
-
     const topUnits = Object.values(aptStats)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 3);
+
+    // Per-unit P&L — always computed post-Phase-2b since Expense table is
+    // the single source of truth. Sorted by netProfit desc from the server.
+    let perUnitPnL = [];
+    {
+      // Bring in ALL apartments in scope (including those with zero bookings
+      // in the period — they still have rent, cleaning, etc.), and keep only
+      // those that pass the current filter.
+      const filteredAptList = apartmentIds
+        ? allApartments.filter(a => apartmentIds.split(',').includes(a.id))
+        : allApartments;
+
+      // Refetch expenses for the P&L computation. We already have them from
+      // the main expense loop but not indexed by apartment — a fresh pull
+      // with a small scope filter is cheaper than restructuring the earlier
+      // loop for one downstream use.
+      const allExpensesForPnL = await prisma.expense.findMany({
+        where: { userId: targetUserId }
+      });
+
+      // Compute total global expenses for the period, to split equally
+      // across the filtered units.
+      let globalPeriodTotal = 0;
+      const rangeStart = startDate ? new Date(startDate) : null;
+      const rangeEnd = endDate ? new Date(endDate) : null;
+      const pnlStart = rangeStart || new Date(0);
+      const pnlEnd = rangeEnd || new Date();
+      for (const e of allExpensesForPnL) {
+        if (e.scope !== 'global') continue;
+        globalPeriodTotal += expenseContributionInPeriod(e, pnlStart, pnlEnd);
+      }
+      const globalSharePerUnit = filteredAptList.length > 0
+        ? globalPeriodTotal / filteredAptList.length
+        : 0;
+
+      // Now walk each apartment in scope and compute its P&L.
+      perUnitPnL = filteredAptList.map(apt => {
+        // Revenue + nights from aptStats (built during booking loop above).
+        const revenue = aptStats[apt.id]?.revenue || 0;
+        const nights = aptStats[apt.id]?.nights || 0;
+
+        // Direct expenses: scope=unit rows tied to this apartment, in period.
+        let directExpenses = 0;
+        for (const e of allExpensesForPnL) {
+          if (e.scope !== 'unit' || e.apartmentId !== apt.id) continue;
+          directExpenses += expenseContributionInPeriod(e, pnlStart, pnlEnd);
+        }
+
+        const totalUnitExpenses = directExpenses + globalSharePerUnit;
+        const netProfit = revenue - totalUnitExpenses;
+        const marginPct = revenue > 0 ? (netProfit / revenue) * 100 : null;
+        const occupancyPct = periodDays > 0 ? (nights / periodDays) * 100 : 0;
+
+        return {
+          id: apt.id,
+          name: apt.name,
+          revenue,
+          nights,
+          directExpenses,
+          globalShare: globalSharePerUnit,
+          totalExpenses: totalUnitExpenses,
+          netProfit,
+          marginPct,
+          occupancyPct,
+        };
+      }).sort((a, b) => b.netProfit - a.netProfit);
+    }
 
     res.status(200).json({
       totalRevenue,
@@ -473,7 +497,8 @@ export default async function handler(req, res) {
       sourceCounts,
       count: bookings.length,
       dailyTrend,
-      topUnits
+      topUnits,
+      perUnitPnL,
     });
 
   } catch (error) {

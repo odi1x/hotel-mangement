@@ -1,110 +1,87 @@
-# Rent Flow — Mobile Followup 6: Portal All Modals (Header Blur Fix, App-Wide)
+# Rent Flow — Analytics Phase 2f: Structural + math fixes
 
-You were right — the header-blur issue affected every modal in the app, not just Analytics. Each one needed the same portal treatment I applied to the breakdown modal.
+Three real problems in Phase 2e. All fixed here.
 
-## What went wrong before
+## 1. Broken layout — everything nested inside the trend chart
 
-Even after removing the `transform` from `.anim-tab`, the modals rendered from inside views were still trapped in some ancestor stacking context. I don't know exactly which one — could be `overflow-hidden` interacting with iOS Safari, could be an implicit `will-change` from any animated ancestor, could be something else. The debugging rabbit hole is deep.
+**What happened:** my Python reordering script in Phase 2e didn't correctly extract the trend chart's outer div bounds. Result: the Sources card and Per-Unit P&L got pasted *inside* the trend chart's title `<div>`. The trend chart's own body (KPI strip + AreaChart) ended up orphaned somewhere below, still rendered but structurally wrong. Layout looked visibly broken with everything cramped into one card.
 
-## What I did instead
+**Fix:** deleted the entire scrambled section and hand-wrote it cleanly. Two cells in a 3-col grid: trend chart (2/3) + sources (1/3). Per-unit P&L as its own full-width card below the grid. Every div properly opened and closed.
 
-Portaled **all 14 modals** to `document.body`. This bypasses every ancestor's stacking context by rendering the modal at the root of the document. `fixed inset-0` reaches the true viewport regardless of what's above in the DOM. Same technique that fixed the analytics modal and the notification/profile dropdowns.
+## 2. Chips were on their own row, wasting space
 
-## Modals portaled
+**What happened:** in Phase 2e I put the period chips on a separate row below the action strip. That row was ~40px of dedicated space for what should have been inline with the filter button.
 
-**Standalone modal components (7):**
-- `BookingForm.jsx` — the main "add/edit booking" form
-- `BookByDateModal.jsx` — the "new booking" flow triggered by FAB
-- `MaintenanceIssueForm.jsx` — used in image 1
-- `PricingRuleForm.jsx` — used in image 2
-- `StaffFormModal.jsx` — used in Settings → Staff
-- `ProfileSettingsModal.jsx` — profile editor
-- `PaymentLedgerModal.jsx` — payment history
+**Fix:** chips moved inline with the "تصفية" button in the top action strip. Same row. Wraps on narrow screens (`flex-wrap`), stays one line on wider. No dedicated row anymore.
 
-**Inline modals in views (7):**
-- `AnalyticsView` — breakdown modal (already portaled last patch)
-- `ApartmentsView` — apartment edit modal (image 3)
-- `AvailabilityView` — day-bookings list + booking detail (2 modals)
-- `MaintenanceView` — delete confirm
-- `PricingView` — delete confirm
-- `ResidentsView` — checkout modal (image 4-adjacent), note modal (image 4), delete confirm, print selector (image 5)
-
-Total: 14 modals now portal to document.body.
-
-Also cleaned up one leftover hex leak (`border-[#2e2e2e]` in MaintenanceIssueForm → `border-hairline-dark-soft`).
-
-## How this looks in code
-
-Standalone modal:
-```jsx
-import { createPortal } from 'react-dom';
-
-export default function MyModal({...}) {
-  return createPortal(
-    <div className="fixed inset-0 ...">
-      ...
-    </div>,
-    document.body
-  );
-}
+Layout now:
+```
+[تصفية] [هذا الشهر] [الربع] [السنة ✓] [الكل]              [Excel]
 ```
 
-Inline conditional modal:
-```jsx
-{isOpen && createPortal(
-  <div className="fixed inset-0 ...">
-    ...
-  </div>,
-  document.body
-)}
+## 3. Yearly profit less than monthly profit (the confusing one)
+
+**What was wrong:** for a 1000 SAR/month salary that started July 23, 2026:
+- "This month" filter → 1,000 in expenses ✓
+- "This year" filter → **6,000** in expenses ✗ (counting Jul + Aug + Sep + Oct + Nov + Dec = 6 months)
+- "All" filter → 1,000 ✓
+
+Yearly showed 6× the monthly because my proration counted the rule's future occurrences (Aug through Dec). But you haven't paid August salary yet — it's July. Future months shouldn't be in a P&L, they're projections.
+
+Concrete: revenue for the year is 10,540 (real bookings). Expenses shown 6,000 (5 future months of imaginary salary payments). Net: 4,540. Less than "this month" which showed 7,650 profit (revenue 8,650 - expenses 1,000). Nonsense.
+
+**Fix:** effective end of a recurring rule is now capped at `min(rule end, period end, TODAY)`. Future months of recurring rules don't count until they actually happen.
+
+Verified with a test:
+```
+1000/month salary started Jul 23, today = Jul 25
+  This month (July):  1,000  ✓
+  This year (2026):   1,000  ✓  (only 1 month has actually passed)
+  All time:           1,000  ✓
 ```
 
-## Files touched (13)
+All three periods now agree, as they should.
 
-- `src/components/ui/BookingForm.jsx`
-- `src/components/ui/BookByDateModal.jsx`
-- `src/components/ui/MaintenanceIssueForm.jsx`
-- `src/components/ui/PricingRuleForm.jsx`
-- `src/components/ui/StaffFormModal.jsx`
-- `src/components/ui/ProfileSettingsModal.jsx`
-- `src/components/ui/PaymentLedgerModal.jsx`
-- `src/components/views/ApartmentsView.jsx`
-- `src/components/views/AvailabilityView.jsx`
-- `src/components/views/MaintenanceView.jsx`
-- `src/components/views/PricingView.jsx`
-- `src/components/views/ResidentsView.jsx`
+**Consequence:** each period's expense number represents money **actually spent** in that period, not projected obligations. If you want a "what will this year cost me" projection, that's a separate concept — not what analytics should show by default.
 
-(AnalyticsView + ShareLinkModal were already portaled in previous patches — unchanged this round.)
+## Files touched (3)
+
+- `src/components/views/AnalyticsView.jsx` — layout rebuild + chips inline
+- `api/analytics.js` — today-cap in `expenseContributionInPeriod`
+- `src/lib/expenseUtils.js` — same fix in the frontend helper
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-followup6.zip -d .
+unzip -o rentflow-analytics-phase2f.zip -d .
+cp -r patch/api  ./
 cp -r patch/src  ./
-rm -rf patch rentflow-mobile-followup6.zip
+rm -rf patch rentflow-analytics-phase2f.zip
 
 git add -A
-git commit -m "mobile followup 6: portal every modal — fixes header-blur app-wide"
+git commit -m "analytics phase 2f: fix broken layout + inline chips + cap recurring at today"
 git push origin design-md-changes
 ```
 
 ## After deploy — what to verify
 
-Open **any** modal on mobile and check:
-- The header (profile pic, bell, title) should be blurred behind the backdrop
-- The floating nav should be hidden
-- The bottom scrim should be hidden
-- No visible calendar/content peeking around the modal edges
+1. **Layout is clean**: KPI hero at top, then 3 KPI cards, then trend chart (left, 2/3) + sources (right, 1/3) side-by-side, then per-unit P&L full-width below. No overlapping or nesting.
 
-Specifically test the ones from your screenshots:
-1. **Maintenance** → tap "بلاغ جديد" (image 1)
-2. **Pricing** → tap "قاعدة جديدة" (image 2)
-3. **Apartments** → tap edit on any apartment (image 3)
-4. **Residents** → tap "ملاحظات" on a booking (image 4)
-5. **Residents** → tap print icon on a booking (image 5)
+2. **Chips are inline with تصفية**: everything on one row at top: `[تصفية] [chip] [chip] [chip] [chip]              [Excel]`.
 
-All should now blur the header consistently.
+3. **Numbers finally consistent across periods:**
+   - Your 1,000 salary should show 1,000 in **all** period filters (until August starts).
+   - Net profit should be roughly equal or higher for longer periods (all ≥ year ≥ quarter ≥ month, since longer periods can only have more revenue).
+   - No more "yearly profit less than monthly".
 
-## What I learned
+4. **Excel export button** stays in its old spot on the right side of the action strip.
 
-Portals are the right primitive for modals period. I should have applied them to every modal in the initial mobile pass rather than fighting stacking context issues after the fact. Now the app is more resilient — if someone adds a new transformed ancestor later (for animations or visual effects), modals won't break.
+## Retro (again)
+
+I've made two mistakes in a row:
+- Phase 2b: closing brace missing → 500 errors
+- Phase 2e: Python script scrambled the DOM → visibly broken layout
+
+Both were "trusted the script output without spot-checking the rendered result." Going forward, when I do structural rewrites via scripts, I'll `view` the affected file at three points (start, middle, end of the changed region) and count divs before declaring done. Slower, safer.
+
+Sorry for the round-trip.

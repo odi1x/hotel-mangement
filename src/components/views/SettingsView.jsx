@@ -14,7 +14,7 @@ export default function SettingsView() {
   const { subscribeToPushNotifications } = useNotifications();
 
   const [pushStatus, setPushStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
-  const { apartments, licenses, addLicense, deleteLicense, staffExpenses, fetchStaffExpenses } = useData();
+  const { apartments, licenses, addLicense, deleteLicense } = useData();
   const [newStaff, setNewStaff] = useState({ name: '', monthlySalary: '', scope: [] });
   const [activeTab, setActiveTab] = useState('general');
   const [accentId, setAccentId] = useState(getAccentId());
@@ -192,7 +192,6 @@ export default function SettingsView() {
   const facilitySubTabs = [
     { id: 'identity', label: 'الهوية والمعلومات', shortLabel: 'الهوية' },
     { id: 'legal',    label: 'التراخيص والعقود',   shortLabel: 'التراخيص' },
-    { id: 'finance',  label: 'المصروفات والتشغيل', shortLabel: 'المصروفات' },
     { id: 'system',   label: 'خيارات النظام',      shortLabel: 'النظام' },
   ];
 
@@ -397,207 +396,9 @@ export default function SettingsView() {
               </div>
           )}
 
-          {/* Finance Tab */}
-          {facilityTab === 'finance' && (
-              <div className="space-y-6 anim-tab flex flex-col min-h-[400px]">
-                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-6 rounded-lg border border-hairline dark:border-hairline-dark-soft">
-                  <h3 className="text-sm font-semibold text-ink dark:text-white mb-6 flex items-center border-b border-hairline dark:border-hairline-dark-soft pb-3">التكاليف والمصروفات التشغيلية الثابتة (شهرياً)</h3>
-
-                  <div className="flex flex-col gap-6 mb-6">
-                                        {/* Staff Expenses Management */}
-                    <div className="mt-8 border-t border-hairline dark:border-hairline-dark pt-8">
-                      <h3 className="text-base font-semibold text-ink dark:text-white mb-6">الرواتب والموظفين</h3>
-
-                      {/* Desktop: table view */}
-                      <div className="mb-6 rounded-lg border border-hairline dark:border-hairline-dark-soft overflow-hidden hidden md:block">
-                        <table className="w-full text-right">
-                          <thead className="bg-canvas dark:bg-surface-dark border-b border-hairline dark:border-hairline-dark-soft">
-                            <tr>
-                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-body-dark">الاسم / المسمى</th>
-                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-body-dark">الراتب الشهري</th>
-                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-body-dark">النطاق</th>
-                              <th className="px-4 py-3 text-sm font-semibold text-body dark:text-body-dark">إجراء</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-hairline-soft dark:divide-hairline-dark bg-canvas dark:bg-surface-dark">
-                            {staffExpenses?.map(staff => (
-                              <tr key={staff.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
-                                <td className="px-4 py-3 text-sm font-medium text-ink dark:text-white">{staff.name}</td>
-                                <td className="px-4 py-3 text-sm text-muted dark:text-body-dark">{staff.monthlySalary} ر.س</td>
-                                <td className="px-4 py-3 text-sm text-muted dark:text-body-dark">{staff.scope === 'all' ? 'جميع الوحدات' : staff.scope?.split(',').length + ' وحدات'}</td>
-                                <td className="px-4 py-3 text-sm">
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        await axios.delete(`/api/staff-expenses?id=${staff.id}`);
-                                        fetchStaffExpenses();
-                                        toast.success('تم الحذف بنجاح');
-                                      } catch(e) {
-                                        toast.error('حدث خطأ');
-                                      }
-                                    }}
-                                    className="icon-action"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                            {(!staffExpenses || staffExpenses.length === 0) && (
-                              <tr>
-                                <td colSpan="4" className="px-4 py-6 text-center text-sm text-muted dark:text-body-dark">لا يوجد موظفين مضافين</td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Mobile: card list — same data, stacked layout so nothing clips */}
-                      <div className="mb-6 md:hidden space-y-2">
-                        {staffExpenses?.length > 0 ? staffExpenses.map(staff => (
-                          <div key={staff.id} className="rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark p-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-ink dark:text-white truncate">{staff.name}</p>
-                                <div className="flex items-center gap-1.5 text-xs text-muted dark:text-body-dark mt-1">
-                                  <span className="font-semibold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>{staff.monthlySalary} ر.س</span>
-                                  <span className="text-muted-soft">·</span>
-                                  <span>{staff.scope === 'all' ? 'جميع الوحدات' : staff.scope?.split(',').length + ' وحدات'}</span>
-                                </div>
-                              </div>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await axios.delete(`/api/staff-expenses?id=${staff.id}`);
-                                    fetchStaffExpenses();
-                                    toast.success('تم الحذف بنجاح');
-                                  } catch(e) {
-                                    toast.error('حدث خطأ');
-                                  }
-                                }}
-                                className="icon-action p-2 shrink-0"
-                                aria-label={`حذف ${staff.name}`}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        )) : (
-                          <div className="rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark px-4 py-8 text-center text-sm text-muted dark:text-body-dark">
-                            لا يوجد موظفين مضافين
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="bg-canvas dark:bg-surface-dark p-4 rounded-lg border border-hairline dark:border-hairline-dark-soft space-y-4">
-                        <h4 className="text-sm font-semibold text-body dark:text-body-dark">إضافة مصروف راتب +</h4>
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <div className="flex-grow">
-                            <input
-                              type="text"
-                              value={newStaff.name}
-                              onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
-                              placeholder="المسمى الوظيفي / الاسم"
-                              className="input-field h-11"
-                            />
-                          </div>
-                          <div className="w-full md:w-40 shrink-0">
-                            <input
-                              type="number"
-                              value={newStaff.monthlySalary}
-                              onChange={(e) => setNewStaff({...newStaff, monthlySalary: e.target.value})}
-                              placeholder="الراتب (ر.س)"
-                              className="input-field h-11"
-                            />
-                          </div>
-                          <div className="w-full md:w-56 shrink-0 relative">
-                            <select
-                                className="input-field h-11 font-semibold"
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '') {
-                                        setNewStaff({...newStaff, scope: []});
-                                    } else {
-                                        const current = [...newStaff.scope];
-                                        if (current.includes(val)) {
-                                            setNewStaff({...newStaff, scope: current.filter(id => id !== val)});
-                                        } else {
-                                            setNewStaff({...newStaff, scope: [...current, val]});
-                                        }
-                                    }
-                                }}
-                                value=""
-                            >
-                                <option value="" disabled className="font-semibold">النطاق...</option>
-                                <option value="" className="font-semibold">جميع الوحدات</option>
-                                {apartments.map(apt => (
-                                    <option key={apt.id} value={apt.id} className="font-semibold">
-                                        {newStaff.scope.includes(apt.id) ? '✓ ' : ''}{apt.name}
-                                    </option>
-                                ))}
-                            </select>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if(!newStaff.name || !newStaff.monthlySalary) return toast.error('أكمل البيانات');
-                              try {
-                                await axios.post('/api/staff-expenses', {
-                                  name: newStaff.name,
-                                  monthlySalary: newStaff.monthlySalary,
-                                  scope: newStaff.scope.length ? newStaff.scope.join(',') : 'all'
-                                });
-                                setNewStaff({ name: '', monthlySalary: '', scope: [] });
-                                fetchStaffExpenses();
-                                toast.success('تم الإضافة بنجاح');
-                              } catch(e) { toast.error('حدث خطأ'); }
-                            }}
-                            className="btn-primary h-11 px-6 shrink-0"
-                          >
-                            إضافة +
-                          </button>
-                        </div>
-                        {newStaff.scope.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2 px-1">
-                              {newStaff.scope.map(id => {
-                                  const apt = apartments.find(a => a.id === id);
-                                  return apt ? (
-                                      <span key={id} className="badge-pill">
-                                          {apt.name}
-                                          <button type="button" onClick={() => setNewStaff({...newStaff, scope: newStaff.scope.filter(s => s !== id)})} className="hover:text-muted transition-colors mr-1">×</button>
-                                      </span>
-                                  ) : null;
-                              })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-body dark:text-body-dark mb-2">مصروفات عامة أخرى (إيجارات، كهرباء، ماء، إنترنت)</label>
-                    <div className="relative md:w-1/2">
-                      <input
-                        type="number"
-                        name="generalExpenses"
-                        value={formData.generalExpenses}
-                        onChange={handleChange}
-                        className="input-field font-semibold"
-                        placeholder="إجمالي المصروفات الثابتة"
-                      />
-                      <span className="absolute left-4 top-3 text-xs font-semibold text-muted-soft">ر.س / شهر</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-auto pt-6 text-xs text-body dark:text-body-dark">
-                    <p className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg leading-relaxed">
-                        <span className="font-semibold text-ink dark:text-white block mb-1">كيفية الحساب:</span>
-                        يقوم النظام تلقائياً بتجزئة المصروفات الشهرية الثابتة وتحويلها إلى تكلفة يومية تضاف على الحجوزات بشكل دقيق. يتم تقسيم المصروفات العامة على جميع الوحدات بالتساوي، بينما يتم تخصيص رواتب الموظفين للوحدات المحددة في نطاق عملهم فقط.
-                    </p>
-                </div>
-              </div>
-          )}
+          {/* Finance tab removed — expenses moved to their own top-level tab.
+              Old sub-tab id was 'finance'; if a stored preference points there,
+              the tabs list won't render it and the user lands on the identity tab. */}
 
           {/* System Tab */}
           {facilityTab === 'system' && (
