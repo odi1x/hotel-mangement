@@ -1,6 +1,25 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 
+/**
+ * /api/apartments
+ *
+ * GET    → list apartments for this user
+ * POST   → create a new apartment
+ * PUT    → update an existing apartment (by id in body)
+ * DELETE → delete apartment by ?id=…
+ *
+ * Post-Phase-2b schema. Only these fields exist on Apartment:
+ *   - basePrice
+ *   - cleaningFeePerStay
+ *   - platformFeeType, platformFee
+ *   - name, type, description, images, coverPhoto, licenseId
+ *   - needsCleaning, lastCleanedAt
+ *
+ * Dropped in 2b: rentCost, rentPeriod, cleaningType, cleaningCost,
+ * otherExpenseLabel, otherExpenseAmount. Any client still sending those
+ * fields — they're ignored silently rather than throwing.
+ */
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -9,7 +28,6 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  // If user is staff, target the admin's account ID for data ownership
   const targetUserId = user.adminId || user.userId;
 
   try {
@@ -24,9 +42,8 @@ export default async function handler(req, res) {
     else if (req.method === 'POST') {
       const {
         name, type, description, basePrice,
-        rentCost, rentPeriod, cleaningType, cleaningCost,
+        cleaningFeePerStay,
         platformFeeType, platformFee,
-        otherExpenseLabel, otherExpenseAmount,
         licenseId, images, coverPhoto
       } = req.body;
       const apartment = await prisma.apartment.create({
@@ -36,14 +53,9 @@ export default async function handler(req, res) {
           type,
           description,
           basePrice: parseFloat(basePrice) || 0,
-          rentCost: rentCost ? parseFloat(rentCost) : null,
-          rentPeriod,
-          cleaningType: cleaningType || 'salaried',
-          cleaningCost: cleaningType === 'per_booking' && cleaningCost ? parseFloat(cleaningCost) : null,
+          cleaningFeePerStay: cleaningFeePerStay ? parseFloat(cleaningFeePerStay) : null,
           platformFeeType,
           platformFee: platformFee ? parseFloat(platformFee) : null,
-          otherExpenseLabel,
-          otherExpenseAmount: otherExpenseAmount ? parseFloat(otherExpenseAmount) : null,
           licenseId: licenseId || null,
           images: images || [],
           coverPhoto: coverPhoto || null,
@@ -55,9 +67,8 @@ export default async function handler(req, res) {
     else if (req.method === 'PUT') {
       const {
         id, name, type, description, basePrice, needsCleaning,
-        rentCost, rentPeriod, cleaningType, cleaningCost,
+        cleaningFeePerStay,
         platformFeeType, platformFee,
-        otherExpenseLabel, otherExpenseAmount,
         licenseId, images, coverPhoto
       } = req.body;
 
@@ -68,28 +79,23 @@ export default async function handler(req, res) {
       }
 
       const updateData = {
-          name,
-          type,
-          description,
-          basePrice: parseFloat(basePrice) || 0,
-          rentCost: rentCost ? parseFloat(rentCost) : null,
-          rentPeriod,
-          cleaningType: cleaningType || 'salaried',
-          cleaningCost: cleaningType === 'per_booking' && cleaningCost ? parseFloat(cleaningCost) : null,
-          platformFeeType,
-          platformFee: platformFee ? parseFloat(platformFee) : null,
-          otherExpenseLabel,
-          otherExpenseAmount: otherExpenseAmount ? parseFloat(otherExpenseAmount) : null,
-          licenseId: licenseId || null,
-          images: images !== undefined ? images : existing.images,
-          coverPhoto: coverPhoto !== undefined ? coverPhoto : existing.coverPhoto,
+        name,
+        type,
+        description,
+        basePrice: parseFloat(basePrice) || 0,
+        cleaningFeePerStay: cleaningFeePerStay ? parseFloat(cleaningFeePerStay) : null,
+        platformFeeType,
+        platformFee: platformFee ? parseFloat(platformFee) : null,
+        licenseId: licenseId || null,
+        images: images !== undefined ? images : existing.images,
+        coverPhoto: coverPhoto !== undefined ? coverPhoto : existing.coverPhoto,
       };
 
       if (needsCleaning !== undefined) {
-          updateData.needsCleaning = needsCleaning;
-          if (needsCleaning === false) {
-              updateData.lastCleanedAt = new Date();
-          }
+        updateData.needsCleaning = needsCleaning;
+        if (needsCleaning === false) {
+          updateData.lastCleanedAt = new Date();
+        }
       }
 
       const apartment = await prisma.apartment.update({
@@ -102,7 +108,6 @@ export default async function handler(req, res) {
     else if (req.method === 'DELETE') {
       const { id } = req.query;
 
-      // Verify ownership
       const existing = await prisma.apartment.findUnique({ where: { id } });
       if (!existing || existing.userId !== targetUserId) {
         return res.status(403).json({ message: 'Forbidden' });

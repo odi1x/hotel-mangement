@@ -1,87 +1,80 @@
-# Rent Flow — Analytics Phase 2f: Structural + math fixes
+# Rent Flow — Compute burn reduction
 
-Three real problems in Phase 2e. All fixed here.
+Two focused changes that should cut your Neon CU-hour usage by roughly 60-80%. No behavior changes users will notice.
 
-## 1. Broken layout — everything nested inside the trend chart
+## The two big offenders
 
-**What happened:** my Python reordering script in Phase 2e didn't correctly extract the trend chart's outer div bounds. Result: the Sources card and Per-Unit P&L got pasted *inside* the trend chart's title `<div>`. The trend chart's own body (KPI strip + AreaChart) ended up orphaned somewhere below, still rendered but structurally wrong. Layout looked visibly broken with everything cramped into one card.
+**1. Notifications polling every 20 seconds, even when the tab was hidden.**
 
-**Fix:** deleted the entire scrambled section and hand-wrote it cleanly. Two cells in a 3-col grid: trend chart (2/3) + sources (1/3). Per-unit P&L as its own full-width card below the grid. Every div properly opened and closed.
+24 hours × 60 min × 3 polls/min = **4,320 database hits per day per open tab**, running whether you were looking at the page or not. Each poll is a small query but they add up massively over a month.
 
-## 2. Chips were on their own row, wasting space
+**2. Analytics had no caching. Every chip toggle = full DB recompute.**
 
-**What happened:** in Phase 2e I put the period chips on a separate row below the action strip. That row was ~40px of dedicated space for what should have been inline with the filter button.
+Analytics does the heaviest queries in the whole app (loops over all bookings, all expenses, all apartments, computes P&L per unit). Clicking chip → GET /api/analytics → full recompute every time. Toggling between "Month" and "Year" a few times could burn 6-8× the compute of a single view.
 
-**Fix:** chips moved inline with the "تصفية" button in the top action strip. Same row. Wraps on narrow screens (`flex-wrap`), stays one line on wider. No dedicated row anymore.
+## Fix 1: Notification polling — slower + smarter
 
-Layout now:
-```
-[تصفية] [هذا الشهر] [الربع] [السنة ✓] [الكل]              [Excel]
-```
+- Interval: **20s → 60s** (3× reduction on its own)
+- **Skip polling entirely when the tab is hidden** — if you're not looking at Rent Flow, don't waste compute pretending you are
+- The existing `focus` and `visibilitychange` listeners still fire an immediate refresh when you come back, so notifications never feel stale
+- Net effect: from ~4,320/day/tab down to ~1,440/day/tab if you leave the tab open all day. If you close the tab or switch away, it's much lower still.
 
-## 3. Yearly profit less than monthly profit (the confusing one)
+## Fix 2: Server-side response cache on /api/analytics
 
-**What was wrong:** for a 1000 SAR/month salary that started July 23, 2026:
-- "This month" filter → 1,000 in expenses ✓
-- "This year" filter → **6,000** in expenses ✗ (counting Jul + Aug + Sep + Oct + Nov + Dec = 6 months)
-- "All" filter → 1,000 ✓
+- Module-level in-memory cache in `api/analytics.js`
+- Key includes userId + all query params that affect the response
+- **TTL: 30 seconds**
+- Serves cached response without touching the database
+- Cache lives across warm serverless invocations (Vercel reuses lambda instances for short periods — that's when hot-path chip toggling happens)
+- Cold starts miss the cache but that's fine, they'd have to hit the DB anyway
+- Cap at 200 entries with FIFO eviction so long-lived instances don't leak memory
 
-Yearly showed 6× the monthly because my proration counted the rule's future occurrences (Aug through Dec). But you haven't paid August salary yet — it's July. Future months shouldn't be in a P&L, they're projections.
+**Trade-off:** newly-added bookings/expenses can take up to 30 seconds to appear in Analytics. Given how rarely you'd add a booking then immediately check Analytics, and how much compute this saves, I think that's fine. If it bites you later we can tighten the TTL or add manual invalidation.
 
-Concrete: revenue for the year is 10,540 (real bookings). Expenses shown 6,000 (5 future months of imaginary salary payments). Net: 4,540. Less than "this month" which showed 7,650 profit (revenue 8,650 - expenses 1,000). Nonsense.
+## Expected impact
 
-**Fix:** effective end of a recurring rule is now capped at `min(rule end, period end, TODAY)`. Future months of recurring rules don't count until they actually happen.
+Rough numbers for a single-user, single-tab session over a day:
 
-Verified with a test:
-```
-1000/month salary started Jul 23, today = Jul 25
-  This month (July):  1,000  ✓
-  This year (2026):   1,000  ✓  (only 1 month has actually passed)
-  All time:           1,000  ✓
-```
+| Behavior | Before | After |
+|---|---|---|
+| Notification polls | ~4,320 | ~1,440 (tab active), 0 (hidden) |
+| Analytics fetch on chip toggle | full recompute | cached (if within 30s) |
+| Analytics fetch on booking add | full recompute | full recompute (unavoidable) |
+| Total DB CU-hours per day | (your baseline) | **est. 20-40% of baseline** |
 
-All three periods now agree, as they should.
+Should give you significant headroom on the 100 CU-hour Neon free tier. Whether it keeps you under the limit long-term depends on how much you use the app.
 
-**Consequence:** each period's expense number represents money **actually spent** in that period, not projected obligations. If you want a "what will this year cost me" projection, that's a separate concept — not what analytics should show by default.
+## Files touched (2)
 
-## Files touched (3)
-
-- `src/components/views/AnalyticsView.jsx` — layout rebuild + chips inline
-- `api/analytics.js` — today-cap in `expenseContributionInPeriod`
-- `src/lib/expenseUtils.js` — same fix in the frontend helper
+- `api/analytics.js` — response cache with 30s TTL
+- `src/context/NotificationContext.jsx` — polling interval to 60s + skip when hidden
 
 ## Install
 
 ```bash
-unzip -o rentflow-analytics-phase2f.zip -d .
-cp -r patch/api  ./
-cp -r patch/src  ./
-rm -rf patch rentflow-analytics-phase2f.zip
+unzip -o rentflow-compute-reduction.zip -d .
+cp -r patch/. .
+rm -rf patch rentflow-compute-reduction.zip
 
 git add -A
-git commit -m "analytics phase 2f: fix broken layout + inline chips + cap recurring at today"
+git commit -m "perf: server-side analytics cache (30s TTL) + slower notification polling (60s, skip when hidden)"
 git push origin design-md-changes
 ```
 
-## After deploy — what to verify
+## Verify
 
-1. **Layout is clean**: KPI hero at top, then 3 KPI cards, then trend chart (left, 2/3) + sources (right, 1/3) side-by-side, then per-unit P&L full-width below. No overlapping or nesting.
+Nothing visible changes for the user. To confirm the cache is working, watch Vercel function logs while clicking Analytics chips — after the first call for a given filter, subsequent identical calls should complete much faster (they're returning from memory, not the DB).
 
-2. **Chips are inline with تصفية**: everything on one row at top: `[تصفية] [chip] [chip] [chip] [chip]              [Excel]`.
+## What's still burning compute after this
 
-3. **Numbers finally consistent across periods:**
-   - Your 1,000 salary should show 1,000 in **all** period filters (until August starts).
-   - Net profit should be roughly equal or higher for longer periods (all ≥ year ≥ quarter ≥ month, since longer periods can only have more revenue).
-   - No more "yearly profit less than monthly".
+- Every apartment fetch, booking fetch, expense fetch on tab open (`DataContext` fires 6 parallel queries on mount)
+- Filter changes still fetch (but hit cache 30s later)
+- Booking mutations invalidate implicit "freshness" — but we don't manually bust the cache, so analytics may show 30s-old data
 
-4. **Excel export button** stays in its old spot on the right side of the action strip.
+If your CU budget still gets uncomfortable, next candidates:
 
-## Retro (again)
+1. **Cache other endpoints too** — /api/apartments, /api/licenses, /api/pricingRules rarely change. TTL 5 minutes would be safe.
+2. **Lazy DataContext loading** — only fetch what the current view needs, instead of everything on mount. Bigger refactor.
+3. **Neon Launch tier ($19/mo)** — the surgical, boring option. 300 CU-hours vs 100.
 
-I've made two mistakes in a row:
-- Phase 2b: closing brace missing → 500 errors
-- Phase 2e: Python script scrambled the DOM → visibly broken layout
-
-Both were "trusted the script output without spot-checking the rendered result." Going forward, when I do structural rewrites via scripts, I'll `view` the affected file at three points (start, middle, end of the changed region) and count divs before declaring done. Slower, safer.
-
-Sorry for the round-trip.
+Say the word for any of those.

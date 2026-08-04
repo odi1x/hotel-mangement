@@ -90,10 +90,51 @@ export function sumAmounts(expenses) {
  * 1033 in July and 1000×28/30 = 933 in February. Averages out over a year
  * but each individual month looks wrong.
  */
-function calendarMonthsInRange(start, end) {
-  if (end < start) return 0;
-  return (end.getFullYear() - start.getFullYear()) * 12 +
-         (end.getMonth() - start.getMonth()) + 1;
+/**
+ * Count the number of occurrences of a recurring rule that fall inside a
+ * given period AND have already happened (are on or before today). The rule
+ * fires on its `date`, then again every N months (or 1 year for yearly).
+ *
+ * This is the "actual payments made" model — not "months touched". Example:
+ *   Rule dated Oct 15, monthly, today = Nov 3
+ *   → occurrences: Oct 15 (past), Nov 15 (future)
+ *   → count for "this year" filter: 1  (not 2 — only Oct 15 has happened)
+ *
+ * Previously we counted calendar months the rule was active in, which
+ * over-counted at month boundaries: Oct 15 through Nov 3 touches Oct AND
+ * Nov (2 calendar months), so a 1000/mo rule would show 2000 even though
+ * only one salary payment had been made. This new model matches what shows
+ * up on a bank statement.
+ */
+function occurrencesInPeriod(rule, periodStart, periodEnd) {
+  const ruleStart = new Date(rule.date);
+  const ruleEnd = rule.recurringUntil ? new Date(rule.recurringUntil) : null;
+  const today = new Date();
+
+  // Effective cutoff — occurrences after this don't count.
+  //   - today (future payments haven't happened yet)
+  //   - periodEnd (occurrences outside the filter window don't count)
+  //   - ruleEnd (occurrences after rule ended don't count)
+  let effEnd = periodEnd;
+  if (today < effEnd) effEnd = today;
+  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
+  if (ruleStart > effEnd) return 0;
+
+  // Step forward one period at a time and count in-range occurrences.
+  // Monthly steps by 1 month, yearly by 12. Cursor is a copy — never mutates
+  // the caller's rule.date.
+  const stepMonths = rule.recurringPeriod === 'yearly' ? 12 : 1;
+  const cursor = new Date(ruleStart);
+  let count = 0;
+  // Safety cap to prevent runaway loops if data is malformed.
+  let iterations = 0;
+  const MAX_ITERATIONS = 1200; // 100 years of monthly occurrences
+  while (cursor <= effEnd && iterations < MAX_ITERATIONS) {
+    if (cursor >= periodStart) count++;
+    cursor.setMonth(cursor.getMonth() + stepMonths);
+    iterations++;
+  }
+  return count;
 }
 
 /**
@@ -112,27 +153,7 @@ export function contributionInPeriod(expense, periodStart, periodEnd) {
     return (d >= periodStart && d <= periodEnd) ? amount : 0;
   }
 
-  // Recurring: clip the rule's active window against the period AND today.
-  // Effective end is min(rule end, period end, today) — never counts future
-  // occurrences (you haven't paid August salary yet in July).
-  const ruleStart = new Date(expense.date);
-  const ruleEnd = expense.recurringUntil ? new Date(expense.recurringUntil) : null;
-  if (ruleEnd && ruleEnd < periodStart) return 0;
-  if (ruleStart > periodEnd) return 0;
-
-  const today = new Date();
-  const effStart = ruleStart > periodStart ? ruleStart : periodStart;
-  let effEnd = periodEnd;
-  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
-  if (today < effEnd) effEnd = today;
-  const months = Math.max(0, calendarMonthsInRange(effStart, effEnd));
-
-  if (expense.recurringPeriod === 'yearly') {
-    // Yearly rule spread evenly across 12 months — matches "one twelfth per month"
-    return (amount / 12) * months;
-  }
-  // Monthly (default)
-  return amount * months;
+  return amount * occurrencesInPeriod(expense, periodStart, periodEnd);
 }
 
 /**

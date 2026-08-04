@@ -2,27 +2,99 @@ import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 
 /**
- * Number of calendar months a date range spans (inclusive of both endpoints'
- * months). July 1 → July 31 = 1. July 15 → Sep 20 = 3. Same math as
- * expenseUtils.js — both files must agree.
+ * Module-scope response cache. Lives across warm serverless invocations
+ * (Vercel reuses lambda instances for repeated requests within a short
+ * window). Cold starts miss the cache but that's rare compared to
+ * hot-path requests like chip toggling and filter changes.
+ *
+ * Cache key includes the userId (so users don't see each other's data)
+ * and every query param that affects the response.
+ *
+ * TTL is 30 seconds. Compromise: newly-added bookings/expenses may take
+ * up to 30s to appear in analytics, but the compute savings are massive
+ * — a single Analytics tab session with chip toggling used to fire 10+
+ * heavy queries; now it fires 1-3 (miss + refills).
+ *
+ * No manual invalidation across serverless functions (Vercel lambdas
+ * don't share module state), so we rely on TTL alone.
  */
-function calendarMonthsInRange(start, end) {
-  if (end < start) return 0;
-  return (end.getFullYear() - start.getFullYear()) * 12 +
-         (end.getMonth() - start.getMonth()) + 1;
+const responseCache = new Map();
+const CACHE_TTL_MS = 30_000;
+const CACHE_MAX_SIZE = 200;
+
+function cacheKeyFor(userId, req) {
+  const q = req.query || {};
+  return JSON.stringify({
+    u: userId,
+    a: q.apartmentIds || null,
+    s: q.startDate || null,
+    e: q.endDate || null,
+    act: q.action || null,
+    t: q.type || null,
+  });
+}
+
+function getCached(key) {
+  const entry = responseCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    responseCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCached(key, data) {
+  responseCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  // Prevent unbounded growth on long-lived warm instances.
+  if (responseCache.size > CACHE_MAX_SIZE) {
+    const firstKey = responseCache.keys().next().value;
+    responseCache.delete(firstKey);
+  }
+}
+
+/**
+ * Count occurrences of a recurring rule that fall in a given period AND
+ * have already happened (are on or before today). Same logic as
+ * expenseUtils.js — both files MUST agree, so the Expenses tab hero and
+ * Analytics totals stay consistent.
+ *
+ * Example: rule dated Oct 15 (monthly), today = Nov 3
+ *   Occurrences: Oct 15 (past ✓), Nov 15 (future ✗)
+ *   "This year" filter: 1 occurrence → 1× amount
+ */
+function occurrencesInPeriod(rule, periodStart, periodEnd) {
+  const ruleStart = new Date(rule.date);
+  const ruleEnd = rule.recurringUntil ? new Date(rule.recurringUntil) : null;
+  const today = new Date();
+
+  let effEnd = periodEnd;
+  if (today < effEnd) effEnd = today;
+  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
+  if (ruleStart > effEnd) return 0;
+
+  const stepMonths = rule.recurringPeriod === 'yearly' ? 12 : 1;
+  const cursor = new Date(ruleStart);
+  let count = 0;
+  let iterations = 0;
+  const MAX_ITERATIONS = 1200;
+  while (cursor <= effEnd && iterations < MAX_ITERATIONS) {
+    if (cursor >= periodStart) count++;
+    cursor.setMonth(cursor.getMonth() + stepMonths);
+    iterations++;
+  }
+  return count;
 }
 
 /**
  * How much a single Expense row contributes to a given period. Recurring
- * rules count by calendar unit (1 monthly rule × 1 month = amount), not
- * by days. Yearly rules spread evenly across 12 months. Non-recurring
+ * rules use occurrence counting (see occurrencesInPeriod). Non-recurring
  * count only if their date falls in range.
  *
- * For recurring rules, the effective end is capped at TODAY. You haven't
- * paid August salary in July — the P&L should reflect money actually out,
- * not projected obligations. Otherwise "this year" would count Jul-Dec
- * for a rule started Jul 23, giving 6× the amount for a rule that's only
- * been active 1 month.
+ * Previously used calendar-month counting, but that over-counted at month
+ * boundaries: a rule dated Oct 15 with today = Nov 3 would show as 2 months
+ * (Oct + Nov) × amount, even though only the Oct 15 payment had been made.
+ * Occurrence counting matches what shows up on a bank statement.
  */
 function expenseContributionInPeriod(e, periodStart, periodEnd) {
   const amount = Number(e.amount || 0);
@@ -33,22 +105,7 @@ function expenseContributionInPeriod(e, periodStart, periodEnd) {
     return (d >= periodStart && d <= periodEnd) ? amount : 0;
   }
 
-  const ruleStart = new Date(e.date);
-  const ruleEnd = e.recurringUntil ? new Date(e.recurringUntil) : null;
-  if (ruleEnd && ruleEnd < periodStart) return 0;
-  if (ruleStart > periodEnd) return 0;
-
-  const today = new Date();
-  const effStart = ruleStart > periodStart ? ruleStart : periodStart;
-  // Effective end: earliest of (rule end, period end, today) — never counts
-  // future occurrences of the rule.
-  let effEnd = periodEnd;
-  if (ruleEnd && ruleEnd < effEnd) effEnd = ruleEnd;
-  if (today < effEnd) effEnd = today;
-  const months = Math.max(0, calendarMonthsInRange(effStart, effEnd));
-
-  if (e.recurringPeriod === 'yearly') return (amount / 12) * months;
-  return amount * months;
+  return amount * occurrencesInPeriod(e, periodStart, periodEnd);
 }
 
 export default async function handler(req, res) {
@@ -67,6 +124,15 @@ export default async function handler(req, res) {
   const { apartmentIds, startDate, endDate, action, type } = req.query;
 
   const targetUserId = user.adminId || user.userId;
+
+  // Cache check — if a warm invocation computed this same request in the
+  // last 30 seconds, serve it without touching the DB. Saves the bulk of
+  // compute during chip-toggling and filter tweaking.
+  const _cacheKey = cacheKeyFor(targetUserId, req);
+  const _cached = getCached(_cacheKey);
+  if (_cached) {
+    return res.status(200).json(_cached);
+  }
 
   if (action === 'breakdown') {
     try {
@@ -142,7 +208,9 @@ export default async function handler(req, res) {
           results.sort((a,b) => b.nights - a.nights);
         }
 
-        return res.status(200).json({ data: results });
+        const _payload = { data: results };
+        setCached(_cacheKey, _payload);
+        return res.status(200).json(_payload);
       }
 
       if (type === 'profit') {
@@ -216,7 +284,7 @@ export default async function handler(req, res) {
             catBucket.marketing + catBucket.licenses + catBucket.supplies +
             catBucket.insurance + catBucket.utilities + catBucket.zakat + catBucket.other;
 
-         return res.status(200).json({
+         const _profitPayload = {
             data: [
                { category: 'إجمالي الإيرادات',       amount: rev,               type: 'income'  },
                { category: 'تكاليف الإيجار',         amount: catBucket.rent,    type: 'expense' },
@@ -226,7 +294,9 @@ export default async function handler(req, res) {
                { category: 'تكاليف الصيانة',         amount: catBucket.maintenance, type: 'expense' },
                { category: 'مصروفات عامة وأخرى',     amount: generalAndOther,   type: 'expense' },
             ]
-         });
+         };
+         setCached(_cacheKey, _profitPayload);
+         return res.status(200).json(_profitPayload);
       }
 
       
@@ -488,7 +558,7 @@ export default async function handler(req, res) {
       }).sort((a, b) => b.netProfit - a.netProfit);
     }
 
-    res.status(200).json({
+    const _mainPayload = {
       totalRevenue,
       totalExpenses,
       netProfit,
@@ -499,7 +569,9 @@ export default async function handler(req, res) {
       dailyTrend,
       topUnits,
       perUnitPnL,
-    });
+    };
+    setCached(_cacheKey, _mainPayload);
+    res.status(200).json(_mainPayload);
 
   } catch (error) {
     console.error(error);

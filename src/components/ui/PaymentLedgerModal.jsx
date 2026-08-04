@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Plus, Trash2, Wallet, Banknote, Building2, Smartphone, CreditCard, AlertTriangle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
@@ -43,6 +43,12 @@ export default function PaymentLedgerModal({ booking, apartment, onClose }) {
   const [showAdd, setShowAdd] = useState(payments.length === 0);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous double-submit guard. `submitting` state alone isn't enough —
+  // React batches state updates, so between the click event and `disabled`
+  // being applied to the button, a very fast second click (or an Enter key
+  // repeat) can enter the handler again. A ref updates synchronously and
+  // closes that window.
+  const submittingRef = useRef(false);
   const [form, setForm] = useState({
     amount: balanceDue > 0 ? balanceDue.toString() : '',
     method: 'cash',
@@ -53,7 +59,9 @@ export default function PaymentLedgerModal({ booking, apartment, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;        // sync lock
     if (!form.amount || Number(form.amount) === 0) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await addPayment(booking.id, form);
@@ -66,6 +74,7 @@ export default function PaymentLedgerModal({ booking, apartment, onClose }) {
       });
       setShowAdd(false);
     } catch { /* toast handled in context */ } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

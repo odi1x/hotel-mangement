@@ -6,7 +6,14 @@ import { useNotifications } from '../../context/NotificationContext';
 export default function NotificationsDropdown({ onNavigate }) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, fetchNotifications } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
+  // buttonRef anchors the dropdown against the bell button so we can compute
+  // a viewport-fixed position on desktop. dropdownRef is used for click-away
+  // detection. These need to be SEPARATE refs — the old code reused
+  // dropdownRef on both button and portaled panel, which meant click-outside
+  // couldn't tell the two apart.
+  const buttonRef = useRef(null);
   const dropdownRef = useRef(null);
+  const [buttonRect, setButtonRect] = useState(null);
 
   // Map a notification to the page it should open
   const targetFor = (n) => {
@@ -33,19 +40,28 @@ export default function NotificationsDropdown({ onNavigate }) {
 
   const toggleOpen = () => {
     const next = !isOpen;
+    if (next && buttonRef.current) {
+      // Measure the button's viewport rect so the portaled dropdown can be
+      // positioned relative to it with `position: fixed`. Recomputed every
+      // open — layout may have changed between opens (scroll, resize).
+      setButtonRect(buttonRef.current.getBoundingClientRect());
+    }
     setIsOpen(next);
     if (next) fetchNotifications(); // always show fresh on open
   };
 
   useEffect(() => {
+    // Close on outside click. Have to check BOTH the button (source) and the
+    // dropdown (portaled to body) — a click on the button itself shouldn't
+    // count as "outside," it's the toggler.
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+      const inButton = buttonRef.current && buttonRef.current.contains(event.target);
+      const inDropdown = dropdownRef.current && dropdownRef.current.contains(event.target);
+      if (!inButton && !inDropdown) setIsOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [dropdownRef]);
+  }, []);
 
   const getIcon = (type) => {
     switch (type) {
@@ -74,8 +90,9 @@ export default function NotificationsDropdown({ onNavigate }) {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       <button
+        ref={buttonRef}
         onClick={toggleOpen}
         className="relative p-2 rounded-md text-muted hover:bg-surface-soft hover:text-ink dark:text-body-dark dark:hover:bg-surface-dark-elevated dark:hover:text-white transition-colors focus:outline-none"
       >
@@ -88,7 +105,52 @@ export default function NotificationsDropdown({ onNavigate }) {
       </button>
 
       {isOpen && createPortal(
-        <div className="fixed md:absolute inset-x-3 top-16 md:inset-auto md:top-full md:left-0 md:mt-2 w-auto md:w-80 lg:w-96 max-w-md md:max-w-none mx-auto md:mx-0 bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden z-[100] anim-dropdown" ref={dropdownRef}>
+        // Portaled to body. Positioned as `fixed` on both platforms:
+        //   - Desktop (>= 768px): anchored to the bell button's viewport rect
+        //     via inline style (buttonRect was measured in toggleOpen).
+        //   - Mobile: pinned near the top of the viewport, full-width with
+        //     small side gutters (inline style overrides Tailwind).
+        // The old `md:absolute md:top-full md:left-0` combo didn't work here
+        // because absolute needs a positioned ancestor; portal target is body.
+        <div
+          ref={dropdownRef}
+          className="w-auto md:w-80 lg:w-96 max-w-md md:max-w-none bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden z-[100] anim-dropdown"
+          style={(() => {
+            const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+            if (isDesktop && buttonRect) {
+              // Auto-flip: if the button is on the LEFT half of the viewport
+              // (which is the natural bell position in an RTL header), extend
+              // the dropdown to the RIGHT — otherwise anchor it to the button's
+              // right edge and extend LEFT. Clamp to viewport edges either way.
+              const dropdownWidth = window.innerWidth >= 1024 ? 384 : 320; // md:w-80 / lg:w-96
+              const gap = 12;
+              const buttonOnLeftHalf = buttonRect.left < window.innerWidth / 2;
+              const style = {
+                position: 'fixed',
+                top: Math.round(buttonRect.bottom + 8),
+              };
+              if (buttonOnLeftHalf) {
+                // Extend rightward from the button's LEFT edge.
+                const proposedLeft = Math.round(buttonRect.left);
+                const maxLeft = window.innerWidth - dropdownWidth - gap;
+                style.left = Math.max(gap, Math.min(proposedLeft, maxLeft));
+              } else {
+                // Extend leftward, aligning dropdown's right edge to button's.
+                const proposedRight = Math.round(window.innerWidth - buttonRect.right);
+                const maxRight = window.innerWidth - dropdownWidth - gap;
+                style.right = Math.max(gap, Math.min(proposedRight, maxRight));
+              }
+              return style;
+            }
+            return {
+              position: 'fixed',
+              top: 64,
+              left: 12,
+              right: 12,
+              marginInline: 'auto',
+            };
+          })()}
+        >
           <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark-soft flex justify-between items-center">
             <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2">
               الإشعارات

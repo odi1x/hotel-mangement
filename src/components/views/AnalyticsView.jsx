@@ -40,38 +40,64 @@ export default function AnalyticsView({ setView }) {
 
   // Compute the date range implied by a period chip. Returns null dates for
   // 'all' (analytics API treats missing dates as "no time filter").
+  //
+  // Format is YYYY-MM-DD (not ISO datetime with the Z suffix) because
+  // DatePickerCal expects this format — it parses via s.split('-').map(Number),
+  // which returns NaN for the day segment if there's a "T00:00:00.000Z" tail.
+  // The API server also accepts either format via new Date(), so this is safe.
   const rangeForPeriod = (period) => {
     const now = new Date();
+    const toDateStr = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (period === 'month') {
       return {
-        startDate: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
-        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString(),
+        startDate: toDateStr(new Date(now.getFullYear(), now.getMonth(), 1)),
+        endDate:   toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
       };
     }
     if (period === 'quarter') {
       const q = Math.floor(now.getMonth() / 3);
       return {
-        startDate: new Date(now.getFullYear(), q * 3, 1).toISOString(),
-        endDate: new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999).toISOString(),
+        startDate: toDateStr(new Date(now.getFullYear(), q * 3, 1)),
+        endDate:   toDateStr(new Date(now.getFullYear(), q * 3 + 3, 0)),
       };
     }
     if (period === 'year') {
       return {
-        startDate: new Date(now.getFullYear(), 0, 1).toISOString(),
-        endDate: new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999).toISOString(),
+        startDate: toDateStr(new Date(now.getFullYear(), 0, 1)),
+        endDate:   toDateStr(new Date(now.getFullYear(), 11, 31)),
       };
     }
     return { startDate: null, endDate: null };
   };
 
-  // Apply period chip → analyticsFilter. Runs once on mount (unless the user
-  // already has a custom range set via the advanced modal), and again every
-  // time the chip changes. The modal's Apply button still wins — if the user
-  // picks a custom range, we don't overwrite it.
+  // Sync period chip ↔ analyticsFilter on mount. Since analyticsFilter is
+  // stored in DataContext, it persists across navigation. But this component's
+  // periodFilter state is fresh on every mount (defaults to 'year'). Without
+  // sync, the user could leave Analytics on "month" and come back to see the
+  // "year" chip highlighted while the underlying data still reflects month
+  // range — visibly inconsistent.
+  //
+  // Behavior:
+  //   - No dates set in analyticsFilter → apply the default (year) chip.
+  //   - Dates match a known chip's range → highlight that chip.
+  //   - Dates don't match any chip (custom via modal) → leave chip state
+  //     alone; the "advanced filter" indicator handles that case.
   useEffect(() => {
-    // First mount with no active custom filter: apply the default (year).
-    // If custom dates already present, respect them.
-    if (analyticsFilter.startDate && analyticsFilter.endDate) return;
+    if (analyticsFilter.startDate && analyticsFilter.endDate) {
+      for (const chip of ['month', 'quarter', 'year']) {
+        const r = rangeForPeriod(chip);
+        if (r.startDate === analyticsFilter.startDate && r.endDate === analyticsFilter.endDate) {
+          setPeriodFilter(chip);
+          return;
+        }
+      }
+      // No chip matches — must be a custom range from the modal. Leave
+      // periodFilter at its default; hasActiveFilters will highlight the
+      // advanced filter indicator so the user sees why no chip is active.
+      return;
+    }
+    // No dates: apply default period.
     const range = rangeForPeriod(periodFilter);
     setAnalyticsFilter(prev => ({ ...prev, ...range }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -214,7 +240,23 @@ export default function AnalyticsView({ setView }) {
     document.body.removeChild(link);
   };
 
-  const hasActiveFilters = analyticsFilter.apartmentIds?.length > 0 || (analyticsFilter.startDate && analyticsFilter.endDate);
+  // Does the current filter state include anything that a user could think
+  // of as "an active advanced filter"? Chip-driven dates don't count — they
+  // just represent the current period selection (always set). Only true
+  // "advanced" state:
+  //   - specific apartments picked from the modal
+  //   - a custom date range that DOESN'T match any period chip
+  const hasActiveFilters = (() => {
+    const hasApartmentFilter = analyticsFilter.apartmentIds?.length > 0;
+    if (hasApartmentFilter) return true;
+    if (!analyticsFilter.startDate || !analyticsFilter.endDate) return false;
+    // If dates match the current chip's range, it's not "advanced" — just
+    // the chip in action. Compare to millisecond precision.
+    const chipRange = rangeForPeriod(periodFilter);
+    if (!chipRange.startDate || !chipRange.endDate) return true; // 'all' has no dates
+    return analyticsFilter.startDate !== chipRange.startDate
+        || analyticsFilter.endDate   !== chipRange.endDate;
+  })();
 
 
   if (isAnalyticsLoading) {
@@ -286,7 +328,19 @@ export default function AnalyticsView({ setView }) {
       <div className="flex justify-between items-center mb-5 gap-3 shrink-0 flex-wrap">
         <div className="relative flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            onClick={() => {
+              // Snapshot the CURRENT analyticsFilter into tempFilter when
+              // opening. useState's initializer only runs once (at mount),
+              // so if analyticsFilter was empty at that moment (before the
+              // mount-sync effect populated it), tempFilter would be
+              // permanently stale — DatePicker would receive undefined
+              // dates and render "undefined NaN". Refreshing on each open
+              // fixes it and also picks up any changes made via the chips
+              // since the last open.
+              const nextOpen = !isFilterOpen;
+              if (nextOpen) setTempFilter({ ...analyticsFilter });
+              setIsFilterOpen(nextOpen);
+            }}
             className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold transition-colors border ${
               hasActiveFilters
                 ? 'bg-accent-soft text-accent-strong border-accent/40'

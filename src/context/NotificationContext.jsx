@@ -29,7 +29,15 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     fetchNotifications();
     if (!token) return;
-    const interval = setInterval(fetchNotifications, 20000); // poll every 20s
+    // Polling every 60s (was 20s) — that's ~1,440 fetches/day per open tab
+    // instead of ~4,320. Skip entirely when the tab is hidden: nobody's
+    // looking, no point burning DB compute. focus/visibilitychange listeners
+    // still refresh instantly when the user returns, so notifications never
+    // feel stale in practice.
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      fetchNotifications();
+    }, 60000);
     const onFocus = () => fetchNotifications();
     const onVisible = () => { if (!document.hidden) fetchNotifications(); };
     window.addEventListener('focus', onFocus);

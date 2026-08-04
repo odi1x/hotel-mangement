@@ -56,6 +56,58 @@ export default function ExpensesView({ initialFilter = null }) {
 
   const stats = useMemo(() => computeExpenseStats(expenses), [expenses]);
 
+  // Period-aware hero — label + amount + optional comparison, driven by the
+  // current time filter chip. Previously the hero was hardcoded to "this
+  // month" no matter which chip was selected, which meant switching to
+  // quarter/year/all left the hero on stale numbers. Now:
+  //   - month:   this month vs last month (delta shown)
+  //   - quarter: this quarter, prior quarter (delta shown)
+  //   - year:    this year, prior year (delta shown)
+  //   - all:     lifetime total (no comparison)
+  const heroSummary = useMemo(() => {
+    const now = new Date();
+    if (timeFilter === 'month') {
+      return {
+        label: 'صرفَك هذا الشهر',
+        amount: stats.thisMonth,
+        prevLabel: 'الشهر الماضي',
+        prevAmount: stats.lastMonth,
+      };
+    }
+    if (timeFilter === 'quarter') {
+      const q = Math.floor(now.getMonth() / 3);
+      const thisStart = new Date(now.getFullYear(), q * 3, 1);
+      const thisEnd = new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
+      const prevStart = new Date(now.getFullYear(), (q - 1) * 3, 1);
+      const prevEnd = new Date(now.getFullYear(), (q - 1) * 3 + 3, 0, 23, 59, 59, 999);
+      return {
+        label: 'صرفَك هذا الربع',
+        amount: (expenses || []).reduce((s, e) => s + contributionInPeriod(e, thisStart, thisEnd), 0),
+        prevLabel: 'الربع الماضي',
+        prevAmount: (expenses || []).reduce((s, e) => s + contributionInPeriod(e, prevStart, prevEnd), 0),
+      };
+    }
+    if (timeFilter === 'year') {
+      const thisStart = new Date(now.getFullYear(), 0, 1);
+      const thisEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+      const prevStart = new Date(now.getFullYear() - 1, 0, 1);
+      const prevEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+      return {
+        label: 'صرفَك هذه السنة',
+        amount: (expenses || []).reduce((s, e) => s + contributionInPeriod(e, thisStart, thisEnd), 0),
+        prevLabel: 'السنة الماضية',
+        prevAmount: (expenses || []).reduce((s, e) => s + contributionInPeriod(e, prevStart, prevEnd), 0),
+      };
+    }
+    // 'all' — lifetime total, no comparison
+    return {
+      label: 'إجمالي المصروفات',
+      amount: (expenses || []).reduce((s, e) => s + Number(e.amount || 0), 0),
+      prevLabel: null,
+      prevAmount: 0,
+    };
+  }, [expenses, timeFilter, stats.thisMonth, stats.lastMonth]);
+
   // Look up the pinned apartment (for the chip label).
   const pinnedApartment = apartmentFilter
     ? apartments.find(a => a.id === apartmentFilter)
@@ -68,33 +120,33 @@ export default function ExpensesView({ initialFilter = null }) {
   // hero total, the filtered total below, and analytics all agree.
   const filtered = useMemo(() => {
     const now = new Date();
+    // Only `from` (period start) is needed here. `to` (period end) used to
+    // be part of the "hide future recurring rules" check, but rules are
+    // now always visible in the list regardless of whether they've started.
     let from = null;
-    let to = null;
     if (timeFilter === 'month') {
       from = new Date(now.getFullYear(), now.getMonth(), 1);
-      to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     } else if (timeFilter === 'quarter') {
       const q = Math.floor(now.getMonth() / 3);
       from = new Date(now.getFullYear(), q * 3, 1);
-      to = new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
     } else if (timeFilter === 'year') {
       from = new Date(now.getFullYear(), 0, 1);
-      to = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
 
     return (expenses || [])
       .filter(e => {
-        // Recurring rules: always visible (unless recurringUntil has passed
-        // and we're looking at the current period). Simpler: just show them.
+        // Recurring rules represent ongoing obligations and should always
+        // appear in the list — regardless of whether the current time
+        // filter's window overlaps with the rule's start. The only reason
+        // to hide is if the rule has been explicitly ended (recurringUntil)
+        // and that end date is BEFORE the current period starts — in
+        // which case the rule no longer applies.
         if (e.isRecurring) {
           if (!from) return true;
-          // If the rule's start date is after the period end, it hasn't started yet
-          if (new Date(e.date) > to) return false;
-          // If recurringUntil ended before the period start, rule no longer applies
           if (e.recurringUntil && new Date(e.recurringUntil) < from) return false;
           return true;
         }
-        // One-time: filter by date
+        // One-time expenses filter by date normally.
         return from ? new Date(e.date) >= from : true;
       })
       .filter(e => (categoryFilter === 'all' ? true : e.category === categoryFilter))
@@ -140,37 +192,42 @@ export default function ExpensesView({ initialFilter = null }) {
       <div className="card-surface p-4 md:p-6 mb-3 md:mb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="eyebrow mb-1.5">صرفَك هذا الشهر</p>
+            <p className="eyebrow mb-1.5">{heroSummary.label}</p>
             <p
               className="text-3xl md:text-4xl font-bold tracking-tight text-ink dark:text-white leading-none"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
-              {formatSAR(stats.thisMonth)}
+              {formatSAR(heroSummary.amount)}
               <span className="text-base md:text-lg font-medium text-muted dark:text-body-dark mr-1.5">ر.س</span>
             </p>
             <p className="text-xs text-muted-soft mt-2 flex items-center gap-1.5">
-              {stats.deltaPct != null ? (
-                <>
-                  {stats.deltaPct > 0 ? (
-                    <TrendingUp size={13} className="text-ink dark:text-white shrink-0" />
-                  ) : (
-                    <TrendingDown size={13} className="text-accent-strong shrink-0" />
-                  )}
-                  <span>
-                    <span
-                      className={stats.deltaPct > 0 ? 'text-ink dark:text-white font-semibold' : 'text-accent-strong font-semibold'}
-                      style={{ fontVariantNumeric: 'tabular-nums' }}
-                    >
-                      {Math.abs(stats.deltaPct).toFixed(0)}%
+              {(() => {
+                if (!heroSummary.prevLabel) return <span>إجمالي عبر جميع الفترات</span>;
+                const prev = heroSummary.prevAmount;
+                const curr = heroSummary.amount;
+                if (prev <= 0 && curr <= 0) return <span>لا بيانات للمقارنة</span>;
+                if (prev <= 0) return <span>لا مقارنة — {heroSummary.prevLabel} كان صفر</span>;
+                const deltaPct = ((curr - prev) / prev) * 100;
+                const isUp = deltaPct > 0;
+                return (
+                  <>
+                    {isUp ? (
+                      <TrendingUp size={13} className="text-ink dark:text-white shrink-0" />
+                    ) : (
+                      <TrendingDown size={13} className="text-accent-strong shrink-0" />
+                    )}
+                    <span>
+                      <span
+                        className={isUp ? 'text-ink dark:text-white font-semibold' : 'text-accent-strong font-semibold'}
+                        style={{ fontVariantNumeric: 'tabular-nums' }}
+                      >
+                        {Math.abs(deltaPct).toFixed(0)}%
+                      </span>
+                      {' '}{isUp ? 'أعلى من' : 'أقل من'} {heroSummary.prevLabel} ({formatSAR(prev)} ر.س)
                     </span>
-                    {' '}{stats.deltaPct > 0 ? 'أعلى من' : 'أقل من'} الشهر الماضي ({formatSAR(stats.lastMonth)} ر.س)
-                  </span>
-                </>
-              ) : stats.lastMonth === 0 && stats.thisMonth > 0 ? (
-                <span>لا مقارنة — الشهر الماضي كان صفر</span>
-              ) : (
-                <span>لا بيانات للمقارنة</span>
-              )}
+                  </>
+                );
+              })()}
             </p>
           </div>
 
