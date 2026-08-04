@@ -2,6 +2,58 @@ import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 
 /**
+ * Module-scope response cache. Lives across warm serverless invocations
+ * (Vercel reuses lambda instances for repeated requests within a short
+ * window). Cold starts miss the cache but that's rare compared to
+ * hot-path requests like chip toggling and filter changes.
+ *
+ * Cache key includes the userId (so users don't see each other's data)
+ * and every query param that affects the response.
+ *
+ * TTL is 30 seconds. Compromise: newly-added bookings/expenses may take
+ * up to 30s to appear in analytics, but the compute savings are massive
+ * — a single Analytics tab session with chip toggling used to fire 10+
+ * heavy queries; now it fires 1-3 (miss + refills).
+ *
+ * No manual invalidation across serverless functions (Vercel lambdas
+ * don't share module state), so we rely on TTL alone.
+ */
+const responseCache = new Map();
+const CACHE_TTL_MS = 30_000;
+const CACHE_MAX_SIZE = 200;
+
+function cacheKeyFor(userId, req) {
+  const q = req.query || {};
+  return JSON.stringify({
+    u: userId,
+    a: q.apartmentIds || null,
+    s: q.startDate || null,
+    e: q.endDate || null,
+    act: q.action || null,
+    t: q.type || null,
+  });
+}
+
+function getCached(key) {
+  const entry = responseCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    responseCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCached(key, data) {
+  responseCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  // Prevent unbounded growth on long-lived warm instances.
+  if (responseCache.size > CACHE_MAX_SIZE) {
+    const firstKey = responseCache.keys().next().value;
+    responseCache.delete(firstKey);
+  }
+}
+
+/**
  * Count occurrences of a recurring rule that fall in a given period AND
  * have already happened (are on or before today). Same logic as
  * expenseUtils.js — both files MUST agree, so the Expenses tab hero and
@@ -72,6 +124,15 @@ export default async function handler(req, res) {
   const { apartmentIds, startDate, endDate, action, type } = req.query;
 
   const targetUserId = user.adminId || user.userId;
+
+  // Cache check — if a warm invocation computed this same request in the
+  // last 30 seconds, serve it without touching the DB. Saves the bulk of
+  // compute during chip-toggling and filter tweaking.
+  const _cacheKey = cacheKeyFor(targetUserId, req);
+  const _cached = getCached(_cacheKey);
+  if (_cached) {
+    return res.status(200).json(_cached);
+  }
 
   if (action === 'breakdown') {
     try {
@@ -147,7 +208,9 @@ export default async function handler(req, res) {
           results.sort((a,b) => b.nights - a.nights);
         }
 
-        return res.status(200).json({ data: results });
+        const _payload = { data: results };
+        setCached(_cacheKey, _payload);
+        return res.status(200).json(_payload);
       }
 
       if (type === 'profit') {
@@ -221,7 +284,7 @@ export default async function handler(req, res) {
             catBucket.marketing + catBucket.licenses + catBucket.supplies +
             catBucket.insurance + catBucket.utilities + catBucket.zakat + catBucket.other;
 
-         return res.status(200).json({
+         const _profitPayload = {
             data: [
                { category: 'إجمالي الإيرادات',       amount: rev,               type: 'income'  },
                { category: 'تكاليف الإيجار',         amount: catBucket.rent,    type: 'expense' },
@@ -231,7 +294,9 @@ export default async function handler(req, res) {
                { category: 'تكاليف الصيانة',         amount: catBucket.maintenance, type: 'expense' },
                { category: 'مصروفات عامة وأخرى',     amount: generalAndOther,   type: 'expense' },
             ]
-         });
+         };
+         setCached(_cacheKey, _profitPayload);
+         return res.status(200).json(_profitPayload);
       }
 
       
@@ -493,7 +558,7 @@ export default async function handler(req, res) {
       }).sort((a, b) => b.netProfit - a.netProfit);
     }
 
-    res.status(200).json({
+    const _mainPayload = {
       totalRevenue,
       totalExpenses,
       netProfit,
@@ -504,7 +569,9 @@ export default async function handler(req, res) {
       dailyTrend,
       topUnits,
       perUnitPnL,
-    });
+    };
+    setCached(_cacheKey, _mainPayload);
+    res.status(200).json(_mainPayload);
 
   } catch (error) {
     console.error(error);
