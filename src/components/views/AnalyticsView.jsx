@@ -321,7 +321,19 @@ export default function AnalyticsView({ setView }) {
       <div className="flex justify-between items-center mb-5 gap-3 shrink-0 flex-wrap">
         <div className="relative flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            onClick={() => {
+              // Snapshot the CURRENT analyticsFilter into tempFilter when
+              // opening. useState's initializer only runs once (at mount),
+              // so if analyticsFilter was empty at that moment (before the
+              // mount-sync effect populated it), tempFilter would be
+              // permanently stale — DatePicker would receive undefined
+              // dates and render "undefined NaN". Refreshing on each open
+              // fixes it and also picks up any changes made via the chips
+              // since the last open.
+              const nextOpen = !isFilterOpen;
+              if (nextOpen) setTempFilter({ ...analyticsFilter });
+              setIsFilterOpen(nextOpen);
+            }}
             className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold transition-colors border ${
               hasActiveFilters
                 ? 'bg-accent-soft text-accent-strong border-accent/40'
