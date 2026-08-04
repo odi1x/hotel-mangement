@@ -1,87 +1,137 @@
-# Rent Flow — Analytics Phase 2f: Structural + math fixes
+# Rent Flow — Batch Hotfix
 
-Three real problems in Phase 2e. All fixed here.
+Six real bugs, one dead file, all in one patch.
 
-## 1. Broken layout — everything nested inside the trend chart
+## 1. Apartment PUT 500 error — FIXED
 
-**What happened:** my Python reordering script in Phase 2e didn't correctly extract the trend chart's outer div bounds. Result: the Sources card and Per-Unit P&L got pasted *inside* the trend chart's title `<div>`. The trend chart's own body (KPI strip + AreaChart) ended up orphaned somewhere below, still rendered but structurally wrong. Layout looked visibly broken with everything cramped into one card.
+**Root cause:** `api/apartments.js` was still trying to write `rentCost`, `rentPeriod`, `cleaningType`, `cleaningCost`, `otherExpenseLabel`, `otherExpenseAmount` — all of which Phase 2b dropped from the schema. Prisma threw on every PUT and POST.
 
-**Fix:** deleted the entire scrambled section and hand-wrote it cleanly. Two cells in a 3-col grid: trend chart (2/3) + sources (1/3). Per-unit P&L as its own full-width card below the grid. Every div properly opened and closed.
+**Fix:** rewrote apartments.js to only reference current schema fields (`cleaningFeePerStay`, `platformFee/Type`, standard fields). Any legacy field a client still sends is silently ignored rather than blowing up.
 
-## 2. Chips were on their own row, wasting space
+## 2. Desktop notification button broken — FIXED
 
-**What happened:** in Phase 2e I put the period chips on a separate row below the action strip. That row was ~40px of dedicated space for what should have been inline with the filter button.
+**Root cause:** the dropdown panel was portaled to `<body>` but used `md:absolute md:top-full md:left-0`. Absolute positioning needs a positioned ancestor — with portal → body, there isn't one, so the panel rendered at viewport (0,0), hidden under the header. Same `dropdownRef` was mis-attached to both the button wrapper AND the portaled panel, so click-outside detection also broke.
 
-**Fix:** chips moved inline with the "تصفية" button in the top action strip. Same row. Wraps on narrow screens (`flex-wrap`), stays one line on wider. No dedicated row anymore.
+**Fix:** separated the refs (`buttonRef` for the bell, `dropdownRef` for the panel). On open, measure the button's `getBoundingClientRect()` and use it to position the panel as `fixed` on desktop, anchored below-right of the button. Mobile keeps its viewport-anchored fixed layout. Click-outside now checks both refs.
 
-Layout now:
+## 3. Analytics "filter active" indicator on load — FIXED
+
+**Root cause:** `hasActiveFilters = ... || (analyticsFilter.startDate && analyticsFilter.endDate)`. Since the yearly period chip sets `startDate/endDate` on mount, this was always true — the `•` dot and X button appeared before the user did anything.
+
+**Fix:** `hasActiveFilters` now excludes dates that match the current chip's range. Only apartment picks OR a custom range that doesn't match any chip counts as "advanced." Loading Analytics fresh no longer shows the active-filter indicator.
+
+## 4. Expenses tab: hero total + list behavior — FIXED
+
+**Two issues:**
+
+**A) Hero always showed "this month" regardless of the selected chip.** Switching to quarter/year/all left the hero on stale numbers.
+
+**B) Recurring rules were hidden from the list when the current filter's window ended before the rule's start date** (e.g. a future-dated rule was invisible in month/quarter/year views). User expectation: recurring rules represent ongoing obligations and should always be visible in the ledger.
+
+**Fix:**
+- Added `heroSummary` — driven by `timeFilter`. Label, amount, and comparison all reflect the current chip:
+  - `month`: this month vs last month
+  - `quarter`: this quarter vs last quarter
+  - `year`: this year vs last year
+  - `all`: lifetime total, no comparison
+- List filter: recurring rules are always visible. Only hidden if the rule has been explicitly ended (`recurringUntil` set) BEFORE the current period starts.
+
+## 5. Payment double-submission guard — HARDENED
+
+**Existing:** `setSubmitting(true)` + `disabled={submitting}` on the button. Good, but React state updates are batched — between the click event and `disabled` applying, a very fast second click (or an Enter key repeat) can enter the handler again.
+
+**Fix:** added a `useRef`-based synchronous lock. `submittingRef.current = true` runs immediately, closes the window that the state update leaves open.
+
+This prevents FUTURE duplicate payments. If you already have historical duplicates in the DB inflating totals (see #6), this doesn't retroactively clean them.
+
+## 6. إجمالي المحصَّل 39,300 vs revenue 10,540 — DIAGNOSTIC PROVIDED
+
+The 4× inflation looks like existing duplicate `Payment` rows. To find them, run this in the Neon SQL editor once you have console access again:
+
+```sql
+-- Bookings where total payments exceed the booking's price by 50%+
+SELECT
+  b.id,
+  b."residentName",
+  b."totalPrice",
+  COUNT(p.id)      AS payment_count,
+  SUM(p.amount)    AS total_paid,
+  SUM(p.amount) - b."totalPrice" AS overpayment
+FROM "Booking" b
+LEFT JOIN "Payment" p ON p."bookingId" = b.id
+GROUP BY b.id
+HAVING SUM(p.amount) > b."totalPrice" * 1.5
+ORDER BY overpayment DESC;
 ```
-[تصفية] [هذا الشهر] [الربع] [السنة ✓] [الكل]              [Excel]
+
+For each row that comes back, look at the payment details:
+
+```sql
+-- Replace 'BOOKING_ID' with the id from above
+SELECT id, amount, date, method, type, "createdAt", "collectedBy"
+FROM "Payment"
+WHERE "bookingId" = 'BOOKING_ID'
+ORDER BY "createdAt" ASC;
 ```
 
-## 3. Yearly profit less than monthly profit (the confusing one)
+Look for near-identical rows created within seconds of each other — those are the duplicates. Delete via the UI (Payment Ledger modal → trash icon on each row) or via SQL if you're comfortable.
 
-**What was wrong:** for a 1000 SAR/month salary that started July 23, 2026:
-- "This month" filter → 1,000 in expenses ✓
-- "This year" filter → **6,000** in expenses ✗ (counting Jul + Aug + Sep + Oct + Nov + Dec = 6 months)
-- "All" filter → 1,000 ✓
+## 7. Dead API file removed
 
-Yearly showed 6× the monthly because my proration counted the rule's future occurrences (Aug through Dec). But you haven't paid August salary yet — it's July. Future months shouldn't be in a P&L, they're projections.
+`api/staff-expenses.js` was still querying `prisma.staffExpense.findMany` — but Phase 2b dropped that model. Any request would 500. Removed the file entirely.
 
-Concrete: revenue for the year is 10,540 (real bookings). Expenses shown 6,000 (5 future months of imaginary salary payments). Net: 4,540. Less than "this month" which showed 7,650 profit (revenue 8,650 - expenses 1,000). Nonsense.
+## About the "showing 0 in all tabs" report
 
-**Fix:** effective end of a recurring rule is now capped at `min(rule end, period end, TODAY)`. Future months of recurring rules don't count until they actually happen.
+Your recurring salary rule was dated **October 3, 2026**. Whether it counts toward this month/quarter/year depends on whether "today" is before or after October 3.
 
-Verified with a test:
-```
-1000/month salary started Jul 23, today = Jul 25
-  This month (July):  1,000  ✓
-  This year (2026):   1,000  ✓  (only 1 month has actually passed)
-  All time:           1,000  ✓
-```
+- If **today < Oct 3**: the rule hasn't started yet. Contribution is correctly 0 for month/quarter/year filters. `الكل` (all) will show the rule in the list, but its contribution to totals is still 0 until it starts.
+- If **today >= Oct 3**: the rule is active. Month filter should show 1000. Longer filters show `months_active × 1000`.
 
-All three periods now agree, as they should.
+After this patch:
+- The rule is always visible in the list on every tab (was hidden from month/quarter before if the rule's start date was after the period end)
+- The hero total updates when you switch tabs (was frozen on "this month" before)
+- If you're still seeing 0 in a tab where you expect a value, first check whether today's date has actually passed the rule's start date
 
-**Consequence:** each period's expense number represents money **actually spent** in that period, not projected obligations. If you want a "what will this year cost me" projection, that's a separate concept — not what analytics should show by default.
+## Files touched (6)
 
-## Files touched (3)
-
-- `src/components/views/AnalyticsView.jsx` — layout rebuild + chips inline
-- `api/analytics.js` — today-cap in `expenseContributionInPeriod`
-- `src/lib/expenseUtils.js` — same fix in the frontend helper
+- `api/apartments.js` — rewrite to Phase 2b schema
+- `api/staff-expenses.js` — **deleted**
+- `src/components/layout/NotificationsDropdown.jsx` — portal position fix
+- `src/components/views/AnalyticsView.jsx` — `hasActiveFilters` refinement
+- `src/components/views/ExpensesView.jsx` — dynamic hero + always-show recurring
+- `src/components/ui/PaymentLedgerModal.jsx` — sync double-submit guard
 
 ## Install
 
 ```bash
-unzip -o rentflow-analytics-phase2f.zip -d .
-cp -r patch/api  ./
-cp -r patch/src  ./
-rm -rf patch rentflow-analytics-phase2f.zip
+unzip -o rentflow-batch-hotfix.zip -d .
+cp -rn patch/. .
+# Note the . at the end — merges into current directory
+# staff-expenses.js won't be recreated (patch has no copy of it) but you
+# should also delete it from your local checkout since it's dead:
+rm -f api/staff-expenses.js
+rm -rf patch rentflow-batch-hotfix.zip
 
 git add -A
-git commit -m "analytics phase 2f: fix broken layout + inline chips + cap recurring at today"
-git push origin design-md-changes
+git commit -m "batch hotfix: apartments PUT, notifications desktop, filter indicator, expenses hero, payment guard, dead staff-expenses"
+git push origin main
 ```
+
+Or if you prefer, unzip into a scratch folder and manually copy files over.
 
 ## After deploy — what to verify
 
-1. **Layout is clean**: KPI hero at top, then 3 KPI cards, then trend chart (left, 2/3) + sources (right, 1/3) side-by-side, then per-unit P&L full-width below. No overlapping or nesting.
+1. **Edit an apartment** — should save without 500. Check devtools Network tab: PUT /api/apartments returns 200.
+2. **Click the bell icon on desktop** — dropdown should appear anchored below the bell, not at (0,0) or hidden.
+3. **Load Analytics fresh** — no `•` dot on تصفية, no X clear button. Only appears if you actually pick apartments in the modal or set a custom date range.
+4. **In Expenses, click through the period chips** — the hero label and amount update accordingly. Recurring rules stay in the list on every tab.
+5. **Fast-click the payment submit button** — only one payment gets recorded.
+6. **Run the SQL diagnostic** (once console access is back) to find and remove historical duplicate payments.
 
-2. **Chips are inline with تصفية**: everything on one row at top: `[تصفية] [chip] [chip] [chip] [chip]              [Excel]`.
+## What's not in this patch
 
-3. **Numbers finally consistent across periods:**
-   - Your 1,000 salary should show 1,000 in **all** period filters (until August starts).
-   - Net profit should be roughly equal or higher for longer periods (all ≥ year ≥ quarter ≥ month, since longer periods can only have more revenue).
-   - No more "yearly profit less than monthly".
+- **Compute burn reduction** (analytics caching, mount-fetch trimming) — separate patch, no urgency now that the app is working.
+- **Automatic backup script** — Vercel Cron + R2/S3. Real insurance for the next Neon quota crisis. Worth a dedicated patch.
+- **Recurring cron generation** — turning virtual proration into concrete monthly ledger rows. Still Phase 3 material.
 
-4. **Excel export button** stays in its old spot on the right side of the action strip.
-
-## Retro (again)
-
-I've made two mistakes in a row:
-- Phase 2b: closing brace missing → 500 errors
-- Phase 2e: Python script scrambled the DOM → visibly broken layout
-
-Both were "trusted the script output without spot-checking the rendered result." Going forward, when I do structural rewrites via scripts, I'll `view` the affected file at three points (start, middle, end of the changed region) and count divs before declaring done. Slower, safer.
-
-Sorry for the round-trip.
+Say when you want to tackle any of those.

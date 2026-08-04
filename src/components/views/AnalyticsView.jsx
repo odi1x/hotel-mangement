@@ -214,7 +214,23 @@ export default function AnalyticsView({ setView }) {
     document.body.removeChild(link);
   };
 
-  const hasActiveFilters = analyticsFilter.apartmentIds?.length > 0 || (analyticsFilter.startDate && analyticsFilter.endDate);
+  // Does the current filter state include anything that a user could think
+  // of as "an active advanced filter"? Chip-driven dates don't count — they
+  // just represent the current period selection (always set). Only true
+  // "advanced" state:
+  //   - specific apartments picked from the modal
+  //   - a custom date range that DOESN'T match any period chip
+  const hasActiveFilters = (() => {
+    const hasApartmentFilter = analyticsFilter.apartmentIds?.length > 0;
+    if (hasApartmentFilter) return true;
+    if (!analyticsFilter.startDate || !analyticsFilter.endDate) return false;
+    // If dates match the current chip's range, it's not "advanced" — just
+    // the chip in action. Compare to millisecond precision.
+    const chipRange = rangeForPeriod(periodFilter);
+    if (!chipRange.startDate || !chipRange.endDate) return true; // 'all' has no dates
+    return analyticsFilter.startDate !== chipRange.startDate
+        || analyticsFilter.endDate   !== chipRange.endDate;
+  })();
 
 
   if (isAnalyticsLoading) {
