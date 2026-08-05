@@ -48,6 +48,15 @@ export default function Layout() {
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [initialBookingData, setInitialBookingData] = useState({});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Per-view "primary action" triggers. Each is a counter that increments
+  // every time Layout's top-right button is clicked on the matching view.
+  // Child views watch the number via useEffect and open their own add-modal
+  // when it changes. Counter (rather than boolean) means repeated clicks
+  // reliably fire even if the child already closed the modal.
+  const [cleaningAddTrigger,    setCleaningAddTrigger]    = useState(0);
+  const [expensesAddTrigger,    setExpensesAddTrigger]    = useState(0);
+  const [maintenanceAddTrigger, setMaintenanceAddTrigger] = useState(0);
+  const [pricingAddTrigger,     setPricingAddTrigger]     = useState(0);
 
   // Wrap setView so unauthorized navigation is blocked at the source.
   // Admin bypasses gating. Non-gated views (availability, apartments,
@@ -169,13 +178,50 @@ export default function Layout() {
                 </button>
               )}
 
-              {view !== 'balances' && view !== 'maintenance' && view !== 'pricing' && view !== 'more' && (
+              {/* Primary action — depends on the current view. */}
+              {(view === 'availability' || view === 'residents' || view === 'apartments' || view === 'requests') && (
                 <button
                   onClick={() => setIsBookingByDate(true)}
                   className="btn-accent"
                 >
                   <Plus size={18} />
                   <span>حجز جديد</span>
+                </button>
+              )}
+              {view === 'cleaning' && (user?.role === 'admin') && (
+                <button
+                  onClick={() => setCleaningAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>مهمة جديدة</span>
+                </button>
+              )}
+              {view === 'expenses' && (user?.role === 'admin' || user?.permissions?.canEdit) && (
+                <button
+                  onClick={() => setExpensesAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>مصروف جديد</span>
+                </button>
+              )}
+              {view === 'maintenance' && (user?.role === 'admin' || user?.permissions?.canViewMaintenance) && (
+                <button
+                  onClick={() => setMaintenanceAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>بلاغ جديد</span>
+                </button>
+              )}
+              {view === 'pricing' && (user?.role === 'admin' || user?.permissions?.canViewPricing) && (
+                <button
+                  onClick={() => setPricingAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>قاعدة جديدة</span>
                 </button>
               )}
             </div>
@@ -193,10 +239,10 @@ export default function Layout() {
             {view === 'apartments' && <ApartmentsView setView={setView} />}
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
             {view === 'balances' && <BalancesView />}
-            {view === 'expenses' && <ExpensesView initialFilter={viewFilter} />}
-            {view === 'cleaning' && <CleaningView />}
-            {view === 'maintenance' && <MaintenanceView />}
-            {view === 'pricing' && <PricingView />}
+            {view === 'expenses' && <ExpensesView initialFilter={viewFilter} addTrigger={expensesAddTrigger} />}
+            {view === 'cleaning' && <CleaningView addTrigger={cleaningAddTrigger} />}
+            {view === 'maintenance' && <MaintenanceView addTrigger={maintenanceAddTrigger} />}
+            {view === 'pricing' && <PricingView addTrigger={pricingAddTrigger} />}
             {view === 'analytics' && <AnalyticsView setView={setView} />}
             {view === 'settings' && <SettingsView />}
             {view === 'more' && (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, TagsIcon, Pencil, Trash2, AlertTriangle, Calendar, Home, ArrowLeftRight } from 'lucide-react';
 import { useData } from '../../context/DataContext';
@@ -31,12 +31,22 @@ function PricingMobileStat({ icon: Icon, label, value, tone = 'ink' }) {
   );
 }
 
-export default function PricingView() {
+export default function PricingView({ addTrigger = 0 }) {
   const { apartments, pricingRules, deletePricingRule } = useData();
   const [showAdd, setShowAdd] = useState(false);
   const [editRule, setEditRule] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [scopeFilter, setScopeFilter] = useState('all'); // 'all' | 'global' | apartmentId
+
+  // React to Layout's "New Rule" button (counter → open modal).
+  const lastAddTrigger = useRef(addTrigger);
+  useEffect(() => {
+    if (addTrigger !== lastAddTrigger.current) {
+      lastAddTrigger.current = addTrigger;
+      setShowAdd(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addTrigger]);
 
   // "Now" as a stable timestamp captured on mount and each time the rules
   // list changes — enough to keep "is this rule active now?" fresh whenever
@@ -220,10 +230,6 @@ export default function PricingView() {
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
-            <button onClick={() => setShowAdd(true)} className="btn-accent h-9 px-4 shrink-0">
-              <Plus size={14} />
-              <span>قاعدة جديدة</span>
-            </button>
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus, Search, Filter, Wallet, Home, Zap, Users, Wrench, Megaphone,
@@ -36,7 +36,7 @@ function fmtDate(d) {
   });
 }
 
-export default function ExpensesView({ initialFilter = null }) {
+export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
   const { expenses, apartments, deleteExpense } = useData();
   const { user } = useAuth();
 
@@ -45,6 +45,19 @@ export default function ExpensesView({ initialFilter = null }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // React to Layout's "New Expense" button. The counter increments per click;
+  // we open the add modal only when it actually changes vs the last-seen
+  // value — prevents spurious opens on remount when trigger is already >0.
+  const lastAddTrigger = useRef(addTrigger);
+  useEffect(() => {
+    if (addTrigger !== lastAddTrigger.current) {
+      lastAddTrigger.current = addTrigger;
+      setShowAdd(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addTrigger]);
+
   // When arriving via deep-link (e.g. from ApartmentsView or AnalyticsView P&L),
   // default to 'all' time so the user sees everything for that unit, and
   // apply the apartment filter. Otherwise default to 'month'.
@@ -332,15 +345,6 @@ export default function ExpensesView({ initialFilter = null }) {
                 />
                 <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
               </div>
-              {canEdit && (
-                <button
-                  onClick={() => setShowAdd(true)}
-                  className="btn-accent h-10 px-4 shrink-0"
-                >
-                  <Plus size={16} />
-                  <span>مصروف جديد</span>
-                </button>
-              )}
             </div>
           </div>
 

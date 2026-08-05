@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus, Search, Sparkles, ShowerHead, ChefHat, Bed, Sofa, DoorOpen, Package,
@@ -40,7 +40,7 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
 }
 
-export default function CleaningView() {
+export default function CleaningView({ addTrigger = 0 }) {
   const { cleaningTasks, apartments, createCleaningTask, updateCleaningTask, deleteCleaningTask } = useData();
   const { user } = useAuth();
 
@@ -52,6 +52,20 @@ export default function CleaningView() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [search, setSearch] = useState('');
+
+  // React to Layout's "New Task" button. The counter increments on each
+  // click; we open the add modal only when the incoming number DIFFERS from
+  // the last-seen value. This avoids spurious opens if the view unmounts
+  // and remounts while addTrigger is already >0 (which happens whenever
+  // the user has clicked the button in a previous session).
+  const lastAddTrigger = useRef(addTrigger);
+  useEffect(() => {
+    if (addTrigger !== lastAddTrigger.current) {
+      lastAddTrigger.current = addTrigger;
+      if (isAdmin) setShowAddModal(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addTrigger]);
 
   // Filter + sort. Pending first, urgency-sorted (dueBy soonest first);
   // completed today stay visible; older completed hidden by default.
@@ -112,20 +126,6 @@ export default function CleaningView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Top action row — page title/subtitle come from Layout on desktop.
-          Only the "New Task" button lives here to keep the header cluttered. */}
-      {isAdmin && (
-        <div className="flex justify-end mb-4 shrink-0">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn-primary h-9 px-3 text-xs shrink-0"
-          >
-            <Plus size={14} />
-            <span>مهمة جديدة</span>
-          </button>
-        </div>
-      )}
-
       {/* Hero counter */}
       <div className="card-surface p-4 md:p-5 mb-4 shrink-0">
         <div className="flex items-baseline justify-between gap-3">
@@ -198,10 +198,12 @@ export default function CleaningView() {
           onClose={() => setOpenTask(null)}
           isAdmin={isAdmin}
           onUpdate={async (patch) => {
-            const updated = await updateCleaningTask(openTask.id, patch);
-            // Keep the modal open with fresh data unless action was complete
-            if (patch.action === 'complete') setOpenTask(null);
-            else setOpenTask({ ...openTask, ...updated });
+            await updateCleaningTask(openTask.id, patch);
+            // Close the modal after any main-button action (save OR complete).
+            // Staying open after save was creating confusion — the user
+            // couldn't tell whether the button was "save" or "finish" from
+            // the still-open state. Always closing removes that ambiguity.
+            setOpenTask(null);
           }}
           onDelete={() => { setConfirmDeleteId(openTask.id); setOpenTask(null); }}
         />,
@@ -361,6 +363,7 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
 
   const saveChecklistEdits = async () => {
     await onUpdate({ checklist });
+    onClose();
   };
 
   // Finish: mark task done. One click, closes immediately.

@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Wrench, AlertTriangle, Circle, CheckCircle2, CircleDashed, Search, Filter, Trash2, Pencil } from 'lucide-react';
+import { Wrench, AlertTriangle, Circle, CheckCircle2, CircleDashed, Search, Filter, Trash2, Pencil } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -47,7 +47,7 @@ function MobileStat({ icon: Icon, label, value, tone = 'ink' }) {
   );
 }
 
-export default function MaintenanceView() {
+export default function MaintenanceView({ addTrigger = 0 }) {
   const { apartments, maintenanceIssues, deleteMaintenanceIssue } = useData();
   const { user } = useAuth();
   const canDelete = user?.role === 'admin' || user?.permissions?.canDelete;
@@ -59,6 +59,16 @@ export default function MaintenanceView() {
   const [statusFilter, setStatusFilter] = useState('open'); // 'all' | 'open' | 'in_progress' | 'resolved'
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [apartmentFilter, setApartmentFilter] = useState('all');
+
+  // React to Layout's "New Maintenance" button (counter → open modal).
+  const lastAddTrigger = useRef(addTrigger);
+  useEffect(() => {
+    if (addTrigger !== lastAddTrigger.current) {
+      lastAddTrigger.current = addTrigger;
+      setShowAdd(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addTrigger]);
 
   const filtered = useMemo(() => {
     return maintenanceIssues
@@ -224,10 +234,6 @@ export default function MaintenanceView() {
                 />
                 <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
               </div>
-              <button onClick={() => setShowAdd(true)} className="btn-accent h-10 px-4 shrink-0">
-                <Plus size={16} />
-                <span>بلاغ جديد</span>
-              </button>
             </div>
           </div>
 

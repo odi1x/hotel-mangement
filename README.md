@@ -1,80 +1,72 @@
-# Rent Flow — Cleaning R3: smart Save/Finish button + grid always open
+# Rent Flow — Cleaning R4: auto-close save + context-aware primary button
 
-Four tweaks from your feedback. One file.
+Two things from your last message. Five files.
 
-## What changed
+## 1. Save Tasks auto-closes
 
-### 1. One smart button instead of two
+Admin taps "حفظ المهام" → task saves → modal closes automatically. No more manually dismissing.
 
-Before: modal had a small "حفظ التعليمات" button below the grid AND a main "إنهاء" button at the bottom. Confusing — two ways to save/finish.
+If admin wants to keep editing, they can reopen the task. Otherwise the flow is: open → set areas + notes → save → done, one action per modal open.
 
-Now: **one main button that changes based on state.**
+## 2. Header button is context-aware per tab
 
-- **Staff (never can edit checklist):** always shows `إنهاء` (or `تم الانتهاء` if no checklist). One click completes and closes.
-- **Admin, unsaved changes:** shows `حفظ المهام`. One click saves the checklist without closing — modal stays open so admin can review or the cleaner can then complete it.
-- **Admin, no unsaved changes:** shows `إنهاء (X/Y)`. One click completes and closes.
+The top-right "حجز جديد" button was showing on every page, even ones that had nothing to do with bookings (like Cleaning, Expenses, Maintenance, Pricing). Now each tab gets the button that matches what that tab does.
 
-The small "حفظ التعليمات" button is gone. Everything routes through the main button.
+| Tab | Button | Opens |
+|---|---|---|
+| Availability | حجز جديد | Booking form |
+| Apartments | حجز جديد | Booking form |
+| Residents | حجز جديد | Booking form |
+| Requests | حجز جديد | Booking form |
+| **Cleaning** | **مهمة جديدة** | New cleaning task modal |
+| **Expenses** | **مصروف جديد** | New expense modal |
+| **Maintenance** | **بلاغ جديد** | New maintenance report modal |
+| **Pricing** | **قاعدة جديدة** | New pricing rule modal |
+| Balances / Analytics / Settings | (none) | — |
 
-### 2. Grid expanded by default for admin
+Each button is permission-gated appropriately:
+- Cleaning button → admin only
+- Expenses button → admin or `canEdit`
+- Maintenance button → admin or `canViewMaintenance`
+- Pricing button → admin or `canViewPricing`
 
-Previously the "ما يحتاج تنظيف إضافي" section defaulted to collapsed unless the task already had a checklist. Admin had to tap to expand it every time — a small papercut that adds up.
+**Internal buttons removed.** The old "+ مصروف جديد" / "+ بلاغ جديد" / "+ قاعدة جديدة" buttons that lived inside each view's toolbar are gone — the header button handles it now. This makes the UI feel consistent: same button, same spot, tab-specific action.
 
-Now: always expanded when the modal opens. Collapse toggle still available if admin wants to hide it.
+## How the wiring works (technical note)
 
-### 3. "Unsaved changes" detection
+Each view accepts an `addTrigger` counter prop from Layout. When you click the header button, Layout increments the counter. The view watches for the counter to change via a `useRef` (so it doesn't fire on remount if the counter is already >0), and opens its own add-modal in response.
 
-Admin adds/removes an area, or edits an area's note → button becomes `حفظ المهام`.
-Admin (or cleaner) ticks a checkbox → does NOT count as unsaved edit (that's a cleaner action, not an admin edit). Button stays as `إنهاء`.
+This keeps the modals inside their respective views (where they belong) while giving Layout control over the entry-point button. Simple pattern, no context or refs across boundaries.
 
-This lets:
-- Admin set up the checklist + hand off to cleaner
-- Cleaner tick through the items and finish, all with one clear "Finish" button
-- Admin come back later, add one more area → button flips to `حفظ المهام` → save → back to `إنهاء`
+## Files touched (5)
 
-### 4. Staff behavior clarified
-
-Staff sees exactly the same modal minus the admin grid section. They see:
-- Task title + apartment
-- The checklist (as tap-to-check boxes)
-- Cleaner notes field
-- One button: `إنهاء (X/Y)` or `تم الانتهاء` if there's no checklist
-
-## Mobile view
-
-Not touched in this patch. You said we could do desktop first — this patch is desktop-focused. Once you deploy and test, we'll do a mobile pass together.
-
-## Files touched (1)
-
-- `src/components/views/CleaningView.jsx`
+- `src/components/layout/Layout.jsx` — 4 triggers + 4 buttons + prop passing
+- `src/components/views/CleaningView.jsx` — receiver + save auto-close
+- `src/components/views/ExpensesView.jsx` — receiver + removed internal button
+- `src/components/views/MaintenanceView.jsx` — receiver + removed internal button
+- `src/components/views/PricingView.jsx` — receiver + removed internal button
 
 ## Install
 
 ```bash
-unzip -o rentflow-cleaning-r3.zip -d .
+unzip -o rentflow-cleaning-r4.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-cleaning-r3.zip
+rm -rf patch rentflow-cleaning-r4.zip
 
 git add -A
-git commit -m "cleaning r3: smart save/finish button, grid always open, remove secondary save button"
+git commit -m "cleaning r4: auto-close save, context-aware header buttons per tab"
 git push origin design-md-changes
 ```
 
 ## Verify
 
-1. **Admin — fresh task (auto-generated from checkout):**
-   - Open task → grid is already expanded (didn't have to tap)
-   - Button shows `تم الانتهاء` (no checklist yet)
-   - Tap a couple of area tiles → button flips to `حفظ المهام`
-   - Click → save happens, modal stays open, button flips back to `إنهاء (0/2)`
+1. **Cleaning:** admin taps "مهمة جديدة" in header → new task modal opens. Inside a task: tap tiles, edit notes, tap "حفظ المهام" → saves and closes.
+2. **Expenses:** admin (or staff with canEdit) taps "مصروف جديد" in header → expense form opens. The old internal button is gone.
+3. **Maintenance:** same pattern with "بلاغ جديد".
+4. **Pricing:** same with "قاعدة جديدة".
+5. **Booking-related tabs (Availability/Apartments/Residents/Requests):** still show "حجز جديد" as before.
+6. **Balances/Analytics/Settings:** no button on the top-right.
 
-2. **Admin — reopen a task with saved checklist:**
-   - Button shows `إنهاء (X/Y)` (matches the checked state)
-   - Tap another area tile → button flips to `حفظ المهام`
-   - Click Save → modal stays open, button back to `إنهاء`
-   - Click again → task completes, modal closes
+## Next
 
-3. **Staff — same task:**
-   - Grid section is completely hidden
-   - Only sees checklist + notes + `إنهاء (X/Y)` button
-   - One click completes and closes
+Mobile view for the cleaning tab (you mentioned we'd tackle that after this). Say when ready.
