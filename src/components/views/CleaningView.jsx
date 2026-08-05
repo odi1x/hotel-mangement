@@ -256,7 +256,7 @@ function TaskRow({ task, onOpen }) {
     <li>
       <button
         onClick={() => onOpen(task)}
-        className="w-full text-right flex items-center gap-3 p-3 rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors"
+        className="w-full text-right flex items-center gap-3 p-3 md:p-3.5 rounded-lg border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 active:bg-surface-soft dark:active:bg-surface-dark-elevated transition-colors"
       >
         <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
           isDone ? 'bg-accent text-white' : 'bg-surface-card text-muted dark:bg-surface-dark-elevated dark:text-body-dark'
@@ -366,8 +366,21 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
     onClose();
   };
 
-  // Finish: mark task done. One click, closes immediately.
+  // Attention-blink nonce: increments each time a staff member tries to
+  // finish with unchecked items. Bumping this remounts the unchecked list
+  // items (via key), which restarts the CSS shake animation on each attempt.
+  const [blinkNonce, setBlinkNonce] = useState(0);
+
+  // Finish: mark task done. Staff must check all boxes first — clicking
+  // Finish with unchecked items blinks them instead of completing. Admin
+  // can finish regardless (they may be closing out for a cleaner who forgot
+  // to tick, or handling exceptions).
   const complete = async () => {
+    const hasUnchecked = totalCount > 0 && checkedCount < totalCount;
+    if (!isAdmin && hasUnchecked) {
+      setBlinkNonce(n => n + 1);
+      return;
+    }
     await onUpdate({ action: 'complete', checklist, cleanerNotes });
   };
 
@@ -383,9 +396,14 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
   return (
     <div className="fixed inset-0 z-[105] flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm p-0 md:p-4" data-modal-active>
       <div className="absolute inset-0" onClick={onClose}></div>
-      <div className="relative bg-canvas dark:bg-surface-dark-elevated rounded-t-2xl md:rounded-xl border border-hairline dark:border-hairline-dark-soft shadow-soft w-full max-w-xl md:max-h-[90vh] overflow-hidden flex flex-col anim-dropdown">
+      <div className="relative bg-canvas dark:bg-surface-dark-elevated rounded-t-2xl md:rounded-xl border border-hairline dark:border-hairline-dark-soft shadow-soft w-full max-w-xl max-h-[92vh] md:max-h-[90vh] overflow-hidden flex flex-col anim-sheet">
+        {/* Grab handle on mobile — subtle visual cue that this is a bottom-sheet
+            that can be dismissed. Absent on desktop where the modal is centered. */}
+        <div className="md:hidden pt-2 flex justify-center shrink-0">
+          <div className="w-9 h-1 rounded-full bg-hairline dark:bg-hairline-dark" />
+        </div>
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 p-5 border-b border-hairline dark:border-hairline-dark shrink-0">
+        <div className="flex items-start justify-between gap-3 p-4 md:p-5 border-b border-hairline dark:border-hairline-dark shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Building2 size={16} className="text-muted shrink-0" />
@@ -420,7 +438,7 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
               </button>
               {gridExpanded && (
                 <div>
-                  <div className="grid grid-cols-4 gap-2 mb-3">
+                  <div className="grid grid-cols-4 gap-1.5 md:gap-2 mb-3">
                     {AREAS.map(a => {
                       const selected = isSelected(a.value);
                       const A = a.Icon;
@@ -429,14 +447,14 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
                           key={a.value}
                           type="button"
                           onClick={() => toggleArea(a.value)}
-                          className={`flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-lg border-2 transition-all ${
+                          className={`flex flex-col items-center justify-center gap-1 md:gap-1.5 p-1.5 md:p-2.5 min-h-16 rounded-lg border-2 transition-all active:scale-[0.97] ${
                             selected
                               ? 'border-accent bg-accent/10 text-accent-strong'
                               : 'border-hairline dark:border-hairline-dark-soft text-muted hover:text-ink dark:hover:text-white'
                           }`}
                         >
                           <A size={20} />
-                          <span className="text-2xs font-semibold text-center leading-tight">{a.label}</span>
+                          <span className="text-[10px] md:text-2xs font-semibold text-center leading-tight">{a.label}</span>
                         </button>
                       );
                     })}
@@ -490,8 +508,14 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
                 {checklist.map(item => {
                   const meta = areaMeta(item.area);
                   const A = meta.Icon;
+                  // Unchecked items get a key that changes with blinkNonce
+                  // so they remount when staff triggers a blink attempt —
+                  // remounting restarts the .anim-attention CSS animation.
+                  // Checked items keep a stable key (no remount, no shake).
+                  const rowKey = item.checked ? item.area : `${item.area}-${blinkNonce}`;
+                  const isBlinking = !item.checked && blinkNonce > 0;
                   return (
-                    <li key={item.area}>
+                    <li key={rowKey} className={isBlinking ? 'anim-attention' : ''}>
                       <button
                         type="button"
                         onClick={() => toggleCheck(item.area)}
@@ -567,7 +591,10 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
 
         {/* Footer */}
         {!isDone && (
-          <div className="p-4 border-t border-hairline dark:border-hairline-dark shrink-0 flex items-center gap-2">
+          <div
+            className="p-3 md:p-4 border-t border-hairline dark:border-hairline-dark shrink-0 flex items-center gap-2"
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+          >
             {isAdmin && (
               <button
                 onClick={onDelete}
@@ -608,7 +635,14 @@ function AddTaskModal({ apartments, onClose, onSubmit }) {
   return (
     <div className="fixed inset-0 z-[105] flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm p-0 md:p-4" data-modal-active>
       <div className="absolute inset-0" onClick={onClose}></div>
-      <div className="relative bg-canvas dark:bg-surface-dark-elevated rounded-t-2xl md:rounded-xl border border-hairline dark:border-hairline-dark-soft shadow-soft w-full max-w-md p-5 anim-dropdown">
+      <div className="relative bg-canvas dark:bg-surface-dark-elevated rounded-t-2xl md:rounded-xl border border-hairline dark:border-hairline-dark-soft shadow-soft w-full max-w-md anim-sheet"
+        style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+      >
+        {/* Grab handle on mobile */}
+        <div className="md:hidden pt-2 flex justify-center">
+          <div className="w-9 h-1 rounded-full bg-hairline dark:bg-hairline-dark" />
+        </div>
+        <div className="p-5 pb-0">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-semibold text-ink dark:text-white">مهمة تنظيف جديدة</h3>
           <button onClick={onClose} className="icon-action h-8 w-8"><X size={14} /></button>
@@ -647,6 +681,7 @@ function AddTaskModal({ apartments, onClose, onSubmit }) {
           >
             <Plus size={13} /> إنشاء
           </button>
+        </div>
         </div>
       </div>
     </div>

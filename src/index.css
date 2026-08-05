@@ -216,9 +216,21 @@
   .anim-dropdown {
     animation: anim-fade-down-sm 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
   }
+  /* Attention shake — small horizontal wobble to draw the eye to a control
+     the user needs to interact with before proceeding (e.g. an unchecked
+     checkbox blocking a "Finish" action). No color change — the shake alone
+     signals "check this," fitting the codebase's restrained palette. */
+  @keyframes anim-attention-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-3px); }
+    40%, 80% { transform: translateX(3px); }
+  }
+  .anim-attention {
+    animation: anim-attention-shake 400ms ease-in-out 2;
+  }
   /* Respect reduced motion — no animations if user opted out */
   @media (prefers-reduced-motion: reduce) {
-    .anim-tab, .anim-nav, .anim-sheet, .anim-dropdown {
+    .anim-tab, .anim-nav, .anim-sheet, .anim-dropdown, .anim-attention {
       animation: none;
     }
   }
