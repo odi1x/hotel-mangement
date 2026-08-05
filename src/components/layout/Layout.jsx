@@ -93,26 +93,40 @@ export default function Layout() {
   const getViewTitle = () => {
     switch (view) {
       case 'availability': return 'جدول التوفر';
-      case 'apartments': return 'إدارة الشقق';
-      case 'residents': return 'سجل النزلاء';
-      case 'balances': return 'المستحقات المالية';
-      case 'maintenance': return 'سجل الصيانة';
-      case 'pricing': return 'الأسعار الموسمية';
-      case 'analytics': return 'تحليلات الأداء';
-      case 'settings': return 'الإعدادات';
-      case 'requests': return 'طلبات الحجز';
-      case 'more': return 'المزيد';
+      case 'apartments':   return 'إدارة الشقق';
+      case 'residents':    return 'سجل النزلاء';
+      case 'balances':     return 'المستحقات المالية';
+      case 'expenses':     return 'المصروفات';
+      case 'cleaning':     return 'التنظيف';
+      case 'maintenance':  return 'سجل الصيانة';
+      case 'pricing':      return 'الأسعار الموسمية';
+      case 'analytics':    return 'تحليلات الأداء';
+      case 'settings':     return 'الإعدادات';
+      case 'requests':     return 'طلبات الحجز';
+      case 'more':         return 'المزيد';
       default: return '';
     }
   };
 
   const getViewSubtitle = () => {
+    // Each view has its own subtitle. Kept short and specific to what the
+    // user actually does on that page — the previous shared "manage rentals"
+    // fallback was showing on multiple tabs (Expenses, Cleaning, Analytics)
+    // and made every page feel identical.
     switch (view) {
-      case 'balances':    return 'تتبّع الدفعات والأرصدة المتبقية على الحجوزات.';
-      case 'maintenance': return 'وثّق بلاغات الصيانة وتتبّع حالتها حتى الحل.';
-      case 'pricing':     return 'اضبط أسعار المواسم والفترات الخاصة تلقائياً.';
-      case 'more':        return null;
-      default:            return 'إدارة التأجير اليومي والأسبوعي والشهري بدقة.';
+      case 'availability': return 'شاهد وأدِر أشغال الوحدات في التقويم اليومي.';
+      case 'apartments':   return 'شقق ومرافق، بيانات وأسعار، مشاركة روابط الحجز.';
+      case 'residents':    return 'كل الحجوزات القادمة والحالية والسابقة في مكان واحد.';
+      case 'balances':     return 'تتبّع الدفعات والأرصدة المتبقية على الحجوزات.';
+      case 'expenses':     return 'سجّل مصروفاتك اليومية والمتكرّرة وتابع أين تذهب أموالك.';
+      case 'cleaning':     return 'تابع مهام تنظيف الوحدات بعد المغادرة والمهام الإضافية.';
+      case 'maintenance':  return 'وثّق بلاغات الصيانة وتتبّع حالتها حتى الحل.';
+      case 'pricing':      return 'اضبط أسعار المواسم والفترات الخاصة تلقائياً.';
+      case 'analytics':    return 'مؤشرات الإيرادات، المصروفات، والربحية حسب الوحدة.';
+      case 'settings':     return 'إدارة الحساب، الموظفين، والتفضيلات العامة.';
+      case 'requests':     return 'راجع طلبات الحجز الواردة عبر الرابط العام.';
+      case 'more':         return null;
+      default:             return null;
     }
   };
 

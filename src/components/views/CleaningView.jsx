@@ -45,7 +45,7 @@ export default function CleaningView() {
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
-  const canClean = isAdmin || !!user?.canClean;
+  const canClean = isAdmin || !!user?.permissions?.canClean;
 
   const [statusFilter, setStatusFilter] = useState('pending'); // 'pending' | 'done' | 'all'
   const [openTask, setOpenTask] = useState(null);              // task object being viewed
@@ -112,12 +112,10 @@ export default function CleaningView() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-4 gap-3 shrink-0">
-        <div>
-          <p className="text-xs text-muted">إدارة تنظيف الوحدات بعد المغادرة والمهام الإضافية</p>
-        </div>
-        {isAdmin && (
+      {/* Top action row — page title/subtitle come from Layout on desktop.
+          Only the "New Task" button lives here to keep the header cluttered. */}
+      {isAdmin && (
+        <div className="flex justify-end mb-4 shrink-0">
           <button
             onClick={() => setShowAddModal(true)}
             className="btn-primary h-9 px-3 text-xs shrink-0"
@@ -125,8 +123,8 @@ export default function CleaningView() {
             <Plus size={14} />
             <span>مهمة جديدة</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Hero counter */}
       <div className="card-surface p-4 md:p-5 mb-4 shrink-0">
@@ -313,7 +311,6 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
   const [checklist, setChecklist] = useState(task.checklist || []);
   const [cleanerNotes, setCleanerNotes] = useState(task.cleanerNotes || '');
   const [gridExpanded, setGridExpanded] = useState((task.checklist || []).length > 0);
-  const [confirmSkip, setConfirmSkip] = useState(false);
 
   // Map area value → current entry in checklist (for lookup)
   const bySlot = useMemo(() => {
@@ -344,17 +341,15 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
 
   const checkedCount = checklist.filter(x => x.checked).length;
   const totalCount = checklist.length;
-  const allChecked = totalCount === 0 || checkedCount === totalCount;
 
   const saveChecklistEdits = async () => {
     await onUpdate({ checklist });
   };
 
+  // Finish immediately on click. Previously we had a two-step "mark done
+  // anyway?" confirm when items were unchecked. Removed on user request:
+  // one click closes, regardless of check state.
   const complete = async () => {
-    if (!allChecked && !confirmSkip) {
-      setConfirmSkip(true);
-      return;
-    }
     await onUpdate({ action: 'complete', checklist, cleanerNotes });
   };
 
@@ -564,9 +559,7 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
               className="btn-primary h-10 flex-1 text-sm"
             >
               <Check size={15} />
-              {confirmSkip
-                ? `أنهِ الآن (${checkedCount}/${totalCount})`
-                : totalCount === 0 ? 'تم الانتهاء' : `إنهاء (${checkedCount}/${totalCount})`}
+              {totalCount === 0 ? 'تم الانتهاء' : `إنهاء (${checkedCount}/${totalCount})`}
             </button>
           </div>
         )}
