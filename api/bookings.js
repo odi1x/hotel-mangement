@@ -1,6 +1,7 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 import { sendWebPush } from '../push-helper.js';
+import { createCleaningTaskForBooking } from './admin-resources.js';
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -255,11 +256,19 @@ export default async function handler(req, res) {
           }
         }
 
-        // Also set unit to needs cleaning
+        // Also set unit to needs cleaning + auto-generate a cleaning task
+        // (the task shows up in the new Cleaning tab, tracks who eventually
+        // finishes it, and stores the checklist admin may add).
         await prisma.apartment.update({
           where: { id: existing.apartmentId },
           data: { needsCleaning: true }
         });
+        try {
+          await createCleaningTaskForBooking(existing, targetUserId);
+        } catch (e) {
+          // Task creation failure shouldn't fail the checkout — log and move on.
+          console.error('Failed to auto-create cleaning task on checkout:', e);
+        }
 
         return res.status(200).json(booking);
       }

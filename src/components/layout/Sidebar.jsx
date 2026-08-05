@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing, Wallet, Wrench, TagsIcon, ArrowDownCircle } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing, Wallet, Wrench, TagsIcon, ArrowDownCircle, Sparkles } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -37,7 +37,7 @@ const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isColla
 export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) {
   const { darkMode, toggleDarkMode } = useTheme();
   const { user, logout } = useAuth();
-  const { apartments, bookings, maintenanceIssues } = useData();
+  const { apartments, bookings, maintenanceIssues, cleaningTasks } = useData();
   const pendingCount = (bookings || []).filter(b => b.status === 'pending').length;
 
   const duesCount = (bookings || []).reduce((n, b) => {
@@ -50,6 +50,9 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
   const urgentMaintenanceCount = (maintenanceIssues || []).filter(i =>
     i.status !== 'resolved' && i.severity === 'urgent'
   ).length;
+
+  // Cleaning tab badge: how many units need cleaning right now.
+  const pendingCleaningCount = (cleaningTasks || []).filter(t => t.status !== 'done').length;
 
   const isDateBetween = (date, start, end) => {
     const d = new Date(date).setHours(0,0,0,0);
@@ -93,6 +96,9 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         )}
         {(user?.role === 'admin' || user?.permissions?.canViewAnalytics) && (
           <SidebarItem icon={ArrowDownCircle} label="المصروفات" id="expenses" view={view} setView={setView} isCollapsed={isCollapsed} />
+        )}
+        {(user?.role === 'admin' || user?.permissions?.canClean) && (
+          <SidebarItem icon={Sparkles} label="التنظيف" id="cleaning" badgeCount={pendingCleaningCount} view={view} setView={setView} isCollapsed={isCollapsed} />
         )}
         {(user?.role === 'admin' || user?.permissions?.canViewMaintenance) && (
           <SidebarItem icon={Wrench} label="الصيانة" id="maintenance" badgeCount={urgentMaintenanceCount} view={view} setView={setView} isCollapsed={isCollapsed} />

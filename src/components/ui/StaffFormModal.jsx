@@ -23,7 +23,8 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     canViewBalances:    staff ? staff.canViewBalances    : true,   // operational — staff usually record payments
     canViewMaintenance: staff ? staff.canViewMaintenance : true,   // operational — staff report issues from the field
     canViewPricing:     staff ? staff.canViewPricing     : false,  // sensitive — reveals pricing strategy
-    canViewPrices:      staff ? staff.canViewPrices      : true    // if turned off: receptionist mode (no prices in bookings/residents)
+    canViewPrices:      staff ? staff.canViewPrices      : true,   // if turned off: receptionist mode (no prices in bookings/residents)
+    canClean:           staff ? staff.canClean           : false
   });
 
   const handleChange = (e) => {
@@ -74,6 +75,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     { name: 'canViewPricing',     title: 'إدارة الأسعار الموسمية', desc: 'إنشاء وتعديل قواعد الأسعار للمواسم والفترات الخاصة' },
     { name: 'canViewAnalytics',   title: 'عرض الإحصائيات',        desc: 'الوصول إلى تقارير الأداء المالي والتحليلات' },
     { name: 'canViewSettings',    title: 'إدارة الإعدادات',       desc: 'الوصول لإعدادات النظام العامة (باستثناء الموظفين)' },
+    { name: 'canClean',           title: 'قسم التنظيف',           desc: 'الوصول إلى تبويب التنظيف وإنهاء مهام تنظيف الوحدات' },
   ];
 
   return createPortal(

@@ -1,5 +1,6 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
+import { completeActiveTasksForApartment } from './admin-resources.js';
 
 /**
  * /api/apartments
@@ -102,6 +103,18 @@ export default async function handler(req, res) {
         where: { id },
         data: updateData,
       });
+
+      // If we just marked this apartment as cleaned, also complete any
+      // active cleaning tasks — one-tap flow: the "mark cleaned" button
+      // in Apartments/Search view now records completion in the task
+      // ledger too, so the Cleaning tab stays consistent.
+      if (needsCleaning === false) {
+        try {
+          await completeActiveTasksForApartment(id, targetUserId, user.userId);
+        } catch (e) {
+          console.error('Failed to complete cleaning tasks on apartment update:', e);
+        }
+      }
       return res.status(200).json(apartment);
     }
 

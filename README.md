@@ -1,80 +1,123 @@
-# Rent Flow — Compute burn reduction
+# Rent Flow — Cleaning system
 
-Two focused changes that should cut your Neon CU-hour usage by roughly 60-80%. No behavior changes users will notice.
+A dedicated cleaning tab. Auto-generates tasks on checkout, admin can select cleaning areas from an 8-tile grid with optional per-area notes, cleaners tick through the checklist and mark done. Every completion records who did it.
 
-## The two big offenders
+## What ships
 
-**1. Notifications polling every 20 seconds, even when the tab was hidden.**
+**Schema:**
+- New `CleaningTask` table (apartmentId, bookingId?, status, checklist JSON, notes, timestamps, startedBy/At, completedBy/At)
+- New `canClean` boolean on `User`
+- Inverse relations across User, Apartment, Booking
 
-24 hours × 60 min × 3 polls/min = **4,320 database hits per day per open tab**, running whether you were looking at the page or not. Each poll is a small query but they add up massively over a month.
+**API — no new endpoint file. Wired through the existing multiplexer:**
+- `GET /api/admin-resources?resource=cleaning` — list all tasks (with apartment + user names inlined)
+- `POST` — admin ad-hoc task creation
+- `PUT ?id=<id>` — actions: `start`, `complete`, or generic checklist/notes edit
+- `DELETE ?id=<id>` — admin only
 
-**2. Analytics had no caching. Every chip toggle = full DB recompute.**
+**Total serverless endpoints: still 11 (below Vercel's 12 free-tier limit).**
 
-Analytics does the heaviest queries in the whole app (loops over all bookings, all expenses, all apartments, computes P&L per unit). Clicking chip → GET /api/analytics → full recompute every time. Toggling between "Month" and "Year" a few times could burn 6-8× the compute of a single view.
+**Auto-integrations:**
+- Booking checkout → auto-creates a cleaning task with `dueBy` = next check-in date
+- Apartment "mark cleaned" button → completes any active task server-side (records who did it, sets `lastCleanedAt`)
+- One-time backfill: on first `GET` after deploy, tasks are created for apartments currently flagged `needsCleaning: true` — so the tab is useful on day one
 
-## Fix 1: Notification polling — slower + smarter
+**Permission gating:**
+- `canClean` field added to User schema
+- Added to JWT payload + client permissions object
+- Exposed in staff creation/edit modal as "قسم التنظيف" toggle
+- Sidebar tab and view route both gated on `admin OR canClean`
 
-- Interval: **20s → 60s** (3× reduction on its own)
-- **Skip polling entirely when the tab is hidden** — if you're not looking at Rent Flow, don't waste compute pretending you are
-- The existing `focus` and `visibilitychange` listeners still fire an immediate refresh when you come back, so notifications never feel stale
-- Net effect: from ~4,320/day/tab down to ~1,440/day/tab if you leave the tab open all day. If you close the tab or switch away, it's much lower still.
+**UI — new `التنظيف` tab between Expenses and Maintenance:**
+- Pending-tasks list (sorted: urgent first via `dueBy`, then by schedule date)
+- Filter chips: قيد التنفيذ / المكتمل / الكل
+- Search by unit or notes
+- Sidebar badge shows pending count
+- Urgency indicator on each row: red "متأخر" if past due, gray hours/days countdown otherwise
+- Completed-today stays visible in the pending view (crossed out); older completions accessible via "المكتمل" filter
 
-## Fix 2: Server-side response cache on /api/analytics
+**Task detail modal:**
+- Admin sees 8-tile area grid: الحمام, المطبخ, غرفة النوم, الصالة, المدخل, تجديد المستلزمات, تنظيف عام, أخرى
+- Selecting a tile reveals a per-area note field (except "تنظيف عام" — marker only, no note by design)
+- All areas compose (general + specific areas can coexist)
+- Save button persists the checklist without completing the task
+- Cleaner sees the checklist as tap-to-check boxes with area label + note preview
+- Optional "ملاحظات" text area for cleaner to add anything at the end
+- Big "إنهاء" button; soft confirm if items are unchecked ("mark done anyway?")
 
-- Module-level in-memory cache in `api/analytics.js`
-- Key includes userId + all query params that affect the response
-- **TTL: 30 seconds**
-- Serves cached response without touching the database
-- Cache lives across warm serverless invocations (Vercel reuses lambda instances for short periods — that's when hot-path chip toggling happens)
-- Cold starts miss the cache but that's fine, they'd have to hit the DB anyway
-- Cap at 200 entries with FIFO eviction so long-lived instances don't leak memory
+**Completed view:**
+- Green "مكتملة بواسطة [name]" banner with date
+- Read-only checklist showing what was and wasn't ticked
+- Cleaner's notes if any
 
-**Trade-off:** newly-added bookings/expenses can take up to 30 seconds to appear in Analytics. Given how rarely you'd add a booking then immediately check Analytics, and how much compute this saves, I think that's fine. If it bites you later we can tighten the TTL or add manual invalidation.
+**Add-task modal (admin only):**
+- Pick apartment
+- Optional notes
+- Creates a pending task + flags the apartment `needsCleaning: true`
 
-## Expected impact
+## What's NOT in this patch (skipped as agreed)
 
-Rough numbers for a single-user, single-tab session over a day:
+- **Push notifications** — I'll audit the existing push infrastructure and add cleaning-triggered pushes in a follow-up patch. The bell notifications will still fire in-app.
+- **Assignment** — anyone with `canClean` sees all tasks; completedBy tracking gives you the "who did it" record without assignment overhead
+- **Checklist templates / quick-apply from last cleaning**
+- **Photo requirement**
+- **Time tracking metrics**
 
-| Behavior | Before | After |
-|---|---|---|
-| Notification polls | ~4,320 | ~1,440 (tab active), 0 (hidden) |
-| Analytics fetch on chip toggle | full recompute | cached (if within 30s) |
-| Analytics fetch on booking add | full recompute | full recompute (unavoidable) |
-| Total DB CU-hours per day | (your baseline) | **est. 20-40% of baseline** |
+## Files touched (10)
 
-Should give you significant headroom on the 100 CU-hour Neon free tier. Whether it keeps you under the limit long-term depends on how much you use the app.
-
-## Files touched (2)
-
-- `api/analytics.js` — response cache with 30s TTL
-- `src/context/NotificationContext.jsx` — polling interval to 60s + skip when hidden
+- `prisma/schema.prisma` — new model + field + relations
+- `api/admin-resources.js` — full cleaning handler + exported helpers for other APIs
+- `api/apartments.js` — mark-cleaned also completes tasks
+- `api/bookings.js` — checkout auto-creates task
+- `api/auth.js` — canClean in JWT + permissions object
+- `api/staff.js` — canClean in staff CRUD
+- `src/context/DataContext.jsx` — cleaningTasks state + fetch/create/update/delete
+- `src/components/layout/Sidebar.jsx` — new tab + badge
+- `src/components/layout/Layout.jsx` — route + gate
+- `src/components/views/CleaningView.jsx` — the view itself
+- `src/components/ui/StaffFormModal.jsx` — canClean toggle in staff form
 
 ## Install
 
 ```bash
-unzip -o rentflow-compute-reduction.zip -d .
+unzip -o rentflow-cleaning.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-compute-reduction.zip
+rm -rf patch rentflow-cleaning.zip
 
 git add -A
-git commit -m "perf: server-side analytics cache (30s TTL) + slower notification polling (60s, skip when hidden)"
+git commit -m "feat: cleaning system — auto-generated tasks, admin checklist grid, cleaner UI, permission-gated"
 git push origin design-md-changes
 ```
 
-## Verify
+Vercel auto-runs `prisma db push` on deploy. This adds the `CleaningTask` table + `canClean` column. Non-destructive.
 
-Nothing visible changes for the user. To confirm the cache is working, watch Vercel function logs while clicking Analytics chips — after the first call for a given filter, subsequent identical calls should complete much faster (they're returning from memory, not the DB).
+## After deploy — verify
 
-## What's still burning compute after this
+1. **New tab in sidebar** — "التنظيف" between Expenses and Maintenance. Sparkles icon. Badge shows pending count (may show 0 initially if no apartments are flagged `needsCleaning: true`).
+2. **Open the tab** — if any apartments were previously flagged as needing cleaning, they'll be backfilled as pending tasks automatically on first visit.
+3. **Test auto-generation:**
+   - Check out an active booking
+   - Go to Cleaning tab — the unit should appear as a pending task
+   - The `dueBy` should be set to the next incoming booking's start date (if any)
+4. **Test admin flow:**
+   - Open a task
+   - Tap "ما يحتاج تنظيف إضافي" to expand the grid
+   - Select 2-3 areas (say Bathroom + Kitchen + General)
+   - Add notes on the ones with note fields
+   - Save
+5. **Test cleaner flow** (either as admin or a staff account with `canClean`):
+   - Open the same task
+   - Tick each checklist item
+   - Tap "إنهاء"
+   - Task moves to completed; unit's needsCleaning flag clears; lastCleanedAt updates
+6. **Test the shortcut:** in Apartments view, tap the existing "mark cleaned" button on a dirty unit. Check Cleaning tab — that task should show as completed by you.
+7. **Test permission gating:**
+   - Create a staff user with `canClean: false` — they should NOT see the tab
+   - Toggle canClean to true — they should see the tab
+   - Log in as them — they can view/complete tasks but can't delete or add manually
 
-- Every apartment fetch, booking fetch, expense fetch on tab open (`DataContext` fires 6 parallel queries on mount)
-- Filter changes still fetch (but hit cache 30s later)
-- Booking mutations invalidate implicit "freshness" — but we don't manually bust the cache, so analytics may show 30s-old data
+## Known limitations to know about
 
-If your CU budget still gets uncomfortable, next candidates:
-
-1. **Cache other endpoints too** — /api/apartments, /api/licenses, /api/pricingRules rarely change. TTL 5 minutes would be safe.
-2. **Lazy DataContext loading** — only fetch what the current view needs, instead of everything on mount. Bigger refactor.
-3. **Neon Launch tier ($19/mo)** — the surgical, boring option. 300 CU-hours vs 100.
-
-Say the word for any of those.
+- **No push notifications yet.** Cleaner needs to open the app to see new tasks. Push audit + integration = follow-up patch.
+- **No task assignment.** If you have multiple cleaners, they all see the same task list. Whoever taps "done" first is recorded. If this becomes an issue, we can add explicit assignment later.
+- **Checklist is per-task, not per-apartment template.** Admin has to re-select areas for each task. If a specific unit always needs the same extras (e.g., شقة 91's extractor fan), that gets repetitive. If it becomes annoying, we add "quick apply from last cleaning" — one small button, minimal UI.

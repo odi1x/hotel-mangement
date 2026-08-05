@@ -14,6 +14,7 @@ import BalancesView from '../views/BalancesView';
 import MaintenanceView from '../views/MaintenanceView';
 import PricingView from '../views/PricingView';
 import ExpensesView from '../views/ExpensesView';
+import CleaningView from '../views/CleaningView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
@@ -30,6 +31,7 @@ const GATED_VIEW_PERM = {
   pricing:     'canViewPricing',
   analytics:   'canViewAnalytics',
   expenses:    'canViewAnalytics',  // expenses are financial data — same permission gate
+  cleaning:    'canClean',
   settings:    'canViewSettings',
 };
 
@@ -178,6 +180,7 @@ export default function Layout() {
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
             {view === 'balances' && <BalancesView />}
             {view === 'expenses' && <ExpensesView initialFilter={viewFilter} />}
+            {view === 'cleaning' && <CleaningView />}
             {view === 'maintenance' && <MaintenanceView />}
             {view === 'pricing' && <PricingView />}
             {view === 'analytics' && <AnalyticsView setView={setView} />}
