@@ -1,4 +1,4 @@
-import { Home, Wallet, Wrench, Tag, BarChart2, Settings, Moon, Sun, LogOut, User as UserIcon, ChevronLeft, ArrowDownCircle } from 'lucide-react';
+import { Home, Wallet, Wrench, Tag, BarChart2, Settings, Moon, Sun, LogOut, User as UserIcon, ChevronLeft, ArrowDownCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -14,7 +14,7 @@ import { computeBookingTotals } from '../../lib/paymentUtils';
  */
 export default function MobileMoreMenu({ setView, onProfileClick }) {
   const { user, logout } = useAuth();
-  const { bookings, maintenanceIssues } = useData();
+  const { bookings, maintenanceIssues, cleaningTasks } = useData();
   const { darkMode, toggleDarkMode } = useTheme();
 
   const canSeeBalances    = user?.role === 'admin' || user?.permissions?.canViewBalances;
@@ -22,6 +22,7 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
   const canSeePricing     = user?.role === 'admin' || user?.permissions?.canViewPricing;
   const canSeeAnalytics   = user?.role === 'admin' || user?.permissions?.canViewAnalytics;
   const canSeeSettings    = user?.role === 'admin' || user?.permissions?.canViewSettings;
+  const canSeeCleaning    = user?.role === 'admin' || user?.permissions?.canClean;
 
   const duesCount = canSeeBalances
     ? (bookings || []).reduce((n, b) => (computeBookingTotals(b).balanceDue > 0.01 ? n + 1 : n), 0)
@@ -29,6 +30,10 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
 
   const urgentMaintenanceCount = canSeeMaintenance
     ? (maintenanceIssues || []).filter(i => i.status !== 'resolved' && i.severity === 'urgent').length
+    : 0;
+
+  const pendingCleaningCount = canSeeCleaning
+    ? (cleaningTasks || []).filter(t => t.status !== 'done').length
     : 0;
 
   return (
@@ -60,6 +65,9 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
         )}
         {canSeeAnalytics && (
           <MenuItem icon={ArrowDownCircle} label="المصروفات" onClick={() => setView('expenses')} />
+        )}
+        {canSeeCleaning && (
+          <MenuItem icon={Sparkles} label="التنظيف" badge={pendingCleaningCount} onClick={() => setView('cleaning')} />
         )}
         {canSeeMaintenance && (
           <MenuItem icon={Wrench}  label="الصيانة"   badge={urgentMaintenanceCount} onClick={() => setView('maintenance')} />

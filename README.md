@@ -1,89 +1,49 @@
-# Rent Flow — Cleaning R5: staff must-check gate + mobile polish
+# Rent Flow — Header dropdown fix + Cleaning in mobile More menu
 
 Two things. Two files.
 
-## 1. Staff can't finish with unchecked boxes
+## 1. Profile menu doesn't open (desktop)
 
-Admin still one-clicks Finish regardless of checked state (they may be closing out for a cleaner who forgot to tick, or handling edge cases — the admin knows what they're doing).
+Exact same bug as the notification dropdown a few patches back. The dropdown is portaled to `<body>` but styled with `md:absolute md:top-full md:left-0` — absolute positioning needs a positioned ancestor, and there is none inside `<body>`, so the panel renders at viewport (0,0), invisible under the header. Same `dropdownRef` was assigned to both the outer container AND the portaled panel, so click-outside detection was also broken.
 
-Staff now MUST check every item before finishing. If they tap the Finish button with any item unchecked:
+**Fix — same pattern as NotificationsDropdown:**
+- Separate `buttonRef` (the profile button) from `dropdownRef` (the portaled panel)
+- On open, measure the button's viewport rect (`getBoundingClientRect()`)
+- Position the panel with inline `position: fixed`, anchored to the button's rect
+- **Auto-flip:** if the button is on the right half of the viewport (its normal RTL home), the panel anchors its right edge to the button's right edge and extends leftward. If it's on the left half, it mirrors. Clamped to viewport gutters either way so the panel never runs off-screen
+- Mobile fallback: `top: 64, left: 12, right: 12` — pinned near the top with small side gutters
+- Click-outside now correctly checks both refs
 
-- **The unchecked items shake.** Small horizontal wobble, 400ms × 2 iterations. No color change — the shake alone signals "check this first," fitting the app's restrained palette (no red warnings anywhere).
-- The task does NOT complete.
-- Repeated Finish taps re-trigger the shake (via a nonce that force-remounts unchecked items to restart the animation).
-- Once all items are checked, the Finish tap succeeds and the modal closes normally.
+Result: profile menu opens right below the profile button on desktop, correctly positioned.
 
-Implementation: a small `blinkNonce` state gets bumped on each blocked attempt. Unchecked items include the nonce in their React `key` — so they remount when the nonce changes, restarting the CSS animation cleanly. Checked items keep a stable key (no remount, no shake).
+## 2. Cleaning tab missing from mobile "More" menu
 
-The `anim-attention-shake` keyframe was added to `src/index.css` following the codebase's existing `anim-*` utility convention. Respects `prefers-reduced-motion` (no animation for users who opted out).
+Sidebar had it, but I forgot to add it to `MobileMoreMenu.jsx` — which is what shows up when mobile users tap "المزيد" from the bottom nav. Now added:
 
-## 2. Mobile polish for the Cleaning tab
-
-Not a redesign — targeted fixes for the phone experience:
-
-**Task detail modal (bottom sheet on mobile):**
-- Added a **grab handle** (small horizontal bar at top) — subtle visual cue this is a dismissible bottom-sheet, not a full-screen page.
-- **Max height 92vh** on mobile so long checklists don't push the sheet past the viewport.
-- **Safe-area padding** on the bottom action bar (`env(safe-area-inset-bottom)`) so the Finish button clears the iPhone home indicator instead of sitting behind it.
-- **Slightly tighter header padding** on mobile (`p-4` vs desktop `p-5`).
-
-**Area grid inside the modal:**
-- **Tighter padding + gaps** on mobile (`p-1.5 gap-1.5`) vs desktop (`p-2.5 gap-2`). Same 4-column layout but tiles no longer feel cramped on 360px viewports.
-- **Minimum tile height `min-h-16` (64px)** so tap targets stay comfortable.
-- **`active:scale-[0.97]`** — subtle press-in feedback on tap. Small but makes the grid feel like something you're physically pressing.
-- **10px label text on mobile** (`text-[10px]`) so labels like "غرفة النوم" and "تجديد المستلزمات" don't wrap or truncate.
-
-**Task rows in the list:**
-- **`active:bg-*`** state for touch feedback (was hover-only).
-- **`md:p-3.5`** — slightly more padding on desktop, unchanged on mobile.
-
-**Add-task modal:**
-- Also converted to proper bottom-sheet with grab handle + safe-area padding.
-- Now uses `anim-sheet` (mobile-appropriate slide-up + desktop zoom) instead of `anim-dropdown`.
-
-**Modal shell (both):**
-- Swapped `anim-dropdown` for `anim-sheet` — the existing utility that's already tuned for bottom-sheet slide-up on mobile and centered zoom on desktop. Same visual result on desktop, more natural feel on mobile.
+- Sparkles icon (matches the sidebar)
+- Positioned between Expenses and Maintenance (matches sidebar order)
+- Gated on `admin OR canClean` (same rule as sidebar)
+- Pending-tasks badge (same badge count as the sidebar)
 
 ## Files touched (2)
 
-- `src/index.css` — added `anim-attention-shake` keyframe + `.anim-attention` class
-- `src/components/views/CleaningView.jsx` — blink logic, mobile polish
+- `src/components/layout/Header.jsx` — profile dropdown position fix
+- `src/components/layout/MobileMoreMenu.jsx` — cleaning entry added
 
 ## Install
 
 ```bash
-unzip -o rentflow-cleaning-r5.zip -d .
+unzip -o rentflow-header-cleaning-more.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-cleaning-r5.zip
+rm -rf patch rentflow-header-cleaning-more.zip
 
 git add -A
-git commit -m "cleaning r5: staff must-check gate with shake feedback, mobile polish"
+git commit -m "fix: header dropdown position (same bug as notif), add cleaning to mobile more menu"
 git push origin design-md-changes
 ```
 
 ## Verify
 
-**Staff must-check flow:**
-1. Log in as staff (or admin — same UI, admin bypasses the block).
-2. Open a task with a non-empty checklist, some boxes unchecked.
-3. Tap Finish → unchecked items shake. Modal stays open. Nothing saved.
-4. Check the remaining items.
-5. Tap Finish → task completes and modal closes.
-
-**Admin bypass:**
-1. Log in as admin, open same kind of task.
-2. Tap Finish with unchecked items → task completes anyway. Modal closes.
-
-**Mobile:**
-1. Open the Cleaning tab on your phone.
-2. Tap a task → bottom-sheet slides up with a grab handle.
-3. The 8-tile area grid fits comfortably; labels aren't cropped.
-4. Bottom Finish button clears the iPhone home indicator.
-5. Tapping the Finish button (with something unchecked, as staff) makes the unchecked items shake.
-6. All motion respects your system's Reduce Motion setting.
-
-## Design notes
-
-I stuck to the existing token system rather than introducing new colors or type treatments. The shake animation uses no color at all — it's motion-only, matching the app's restraint. Everything follows the same `anim-*` naming convention already used for `.anim-tab`, `.anim-nav`, `.anim-sheet`, `.anim-dropdown`.
-
-The one aesthetic risk was the shake pattern itself: shakes are common in error/rejection UX but usually loud and short. This one is deliberately subtle — 3px displacement across 800ms total — matching the app's overall quiet feel. It communicates "check this first" without pretending something's broken.
+1. **Desktop profile menu:** click your profile picture in the top-right → dropdown appears right below it with "إعدادات الحساب" and "تسجيل الخروج". Clicking elsewhere closes it.
+2. **Mobile More menu:** on your phone, tap "المزيد" in the bottom nav → the list should now include "التنظيف" between "المصروفات" and "الصيانة", with a Sparkles icon and pending-count badge.
+3. **Cleaning permission:** if you log in as a staff user with `canClean: false`, the Cleaning entry should NOT appear in the More menu.
