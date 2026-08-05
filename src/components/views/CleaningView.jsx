@@ -310,7 +310,24 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
   const isDone = task.status === 'done';
   const [checklist, setChecklist] = useState(task.checklist || []);
   const [cleanerNotes, setCleanerNotes] = useState(task.cleanerNotes || '');
-  const [gridExpanded, setGridExpanded] = useState((task.checklist || []).length > 0);
+  // Grid expanded by default for admin — was collapsed which meant admin
+  // had to tap to open it every time. Users always want to see the grid
+  // when they open a task; collapse toggle stays available if they want.
+  const [gridExpanded, setGridExpanded] = useState(true);
+
+  // Dirty tracking: has the admin changed the checklist STRUCTURE (areas
+  // added/removed OR notes edited) since the last save? Excludes .checked
+  // toggles — those are cleaner actions, not admin edits, and shouldn't
+  // flip the button from "Finish" back to "Save".
+  //
+  // Compares local checklist against task.checklist (the server-known state).
+  // After a successful save, parent updates the task prop → task.checklist
+  // catches up → isDirty resets to false naturally.
+  const structureOf = (list) => (list || [])
+    .map(x => `${x.area}:${x.note || ''}`)
+    .sort()
+    .join('|');
+  const isDirty = structureOf(checklist) !== structureOf(task.checklist || []);
 
   // Map area value → current entry in checklist (for lookup)
   const bySlot = useMemo(() => {
@@ -346,12 +363,19 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
     await onUpdate({ checklist });
   };
 
-  // Finish immediately on click. Previously we had a two-step "mark done
-  // anyway?" confirm when items were unchecked. Removed on user request:
-  // one click closes, regardless of check state.
+  // Finish: mark task done. One click, closes immediately.
   const complete = async () => {
     await onUpdate({ action: 'complete', checklist, cleanerNotes });
   };
+
+  // Main button behavior — one big context-aware button.
+  //   Staff always sees Finish (they can't edit the checklist structure).
+  //   Admin sees Save when the checklist has unsaved changes, else Finish.
+  const primaryAction = (isAdmin && isDirty) ? 'save' : 'complete';
+  const primaryLabel = primaryAction === 'save'
+    ? 'حفظ المهام'
+    : (totalCount === 0 ? 'تم الانتهاء' : `إنهاء (${checkedCount}/${totalCount})`);
+  const onPrimary = primaryAction === 'save' ? saveChecklistEdits : complete;
 
   return (
     <div className="fixed inset-0 z-[105] flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm p-0 md:p-4" data-modal-active>
@@ -448,10 +472,6 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
                       })}
                     </div>
                   )}
-
-                  <button onClick={saveChecklistEdits} className="btn-ghost h-8 px-3 text-xs">
-                    <Check size={13} /> حفظ التعليمات
-                  </button>
                 </div>
               )}
             </section>
@@ -555,11 +575,11 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
               </button>
             )}
             <button
-              onClick={complete}
+              onClick={onPrimary}
               className="btn-primary h-10 flex-1 text-sm"
             >
               <Check size={15} />
-              {totalCount === 0 ? 'تم الانتهاء' : `إنهاء (${checkedCount}/${totalCount})`}
+              {primaryLabel}
             </button>
           </div>
         )}
