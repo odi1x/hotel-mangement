@@ -13,11 +13,17 @@ import { computeBookingTotals } from '../../lib/paymentUtils';
  * sidebar tabs don't fit in a bar. Everything else lives inside "More" which
  * opens a full-page menu — the Notion pattern the video explicitly describes.
  *
- * The FAB opens the "new booking" flow (the app's primary recurring action).
- * It hides on views where "new booking" isn't the natural action (المزيد
- * itself, plus admin-only views the user can't do quick actions on).
+ * The FAB is context-aware: it fires a different action depending on which
+ * view is currently open, mirroring the desktop header's per-tab primary
+ * button. Since MobileBottomNav is always mounted (fixed position, renders
+ * on every view including ones reached via "More"), the FAB stays available
+ * even when the tab itself isn't one of the 4 in the bottom bar — e.g. on
+ * Cleaning, Expenses, Maintenance, Pricing, all reached via "المزيد".
  */
-export default function MobileBottomNav({ view, setView, onNewBooking }) {
+export default function MobileBottomNav({
+  view, setView,
+  onNewBooking, onNewCleaningTask, onNewExpense, onNewMaintenance, onNewPricingRule,
+}) {
   const { user } = useAuth();
   const { bookings, maintenanceIssues } = useData();
 
@@ -25,6 +31,9 @@ export default function MobileBottomNav({ view, setView, onNewBooking }) {
 
   const canSeeBalances    = user?.role === 'admin' || user?.permissions?.canViewBalances;
   const canSeeMaintenance = user?.role === 'admin' || user?.permissions?.canViewMaintenance;
+  const canEditExpenses   = user?.role === 'admin' || user?.permissions?.canEdit;
+  const canSeePricing     = user?.role === 'admin' || user?.permissions?.canViewPricing;
+  const isAdmin            = user?.role === 'admin';
 
   const duesCount = canSeeBalances
     ? (bookings || []).reduce((n, b) => (computeBookingTotals(b).balanceDue > 0.01 ? n + 1 : n), 0)
@@ -39,12 +48,35 @@ export default function MobileBottomNav({ view, setView, onNewBooking }) {
   const moreBadge = duesCount + urgentMaintenanceCount;
 
   // The three primary content tabs share the bottom bar; "more" is the 4th.
-  // Any other view (analytics, settings, apartments, etc.) reached via the
-  // More menu should keep "More" highlighted so the user knows where they are.
+  // Any other view (analytics, settings, apartments, cleaning, expenses,
+  // maintenance, pricing, etc.) reached via the More menu should keep
+  // "More" highlighted so the user knows where they are.
   const primaryContentTabs = ['availability', 'requests', 'residents'];
   const moreIsActive = view === 'more' || !primaryContentTabs.includes(view);
 
-  const showFAB = primaryContentTabs.includes(view);
+  // Per-view FAB config — mirrors the desktop header's primary-action button
+  // logic (same permission gates). booking-related tabs keep the original
+  // action; other tabs reached via "More" get their own create-action.
+  const fabConfig = (() => {
+    if (['availability', 'requests', 'residents', 'apartments'].includes(view)) {
+      return { show: true, onClick: onNewBooking, label: 'حجز جديد' };
+    }
+    if (view === 'cleaning' && isAdmin) {
+      return { show: true, onClick: onNewCleaningTask, label: 'مهمة جديدة' };
+    }
+    if (view === 'expenses' && canEditExpenses) {
+      return { show: true, onClick: onNewExpense, label: 'مصروف جديد' };
+    }
+    if (view === 'maintenance' && canSeeMaintenance) {
+      return { show: true, onClick: onNewMaintenance, label: 'بلاغ جديد' };
+    }
+    if (view === 'pricing' && canSeePricing) {
+      return { show: true, onClick: onNewPricingRule, label: 'قاعدة جديدة' };
+    }
+    return { show: false, onClick: () => {}, label: '' };
+  })();
+
+  const showFAB = fabConfig.show;
 
   return (
     <div className="md:hidden fixed bottom-4 inset-x-4 z-40 flex items-center anim-nav mobile-nav-shield">
@@ -78,17 +110,17 @@ export default function MobileBottomNav({ view, setView, onNewBooking }) {
       </div>
 
       {/* FAB always renders but morphs its size / opacity / scale based on
-          whether it should show. When collapsing (view→more): width shrinks
-          from 56px to 0, right-margin shrinks from 12px to 0, opacity fades,
-          scale down slightly — feels like the circle is "absorbed" into
-          the pill. When expanding back: reverse — circle pops out of the
-          pill's left edge as it compresses. Pill's flex-1 auto-fills the
-          reclaimed space smoothly during either transition.
-          iOS-quality easing (quart-out). 350ms — long enough to feel
-          intentional, short enough to feel snappy. */}
+          whether it should show. When collapsing (view→more, or a view with
+          no primary action): width shrinks from 56px to 0, right-margin
+          shrinks from 12px to 0, opacity fades, scale down slightly — feels
+          like the circle is "absorbed" into the pill. When expanding back:
+          reverse — circle pops out of the pill's left edge as it compresses.
+          Pill's flex-1 auto-fills the reclaimed space smoothly during either
+          transition. iOS-quality easing (quart-out). 350ms — long enough to
+          feel intentional, short enough to feel snappy. */}
       <button
-        onClick={onNewBooking}
-        aria-label="حجز جديد"
+        onClick={fabConfig.onClick}
+        aria-label={fabConfig.label || 'إجراء'}
         aria-hidden={!showFAB}
         tabIndex={showFAB ? 0 : -1}
         className={`shrink-0 h-14 rounded-full bg-accent text-white shadow-lift flex items-center justify-center overflow-hidden transition-[width,margin,opacity,transform] duration-[350ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-accent-strong active:scale-95 ${

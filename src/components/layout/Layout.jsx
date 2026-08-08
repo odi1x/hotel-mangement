@@ -274,6 +274,10 @@ export default function Layout() {
         view={view}
         setView={setView}
         onNewBooking={() => setIsBookingByDate(true)}
+        onNewCleaningTask={() => setCleaningAddTrigger(c => c + 1)}
+        onNewExpense={() => setExpensesAddTrigger(c => c + 1)}
+        onNewMaintenance={() => setMaintenanceAddTrigger(c => c + 1)}
+        onNewPricingRule={() => setPricingAddTrigger(c => c + 1)}
       />
 
       {isProfileSettingsOpen && (

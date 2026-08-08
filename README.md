@@ -1,49 +1,56 @@
-# Rent Flow — Header dropdown fix + Cleaning in mobile More menu
+# Rent Flow — Mobile FAB fix (context-aware primary action)
 
-Two things. Two files.
+You were right — real bug, sorry about that.
 
-## 1. Profile menu doesn't open (desktop)
+## What happened
 
-Exact same bug as the notification dropdown a few patches back. The dropdown is portaled to `<body>` but styled with `md:absolute md:top-full md:left-0` — absolute positioning needs a positioned ancestor, and there is none inside `<body>`, so the panel renders at viewport (0,0), invisible under the header. Same `dropdownRef` was assigned to both the outer container AND the portaled panel, so click-outside detection was also broken.
+When I made the desktop header button context-aware (r4 patch), I removed the internal "New X" buttons from ExpensesView, MaintenanceView, CleaningView, PricingView — assuming the header button covered it.
 
-**Fix — same pattern as NotificationsDropdown:**
-- Separate `buttonRef` (the profile button) from `dropdownRef` (the portaled panel)
-- On open, measure the button's viewport rect (`getBoundingClientRect()`)
-- Position the panel with inline `position: fixed`, anchored to the button's rect
-- **Auto-flip:** if the button is on the right half of the viewport (its normal RTL home), the panel anchors its right edge to the button's right edge and extends leftward. If it's on the left half, it mirrors. Clamped to viewport gutters either way so the panel never runs off-screen
-- Mobile fallback: `top: 64, left: 12, right: 12` — pinned near the top with small side gutters
-- Click-outside now correctly checks both refs
+**I missed that mobile has a completely separate primary-action button: the floating action button (FAB) in the bottom nav.** That FAB was hardcoded to always open "new booking" and only appeared on 3 tabs (Availability, Requests, Residents). It was never extended to Cleaning, Expenses, Maintenance, or Pricing.
 
-Result: profile menu opens right below the profile button on desktop, correctly positioned.
+Once I removed those views' internal buttons, mobile users had zero way to create anything on those four tabs — no header button (desktop-only), no FAB (booking-only), nothing.
 
-## 2. Cleaning tab missing from mobile "More" menu
+## Fix
 
-Sidebar had it, but I forgot to add it to `MobileMoreMenu.jsx` — which is what shows up when mobile users tap "المزيد" from the bottom nav. Now added:
+Generalized the FAB the same way I generalized the desktop header button — one config table, same permission gates:
 
-- Sparkles icon (matches the sidebar)
-- Positioned between Expenses and Maintenance (matches sidebar order)
-- Gated on `admin OR canClean` (same rule as sidebar)
-- Pending-tasks badge (same badge count as the sidebar)
+| View | FAB label | Permission |
+|---|---|---|
+| Availability, Requests, Residents, Apartments | حجز جديد | Everyone |
+| Cleaning | مهمة جديدة | Admin only |
+| Expenses | مصروف جديد | Admin or canEdit |
+| Maintenance | بلاغ جديد | Admin or canViewMaintenance |
+| Pricing | قاعدة جديدة | Admin or canViewPricing |
+| Everything else (Balances, Analytics, Settings, More) | — | FAB hidden |
+
+The FAB is always mounted (it's `position: fixed` in Layout, renders across every view — including views reached via "المزيد" like Cleaning/Expenses/Maintenance/Pricing, which aren't in the bottom bar itself). It just changes its icon-action and visibility based on the current view, mirroring the desktop header exactly.
+
+**Same trigger mechanism as desktop** — Layout already had `cleaningAddTrigger`, `expensesAddTrigger`, `maintenanceAddTrigger`, `pricingAddTrigger` counters wired to the header buttons. I passed the same setters down into `MobileBottomNav` so the FAB increments the same triggers. No duplicate logic, no new state — just reusing what the desktop button already does.
 
 ## Files touched (2)
 
-- `src/components/layout/Header.jsx` — profile dropdown position fix
-- `src/components/layout/MobileMoreMenu.jsx` — cleaning entry added
+- `src/components/layout/MobileBottomNav.jsx` — FAB is now context-aware
+- `src/components/layout/Layout.jsx` — passes the 4 trigger setters to MobileBottomNav
 
 ## Install
 
 ```bash
-unzip -o rentflow-header-cleaning-more.zip -d .
+unzip -o rentflow-mobile-fab-fix.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-header-cleaning-more.zip
+rm -rf patch rentflow-mobile-fab-fix.zip
 
 git add -A
-git commit -m "fix: header dropdown position (same bug as notif), add cleaning to mobile more menu"
+git commit -m "fix: mobile FAB context-aware per tab (was booking-only, broke cleaning/expenses/maintenance/pricing creation on mobile)"
 git push origin design-md-changes
 ```
 
-## Verify
+## Verify — on your phone
 
-1. **Desktop profile menu:** click your profile picture in the top-right → dropdown appears right below it with "إعدادات الحساب" and "تسجيل الخروج". Clicking elsewhere closes it.
-2. **Mobile More menu:** on your phone, tap "المزيد" in the bottom nav → the list should now include "التنظيف" between "المصروفات" and "الصيانة", with a Sparkles icon and pending-count badge.
-3. **Cleaning permission:** if you log in as a staff user with `canClean: false`, the Cleaning entry should NOT appear in the More menu.
+1. **Cleaning tab** (via المزيد → التنظيف): green circle FAB appears bottom-right. Tap it → new cleaning task modal opens. (Admin only — if logged in as staff, FAB is hidden here, matching desktop.)
+2. **Expenses tab:** FAB opens the expense form.
+3. **Maintenance tab:** FAB opens the maintenance report form.
+4. **Pricing tab:** FAB opens the pricing rule form.
+5. **Availability / Requests / Residents / Apartments:** FAB still opens "new booking" — unchanged.
+6. **Balances / Analytics / Settings / More itself:** no FAB — matches desktop (no header button there either).
+
+Sorry again for missing this in the last round — should be solid now across both desktop and mobile.
