@@ -235,6 +235,31 @@
     }
   }
 
+  /* ---- Print isolation ----------------------------------------------------
+     PrintAgreement renders as `position: fixed inset-0` so it visually covers
+     the whole screen in the browser — but `window.print()` doesn't respect
+     that. The browser's print engine walks the WHOLE DOM (Sidebar, Header,
+     bottom nav, everything), because fixed positioning collapses to normal
+     flow during print layout unless told otherwise. Result: the app chrome
+     printed above/around the actual document.
+
+     Standard fix: hide everything by default when printing, then explicitly
+     re-show only the element marked `.print-root` (and its children).
+     PrintAgreement's outermost div carries this class. */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    .print-root, .print-root * {
+      visibility: visible;
+    }
+    .print-root {
+      position: absolute;
+      inset: 0;
+      z-index: 9999;
+    }
+  }
+
   /* ---- Hide the mobile floating nav AND the fade scrims when a modal /
      bottom sheet is open. Modals mark themselves with `data-modal-active`.
      When the browser detects any such element in the DOM (via CSS :has()),
