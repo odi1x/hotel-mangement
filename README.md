@@ -1,57 +1,74 @@
-# Rent Flow — Print fixes: app header leaking into print + missing paid/due on receipt
+# Rent Flow — Phone number bidi/paste bug
 
-Two bugs. Two files.
+Real bug, found the root cause. 8 files.
 
-## 1. App header (profile, notification bell) showing up in print
+## What was actually happening
 
-**Root cause:** `PrintAgreement` renders as `position: fixed inset-0` — visually this covers the whole browser window, so it LOOKS like the only thing on screen. But `window.print()` doesn't respect visual layering. The browser's print engine walks the entire DOM (Sidebar, Header, bottom nav, everything), and fixed positioning collapses to normal document flow during print layout unless explicitly told otherwise. Since `PrintAgreement` isn't portaled out of the component tree, it prints alongside — not instead of — the rest of the app chrome.
+When you paste a phone number copied from a Contacts app, WhatsApp, or any Arabic-context source, the copied text often carries an **invisible Unicode bidi control character** — typically RLM (Right-to-Left Mark, U+200F) — embedded right alongside the digits. You can't see it, but it's there in the clipboard data.
 
-**Fix — standard "print only this element" pattern:**
+That invisible character forces the browser's bidi (bidirectional text) algorithm to treat the surrounding content as right-to-left, which reorders the VISUAL grouping of digits and spaces — even though the actual digit sequence in memory never changed. This is why:
 
-Added a global print rule to `src/index.css`:
+- **Typing** a number is fine — no bidi characters get typed, just plain digits.
+- **Pasting** a number looks reversed — the hidden RLM mark comes along with the paste and gets stored into the database as part of the phone number string.
+- **The corruption shows up everywhere** the number is later displayed (lists, receipts, printouts) — because the bad character is now baked into the stored string, not just a display glitch in one spot.
 
-```css
-@media print {
-  body * { visibility: hidden; }
-  .print-root, .print-root * { visibility: visible; }
-  .print-root { position: absolute; inset: 0; z-index: 9999; }
-}
+I confirmed this by simulating a paste with an embedded RLM character:
+```
+Raw (has RLM):  "‏+966 55 740 3401"   (invisible char before the +)
+Sanitized:      "+966 55 740 3401"
 ```
 
-This hides everything by default when printing, then explicitly re-shows only the element marked `.print-root` and its children. `PrintAgreement`'s outermost div now carries this class.
+I also found `BookingForm`'s phone input was missing `dir="ltr"` entirely (the public booking form had it, the admin one didn't) — a secondary contributor.
 
-Result: only the actual document (رنت فلو header, contract/receipt body, signature lines) shows up in the print output — no more profile picture, notification bell, or sidebar bleeding into the printed page.
+## Fix — three layers
 
-## 2. Paid/remaining amount missing from receipts
+**1. New shared utility** (`src/lib/phoneUtils.js`) — `sanitizePhone()`:
+- Strips all bidi control characters (RLM, LRM, and the wider bidi-control Unicode ranges)
+- Normalizes Arabic-Indic (٠-٩) and Extended Arabic-Indic (۰-۹) digits to Western digits, in case those got pasted too
+- Collapses whitespace
 
-**Root cause:** `PrintAgreement` computed a purely theoretical total (`pricePerNight × nights + tax`) but never looked at `booking.payments` at all. So the receipt showed what the customer *owed* in total, but never what they'd actually *paid* or what's *still outstanding* — which is the entire point of a "سند قبض" (receipt).
+**2. Applied on every phone INPUT** — so new data is clean going forward:
+- `BookingForm.jsx` (admin/staff booking form) — was missing `dir="ltr"` too, now added
+- `PublicBookingView.jsx` (public-facing booking form, most likely target for pasted numbers from a phone's contacts)
 
-**Fix:** imported the same `computeBookingTotals` helper the rest of the app already uses (Balances view, Payment Ledger modal) — so the numbers are guaranteed consistent with what you see everywhere else in the app. Added a new section, **رابعاً: حالة السداد** (Payment Status), shown only on receipt/financial-report documents (`documentType === 'voucher'`) — the rental agreement/confirmation document doesn't need this since it's a contract, not a receipt.
+**3. Applied on every phone DISPLAY site** — so already-corrupted existing data self-heals without a database migration:
+- `PrintAgreement.jsx` — the receipt/contract screenshot you showed
+- `ResidentsView.jsx` — both the desktop table row and the mobile card (the mobile card screenshot you showed)
+- `BalancesView.jsx`
+- `RequestsView.jsx` (already had `dir="ltr"`, added sanitizer for defense-in-depth)
+- `AvailabilityView.jsx` (same — already had `dir="ltr"`, added sanitizer)
 
-The new section shows three figures:
-- **المبلغ المدفوع** (Amount Paid) — sum of all payment records
-- **المبلغ المتبقي** (Amount Remaining) — in red if > 0, otherwise the normal ink color
-- **حالة السداد** (Payment Status) — مسدد بالكامل / سداد جزئي / غير مسدد
+Because the sanitizer is idempotent (running it twice gives the same result), it's safe to apply on every render without any performance concern or risk of double-processing.
 
-## Files touched (2)
+## Files touched (8)
 
-- `src/index.css` — global print isolation rule
-- `src/components/ui/PrintAgreement.jsx` — print-root class + payment status section
+- `src/lib/phoneUtils.js` — new utility
+- `src/components/ui/BookingForm.jsx` — input fix + dir=ltr
+- `src/components/ui/PrintAgreement.jsx` — display fix
+- `src/components/views/PublicBookingView.jsx` — input fix
+- `src/components/views/ResidentsView.jsx` — display fix (2 spots)
+- `src/components/views/BalancesView.jsx` — display fix
+- `src/components/views/RequestsView.jsx` — display fix
+- `src/components/views/AvailabilityView.jsx` — display fix
 
 ## Install
 
 ```bash
-unzip -o rentflow-print-fix.zip -d .
+unzip -o rentflow-phone-fix.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-print-fix.zip
+rm -rf patch rentflow-phone-fix.zip
 
 git add -A
-git commit -m "fix: print isolation (hide app chrome) + restore paid/due section on receipts"
+git commit -m "fix: phone number bidi corruption on paste — strip invisible RLM/bidi chars, normalize Arabic-Indic digits"
 git push origin design-md-changes
 ```
 
 ## Verify
 
-1. **Print isolation:** open any receipt or contract from Residents view → print. The printed page (or Save-as-PDF preview) should show ONLY the document — no profile picture, no bell icon, no sidebar.
-2. **Receipt payment status:** open a booking that has SOME but not all payments recorded → generate the "سند قبض / تقرير مالي" (voucher) document. You should now see a "رابعاً: حالة السداد" section showing amount paid, amount remaining, and status.
-3. **Contract unaffected:** the rental agreement/confirmation document (not the voucher) should look the same as before — no payment section there, since it's not meant to be a receipt.
+1. **The specific bug you showed:** find that same booking (مسفر محمد مصفر التليدي) — it should now display correctly wherever you see it (Residents list, Balances, printed receipt) since the display-side sanitizer self-heals the already-corrupted stored value.
+2. **New paste test:** copy a phone number from your phone's Contacts app (the kind that triggered this originally) and paste it into the phone field when creating a new booking. It should now display correctly, both in the form and afterward in every list/receipt.
+3. **Typing still works:** typing a number manually should look exactly the same as before — no regression there.
+
+## One thing worth knowing
+
+This fix cleans up the DISPLAY everywhere, but it does NOT retroactively rewrite the corrupted value in the database — it just cleans it every time it's rendered. If you want the database itself cleaned (so raw exports/backups also have clean numbers), that would need a one-time migration script. Let me know if you want that — it's a quick script to write given the sanitizer already exists.

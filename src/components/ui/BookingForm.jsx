@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Calendar, Pencil, AlertTriangle, TagsIcon, Wrench } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { sanitizePhone } from '../../lib/phoneUtils';
 import DatePickerCal from './DatePickerCal';
 import { computeStayTotal, summarizeBreakdown } from '../../lib/pricingUtils';
 import toast from 'react-hot-toast';
@@ -257,7 +258,15 @@ export default function BookingForm({ onClose, initialData }) {
               </div>
               <div>
                 <label className={eyebrow}>رقم الهاتف</label>
-                <input required type="tel" placeholder="05XXXXXXXX" className="input-field" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                <input
+                  required
+                  type="tel"
+                  dir="ltr"
+                  placeholder="05XXXXXXXX"
+                  className="input-field text-right"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: sanitizePhone(e.target.value) })}
+                />
               </div>
 
               {initialData?.customerRequest && (

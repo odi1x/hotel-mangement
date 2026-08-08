@@ -2,6 +2,7 @@ import { Printer } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
+import { sanitizePhone } from '../../lib/phoneUtils';
 
 export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
   const { apartments } = useData();
@@ -83,7 +84,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المستأجر / النزيل</p>
                         <p className="font-black uppercase text-gray-900">{booking.residentName}</p>
                         <p className="text-sm font-medium mt-1">رقم الهوية: {booking.residentId}</p>
-                        <p className="text-sm font-medium">هاتف: {booking.phone}</p>
+                        <p className="text-sm font-medium">هاتف: <span dir="ltr">{sanitizePhone(booking.phone)}</span></p>
                         <p className="text-xs text-gray-500 mt-1">{booking.address}</p>
                     </div>
                 </div>

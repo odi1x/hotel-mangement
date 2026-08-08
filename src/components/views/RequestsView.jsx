@@ -2,6 +2,7 @@ import React from 'react';
 import { useData } from '../../context/DataContext';
 import { Calendar, User, Phone, CheckCircle, XCircle, Clock, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { sanitizePhone } from '../../lib/phoneUtils';
 
 export default function RequestsView({ openBookingForm }) {
   const { bookings, apartments, deleteBooking } = useData();
@@ -80,7 +81,7 @@ export default function RequestsView({ openBookingForm }) {
                       </div>
                       <div className="flex items-center gap-3 text-sm text-body dark:text-body-dark">
                         <Phone size={16} className="text-muted-soft" />
-                        <span dir="ltr" className="font-medium truncate">{request.phone}</span>
+                        <span dir="ltr" className="font-medium truncate">{sanitizePhone(request.phone)}</span>
                       </div>
                     </div>
 

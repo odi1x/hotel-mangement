@@ -6,6 +6,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
 import EmptyState from '../ui/EmptyState';
+import { sanitizePhone } from '../../lib/phoneUtils';
 import { computeBookingTotals } from '../../lib/paymentUtils';
 import toast from 'react-hot-toast';
 
@@ -234,7 +235,7 @@ export default function ResidentsView({ openBookingForm }) {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium flex items-center text-body dark:text-body-dark"><Phone size={14} className="ml-1.5 text-muted-soft"/> {booking.phone}</div>
+                      <div className="text-sm font-medium flex items-center text-body dark:text-body-dark"><Phone size={14} className="ml-1.5 text-muted-soft"/> <span dir="ltr">{sanitizePhone(booking.phone)}</span></div>
                       <div className="text-xs text-muted dark:text-body-dark mt-1">هوية: {booking.residentId}</div>
                     </td>
                     <td className="px-6 py-4">
@@ -373,7 +374,7 @@ export default function ResidentsView({ openBookingForm }) {
                       </p>
                       <p className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5">
                         <Phone size={12} className="text-muted-soft shrink-0" />
-                        <span className="truncate">{booking.phone}</span>
+                        <span dir="ltr" className="truncate">{sanitizePhone(booking.phone)}</span>
                       </p>
                     </div>
                     <div className="shrink-0">

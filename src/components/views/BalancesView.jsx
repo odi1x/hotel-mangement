@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Wallet, Phone, ArrowDownWideNarrow, ArrowUpNarrowWide, Printer } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
+import { sanitizePhone } from '../../lib/phoneUtils';
 import PaymentStatusBadge from '../ui/PaymentStatusBadge';
 import PaymentLedgerModal from '../ui/PaymentLedgerModal';
 import PrintAgreement from '../ui/PrintAgreement';
@@ -220,8 +221,8 @@ export default function BalancesView() {
                         <div className="flex items-center gap-3 text-xs text-muted dark:text-body-dark">
                           <span className="truncate">{apt?.name || 'وحدة محذوفة'}</span>
                           <span className="text-muted-soft">·</span>
-                          <span className="flex items-center gap-1">
-                            <Phone size={11} />{booking.phone}
+                          <span className="flex items-center gap-1" dir="ltr">
+                            <Phone size={11} />{sanitizePhone(booking.phone)}
                           </span>
                         </div>
                         <div className={`text-xs mt-1.5 font-medium ${
