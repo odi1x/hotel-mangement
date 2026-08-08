@@ -146,7 +146,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                       </div>
                       <div>
                           <p className="text-xs font-bold text-gray-400 uppercase mb-1">المبلغ المتبقي</p>
-                          <p className={`text-lg font-black ${balanceDue > 0.01 ? 'text-red-600' : 'text-gray-900'}`}>
+                          <p className="text-lg font-black text-red-600">
                             {formatSAR(balanceDue)} ر.س
                           </p>
                       </div>

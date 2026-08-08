@@ -754,7 +754,7 @@ export default function ResidentsView({ openBookingForm }) {
       {deleteConfirmId && createPortal(
         <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full md:max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
             <div className="p-6 text-center">
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-5">
                 <AlertTriangle className="h-8 w-8 text-ink dark:text-white" />

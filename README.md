@@ -1,74 +1,54 @@
-# Rent Flow — Phone number bidi/paste bug
+# Rent Flow — Print red text + mobile modal width + payment tab mobile layout
 
-Real bug, found the root cause. 8 files.
+Three fixes. Six files.
 
-## What was actually happening
+## 1. المبلغ المتبقي now always red on the printed receipt
 
-When you paste a phone number copied from a Contacts app, WhatsApp, or any Arabic-context source, the copied text often carries an **invisible Unicode bidi control character** — typically RLM (Right-to-Left Mark, U+200F) — embedded right alongside the digits. You can't see it, but it's there in the clipboard data.
+Was conditionally black when the balance was fully paid (0 remaining), red only when there was an outstanding amount. Now always red regardless of the amount, per your request.
 
-That invisible character forces the browser's bidi (bidirectional text) algorithm to treat the surrounding content as right-to-left, which reorders the VISUAL grouping of digits and spaces — even though the actual digit sequence in memory never changed. This is why:
+## 2. Delete confirmation modals not using full width on mobile
 
-- **Typing** a number is fine — no bidi characters get typed, just plain digits.
-- **Pasting** a number looks reversed — the hidden RLM mark comes along with the paste and gets stored into the database as part of the phone number string.
-- **The corruption shows up everywhere** the number is later displayed (lists, receipts, printouts) — because the bad character is now baked into the stored string, not just a display glitch in one spot.
+**Root cause:** four confirm-delete modals (Residents, Maintenance, Pricing, Expenses) all had the same bug — the outer wrapper correctly set up a mobile bottom-sheet layout (`items-end`, no horizontal padding), but the modal box itself was capped with `max-w-sm` (384px) **unconditionally**, even on mobile. Since `max-w-sm` applied regardless of screen size, on phones with any viewport width the box would center itself with dead space on both sides instead of stretching edge-to-edge like a proper bottom sheet.
 
-I confirmed this by simulating a paste with an embedded RLM character:
-```
-Raw (has RLM):  "‏+966 55 740 3401"   (invisible char before the +)
-Sanitized:      "+966 55 740 3401"
-```
+**Fix:** changed `max-w-sm` → `md:max-w-sm` in all four spots — the width cap now only applies on desktop (≥768px), where it becomes a small centered dialog. On mobile it's a full-width bottom sheet, matching the pattern used everywhere else in the app (Cleaning task modal, Add Task modal, etc.).
 
-I also found `BookingForm`'s phone input was missing `dir="ltr"` entirely (the public booking form had it, the admin one didn't) — a secondary contributor.
+I swept the whole codebase for this exact class combination afterward and confirmed no other instances remain.
 
-## Fix — three layers
+## 3. Payment tab resident info — mobile layout cleanup
 
-**1. New shared utility** (`src/lib/phoneUtils.js`) — `sanitizePhone()`:
-- Strips all bidi control characters (RLM, LRM, and the wider bidi-control Unicode ranges)
-- Normalizes Arabic-Indic (٠-٩) and Extended Arabic-Indic (۰-۹) digits to Western digits, in case those got pasted too
-- Collapses whitespace
+Two things were cramped on narrow screens:
 
-**2. Applied on every phone INPUT** — so new data is clean going forward:
-- `BookingForm.jsx` (admin/staff booking form) — was missing `dir="ltr"` too, now added
-- `PublicBookingView.jsx` (public-facing booking form, most likely target for pasted numbers from a phone's contacts)
+**A) Header text.** The resident name and apartment name were joined on one line with a "·" separator (`{residentName} · {apartmentName}`), with no `truncate` and no `min-w-0` on the flex container — so a longer resident name could overflow past the close button or wrap awkwardly, especially combined with the icon block on the left.
 
-**3. Applied on every phone DISPLAY site** — so already-corrupted existing data self-heals without a database migration:
-- `PrintAgreement.jsx` — the receipt/contract screenshot you showed
-- `ResidentsView.jsx` — both the desktop table row and the mobile card (the mobile card screenshot you showed)
-- `BalancesView.jsx`
-- `RequestsView.jsx` (already had `dir="ltr"`, added sanitizer for defense-in-depth)
-- `AvailabilityView.jsx` (same — already had `dir="ltr"`, added sanitizer)
+Fixed: on mobile, resident name and apartment now stack on **separate lines**, each independently truncated. On desktop (≥640px, `sm:`) they go back to the compact single-line dot-separated version since there's more room there.
 
-Because the sanitizer is idempotent (running it twice gives the same result), it's safe to apply on every render without any performance concern or risk of double-processing.
+**B) The three-column totals strip** (إجمالي الحجز / المدفوع / المتبقّي). `text-2xl` bold numbers in three tight `p-5` columns left very little room per column on a 360-390px phone — the amount + "ر.س" suffix could wrap, and the payment-status badge below the remaining-amount column got squeezed.
 
-## Files touched (8)
+Fixed: reduced padding and font size on mobile only (`p-3` vs `p-5`, `text-base` vs `text-2xl`, smaller labels), full size restored at `md:` breakpoint. Numbers, currency suffix, and the status badge now fit comfortably without wrapping.
 
-- `src/lib/phoneUtils.js` — new utility
-- `src/components/ui/BookingForm.jsx` — input fix + dir=ltr
-- `src/components/ui/PrintAgreement.jsx` — display fix
-- `src/components/views/PublicBookingView.jsx` — input fix
-- `src/components/views/ResidentsView.jsx` — display fix (2 spots)
-- `src/components/views/BalancesView.jsx` — display fix
-- `src/components/views/RequestsView.jsx` — display fix
-- `src/components/views/AvailabilityView.jsx` — display fix
+## Files touched (6)
+
+- `src/components/ui/PrintAgreement.jsx` — red remaining-amount
+- `src/components/ui/PaymentLedgerModal.jsx` — mobile header + totals-strip layout
+- `src/components/views/ResidentsView.jsx` — delete-confirm width
+- `src/components/views/MaintenanceView.jsx` — delete-confirm width
+- `src/components/views/PricingView.jsx` — delete-confirm width
+- `src/components/views/ExpensesView.jsx` — delete-confirm width
 
 ## Install
 
 ```bash
-unzip -o rentflow-phone-fix.zip -d .
+unzip -o rentflow-print-mobile-fixes.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-phone-fix.zip
+rm -rf patch rentflow-print-mobile-fixes.zip
 
 git add -A
-git commit -m "fix: phone number bidi corruption on paste — strip invisible RLM/bidi chars, normalize Arabic-Indic digits"
+git commit -m "fix: red remaining-amount in print, mobile delete-confirm full-width, payment tab mobile layout cleanup"
 git push origin design-md-changes
 ```
 
 ## Verify
 
-1. **The specific bug you showed:** find that same booking (مسفر محمد مصفر التليدي) — it should now display correctly wherever you see it (Residents list, Balances, printed receipt) since the display-side sanitizer self-heals the already-corrupted stored value.
-2. **New paste test:** copy a phone number from your phone's Contacts app (the kind that triggered this originally) and paste it into the phone field when creating a new booking. It should now display correctly, both in the form and afterward in every list/receipt.
-3. **Typing still works:** typing a number manually should look exactly the same as before — no regression there.
-
-## One thing worth knowing
-
-This fix cleans up the DISPLAY everywhere, but it does NOT retroactively rewrite the corrupted value in the database — it just cleans it every time it's rendered. If you want the database itself cleaned (so raw exports/backups also have clean numbers), that would need a one-time migration script. Let me know if you want that — it's a quick script to write given the sanitizer already exists.
+1. **Print:** generate a receipt (سند قبض) for any booking — المبلغ المتبقي should show in red regardless of whether it's 0 or has an outstanding amount.
+2. **Delete confirmations on mobile:** try deleting a resident, a maintenance report, a pricing rule, and an expense — each confirm dialog should now stretch edge-to-edge as a proper bottom sheet, not float as a narrow box with gaps on both sides.
+3. **Payment tab on mobile:** open the payment ledger for any booking on your phone — resident name and apartment should each sit on their own line without overflowing, and the three totals (Total / Paid / Remaining) should fit cleanly without the numbers or currency label wrapping.

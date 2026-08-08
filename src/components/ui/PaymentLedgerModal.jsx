@@ -102,65 +102,75 @@ export default function PaymentLedgerModal({ booking, apartment, onClose }) {
         <div className="sheet-handle" />
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-md bg-accent-soft">
+        <div className="px-4 md:px-6 py-4 border-b border-hairline-soft dark:border-[#242424] flex justify-between items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="p-2 rounded-md bg-accent-soft shrink-0">
               <Wallet size={18} className="text-accent-strong" />
             </div>
-            <div>
-              <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg leading-tight">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg leading-tight truncate">
                 سجل المدفوعات
               </h3>
-              <p className="text-xs text-muted dark:text-[#a1a1aa] mt-0.5">
-                {booking.residentName} <span className="text-muted-soft">·</span> {apartment?.name || 'وحدة'}
-              </p>
+              {/* Resident + apartment: stacked on mobile (each gets its own
+                  line, truncates independently) since a long name joined
+                  with "· شقة X" on one line easily overflows a narrow
+                  screen. Desktop keeps the compact single-line dot-separated
+                  version since there's more horizontal room. */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1.5 mt-0.5 min-w-0">
+                <p className="text-xs text-muted dark:text-[#a1a1aa] truncate">{booking.residentName}</p>
+                <span className="hidden sm:inline text-muted-soft text-xs">·</span>
+                <p className="text-xs text-muted dark:text-[#a1a1aa] truncate">{apartment?.name || 'وحدة'}</p>
+              </div>
             </div>
           </div>
-          <button onClick={onClose} className="icon-action hover:text-accent">
+          <button onClick={onClose} className="icon-action hover:text-accent shrink-0">
             <X size={20} />
           </button>
         </div>
 
-        {/* Totals strip — the big numbers, three columns, hairline separators. */}
+        {/* Totals strip — the big numbers, three columns, hairline separators.
+            Smaller padding + font size on mobile — three columns of text-2xl
+            numbers with p-5 padding was too tight on narrow screens, causing
+            the amount + currency suffix to wrap awkwardly. */}
         <div className="grid grid-cols-3 divide-x divide-x-reverse divide-hairline-soft dark:divide-[#242424] border-b border-hairline-soft dark:border-[#242424] shrink-0">
-          <div className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa] mb-1.5">
+          <div className="p-3 md:p-5">
+            <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa] mb-1 md:mb-1.5">
               إجمالي الحجز
             </p>
             <p
-              className="text-2xl font-bold tracking-tight text-ink dark:text-white leading-none"
+              className="text-base md:text-2xl font-bold tracking-tight text-ink dark:text-white leading-none"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               {formatSAR(totalDue)}
-              <span className="text-xs font-medium text-muted mr-1">ر.س</span>
+              <span className="text-[10px] md:text-xs font-medium text-muted mr-1">ر.س</span>
             </p>
           </div>
-          <div className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa] mb-1.5">
+          <div className="p-3 md:p-5">
+            <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa] mb-1 md:mb-1.5">
               المدفوع
             </p>
             <p
-              className="text-2xl font-bold tracking-tight text-accent-strong leading-none"
+              className="text-base md:text-2xl font-bold tracking-tight text-accent-strong leading-none"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               {formatSAR(totalReceived)}
-              <span className="text-xs font-medium text-accent-strong/70 mr-1">ر.س</span>
+              <span className="text-[10px] md:text-xs font-medium text-accent-strong/70 mr-1">ر.س</span>
             </p>
           </div>
-          <div className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa] mb-1.5">
+          <div className="p-3 md:p-5">
+            <p className="text-[10px] md:text-[11px] font-semibold uppercase tracking-wider text-muted dark:text-[#a1a1aa] mb-1 md:mb-1.5">
               المتبقّي
             </p>
             <p
-              className={`text-2xl font-bold tracking-tight leading-none ${
+              className={`text-base md:text-2xl font-bold tracking-tight leading-none ${
                 balanceDue > 0 ? 'text-ink dark:text-white' : 'text-muted-soft'
               }`}
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               {formatSAR(balanceDue)}
-              <span className="text-xs font-medium text-muted mr-1">ر.س</span>
+              <span className="text-[10px] md:text-xs font-medium text-muted mr-1">ر.س</span>
             </p>
-            <div className="mt-2">
+            <div className="mt-1.5 md:mt-2">
               <PaymentStatusBadge status={status} />
             </div>
           </div>
