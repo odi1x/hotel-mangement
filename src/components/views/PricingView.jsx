@@ -307,10 +307,6 @@ export default function PricingView({ addTrigger = 0 }) {
             <option key={a.id} value={a.id}>{a.name}</option>
           ))}
         </select>
-        <button onClick={() => setShowAdd(true)} className="btn-accent h-10 px-4 shrink-0">
-          <Plus size={16} />
-          <span>جديدة</span>
-        </button>
       </div>
 
       {/* Rule list — plain */}

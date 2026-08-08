@@ -1,56 +1,35 @@
-# Rent Flow — Mobile FAB fix (context-aware primary action)
+# Rent Flow — Remove duplicate "New Rule" button on mobile Pricing
 
-You were right — real bug, sorry about that.
+Small fix. One file.
 
-## What happened
+## What was wrong
 
-When I made the desktop header button context-aware (r4 patch), I removed the internal "New X" buttons from ExpensesView, MaintenanceView, CleaningView, PricingView — assuming the header button covered it.
+R4 removed the desktop-row "New Rule" button from PricingView, but missed a **second, mobile-only duplicate** (`md:hidden`) sitting right above the rules list, next to the scope filter dropdown. That one survived because it was in a different spot in the file than the one I checked.
 
-**I missed that mobile has a completely separate primary-action button: the floating action button (FAB) in the bottom nav.** That FAB was hardcoded to always open "new booking" and only appeared on 3 tabs (Availability, Requests, Residents). It was never extended to Cleaning, Expenses, Maintenance, or Pricing.
-
-Once I removed those views' internal buttons, mobile users had zero way to create anything on those four tabs — no header button (desktop-only), no FAB (booking-only), nothing.
+Now that the mobile FAB (from the last patch) opens the same form, this button was redundant — pressing either one did the same thing.
 
 ## Fix
 
-Generalized the FAB the same way I generalized the desktop header button — one config table, same permission gates:
+Removed the mobile-only duplicate button. The scope-filter dropdown stays; it just no longer has a button glued to it.
 
-| View | FAB label | Permission |
-|---|---|---|
-| Availability, Requests, Residents, Apartments | حجز جديد | Everyone |
-| Cleaning | مهمة جديدة | Admin only |
-| Expenses | مصروف جديد | Admin or canEdit |
-| Maintenance | بلاغ جديد | Admin or canViewMaintenance |
-| Pricing | قاعدة جديدة | Admin or canViewPricing |
-| Everything else (Balances, Analytics, Settings, More) | — | FAB hidden |
+**Left untouched:** the "إنشاء قاعدة أولى" (Create first rule) button inside the empty state — that's a legitimate first-run affordance, not a toolbar duplicate. Same pattern exists in ExpensesView's empty state and is intentional.
 
-The FAB is always mounted (it's `position: fixed` in Layout, renders across every view — including views reached via "المزيد" like Cleaning/Expenses/Maintenance/Pricing, which aren't in the bottom bar itself). It just changes its icon-action and visibility based on the current view, mirroring the desktop header exactly.
+## Files touched (1)
 
-**Same trigger mechanism as desktop** — Layout already had `cleaningAddTrigger`, `expensesAddTrigger`, `maintenanceAddTrigger`, `pricingAddTrigger` counters wired to the header buttons. I passed the same setters down into `MobileBottomNav` so the FAB increments the same triggers. No duplicate logic, no new state — just reusing what the desktop button already does.
-
-## Files touched (2)
-
-- `src/components/layout/MobileBottomNav.jsx` — FAB is now context-aware
-- `src/components/layout/Layout.jsx` — passes the 4 trigger setters to MobileBottomNav
+- `src/components/views/PricingView.jsx`
 
 ## Install
 
 ```bash
-unzip -o rentflow-mobile-fab-fix.zip -d .
+unzip -o rentflow-pricing-btn-fix.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-mobile-fab-fix.zip
+rm -rf patch rentflow-pricing-btn-fix.zip
 
 git add -A
-git commit -m "fix: mobile FAB context-aware per tab (was booking-only, broke cleaning/expenses/maintenance/pricing creation on mobile)"
+git commit -m "fix: remove duplicate mobile New Rule button in PricingView (FAB covers it)"
 git push origin design-md-changes
 ```
 
-## Verify — on your phone
+## Verify
 
-1. **Cleaning tab** (via المزيد → التنظيف): green circle FAB appears bottom-right. Tap it → new cleaning task modal opens. (Admin only — if logged in as staff, FAB is hidden here, matching desktop.)
-2. **Expenses tab:** FAB opens the expense form.
-3. **Maintenance tab:** FAB opens the maintenance report form.
-4. **Pricing tab:** FAB opens the pricing rule form.
-5. **Availability / Requests / Residents / Apartments:** FAB still opens "new booking" — unchanged.
-6. **Balances / Analytics / Settings / More itself:** no FAB — matches desktop (no header button there either).
-
-Sorry again for missing this in the last round — should be solid now across both desktop and mobile.
+Open Pricing on your phone — only the scope-filter dropdown shows at the top now, no button next to it. The green FAB in the bottom nav still opens the new-rule form.
