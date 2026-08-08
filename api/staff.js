@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       }
 
       if (req.method === 'PUT') {
-        const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices } = req.body;
+        const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean } = req.body;
 
         const updateData = {
           name,
@@ -42,7 +42,8 @@ export default async function handler(req, res) {
           canViewBalances,
           canViewMaintenance,
           canViewPricing,
-          canViewPrices
+          canViewPrices,
+          canClean: canClean === true,
         };
 
         if (username && username !== staffMember.username) {
@@ -90,7 +91,8 @@ export default async function handler(req, res) {
           canViewBalances: true,
           canViewMaintenance: true,
           canViewPricing: true,
-          canViewPrices: true
+          canViewPrices: true,
+          canClean: true,
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -98,7 +100,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'POST') {
-      const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices } = req.body;
+      const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean } = req.body;
 
       if (!username || !password || !name) {
         return res.status(400).json({ message: 'Username, password, and name are required' });
@@ -130,7 +132,8 @@ export default async function handler(req, res) {
           canViewBalances,
           canViewMaintenance,
           canViewPricing,
-          canViewPrices
+          canViewPrices,
+          canClean: canClean === true,
         }
       });
 

@@ -25,8 +25,9 @@ export default async function handler(req, res) {
   if (resource === 'maintenance')    return maintenanceHandler(req, res, user);
   if (resource === 'pricing-rules')  return pricingRulesHandler(req, res, user);
   if (resource === 'expenses')       return expensesHandler(req, res, user);
+  if (resource === 'cleaning')       return cleaningHandler(req, res, user);
 
-  return res.status(400).json({ message: 'Unknown resource. Use ?resource=maintenance, ?resource=pricing-rules, or ?resource=expenses' });
+  return res.status(400).json({ message: 'Unknown resource. Use ?resource=maintenance | pricing-rules | expenses | cleaning' });
 }
 
 /* ------------------------------------------------------------------------- */
@@ -536,4 +537,308 @@ export async function syncMaintenanceExpense(issue) {
   } else {
     await prisma.expense.create({ data });
   }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Cleaning tasks                                                            */
+/* ------------------------------------------------------------------------- */
+
+// Fixed vocabulary for the areas grid. Frontend renders icons + labels
+// keyed off these values. Adding a new area = update this list + the
+// frontend's AREA_META object.
+const CLEANING_AREAS = ['bathroom', 'kitchen', 'bedroom', 'living_room', 'entrance', 'supplies', 'general', 'other'];
+
+/**
+ * Cleaning tasks handler.
+ *
+ * GET    ?resource=cleaning                → list all tasks for owner
+ * POST   ?resource=cleaning                → create task manually (admin)
+ * PUT    ?resource=cleaning&id=<id>        → update task (checklist, notes, status, complete)
+ * DELETE ?resource=cleaning&id=<id>        → delete task (admin only)
+ *
+ * Permission: `canClean` OR admin role to interact with tasks.
+ * Reads (GET) are broadly allowed to any authenticated user under the owner
+ *   — the sidebar controls visibility, but if someone hits the endpoint
+ *   directly, they get an empty list rather than a leak.
+ *
+ * Auto-backfill on first GET: if there are apartments with needsCleaning=true
+ * but no active task rows, we create tasks for them so the new Cleaning tab
+ * shows something on day one.
+ */
+async function cleaningHandler(req, res, user) {
+  const targetUserId = user.adminId || user.userId;
+  const canClean = user.role === 'admin' || user.canClean === true;
+
+  try {
+    if (req.method === 'GET') {
+      // Backfill: create tasks for currently-flagged apartments that don't
+      // already have an active task. One-time on first call after deploy.
+      await backfillCleaningTasks(targetUserId);
+
+      const tasks = await prisma.cleaningTask.findMany({
+        where: { userId: targetUserId },
+        include: {
+          apartment: { select: { id: true, name: true, type: true } },
+          starter: { select: { id: true, name: true, username: true } },
+          completer: { select: { id: true, name: true, username: true } },
+          booking: { select: { id: true, endDate: true, residentName: true } },
+        },
+        orderBy: [{ status: 'asc' }, { dueBy: 'asc' }, { scheduledFor: 'desc' }],
+      });
+      return res.status(200).json(tasks);
+    }
+
+    if (!canClean) {
+      return res.status(403).json({ message: 'Forbidden: cleaning permission required' });
+    }
+
+    if (req.method === 'POST') {
+      // Manual task creation (admin ad-hoc). Fields expected: apartmentId,
+      // optional checklist array, optional notes, optional dueBy.
+      const { apartmentId, checklist, notes, dueBy } = req.body || {};
+      if (!apartmentId) return res.status(400).json({ message: 'apartmentId required' });
+
+      // Verify apartment ownership.
+      const apt = await prisma.apartment.findFirst({
+        where: { id: apartmentId, userId: targetUserId },
+      });
+      if (!apt) return res.status(404).json({ message: 'Apartment not found' });
+
+      const task = await prisma.cleaningTask.create({
+        data: {
+          userId: targetUserId,
+          apartmentId,
+          status: 'pending',
+          checklist: sanitizeChecklist(checklist),
+          notes: notes || null,
+          dueBy: dueBy ? new Date(dueBy) : null,
+          scheduledFor: new Date(),
+        },
+        include: {
+          apartment: { select: { id: true, name: true, type: true } },
+        },
+      });
+
+      // Also flag the apartment so the "needs cleaning" badge shows.
+      await prisma.apartment.update({
+        where: { id: apartmentId },
+        data: { needsCleaning: true },
+      });
+
+      return res.status(201).json(task);
+    }
+
+    if (req.method === 'PUT') {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ message: 'Task id required' });
+
+      // Verify ownership.
+      const existing = await prisma.cleaningTask.findFirst({
+        where: { id, userId: targetUserId },
+      });
+      if (!existing) return res.status(404).json({ message: 'Task not found' });
+
+      const { action, checklist, notes, cleanerNotes, dueBy } = req.body || {};
+
+      // Action semantics:
+      //   'start'     → status pending → in_progress, startedBy/At recorded
+      //   'complete'  → status → done, completedBy/At recorded, apartment cleared
+      //   (no action) → generic edit: checklist / notes / dueBy
+      if (action === 'start') {
+        const updated = await prisma.cleaningTask.update({
+          where: { id },
+          data: {
+            status: 'in_progress',
+            startedBy: existing.startedBy || user.userId,
+            startedAt: existing.startedAt || new Date(),
+          },
+        });
+        return res.status(200).json(updated);
+      }
+
+      if (action === 'complete') {
+        const updated = await prisma.cleaningTask.update({
+          where: { id },
+          data: {
+            status: 'done',
+            completedBy: user.userId,
+            completedAt: new Date(),
+            cleanerNotes: cleanerNotes ?? existing.cleanerNotes,
+            checklist: checklist ? sanitizeChecklist(checklist) : existing.checklist,
+          },
+        });
+
+        // Clear the "needs cleaning" flag if there are no other active tasks
+        // for this apartment.
+        const stillActive = await prisma.cleaningTask.count({
+          where: {
+            apartmentId: existing.apartmentId,
+            status: { in: ['pending', 'in_progress'] },
+          },
+        });
+        if (stillActive === 0) {
+          await prisma.apartment.update({
+            where: { id: existing.apartmentId },
+            data: { needsCleaning: false, lastCleanedAt: new Date() },
+          });
+        }
+        return res.status(200).json(updated);
+      }
+
+      // Generic edit (admin adjusting checklist / notes / dueBy).
+      const data = {};
+      if (checklist !== undefined) data.checklist = sanitizeChecklist(checklist);
+      if (notes !== undefined) data.notes = notes || null;
+      if (dueBy !== undefined) data.dueBy = dueBy ? new Date(dueBy) : null;
+      if (cleanerNotes !== undefined) data.cleanerNotes = cleanerNotes || null;
+
+      const updated = await prisma.cleaningTask.update({ where: { id }, data });
+      return res.status(200).json(updated);
+    }
+
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ message: 'Task id required' });
+
+      // Only admin can delete (irreversible action).
+      if (user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+
+      const existing = await prisma.cleaningTask.findFirst({
+        where: { id, userId: targetUserId },
+      });
+      if (!existing) return res.status(404).json({ message: 'Task not found' });
+
+      await prisma.cleaningTask.delete({ where: { id } });
+      return res.status(204).end();
+    }
+
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  } catch (err) {
+    console.error('cleaningHandler error:', err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+/**
+ * Clean up a checklist submission. Ensures it's an array of well-formed
+ * items with only allowed areas, and coerces types. Silently drops
+ * malformed entries rather than throwing.
+ */
+function sanitizeChecklist(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const area = String(item.area || '').toLowerCase();
+    if (!CLEANING_AREAS.includes(area)) continue;
+    // "general" area has no note by design; others allow optional note.
+    const note = area === 'general' ? null : (item.note ? String(item.note).slice(0, 500) : null);
+    const checked = !!item.checked;
+    out.push({ area, note, checked });
+  }
+  return out;
+}
+
+/**
+ * Create cleaning tasks for apartments currently flagged needsCleaning=true
+ * that don't have an active task yet. Runs on every GET but is a no-op
+ * when everything's in sync (single COUNT-check, then early return).
+ *
+ * This makes the Cleaning tab useful on day one — otherwise apartments
+ * flagged from before this feature shipped would sit in "needs cleaning"
+ * limbo without appearing in the task list.
+ */
+async function backfillCleaningTasks(userId) {
+  // Cheap early return: if there are no dirty apartments, nothing to do.
+  const dirtyCount = await prisma.apartment.count({
+    where: { userId, needsCleaning: true },
+  });
+  if (dirtyCount === 0) return;
+
+  // Fetch dirty apartments AND their existing active tasks in parallel.
+  const [dirtyApts, activeTasks] = await Promise.all([
+    prisma.apartment.findMany({
+      where: { userId, needsCleaning: true },
+      select: { id: true },
+    }),
+    prisma.cleaningTask.findMany({
+      where: { userId, status: { in: ['pending', 'in_progress'] } },
+      select: { apartmentId: true },
+    }),
+  ]);
+
+  const withTaskSet = new Set(activeTasks.map(t => t.apartmentId));
+  const needBackfill = dirtyApts.filter(a => !withTaskSet.has(a.id));
+  if (needBackfill.length === 0) return;
+
+  await prisma.cleaningTask.createMany({
+    data: needBackfill.map(apt => ({
+      userId,
+      apartmentId: apt.id,
+      status: 'pending',
+      checklist: [],
+      scheduledFor: new Date(),
+    })),
+  });
+}
+
+/**
+ * Auto-create a cleaning task when a booking checks out. Called from
+ * bookings.js checkout handler. Idempotent: skips if a task already
+ * exists for this booking.
+ */
+export async function createCleaningTaskForBooking(booking, userId) {
+  const existing = await prisma.cleaningTask.findFirst({
+    where: { bookingId: booking.id },
+  });
+  if (existing) return existing;
+
+  // If there's a next booking scheduled for this apartment, its start date
+  // becomes the "due by" for this cleaning — urgency signal for the cleaner.
+  const nextBooking = await prisma.booking.findFirst({
+    where: {
+      apartmentId: booking.apartmentId,
+      startDate: { gt: booking.endDate },
+      status: 'active',
+    },
+    orderBy: { startDate: 'asc' },
+    select: { startDate: true },
+  });
+
+  return prisma.cleaningTask.create({
+    data: {
+      userId,
+      apartmentId: booking.apartmentId,
+      bookingId: booking.id,
+      status: 'pending',
+      checklist: [],
+      scheduledFor: booking.endDate,
+      dueBy: nextBooking?.startDate || null,
+    },
+  });
+}
+
+/**
+ * Called from apartments.js when the "mark cleaned" button flips
+ * needsCleaning to false. Marks any active tasks for the apartment as done.
+ */
+export async function completeActiveTasksForApartment(apartmentId, userId, completedByUserId) {
+  const activeTasks = await prisma.cleaningTask.findMany({
+    where: {
+      apartmentId,
+      userId,
+      status: { in: ['pending', 'in_progress'] },
+    },
+    select: { id: true },
+  });
+  if (activeTasks.length === 0) return;
+
+  await prisma.cleaningTask.updateMany({
+    where: { id: { in: activeTasks.map(t => t.id) } },
+    data: {
+      status: 'done',
+      completedBy: completedByUserId,
+      completedAt: new Date(),
+    },
+  });
 }

@@ -16,6 +16,7 @@ export const DataProvider = ({ children }) => {
   const [maintenanceIssues, setMaintenanceIssues] = useState([]);
   const [pricingRules, setPricingRules] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [cleaningTasks, setCleaningTasks] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
   const [loading] = useState(false);
@@ -63,6 +64,42 @@ export const DataProvider = ({ children }) => {
       const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=expenses`);
       setExpenses(res.data);
     } catch (err) { console.error(err); }
+  };
+
+  // --- Cleaning tasks -----------------------------------------------------
+  const fetchCleaningTasks = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=cleaning`);
+      setCleaningTasks(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const createCleaningTask = async (data) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=cleaning`, data);
+      setCleaningTasks(prev => [res.data, ...prev]);
+      // Apartment may have been flagged needsCleaning; re-fetch to sync badges.
+      fetchApartments();
+      return res.data;
+    } catch (err) { console.error(err); throw err; }
+  };
+
+  const updateCleaningTask = async (id, patch) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=cleaning&id=${id}`, patch);
+      setCleaningTasks(prev => prev.map(t => t.id === id ? { ...t, ...res.data } : t));
+      // If we just completed the task, needsCleaning may have been cleared —
+      // refresh apartments so the badge disappears immediately.
+      if (patch.action === 'complete') fetchApartments();
+      return res.data;
+    } catch (err) { console.error(err); throw err; }
+  };
+
+  const deleteCleaningTask = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=cleaning&id=${id}`);
+      setCleaningTasks(prev => prev.filter(t => t.id !== id));
+    } catch (err) { console.error(err); throw err; }
   };
 
   const createExpense = async (data) => {
@@ -122,6 +159,7 @@ export const DataProvider = ({ children }) => {
       fetchMaintenance();
       fetchPricingRules();
       fetchExpenses();
+      fetchCleaningTasks();
     }
   }, [token]);
 
@@ -358,6 +396,12 @@ export const DataProvider = ({ children }) => {
       createExpense,
       updateExpense,
       deleteExpense,
+
+      cleaningTasks,
+      fetchCleaningTasks,
+      createCleaningTask,
+      updateCleaningTask,
+      deleteCleaningTask,
 
       loading,
       isAnalyticsLoading

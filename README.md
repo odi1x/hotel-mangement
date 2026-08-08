@@ -1,80 +1,49 @@
-# Rent Flow — Compute burn reduction
+# Rent Flow — Header dropdown fix + Cleaning in mobile More menu
 
-Two focused changes that should cut your Neon CU-hour usage by roughly 60-80%. No behavior changes users will notice.
+Two things. Two files.
 
-## The two big offenders
+## 1. Profile menu doesn't open (desktop)
 
-**1. Notifications polling every 20 seconds, even when the tab was hidden.**
+Exact same bug as the notification dropdown a few patches back. The dropdown is portaled to `<body>` but styled with `md:absolute md:top-full md:left-0` — absolute positioning needs a positioned ancestor, and there is none inside `<body>`, so the panel renders at viewport (0,0), invisible under the header. Same `dropdownRef` was assigned to both the outer container AND the portaled panel, so click-outside detection was also broken.
 
-24 hours × 60 min × 3 polls/min = **4,320 database hits per day per open tab**, running whether you were looking at the page or not. Each poll is a small query but they add up massively over a month.
+**Fix — same pattern as NotificationsDropdown:**
+- Separate `buttonRef` (the profile button) from `dropdownRef` (the portaled panel)
+- On open, measure the button's viewport rect (`getBoundingClientRect()`)
+- Position the panel with inline `position: fixed`, anchored to the button's rect
+- **Auto-flip:** if the button is on the right half of the viewport (its normal RTL home), the panel anchors its right edge to the button's right edge and extends leftward. If it's on the left half, it mirrors. Clamped to viewport gutters either way so the panel never runs off-screen
+- Mobile fallback: `top: 64, left: 12, right: 12` — pinned near the top with small side gutters
+- Click-outside now correctly checks both refs
 
-**2. Analytics had no caching. Every chip toggle = full DB recompute.**
+Result: profile menu opens right below the profile button on desktop, correctly positioned.
 
-Analytics does the heaviest queries in the whole app (loops over all bookings, all expenses, all apartments, computes P&L per unit). Clicking chip → GET /api/analytics → full recompute every time. Toggling between "Month" and "Year" a few times could burn 6-8× the compute of a single view.
+## 2. Cleaning tab missing from mobile "More" menu
 
-## Fix 1: Notification polling — slower + smarter
+Sidebar had it, but I forgot to add it to `MobileMoreMenu.jsx` — which is what shows up when mobile users tap "المزيد" from the bottom nav. Now added:
 
-- Interval: **20s → 60s** (3× reduction on its own)
-- **Skip polling entirely when the tab is hidden** — if you're not looking at Rent Flow, don't waste compute pretending you are
-- The existing `focus` and `visibilitychange` listeners still fire an immediate refresh when you come back, so notifications never feel stale
-- Net effect: from ~4,320/day/tab down to ~1,440/day/tab if you leave the tab open all day. If you close the tab or switch away, it's much lower still.
-
-## Fix 2: Server-side response cache on /api/analytics
-
-- Module-level in-memory cache in `api/analytics.js`
-- Key includes userId + all query params that affect the response
-- **TTL: 30 seconds**
-- Serves cached response without touching the database
-- Cache lives across warm serverless invocations (Vercel reuses lambda instances for short periods — that's when hot-path chip toggling happens)
-- Cold starts miss the cache but that's fine, they'd have to hit the DB anyway
-- Cap at 200 entries with FIFO eviction so long-lived instances don't leak memory
-
-**Trade-off:** newly-added bookings/expenses can take up to 30 seconds to appear in Analytics. Given how rarely you'd add a booking then immediately check Analytics, and how much compute this saves, I think that's fine. If it bites you later we can tighten the TTL or add manual invalidation.
-
-## Expected impact
-
-Rough numbers for a single-user, single-tab session over a day:
-
-| Behavior | Before | After |
-|---|---|---|
-| Notification polls | ~4,320 | ~1,440 (tab active), 0 (hidden) |
-| Analytics fetch on chip toggle | full recompute | cached (if within 30s) |
-| Analytics fetch on booking add | full recompute | full recompute (unavoidable) |
-| Total DB CU-hours per day | (your baseline) | **est. 20-40% of baseline** |
-
-Should give you significant headroom on the 100 CU-hour Neon free tier. Whether it keeps you under the limit long-term depends on how much you use the app.
+- Sparkles icon (matches the sidebar)
+- Positioned between Expenses and Maintenance (matches sidebar order)
+- Gated on `admin OR canClean` (same rule as sidebar)
+- Pending-tasks badge (same badge count as the sidebar)
 
 ## Files touched (2)
 
-- `api/analytics.js` — response cache with 30s TTL
-- `src/context/NotificationContext.jsx` — polling interval to 60s + skip when hidden
+- `src/components/layout/Header.jsx` — profile dropdown position fix
+- `src/components/layout/MobileMoreMenu.jsx` — cleaning entry added
 
 ## Install
 
 ```bash
-unzip -o rentflow-compute-reduction.zip -d .
+unzip -o rentflow-header-cleaning-more.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-compute-reduction.zip
+rm -rf patch rentflow-header-cleaning-more.zip
 
 git add -A
-git commit -m "perf: server-side analytics cache (30s TTL) + slower notification polling (60s, skip when hidden)"
+git commit -m "fix: header dropdown position (same bug as notif), add cleaning to mobile more menu"
 git push origin design-md-changes
 ```
 
 ## Verify
 
-Nothing visible changes for the user. To confirm the cache is working, watch Vercel function logs while clicking Analytics chips — after the first call for a given filter, subsequent identical calls should complete much faster (they're returning from memory, not the DB).
-
-## What's still burning compute after this
-
-- Every apartment fetch, booking fetch, expense fetch on tab open (`DataContext` fires 6 parallel queries on mount)
-- Filter changes still fetch (but hit cache 30s later)
-- Booking mutations invalidate implicit "freshness" — but we don't manually bust the cache, so analytics may show 30s-old data
-
-If your CU budget still gets uncomfortable, next candidates:
-
-1. **Cache other endpoints too** — /api/apartments, /api/licenses, /api/pricingRules rarely change. TTL 5 minutes would be safe.
-2. **Lazy DataContext loading** — only fetch what the current view needs, instead of everything on mount. Bigger refactor.
-3. **Neon Launch tier ($19/mo)** — the surgical, boring option. 300 CU-hours vs 100.
-
-Say the word for any of those.
+1. **Desktop profile menu:** click your profile picture in the top-right → dropdown appears right below it with "إعدادات الحساب" and "تسجيل الخروج". Clicking elsewhere closes it.
+2. **Mobile More menu:** on your phone, tap "المزيد" in the bottom nav → the list should now include "التنظيف" between "المصروفات" and "الصيانة", with a Sparkles icon and pending-count badge.
+3. **Cleaning permission:** if you log in as a staff user with `canClean: false`, the Cleaning entry should NOT appear in the More menu.

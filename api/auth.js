@@ -33,7 +33,7 @@ export default async function handler(req, res) {
       if (!isPasswordValid) return res.status(401).json({ message: 'Invalid credentials' });
 
       const token = jwt.sign({
-        userId: user.id, username: user.username, role: user.role, adminId: user.adminId
+        userId: user.id, username: user.username, role: user.role, adminId: user.adminId, canClean: user.canClean, name: user.name
       }, JWT_SECRET, { expiresIn: '7d' });
 
       return res.status(200).json({
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
           role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices
+            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
           }
         }
       });
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       });
 
       const token = jwt.sign({
-        userId: user.id, username: user.username, role: user.role, adminId: user.adminId
+        userId: user.id, username: user.username, role: user.role, adminId: user.adminId, canClean: user.canClean, name: user.name
       }, JWT_SECRET, { expiresIn: '7d' });
 
       return res.status(201).json({
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
           role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices
+            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
           }
         }
       });
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices
+          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
         }
       });
     }
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices
+          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
         }
       });
     }

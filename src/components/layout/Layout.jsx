@@ -14,6 +14,7 @@ import BalancesView from '../views/BalancesView';
 import MaintenanceView from '../views/MaintenanceView';
 import PricingView from '../views/PricingView';
 import ExpensesView from '../views/ExpensesView';
+import CleaningView from '../views/CleaningView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
@@ -30,6 +31,7 @@ const GATED_VIEW_PERM = {
   pricing:     'canViewPricing',
   analytics:   'canViewAnalytics',
   expenses:    'canViewAnalytics',  // expenses are financial data — same permission gate
+  cleaning:    'canClean',
   settings:    'canViewSettings',
 };
 
@@ -46,6 +48,15 @@ export default function Layout() {
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [initialBookingData, setInitialBookingData] = useState({});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Per-view "primary action" triggers. Each is a counter that increments
+  // every time Layout's top-right button is clicked on the matching view.
+  // Child views watch the number via useEffect and open their own add-modal
+  // when it changes. Counter (rather than boolean) means repeated clicks
+  // reliably fire even if the child already closed the modal.
+  const [cleaningAddTrigger,    setCleaningAddTrigger]    = useState(0);
+  const [expensesAddTrigger,    setExpensesAddTrigger]    = useState(0);
+  const [maintenanceAddTrigger, setMaintenanceAddTrigger] = useState(0);
+  const [pricingAddTrigger,     setPricingAddTrigger]     = useState(0);
 
   // Wrap setView so unauthorized navigation is blocked at the source.
   // Admin bypasses gating. Non-gated views (availability, apartments,
@@ -91,26 +102,40 @@ export default function Layout() {
   const getViewTitle = () => {
     switch (view) {
       case 'availability': return 'جدول التوفر';
-      case 'apartments': return 'إدارة الشقق';
-      case 'residents': return 'سجل النزلاء';
-      case 'balances': return 'المستحقات المالية';
-      case 'maintenance': return 'سجل الصيانة';
-      case 'pricing': return 'الأسعار الموسمية';
-      case 'analytics': return 'تحليلات الأداء';
-      case 'settings': return 'الإعدادات';
-      case 'requests': return 'طلبات الحجز';
-      case 'more': return 'المزيد';
+      case 'apartments':   return 'إدارة الشقق';
+      case 'residents':    return 'سجل النزلاء';
+      case 'balances':     return 'المستحقات المالية';
+      case 'expenses':     return 'المصروفات';
+      case 'cleaning':     return 'التنظيف';
+      case 'maintenance':  return 'سجل الصيانة';
+      case 'pricing':      return 'الأسعار الموسمية';
+      case 'analytics':    return 'تحليلات الأداء';
+      case 'settings':     return 'الإعدادات';
+      case 'requests':     return 'طلبات الحجز';
+      case 'more':         return 'المزيد';
       default: return '';
     }
   };
 
   const getViewSubtitle = () => {
+    // Each view has its own subtitle. Kept short and specific to what the
+    // user actually does on that page — the previous shared "manage rentals"
+    // fallback was showing on multiple tabs (Expenses, Cleaning, Analytics)
+    // and made every page feel identical.
     switch (view) {
-      case 'balances':    return 'تتبّع الدفعات والأرصدة المتبقية على الحجوزات.';
-      case 'maintenance': return 'وثّق بلاغات الصيانة وتتبّع حالتها حتى الحل.';
-      case 'pricing':     return 'اضبط أسعار المواسم والفترات الخاصة تلقائياً.';
-      case 'more':        return null;
-      default:            return 'إدارة التأجير اليومي والأسبوعي والشهري بدقة.';
+      case 'availability': return 'شاهد وأدِر أشغال الوحدات في التقويم اليومي.';
+      case 'apartments':   return 'شقق ومرافق، بيانات وأسعار، مشاركة روابط الحجز.';
+      case 'residents':    return 'كل الحجوزات القادمة والحالية والسابقة في مكان واحد.';
+      case 'balances':     return 'تتبّع الدفعات والأرصدة المتبقية على الحجوزات.';
+      case 'expenses':     return 'سجّل مصروفاتك اليومية والمتكرّرة وتابع أين تذهب أموالك.';
+      case 'cleaning':     return 'تابع مهام تنظيف الوحدات بعد المغادرة والمهام الإضافية.';
+      case 'maintenance':  return 'وثّق بلاغات الصيانة وتتبّع حالتها حتى الحل.';
+      case 'pricing':      return 'اضبط أسعار المواسم والفترات الخاصة تلقائياً.';
+      case 'analytics':    return 'مؤشرات الإيرادات، المصروفات، والربحية حسب الوحدة.';
+      case 'settings':     return 'إدارة الحساب، الموظفين، والتفضيلات العامة.';
+      case 'requests':     return 'راجع طلبات الحجز الواردة عبر الرابط العام.';
+      case 'more':         return null;
+      default:             return null;
     }
   };
 
@@ -153,13 +178,50 @@ export default function Layout() {
                 </button>
               )}
 
-              {view !== 'balances' && view !== 'maintenance' && view !== 'pricing' && view !== 'more' && (
+              {/* Primary action — depends on the current view. */}
+              {(view === 'availability' || view === 'residents' || view === 'apartments' || view === 'requests') && (
                 <button
                   onClick={() => setIsBookingByDate(true)}
                   className="btn-accent"
                 >
                   <Plus size={18} />
                   <span>حجز جديد</span>
+                </button>
+              )}
+              {view === 'cleaning' && (user?.role === 'admin') && (
+                <button
+                  onClick={() => setCleaningAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>مهمة جديدة</span>
+                </button>
+              )}
+              {view === 'expenses' && (user?.role === 'admin' || user?.permissions?.canEdit) && (
+                <button
+                  onClick={() => setExpensesAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>مصروف جديد</span>
+                </button>
+              )}
+              {view === 'maintenance' && (user?.role === 'admin' || user?.permissions?.canViewMaintenance) && (
+                <button
+                  onClick={() => setMaintenanceAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>بلاغ جديد</span>
+                </button>
+              )}
+              {view === 'pricing' && (user?.role === 'admin' || user?.permissions?.canViewPricing) && (
+                <button
+                  onClick={() => setPricingAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>قاعدة جديدة</span>
                 </button>
               )}
             </div>
@@ -177,9 +239,10 @@ export default function Layout() {
             {view === 'apartments' && <ApartmentsView setView={setView} />}
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
             {view === 'balances' && <BalancesView />}
-            {view === 'expenses' && <ExpensesView initialFilter={viewFilter} />}
-            {view === 'maintenance' && <MaintenanceView />}
-            {view === 'pricing' && <PricingView />}
+            {view === 'expenses' && <ExpensesView initialFilter={viewFilter} addTrigger={expensesAddTrigger} />}
+            {view === 'cleaning' && <CleaningView addTrigger={cleaningAddTrigger} />}
+            {view === 'maintenance' && <MaintenanceView addTrigger={maintenanceAddTrigger} />}
+            {view === 'pricing' && <PricingView addTrigger={pricingAddTrigger} />}
             {view === 'analytics' && <AnalyticsView setView={setView} />}
             {view === 'settings' && <SettingsView />}
             {view === 'more' && (

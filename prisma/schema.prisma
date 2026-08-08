@@ -24,6 +24,7 @@ model User {
   canViewMaintenance  Boolean     @default(true)
   canViewPricing      Boolean     @default(true)
   canViewPrices       Boolean     @default(true)
+  canClean            Boolean     @default(false)
   businessName     String?
   tourismLicense   String?
   logoUrl          String?
@@ -49,6 +50,9 @@ model User {
   pushSubscriptions PushSubscription[]
   maintenanceIssues MaintenanceIssue[]
   pricingRules      PricingRule[]
+  cleaningTasksOwned    CleaningTask[] @relation("CleaningTaskOwner")
+  cleaningTasksStarted  CleaningTask[] @relation("CleaningTaskStarter")
+  cleaningTasksCompleted CleaningTask[] @relation("CleaningTaskCompleter")
 }
 
 model License {
@@ -89,6 +93,7 @@ model Apartment {
   maintenanceIssues  MaintenanceIssue[]
   pricingRules       PricingRule[]
   expenses           Expense[]
+  cleaningTasks      CleaningTask[]
 
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   license       License?  @relation(fields: [licenseId], references: [id], onDelete: SetNull)
@@ -117,6 +122,7 @@ model Booking {
   apartment     Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments      Payment[]
+  cleaningTasks CleaningTask[]
 }
 
 model Payment {
@@ -267,4 +273,47 @@ model PushSubscription {
   createdAt    DateTime @default(now())
 
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A cleaning task for an apartment. Auto-created when a booking checks
+/// out (needsCleaning flag flips to true), or created manually by admin
+/// for ad-hoc cleanings.
+///
+/// The checklist is a JSON array of { area, note, checked } — decided
+/// per-task by admin. Empty array = no checklist, cleaner just taps the
+/// single "Done" button. Admin can add areas from a fixed vocabulary
+/// (bathroom, kitchen, bedroom, living_room, entrance, supplies,
+/// general, other). Notes are per-area, optional (except "general"
+/// which has no note by design).
+///
+/// startedBy / completedBy record which user actioned the task. Fastest
+/// path is direct completion (skip started); we track completedBy
+/// regardless. Used for admin's "who cleaned what" history.
+model CleaningTask {
+  id           String    @id @default(uuid())
+  userId       String                     /// owner (multi-tenant)
+  apartmentId  String
+  bookingId    String?                    /// null for manual/ad-hoc tasks
+  status       String    @default("pending")  /// 'pending' | 'in_progress' | 'done'
+  checklist    Json      @default("[]")   /// [{ area, note, checked }]
+  notes        String?                    /// free-form task-level notes from admin
+  cleanerNotes String?                    /// cleaner's own notes when finishing
+  dueBy        DateTime?                  /// usually next check-in date after checkout
+  scheduledFor DateTime                   /// when the task becomes actionable (checkout date, or now for ad-hoc)
+  startedBy    String?
+  startedAt    DateTime?
+  completedBy  String?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user      User      @relation("CleaningTaskOwner",     fields: [userId],      references: [id], onDelete: Cascade)
+  starter   User?     @relation("CleaningTaskStarter",   fields: [startedBy],   references: [id], onDelete: SetNull)
+  completer User?     @relation("CleaningTaskCompleter", fields: [completedBy], references: [id], onDelete: SetNull)
+  apartment Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  booking   Booking?  @relation(fields: [bookingId],   references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([apartmentId])
+  @@index([bookingId])
 }
