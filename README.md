@@ -1,54 +1,59 @@
-# Rent Flow — Print red text + mobile modal width + payment tab mobile layout
+# Rent Flow — Edit-resident datepicker NaN bug + re-verified print red
 
-Three fixes. Six files.
+Two files.
 
-## 1. المبلغ المتبقي now always red on the printed receipt
+## 1. "undefined NaN" when editing a resident's dates — real bug, fixed
 
-Was conditionally black when the balance was fully paid (0 remaining), red only when there was an outstanding amount. Now always red regardless of the amount, per your request.
+Same root cause as the earlier Analytics datepicker bug, different location this time.
 
-## 2. Delete confirmation modals not using full width on mobile
+`DatePickerCal` strictly expects `YYYY-MM-DD` strings. It parses like this:
+```js
+const parse = (s) => { const [y, m, dd] = s.split('-').map(Number); return new Date(y, m-1, dd); };
+```
 
-**Root cause:** four confirm-delete modals (Residents, Maintenance, Pricing, Expenses) all had the same bug — the outer wrapper correctly set up a mobile bottom-sheet layout (`items-end`, no horizontal padding), but the modal box itself was capped with `max-w-sm` (384px) **unconditionally**, even on mobile. Since `max-w-sm` applied regardless of screen size, on phones with any viewport width the box would center itself with dead space on both sides instead of stretching edge-to-edge like a proper bottom sheet.
+When you open the edit form for an existing resident/booking, `BookingForm` was passing the booking's `startDate`/`endDate` straight from the API — which come back as full ISO datetimes (`"2026-08-05T00:00:00.000Z"`). Splitting that on `-` gives `["2026", "08", "05T00:00:00.000Z"]`, and `Number("05T00:00:00.000Z")` is `NaN`. Every date field downstream (month name, day number, arrival/departure labels) inherited that NaN — exactly the "undefined NaN" you saw.
 
-**Fix:** changed `max-w-sm` → `md:max-w-sm` in all four spots — the width cap now only applies on desktop (≥768px), where it becomes a small centered dialog. On mobile it's a full-width bottom sheet, matching the pattern used everywhere else in the app (Cleaning task modal, Add Task modal, etc.).
+**Fix:** added a small `toDateStr()` helper (same pattern already correctly used in `PricingRuleForm`, which is why that one never had this bug) that converts any incoming date — ISO string, Date object, whatever — into clean `YYYY-MM-DD` before it reaches `dateValue` state. Applied on the initial state so editing now shows the real dates immediately.
 
-I swept the whole codebase for this exact class combination afterward and confirmed no other instances remain.
+I checked every other place that feeds `DatePickerCal`:
+- `BookByDateModal` — always starts empty, no bug there.
+- `PricingRuleForm` — already had the correct conversion, unaffected.
+- `PublicBookingView`, `AnalyticsView` — already fixed in earlier patches.
 
-## 3. Payment tab resident info — mobile layout cleanup
+`BookingForm` was the only one still broken.
 
-Two things were cramped on narrow screens:
+## 2. Red remaining-amount on print — re-verified, code is correct
 
-**A) Header text.** The resident name and apartment name were joined on one line with a "·" separator (`{residentName} · {apartmentName}`), with no `truncate` and no `min-w-0` on the flex container — so a longer resident name could overflow past the close button or wrap awkwardly, especially combined with the icon block on the left.
+I checked the current code and the fix from the last patch IS in place:
 
-Fixed: on mobile, resident name and apartment now stack on **separate lines**, each independently truncated. On desktop (≥640px, `sm:`) they go back to the compact single-line dot-separated version since there's more room there.
+```jsx
+<p className="text-lg font-black text-red-600">
+  {formatSAR(balanceDue)} ر.س
+</p>
+```
 
-**B) The three-column totals strip** (إجمالي الحجز / المدفوع / المتبقّي). `text-2xl` bold numbers in three tight `p-5` columns left very little room per column on a 360-390px phone — the amount + "ر.س" suffix could wrap, and the payment-status badge below the remaining-amount column got squeezed.
+No conditional, no override elsewhere in the codebase (I searched for every occurrence of "المبلغ المتبقي" — there's only the one, inside `PrintAgreement.jsx`), and no print-specific CSS forcing colors back to black. I also confirmed Tailwind's `red` color palette isn't overridden in `tailwind.config.js` (the `extend.colors` block adds custom tokens but never touches the default `red` key), so `text-red-600` should generate normally.
 
-Fixed: reduced padding and font size on mobile only (`p-3` vs `p-5`, `text-base` vs `text-2xl`, smaller labels), full size restored at `md:` breakpoint. Numbers, currency suffix, and the status badge now fit comfortably without wrapping.
+**Most likely explanation:** the previous patch (`rentflow-print-mobile-fixes.zip`) hadn't been deployed yet when you tested. I'm re-shipping `PrintAgreement.jsx` again in this patch (identical to last time) just to be safe — if it's still black after deploying THIS patch, there's something environment-specific going on (browser print settings stripping color, a caching issue, etc.) and I'll need a fresh screenshot of the printed/PDF output to dig further.
 
-## Files touched (6)
+## Files touched (2)
 
-- `src/components/ui/PrintAgreement.jsx` — red remaining-amount
-- `src/components/ui/PaymentLedgerModal.jsx` — mobile header + totals-strip layout
-- `src/components/views/ResidentsView.jsx` — delete-confirm width
-- `src/components/views/MaintenanceView.jsx` — delete-confirm width
-- `src/components/views/PricingView.jsx` — delete-confirm width
-- `src/components/views/ExpensesView.jsx` — delete-confirm width
+- `src/components/ui/BookingForm.jsx` — date conversion fix
+- `src/components/ui/PrintAgreement.jsx` — re-shipped, unchanged from last patch
 
 ## Install
 
 ```bash
-unzip -o rentflow-print-mobile-fixes.zip -d .
+unzip -o rentflow-edit-date-print-fix.zip -d .
 cp -r patch/. .
-rm -rf patch rentflow-print-mobile-fixes.zip
+rm -rf patch rentflow-edit-date-print-fix.zip
 
 git add -A
-git commit -m "fix: red remaining-amount in print, mobile delete-confirm full-width, payment tab mobile layout cleanup"
+git commit -m "fix: edit-resident datepicker NaN (ISO vs YYYY-MM-DD mismatch), re-verify print red remaining-amount"
 git push origin design-md-changes
 ```
 
 ## Verify
 
-1. **Print:** generate a receipt (سند قبض) for any booking — المبلغ المتبقي should show in red regardless of whether it's 0 or has an outstanding amount.
-2. **Delete confirmations on mobile:** try deleting a resident, a maintenance report, a pricing rule, and an expense — each confirm dialog should now stretch edge-to-edge as a proper bottom sheet, not float as a narrow box with gaps on both sides.
-3. **Payment tab on mobile:** open the payment ledger for any booking on your phone — resident name and apartment should each sit on their own line without overflowing, and the three totals (Total / Paid / Remaining) should fit cleanly without the numbers or currency label wrapping.
+1. **Edit dates:** open an existing resident/booking, tap to edit check-in/check-out dates — the calendar should show real numbers and month names, arrival/departure labels should show actual dates, not "undefined NaN".
+2. **Print red:** generate a سند قبض receipt for any booking, check المبلغ المتبقي — should be red. If it's still black after this deploy, send me a fresh screenshot of the print preview specifically (not the app UI) so I can see exactly what's rendering.

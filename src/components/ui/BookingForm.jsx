@@ -20,9 +20,22 @@ export default function BookingForm({ onClose, initialData }) {
     }
   }, [user]);
 
+  // DatePickerCal strictly expects 'YYYY-MM-DD' strings — it parses via
+  // s.split('-').map(Number), so a full ISO datetime string (what the API
+  // returns for existing bookings, e.g. "2026-08-05T00:00:00.000Z") breaks
+  // it: the day segment becomes "05T00:00:00.000Z" and Number(...) on that
+  // is NaN. Convert on the way in so editing an existing booking's dates
+  // shows correctly instead of "undefined NaN".
+  const toDateStr = (d) => {
+    if (!d) return null;
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return null;
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
   const [dateValue, setDateValue] = useState({
-    startDate: initialData?.startDate || null,
-    endDate: initialData?.endDate || null
+    startDate: toDateStr(initialData?.startDate),
+    endDate: toDateStr(initialData?.endDate)
   });
   const [showCal, setShowCal] = useState(!(initialData?.startDate && initialData?.endDate));
 
