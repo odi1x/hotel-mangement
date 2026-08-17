@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import DatePickerCal from '../ui/DatePickerCal';
+import { sanitizePhone } from '../../lib/phoneUtils';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ChevronRight, Calendar, User, Phone, CheckCircle, Image as ImageIcon, MapPin, X } from 'lucide-react';
 
@@ -268,7 +269,7 @@ export default function PublicBookingView() {
                       type="tel" required dir="ltr"
                       className="w-full pl-12 pr-4 py-3.5 bg-canvas border border-hairline rounded-md focus:border-ink outline-none transition-colors font-medium text-left"
                       placeholder="+966 5X XXX XXXX"
-                      value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})}
+                      value={formData.phone} onChange={e => setFormData({...formData, phone: sanitizePhone(e.target.value)})}
                     />
                   </div>
                 </div>

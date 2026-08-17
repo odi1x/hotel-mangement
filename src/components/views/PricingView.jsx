@@ -307,10 +307,6 @@ export default function PricingView({ addTrigger = 0 }) {
             <option key={a.id} value={a.id}>{a.name}</option>
           ))}
         </select>
-        <button onClick={() => setShowAdd(true)} className="btn-accent h-10 px-4 shrink-0">
-          <Plus size={16} />
-          <span>جديدة</span>
-        </button>
       </div>
 
       {/* Rule list — plain */}
@@ -424,7 +420,7 @@ export default function PricingView({ addTrigger = 0 }) {
       {confirmDelete && createPortal(
         <div className="fixed inset-0 z-[90] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
           <div className="absolute inset-0" onClick={() => setConfirmDelete(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full md:max-w-sm border border-hairline dark:border-hairline-dark-soft overflow-hidden">
             <div className="p-6 text-center">
               <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-4">
                 <AlertTriangle className="h-7 w-7 text-ink dark:text-white" />

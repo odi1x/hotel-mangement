@@ -1,6 +1,8 @@
 import { Printer } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
+import { sanitizePhone } from '../../lib/phoneUtils';
 
 export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
   const { apartments } = useData();
@@ -28,6 +30,12 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
     : 0;
   const total = subtotal + taxAmount;
 
+  // Real payment status — how much has actually been collected vs what's
+  // still outstanding. Only shown on the receipt/financial-report document
+  // (documentType === 'voucher'); the rental agreement/confirmation doesn't
+  // need a payment breakdown, it's a contract, not a receipt.
+  const { totalReceived, balanceDue } = computeBookingTotals(booking);
+
   const handlePrint = () => {
 
     const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
@@ -44,7 +52,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
 
   return (
-    <div className="fixed inset-0 bg-white z-[100] flex flex-col items-center p-10 overflow-y-auto" dir="rtl">
+    <div className="print-root fixed inset-0 bg-white z-[100] flex flex-col items-center p-10 overflow-y-auto" dir="rtl">
       <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper">
         <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
             <div>
@@ -76,7 +84,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المستأجر / النزيل</p>
                         <p className="font-black uppercase text-gray-900">{booking.residentName}</p>
                         <p className="text-sm font-medium mt-1">رقم الهوية: {booking.residentId}</p>
-                        <p className="text-sm font-medium">هاتف: {booking.phone}</p>
+                        <p className="text-sm font-medium">هاتف: <span dir="ltr">{sanitizePhone(booking.phone)}</span></p>
                         <p className="text-xs text-gray-500 mt-1">{booking.address}</p>
                     </div>
                 </div>
@@ -121,6 +129,36 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                     </div>
                 </div>
             </section>
+
+            {/* Payment status — only on the receipt/financial-report document.
+                The rental agreement (documentType === 'confirmation') is a
+                contract, not a receipt, so it doesn't need a paid/due
+                breakdown. Shows what's actually been collected vs what
+                remains outstanding, computed from real payment records
+                (not the theoretical total above). */}
+            {documentType === 'voucher' && (
+              <section>
+                  <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-accent">رابعاً: حالة السداد</h3>
+                  <div className="grid grid-cols-3 gap-6">
+                      <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">المبلغ المدفوع</p>
+                          <p className="text-lg font-black text-gray-900">{formatSAR(totalReceived)} ر.س</p>
+                      </div>
+                      <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">المبلغ المتبقي</p>
+                          <p className="text-lg font-black text-red-600">
+                            {formatSAR(balanceDue)} ر.س
+                          </p>
+                      </div>
+                      <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">حالة السداد</p>
+                          <p className="text-lg font-black text-gray-900">
+                            {balanceDue <= 0.01 ? 'مسدد بالكامل' : totalReceived > 0.01 ? 'سداد جزئي' : 'غير مسدد'}
+                          </p>
+                      </div>
+                  </div>
+              </section>
+            )}
 
             {documentType !== 'voucher' && (<section className="pt-10 border-t-2 border-dashed border-gray-200 mt-10">
                 <p className="text-xs text-gray-500 font-medium leading-relaxed text-justify whitespace-pre-wrap">

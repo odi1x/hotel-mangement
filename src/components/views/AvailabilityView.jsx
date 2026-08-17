@@ -4,6 +4,7 @@ import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, 
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { sanitizePhone } from '../../lib/phoneUtils';
 
 // Curated soft per-unit palette — muted pastels, calm not neon.
 // Green is deliberately excluded so it never collides with the emerald
@@ -636,7 +637,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 </div>
                 <div className="bg-surface-card dark:bg-surface-dark-elevated p-3 rounded-lg">
                   <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><Phone size={12} className="ml-1"/> رقم التواصل</div>
-                  <div className="font-semibold text-sm text-ink dark:text-white" dir="ltr">{selectedBookingDetails.phone}</div>
+                  <div className="font-semibold text-sm text-ink dark:text-white" dir="ltr">{sanitizePhone(selectedBookingDetails.phone)}</div>
                 </div>
               </div>
 

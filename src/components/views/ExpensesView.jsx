@@ -550,7 +550,7 @@ function DeleteConfirmModal({ onCancel, onConfirm }) {
       dir="rtl"
     >
       <div className="absolute inset-0" onClick={onCancel} />
-      <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft anim-sheet">
+      <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full md:max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft anim-sheet">
         <div className="sheet-handle" />
         <div className="p-5">
           <h3 className="font-semibold text-ink dark:text-white text-base mb-1">حذف هذا المصروف؟</h3>
