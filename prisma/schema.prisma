@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id               String      @id @default(uuid())
+  username         String      @unique
+  password         String
+  name             String?
+  profilePicture   String?
+  role             String      @default("admin")
+  adminId          String?
+  canBook             Boolean     @default(true)
+  canEdit             Boolean     @default(true)
+  canDelete           Boolean     @default(true)
+  canViewAnalytics    Boolean     @default(true)
+  canViewSettings     Boolean     @default(true)
+  canViewBalances     Boolean     @default(true)
+  canViewMaintenance  Boolean     @default(true)
+  canViewPricing      Boolean     @default(true)
+  canViewPrices       Boolean     @default(true)
+  canClean            Boolean     @default(false)
+  businessName     String?
+  tourismLicense   String?
+  logoUrl          String?
+  stampUrl         String?
+  customTerms      String?
+  taxEnabled       Boolean     @default(false)
+  taxPercentage    Decimal?
+  apartmentTypes   String?
+  bookingSources   String?
+
+  generalExpenses  Decimal?
+
+  createdAt        DateTime    @default(now())
+
+  admin            User?       @relation("AdminStaff", fields: [adminId], references: [id])
+  staff            User[]      @relation("AdminStaff")
+
+  apartments        Apartment[]
+  bookings          Booking[]
+  licenses          License[]
+  expenses          Expense[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+  maintenanceIssues MaintenanceIssue[]
+  pricingRules      PricingRule[]
+  cleaningTasksOwned    CleaningTask[] @relation("CleaningTaskOwner")
+  cleaningTasksStarted  CleaningTask[] @relation("CleaningTaskStarter")
+  cleaningTasksCompleted CleaningTask[] @relation("CleaningTaskCompleter")
+}
+
+model License {
+  id             String    @id @default(uuid())
+  userId         String
+  licenseNumber  String
+  expirationDate DateTime?
+  createdAt      DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apartments    Apartment[]
+}
+
+model Apartment {
+  id            String    @id @default(uuid())
+  userId        String
+  name          String
+  type          String
+  description   String?
+  basePrice     Decimal
+  needsCleaning Boolean   @default(false)
+  lastCleanedAt DateTime  @default(now())
+
+  // Per-booking fees — these are pricing parameters, not expenses.
+  // Applied to each booking's math; not tracked separately in the ledger.
+  cleaningFeePerStay Decimal?
+  platformFeeType    String?
+  platformFee        Decimal?
+
+  images             String[]  @default([])
+  coverPhoto         String?
+
+  licenseId     String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  bookings           Booking[]
+  maintenanceIssues  MaintenanceIssue[]
+  pricingRules       PricingRule[]
+  expenses           Expense[]
+  cleaningTasks      CleaningTask[]
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  license       License?  @relation(fields: [licenseId], references: [id], onDelete: SetNull)
+}
+
+model Booking {
+  id            String    @id @default(uuid())
+  userId        String
+  apartmentId   String
+  residentName  String
+  residentId    String
+  phone         String
+  address       String?
+  pricePerNight Decimal
+  totalPrice    Decimal?
+  source        String    @default("زيارة مباشرة")
+  startDate     DateTime
+  endDate       DateTime
+  status          String    @default("active")
+  notes           String?
+  customerRequest String?
+  creatorName     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  apartment     Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+  cleaningTasks CleaningTask[]
+
+  @@index([userId, startDate])
+  @@index([apartmentId, startDate, endDate])
+}
+
+model Payment {
+  id          String    @id @default(uuid())
+  bookingId   String
+  userId      String
+  amount      Decimal
+  date        DateTime  @default(now())
+  method      String    @default("cash")
+  type        String    @default("payment")
+  notes       String?
+  collectedBy String?
+  createdAt   DateTime  @default(now())
+
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([userId])
+  @@index([bookingId, date])
+}
+
+/// A single maintenance issue against an apartment. History is preserved
+/// forever (no delete-on-resolve) so the analytics view can eventually surface
+/// repeat problems per unit and total maintenance costs per period.
+model MaintenanceIssue {
+  id          String    @id @default(uuid())
+  apartmentId String
+  userId      String    // owner (admin) userId — scopes queries
+  title       String
+  description String?
+  category    String    @default("other")
+  // "hvac" | "plumbing" | "electrical" | "furniture" | "appliances" | "deep_clean" | "other"
+  severity    String    @default("normal")
+  // "urgent" | "normal" | "improvement"
+  status      String    @default("open")
+  // "open" | "in_progress" | "resolved"
+  reportedBy  String?   // staff name who logged the issue
+  cost        Decimal?  // final cost after resolution (feeds owner statements later)
+  contractor  String?   // who fixed it — helps track which vendors are reliable
+  notes       String?
+  images      String[]  @default([])
+  reportedAt  DateTime  @default(now())
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([apartmentId])
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status, reportedAt])
+}
+
+/// A seasonal or dynamic pricing rule. Applies to either a specific apartment
+/// (apartmentId set) or ALL apartments (apartmentId null). When multiple rules
+/// overlap on a date, the one with the highest `priority` wins. Ties are broken
+/// by specificity: a unit-specific rule beats a global rule at equal priority.
+model PricingRule {
+  id           String    @id @default(uuid())
+  userId       String    // owner (admin) userId — scopes queries
+  apartmentId  String?   // null = applies to all apartments
+  label        String    // e.g. "موسم الحج ١٤٤٧", "شهر رمضان", "عطلة نهاية الأسبوع"
+  startDate    DateTime
+  endDate      DateTime
+  priceMode    String    @default("multiplier")  // "fixed" or "multiplier"
+  value        Decimal   // if fixed: SAR/night. if multiplier: e.g. 2.5 = 2.5×basePrice
+  priority     Int       @default(50)  // 0–100; higher wins on overlap
+  daysOfWeek   Int[]     @default([])  // [] = every day; else 0=Sun..6=Sat, so Saudi weekend = [5,6]
+  color        String    @default("#059669")  // hex, for calendar visualization
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  apartment    Apartment? @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([apartmentId])
+  @@index([startDate, endDate])
+}
+
+/// The ledger. One row per money-out event. Category is a string (not enum)
+/// so we can add new categories without a schema migration — the UI
+/// translates known categories to Arabic labels, unknowns show as "أخرى".
+/// scope tells us whether this hits the whole business or a specific unit
+/// — needed for accurate per-unit profit calculations.
+/// isRecurring + recurringPeriod let us auto-generate rent, salaries, etc.
+/// (generation logic lives elsewhere — a scheduled task, not this model).
+model Expense {
+  id               String    @id @default(uuid())
+  userId           String    // owner (admin) userId — scopes queries
+  title            String    // e.g. "إيجار الشقة 91 — أغسطس"
+  amount           Decimal
+  date             DateTime  // when the expense was incurred (not created)
+  category         String    @default("other")
+  // Known categories the UI recognizes:
+  //   "utilities" | "staff" | "marketing" | "maintenance" | "licenses"
+  //   | "supplies" | "insurance" | "rent" | "zakat" | "other"
+  scope            String    @default("global")
+  // "global" (whole business) | "unit" (specific apartment)
+  apartmentId      String?   // when scope=unit
+
+  vendor           String?   // who was paid — for later "vendor spend" analysis
+  notes            String?
+  receiptUrl       String?   // uploaded receipt image / PDF
+
+  isRecurring      Boolean   @default(false)
+  recurringPeriod  String?   // "monthly" | "yearly" — null when isRecurring=false
+  recurringUntil   DateTime? // optional end date for recurring — null = forever
+
+  // Provenance: how this record came into existence.
+  //   "manual" — user added it directly (default)
+  //   "maintenance" — auto-created from a resolved maintenance issue
+  //   "salary-schedule" — auto-created by recurring generation
+  //   "migration" — created by one-time migration from StaffExpense / user config
+  sourceType       String    @default("manual")
+  sourceRefId      String?   // link to the originating record (nullable)
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apartment        Apartment? @relation(fields: [apartmentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([userId, category])
+  @@index([apartmentId])
+  @@index([sourceRefId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  isCleared Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id           String   @id @default(uuid())
+  userId       String
+  subscription Json
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A cleaning task for an apartment. Auto-created when a booking checks
+/// out (needsCleaning flag flips to true), or created manually by admin
+/// for ad-hoc cleanings.
+///
+/// The checklist is a JSON array of { area, note, checked } — decided
+/// per-task by admin. Empty array = no checklist, cleaner just taps the
+/// single "Done" button. Admin can add areas from a fixed vocabulary
+/// (bathroom, kitchen, bedroom, living_room, entrance, supplies,
+/// general, other). Notes are per-area, optional (except "general"
+/// which has no note by design).
+///
+/// startedBy / completedBy record which user actioned the task. Fastest
+/// path is direct completion (skip started); we track completedBy
+/// regardless. Used for admin's "who cleaned what" history.
+model CleaningTask {
+  id           String    @id @default(uuid())
+  userId       String                     /// owner (multi-tenant)
+  apartmentId  String
+  bookingId    String?                    /// null for manual/ad-hoc tasks
+  status       String    @default("pending")  /// 'pending' | 'in_progress' | 'done'
+  checklist    Json      @default("[]")   /// [{ area, note, checked }]
+  notes        String?                    /// free-form task-level notes from admin
+  cleanerNotes String?                    /// cleaner's own notes when finishing
+  dueBy        DateTime?                  /// usually next check-in date after checkout
+  scheduledFor DateTime                   /// when the task becomes actionable (checkout date, or now for ad-hoc)
+  startedBy    String?
+  startedAt    DateTime?
+  completedBy  String?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user      User      @relation("CleaningTaskOwner",     fields: [userId],      references: [id], onDelete: Cascade)
+  starter   User?     @relation("CleaningTaskStarter",   fields: [startedBy],   references: [id], onDelete: SetNull)
+  completer User?     @relation("CleaningTaskCompleter", fields: [completedBy], references: [id], onDelete: SetNull)
+  apartment Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  booking   Booking?  @relation(fields: [bookingId],   references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([apartmentId])
+  @@index([bookingId])
+}

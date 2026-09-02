@@ -1,0 +1,381 @@
+/* ============================================================
+   Rent Flow — Design System (SSOT: DESIGN-cal.md, warmed)
+   Warm monochrome: tinted page, white elevated cards, layered
+   shadows, one scarce emerald accent (semantic = revenue/money).
+   Typeface: "Zain" across every text node (RTL-first).
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Zain:wght@200;300;400;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Accent theme defaults (overridden at runtime from Settings). */
+    --accent-rgb: 15 118 110;
+    --accent-strong: #0b5d56;
+  }
+
+  html {
+    height: 100%;
+    width: 100%;
+    background-color: #fafaf9;  /* matches tailwind `page` token */
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    font-family: 'Zain', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #111111;
+    background-color: #fafaf9;  /* matches tailwind `page` token */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  input, select, textarea, button {
+    font-family: inherit;
+  }
+
+  /* Display headlines carry the drama that color usually would:
+     larger, tighter, confident. Zain synthesizes 600 from 700. */
+  h1 { font-weight: 700; letter-spacing: -0.03em; color: #111111; line-height: 1.1; }
+  h2, h3 { font-weight: 600; letter-spacing: -0.02em; color: #111111; line-height: 1.2; }
+
+  ::placeholder { color: #78716c; }  /* matches tailwind `muted-soft` token */
+
+  /* Thin, accent-tinted scrollbar (replaces the chunky default, works in dark too) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--accent-rgb) / 0.45) transparent;
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--accent-rgb) / 0.4);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--accent-rgb) / 0.7);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
+  /* Accent focus ring — quiet but present */
+  *:focus-visible {
+    outline: 2px solid rgb(var(--accent-rgb));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@layer components {
+  /* ---- Elevated card: white on the warm page, lifted by hairline + shadow ---- */
+  .card-surface {
+    @apply bg-canvas border border-hairline rounded-lg shadow-micro
+           dark:bg-surface-dark-elevated dark:border-hairline-dark dark:shadow-none;
+  }
+
+  /* ---- button-primary: flat near-black ---- */
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 bg-accent text-white
+           font-semibold text-sm rounded-md px-5 h-10 shadow-micro
+           transition-colors hover:bg-accent-strong
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-primary text-white
+           font-semibold text-sm rounded-md px-5 h-10 shadow-micro
+           transition-colors hover:bg-primary-active
+           disabled:bg-primary-disabled disabled:text-muted disabled:cursor-not-allowed disabled:shadow-none;
+  }
+
+  /* ---- button-secondary: white, hairline outline ---- */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-canvas text-ink
+           font-semibold text-sm rounded-md px-5 h-10
+           border border-hairline shadow-micro transition-colors hover:bg-surface-soft
+           dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark dark:hover:bg-hairline-dark;
+  }
+
+  /* ---- text-input: white field, hairline outline, ink focus ---- */
+  .input-field {
+    @apply w-full bg-canvas text-ink text-sm rounded-md border border-hairline
+           px-3.5 py-2.5 outline-none transition-colors
+           focus:border-ink focus:ring-0
+           dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark dark:focus:border-white;
+  }
+
+  /* ---- badge-pill: neutral capsule tag ---- */
+  .badge-pill {
+    @apply inline-flex items-center gap-1 rounded-full bg-surface-card text-ink
+           text-[13px] font-medium px-3 py-0.5
+           dark:bg-surface-dark-elevated dark:text-white;
+  }
+  /* status variants — distinguished by TREATMENT, not colour */
+  .badge-solid   { @apply bg-ink text-white dark:bg-white dark:text-ink; }      /* current */
+  .badge-outline { @apply bg-transparent text-ink border border-hairline dark:text-white dark:border-hairline-dark-soft; } /* arriving */
+  .badge-ghost   { @apply bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated; }  /* departed */
+  .badge-dashed  { @apply bg-transparent text-muted border border-dashed border-muted-soft; } /* early checkout */
+
+  /* ---- nav-pill-group: capsule track, white active pill ---- */
+  .nav-pill-group {
+    @apply inline-flex items-center gap-1 rounded-full bg-surface-soft p-1.5
+           dark:bg-surface-dark-elevated;
+  }
+  .nav-pill {
+    @apply px-3.5 py-1.5 rounded-full text-sm font-medium text-muted
+           transition-colors hover:text-ink dark:hover:text-white;
+  }
+  .nav-pill-active {
+    @apply bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white;
+  }
+
+  /* ---- monochrome icon action ---- */
+  .icon-action {
+    @apply p-2 rounded-md text-muted opacity-80 transition-all
+           min-w-11 min-h-11 md:min-w-0 md:min-h-0
+           inline-flex items-center justify-center shrink-0
+           hover:opacity-100 hover:text-ink hover:bg-surface-soft
+           dark:hover:text-white dark:hover:bg-surface-dark-elevated;
+  }
+
+  /* ---- accent text link ---- */
+  .link-accent {
+    @apply text-accent font-semibold hover:text-accent-strong transition-colors;
+  }
+
+  /* ---- Sheet drag handle — visual affordance at the top of a bottom sheet
+     signalling "swipeable". We don't wire up an actual gesture library (that
+     would be a bigger project), but the handle itself teaches the user this
+     is a sheet, not a hard modal. md:hidden so it only shows on mobile
+     where the sheet pattern applies. --------------------------------- */
+  .sheet-handle {
+    @apply md:hidden mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-hairline dark:bg-hairline-dark-soft shrink-0;
+  }
+
+  /* ---- Motion utilities — these replace the tailwindcss-animate plugin
+     which wasn't installed. Custom keyframes give us the same iOS-feeling
+     transitions (soft ease-out cubic-bezier, small travel) without adding
+     a dependency to package.json. Each utility is self-contained: it sets
+     opacity/transform initial state via animation, so no need for wrapper
+     classes. `both` on animation-fill-mode keeps the end state after the
+     animation completes.
+     -------------------------------------------------------------------- */
+  @keyframes anim-fade-up-sm {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes anim-fade-up-md {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes anim-fade-down-sm {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes anim-fade-zoom {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* View tab transition — opacity-only fade. Deliberately no transform:
+     if the view container has any non-none transform in its final state
+     (even translateY(0)), it becomes a "containing block" for descendant
+     `fixed` elements. That means modals rendered from inside a view
+     (MaintenanceIssueForm, PricingRuleForm, inline analytics modal, etc.)
+     get trapped inside the view container's box and can't reach the
+     viewport — which means they can't cover the header, and the header
+     doesn't get blurred by their backdrop. Opacity has no such side
+     effect. */
+  @keyframes anim-fade-only {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .anim-tab {
+    animation: anim-fade-only 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  /* Mobile nav entrance — larger 16px slide + fade on first load */
+  .anim-nav {
+    animation: anim-fade-up-md 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  /* Bottom sheet / modal entrance — slide up 16px on mobile, zoom in on desktop */
+  .anim-sheet {
+    animation: anim-fade-up-md 300ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  @media (min-width: 768px) {
+    .anim-sheet {
+      animation: anim-fade-zoom 220ms ease-out both;
+    }
+  }
+  /* Dropdown entrance — small drop-down + fade */
+  .anim-dropdown {
+    animation: anim-fade-down-sm 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  /* Attention shake — small horizontal wobble to draw the eye to a control
+     the user needs to interact with before proceeding (e.g. an unchecked
+     checkbox blocking a "Finish" action). No color change — the shake alone
+     signals "check this," fitting the codebase's restrained palette. */
+  @keyframes anim-attention-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-3px); }
+    40%, 80% { transform: translateX(3px); }
+  }
+  .anim-attention {
+    animation: anim-attention-shake 400ms ease-in-out 2;
+  }
+  /* Respect reduced motion — no animations if user opted out */
+  @media (prefers-reduced-motion: reduce) {
+    .anim-tab, .anim-nav, .anim-sheet, .anim-dropdown, .anim-attention {
+      animation: none;
+    }
+  }
+
+  /* ---- Print isolation ----------------------------------------------------
+     PrintAgreement renders as `position: fixed inset-0` so it visually covers
+     the whole screen in the browser — but `window.print()` doesn't respect
+     that. The browser's print engine walks the WHOLE DOM (Sidebar, Header,
+     bottom nav, everything), because fixed positioning collapses to normal
+     flow during print layout unless told otherwise. Result: the app chrome
+     printed above/around the actual document.
+
+     Standard fix: hide everything by default when printing, then explicitly
+     re-show only the element marked `.print-root` (and its children).
+     PrintAgreement's outermost div carries this class. */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    .print-root, .print-root * {
+      visibility: visible;
+    }
+    .print-root {
+      position: absolute;
+      inset: 0;
+      z-index: 9999;
+    }
+  }
+
+  /* ---- Hide the mobile floating nav AND the fade scrims when a modal /
+     bottom sheet is open. Modals mark themselves with `data-modal-active`.
+     When the browser detects any such element in the DOM (via CSS :has()),
+     it hides both the nav wrapper and the scrims. Prevents the nav from
+     showing through the modal backdrop and the scrims from leaking through
+     the semi-transparent backdrop overlay. */
+  body:has([data-modal-active]) .mobile-nav-shield,
+  body:has([data-modal-active]) .mobile-scrim-shield {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* ---- Modal shells: unified structure ------------------------------------
+     Use these together to compose a consistent modal:
+       .modal-backdrop → the fixed backdrop that covers the viewport
+       .modal-shell    → the actual dialog box (add max-w-* per instance)
+       .modal-header   → title strip at the top
+       .modal-body     → scrollable content area
+       .modal-footer   → action strip at the bottom
+     On mobile, backdrop aligns to bottom and shell renders as a bottom sheet
+     (rounded top, flush with screen edges). On desktop, unchanged.
+     -------------------------------------------------------------------- */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm
+           items-end p-0 md:items-center md:justify-center md:p-4;
+  }
+  .modal-shell {
+    @apply relative z-10 bg-canvas dark:bg-surface-dark shadow-soft
+           w-full overflow-hidden border-t border-hairline dark:border-hairline-dark
+           flex flex-col max-h-[92vh]
+           rounded-t-2xl md:rounded-xl md:border;
+  }
+  .modal-header {
+    @apply px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark-soft
+           flex justify-between items-center shrink-0;
+  }
+  .modal-body {
+    @apply flex-1 overflow-y-auto min-h-0 p-6;
+  }
+  .modal-footer {
+    @apply px-6 py-4 border-t border-hairline-soft dark:border-hairline-dark-soft
+           flex justify-end gap-3 shrink-0;
+  }
+  .modal-title {
+    @apply font-semibold tracking-tight text-ink dark:text-white text-lg leading-tight;
+  }
+  .modal-subtitle {
+    @apply text-xs text-muted dark:text-body-dark mt-0.5;
+  }
+
+  /* ---- Tab underline: the "border-b-2 -mb-px" pattern used in Settings.
+     One layer tabs live above a shared bottom border and the active tab's
+     underline overlaps the border, hiding it selectively. Use it like:
+       <div className="flex gap-6 border-b border-hairline">
+         <button className={`tab-underline ${active === 'x' ? 'tab-underline-active' : ''}`}>...
+     -------------------------------------------------------------------- */
+  .tab-underline {
+    @apply relative pb-3 -mb-px border-b-2 border-transparent
+           text-sm font-semibold text-muted transition-colors
+           hover:text-ink dark:text-body-dark dark:hover:text-white;
+  }
+  .tab-underline-active {
+    @apply border-ink text-ink dark:border-white dark:text-white;
+  }
+
+  /* ---- Eyebrow: uppercase micro-label used above card titles / form fields ---- */
+  .eyebrow {
+    @apply block text-2xs font-semibold uppercase tracking-wider
+           text-muted dark:text-body-dark;
+  }
+
+  /* ---- Hide scrollbar for horizontal chip rows (mobile filter bars).
+     Content still scrolls, just no visible scrollbar. -------------------- */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ============================================================
+   react-tailwindcss-datepicker — warm monochrome + RTL repairs
+   ============================================================ */
+
+/* Weekday heading row: reset tracking so connected Arabic script
+   ("أحد إثنين ثلاثاء…") doesn't overlap in RTL. */
+.dp-shell .grid.grid-cols-7 > div {
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+  padding-left: 2px;
+  padding-right: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.dp-shell .grid.grid-cols-7.border-b {
+  border-color: #f3f4f6 !important;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.dp-shell [role="presentation"] > div,
+.dp-shell .shadow-sm {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Kill the library's residual blue (its runtime classes get purged, so it
+   falls back to blue). Force selection / today / hover to the accent + ink. */
+.dp-shell .bg-blue-500,
+.dp-shell [class*="bg-blue-"] { background-color: #0f766e !important; }
+.dp-shell .text-blue-500,
+.dp-shell [class*="text-blue-"] { color: #0f766e !important; }
+.dp-shell [class*="bg-blue-100"],
+.dp-shell [class*="bg-blue-50"] { background-color: #0f766e1f !important; }
+.dp-shell input { caret-color: #111111; }

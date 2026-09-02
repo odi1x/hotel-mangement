@@ -1,0 +1,206 @@
+import { Printer } from 'lucide-react';
+import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
+import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
+import { sanitizePhone } from '../../lib/phoneUtils';
+
+export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
+  const { apartments } = useData();
+  const { user } = useAuth();
+  const apartment = apartments.find(a => a.id === booking.apartmentId);
+  const licenseNumber = apartment?.licenseNumber || user?.tourismLicense;
+
+  const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  const calculateNights = (start, end) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    const diffTime = Math.abs(e - s);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+  };
+
+  const nights = calculateNights(booking.startDate, booking.endDate);
+  const subtotal = parseFloat(booking.pricePerNight) * nights;
+  const taxAmount = user?.taxEnabled && user?.taxPercentage
+    ? (subtotal * parseFloat(user.taxPercentage)) / 100
+    : 0;
+  const total = subtotal + taxAmount;
+
+  // Real payment status — how much has actually been collected vs what's
+  // still outstanding. Only shown on the receipt/financial-report document
+  // (documentType === 'voucher'); the rental agreement/confirmation doesn't
+  // need a payment breakdown, it's a contract, not a receipt.
+  const { totalReceived, balanceDue } = computeBookingTotals(booking);
+
+  const handlePrint = () => {
+
+    const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
+    const resName = booking.residentName ? booking.residentName.replace(/\s+/g, '_') : 'نزيل';
+    const startDateStr = booking.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
+
+    document.title = `حجز_${resName}_${aptName}${startDateStr ? '_' + startDateStr : ''}`;
+
+    setTimeout(() => {
+      window.print();
+
+    }, 100); // slight delay to let the browser register the title change before print dialog
+  };
+
+
+  return (
+    <div className="print-root fixed inset-0 bg-white z-[100] flex flex-col items-center p-10 overflow-y-auto" dir="rtl">
+      <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper">
+        <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
+            <div>
+                <h1 className="text-3xl font-black tracking-tighter text-gray-900">
+                  {documentType === 'voucher' ? 'سند قبض / تقرير مالي' : 'عقد إيجار وحدات سكنية'}
+                </h1>
+                <p className="text-gray-500 font-bold">المرجع: #{booking.id.toUpperCase()}</p>
+            </div>
+            <div className="text-left flex flex-col items-end">
+                {user?.logoUrl && (
+                  <img src={user.logoUrl} alt="Logo" className="h-16 mb-2 object-contain" />
+                )}
+                <p className="font-black text-xl text-gray-900">{user?.businessName || 'رنت فلو العقارية'}</p>
+                {licenseNumber && (
+                  <p className="text-sm text-gray-500 italic font-medium">ترخيص رقم: {licenseNumber}</p>
+                )}
+            </div>
+        </div>
+
+        <div className="space-y-8 text-gray-800">
+            <section>
+                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-accent">أولاً: أطراف العقد</h3>
+                <div className="grid grid-cols-2 gap-8">
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">المؤجر / المدير</p>
+                        <p className="font-bold text-gray-900">{user?.businessName || 'مجموعة رنت فلو العقارية'}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">المستأجر / النزيل</p>
+                        <p className="font-black uppercase text-gray-900">{booking.residentName}</p>
+                        <p className="text-sm font-medium mt-1">رقم الهوية: {booking.residentId}</p>
+                        <p className="text-sm font-medium">هاتف: <span dir="ltr">{sanitizePhone(booking.phone)}</span></p>
+                        <p className="text-xs text-gray-500 mt-1">{booking.address}</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-accent">ثانياً: العقار ومدة الإيجار</h3>
+                <div className="grid grid-cols-2 gap-8">
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">بيانات الوحدة</p>
+                        <p className="font-bold text-gray-900">{apartment?.name}</p>
+                        <p className="text-sm italic font-medium text-gray-600">{apartment?.type}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">فترة الإيجار</p>
+                        <p className="font-bold text-gray-900">{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</p>
+                        <p className="text-sm font-black text-accent mt-1">{nights} ليلة إجمالية</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-accent">ثالثاً: الشروط المالية</h3>
+                <div className="grid grid-cols-4 gap-6">
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">سعر الليلة</p>
+                        <p className="font-bold text-gray-900">{booking.pricePerNight} ر.س</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">المبلغ الأساسي</p>
+                        <p className="font-bold text-gray-900">{subtotal} ر.س</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">
+                          الضريبة {user?.taxEnabled && user?.taxPercentage ? `(${user.taxPercentage}%)` : ''}
+                        </p>
+                        <p className="font-bold text-gray-900">{taxAmount.toFixed(2)} ر.س</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">الإجمالي الشامل</p>
+                        <p className="text-xl font-black text-accent">{total.toFixed(2)} ر.س</p>
+                    </div>
+                </div>
+            </section>
+
+            {/* Payment status — only on the receipt/financial-report document.
+                The rental agreement (documentType === 'confirmation') is a
+                contract, not a receipt, so it doesn't need a paid/due
+                breakdown. Shows what's actually been collected vs what
+                remains outstanding, computed from real payment records
+                (not the theoretical total above). */}
+            {documentType === 'voucher' && (
+              <section>
+                  <h3 className="font-black text-sm bg-gray-100 p-2.5 uppercase mb-4 border-r-4 border-accent">رابعاً: حالة السداد</h3>
+                  <div className="grid grid-cols-3 gap-6">
+                      <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">المبلغ المدفوع</p>
+                          <p className="text-lg font-black text-gray-900">{formatSAR(totalReceived)} ر.س</p>
+                      </div>
+                      <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">المبلغ المتبقي</p>
+                          <p className="text-lg font-black text-red-600">
+                            {formatSAR(balanceDue)} ر.س
+                          </p>
+                      </div>
+                      <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">حالة السداد</p>
+                          <p className="text-lg font-black text-gray-900">
+                            {balanceDue <= 0.01 ? 'مسدد بالكامل' : totalReceived > 0.01 ? 'سداد جزئي' : 'غير مسدد'}
+                          </p>
+                      </div>
+                  </div>
+              </section>
+            )}
+
+            {documentType !== 'voucher' && (<section className="pt-10 border-t-2 border-dashed border-gray-200 mt-10">
+                <p className="text-xs text-gray-500 font-medium leading-relaxed text-justify whitespace-pre-wrap">
+                    {user?.customTerms
+                      ? user.customTerms
+                      : 'يقر المستأجر بموجب هذا العقد بالالتزام بكافة لوائح المبنى والحفاظ على الوحدة السكنية بحالة جيدة وإخلائها في موعد تسجيل الخروج المحدد. أي تلفيات تلحق بالوحدة سيتحمل المستأجر تكاليف إصلاحها. تم إعداد هذا العقد لتوثيق فترة الإقامة وحقوق الطرفين.'}
+                </p>
+
+                <div className="flex justify-between mt-20 gap-20">
+                    <div className="flex-1 border-t-2 border-gray-300 pt-3 text-center relative">
+                        {user?.stampUrl && (
+                          <img
+                            src={user.stampUrl}
+                            alt="Stamp"
+                            className="absolute -top-16 left-1/2 transform -translate-x-1/2 h-20 opacity-80 mix-blend-multiply"
+                          />
+                        )}
+                        <p className="text-xs font-bold text-gray-500 relative z-10">توقيع وختم المؤجر</p>
+                    </div>
+                    <div className="flex-1 border-t-2 border-gray-300 pt-3 text-center">
+                        <p className="text-xs font-bold text-gray-500">توقيع المستأجر</p>
+                    </div>
+                </div>
+            </section>)}
+        </div>
+      </div>
+
+      <div className="mt-8 flex space-x-reverse space-x-4 print:hidden">
+        <button
+            onClick={handlePrint}
+            className="bg-accent hover:bg-accent-strong text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95"
+        >
+            <Printer size={20}/>
+            <span className="mr-2">طباعة المستند</span>
+        </button>
+        <button
+            onClick={onClose}
+            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-bold border border-gray-200 transition-all"
+        >
+            إغلاق المعاينة
+        </button>
+      </div>
+    </div>
+  );
+}

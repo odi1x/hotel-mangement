@@ -1,0 +1,56 @@
+{
+  "name": "hotel-management",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "prisma db push --accept-data-loss && vite build",
+    "postinstall": "prisma generate",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@marsidev/react-turnstile": "^1.5.3",
+    "@prisma/client": "5.22.0",
+    "autoprefixer": "^10.5.0",
+    "axios": "^1.15.2",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.2",
+    "imagekit": "^6.0.0",
+    "imagekitio-react": "^4.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.14.0",
+    "postcss": "^8.5.12",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^6.30.4",
+    "recharts": "^2.15.0",
+    "tailwindcss": "^3.4.1",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "prisma": "^5.22.0",
+    "vite": "^8.0.10"
+  },
+  "overrides": {
+    "recharts": {
+      "react": "^19.2.5",
+      "react-dom": "^19.2.5"
+    }
+  }
+}
