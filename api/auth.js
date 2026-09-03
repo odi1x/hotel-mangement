@@ -41,6 +41,7 @@ export default async function handler(req, res) {
         user: {
           id: user.id, username: user.username, name: user.name, profilePicture: user.profilePicture,
           role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
+          partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
             canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
@@ -71,6 +72,7 @@ export default async function handler(req, res) {
         user: {
           id: user.id, username: user.username, name: user.name, profilePicture: user.profilePicture,
           role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
+          partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
             canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
@@ -119,6 +121,7 @@ export default async function handler(req, res) {
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
+        partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
           canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
@@ -147,6 +150,7 @@ export default async function handler(req, res) {
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
+        partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
           canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean

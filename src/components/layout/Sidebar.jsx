@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing, Wallet, Wrench, TagsIcon, ArrowDownCircle, Sparkles } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing, Wallet, Wrench, TagsIcon, ArrowDownCircle, Sparkles, Handshake } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -108,6 +108,9 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         )}
         {(user?.role === 'admin' || user?.permissions?.canViewAnalytics) && (
           <SidebarItem icon={BarChart3} label="التحليلات" id="analytics" view={view} setView={setView} isCollapsed={isCollapsed} />
+        )}
+        {user?.role === 'admin' && user?.partnersRevenueSharingEnabled && (
+          <SidebarItem icon={Handshake} label="الشركاء" id="partners" view={view} setView={setView} isCollapsed={isCollapsed} />
         )}
 
         {(user?.role === 'admin' || user?.permissions?.canViewSettings) && (

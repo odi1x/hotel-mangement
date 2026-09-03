@@ -22,7 +22,7 @@ import { computeBookingTotals } from '../../lib/paymentUtils';
  */
 export default function MobileBottomNav({
   view, setView,
-  onNewBooking, onNewCleaningTask, onNewExpense, onNewMaintenance, onNewPricingRule,
+  onNewBooking, onNewCleaningTask, onNewExpense, onNewMaintenance, onNewPricingRule, onNewPartner,
 }) {
   const { user } = useAuth();
   const { bookings, maintenanceIssues } = useData();
@@ -72,6 +72,9 @@ export default function MobileBottomNav({
     }
     if (view === 'pricing' && canSeePricing) {
       return { show: true, onClick: onNewPricingRule, label: 'قاعدة جديدة' };
+    }
+    if (view === 'partners' && isAdmin) {
+      return { show: true, onClick: onNewPartner, label: 'شريك جديد' };
     }
     return { show: false, onClick: () => {}, label: '' };
   })();

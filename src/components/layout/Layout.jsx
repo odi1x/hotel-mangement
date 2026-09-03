@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
-import toast from 'react-hot-toast';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
 import MobileMoreMenu from './MobileMoreMenu';
@@ -15,11 +14,13 @@ import MaintenanceView from '../views/MaintenanceView';
 import PricingView from '../views/PricingView';
 import ExpensesView from '../views/ExpensesView';
 import CleaningView from '../views/CleaningView';
+import PartnersView from '../views/PartnersView';
+import PartnerDetailView from '../views/PartnerDetailView';
 import BookingForm from '../ui/BookingForm';
 import BookByDateModal from '../ui/BookByDateModal';
 import ProfileSettingsModal from '../ui/ProfileSettingsModal';
 import ShareLinkModal from '../ui/ShareLinkModal';
-import { Plus, CalendarSearch, Share2 } from 'lucide-react';
+import { Plus, Share2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 // Permission-gated views. If a staff member's permission for one of these
@@ -33,6 +34,8 @@ const GATED_VIEW_PERM = {
   expenses:    'canViewAnalytics',  // expenses are financial data — same permission gate
   cleaning:    'canClean',
   settings:    'canViewSettings',
+  partners:    'canViewPartners',   // admin-only + tenant feature flag (checked in DataContext)
+  'partner-detail': 'canViewPartners',
 };
 
 export default function Layout() {
@@ -48,15 +51,17 @@ export default function Layout() {
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [initialBookingData, setInitialBookingData] = useState({});
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  // Per-view "primary action" triggers. Each is a counter that increments
-  // every time Layout's top-right button is clicked on the matching view.
-  // Child views watch the number via useEffect and open their own add-modal
-  // when it changes. Counter (rather than boolean) means repeated clicks
-  // reliably fire even if the child already closed the modal.
-  const [cleaningAddTrigger,    setCleaningAddTrigger]    = useState(0);
-  const [expensesAddTrigger,    setExpensesAddTrigger]    = useState(0);
-  const [maintenanceAddTrigger, setMaintenanceAddTrigger] = useState(0);
-  const [pricingAddTrigger,     setPricingAddTrigger]     = useState(0);
+// Per-view "primary action" triggers. Each is a counter that increments
+// every time Layout's top-right button is clicked on the matching view.
+// Child views watch the number via useEffect and open their own add-modal
+// when it changes. Counter (rather than boolean) means repeated clicks
+// reliably fire even if the child already closed the modal.
+const [cleaningAddTrigger,    setCleaningAddTrigger]    = useState(0);
+const [expensesAddTrigger,    setExpensesAddTrigger]    = useState(0);
+const [maintenanceAddTrigger, setMaintenanceAddTrigger] = useState(0);
+const [pricingAddTrigger,     setPricingAddTrigger]     = useState(0);
+const [partnersAddTrigger,    setPartnersAddTrigger]    = useState(0);
+const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
 
   // Wrap setView so unauthorized navigation is blocked at the source.
   // Admin bypasses gating. Non-gated views (availability, apartments,
@@ -112,6 +117,8 @@ export default function Layout() {
       case 'analytics':    return 'تحليلات الأداء';
       case 'settings':     return 'الإعدادات';
       case 'requests':     return 'طلبات الحجز';
+      case 'partners':     return 'الشركاء والتقاسم';
+      case 'partner-detail': return 'تفاصيل الشريك';
       case 'more':         return 'المزيد';
       default: return '';
     }
@@ -134,6 +141,8 @@ export default function Layout() {
       case 'analytics':    return 'مؤشرات الإيرادات، المصروفات، والربحية حسب الوحدة.';
       case 'settings':     return 'إدارة الحساب، الموظفين، والتفضيلات العامة.';
       case 'requests':     return 'راجع طلبات الحجز الواردة عبر الرابط العام.';
+      case 'partners':     return 'أدِر شركاء تقاسم الإيرادات وتتبع التسويات المالية.';
+      case 'partner-detail': return null; // subtitle set dynamically by the view
       case 'more':         return null;
       default:             return null;
     }
@@ -224,6 +233,15 @@ export default function Layout() {
                   <span>قاعدة جديدة</span>
                 </button>
               )}
+              {view === 'partners' && user?.role === 'admin' && user?.partnersRevenueSharingEnabled && (
+                <button
+                  onClick={() => setPartnersAddTrigger(c => c + 1)}
+                  className="btn-accent"
+                >
+                  <Plus size={18} />
+                  <span>شريك جديد</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -245,6 +263,8 @@ export default function Layout() {
             {view === 'pricing' && <PricingView addTrigger={pricingAddTrigger} />}
             {view === 'analytics' && <AnalyticsView setView={setView} />}
             {view === 'settings' && <SettingsView />}
+            {view === 'partners' && <PartnersView addTrigger={partnersAddTrigger} />}
+            {view === 'partner-detail' && <PartnerDetailView partnerId={selectedPartnerId} onBack={() => { setSelectedPartnerId(null); setView('partners'); }} />}
             {view === 'more' && (
               <MobileMoreMenu
                 setView={setView}
@@ -278,6 +298,7 @@ export default function Layout() {
         onNewExpense={() => setExpensesAddTrigger(c => c + 1)}
         onNewMaintenance={() => setMaintenanceAddTrigger(c => c + 1)}
         onNewPricingRule={() => setPricingAddTrigger(c => c + 1)}
+        onNewPartner={() => setPartnersAddTrigger(c => c + 1)}
       />
 
       {isProfileSettingsOpen && (

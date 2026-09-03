@@ -26,8 +26,9 @@ export default async function handler(req, res) {
   if (resource === 'pricing-rules')  return pricingRulesHandler(req, res, user);
   if (resource === 'expenses')       return expensesHandler(req, res, user);
   if (resource === 'cleaning')       return cleaningHandler(req, res, user);
+  if (resource === 'partners')       return partnersHandler(req, res, user);
 
-  return res.status(400).json({ message: 'Unknown resource. Use ?resource=maintenance | pricing-rules | expenses | cleaning' });
+  return res.status(400).json({ message: 'Unknown resource. Use ?resource=maintenance | pricing-rules | expenses | cleaning | partners' });
 }
 
 /* ------------------------------------------------------------------------- */
@@ -859,4 +860,524 @@ export async function completeActiveTasksForApartment(apartmentId, userId, compl
       completedAt: new Date(),
     },
   });
+}
+
+/* ------------------------------------------------------------------------- */
+/*  PARTNERS / REVENUE SHARING                                               */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Revenue calculation helper — mirrors the logic in analytics.js.
+ * Returns gross revenue for bookings within a date range and apartment scope.
+ */
+async function calculateGrossRevenue(userId, apartmentIds, periodStart, periodEnd) {
+  const where = {
+    userId,
+    startDate: { lt: periodEnd },
+    endDate: { gt: periodStart },
+  };
+  if (apartmentIds.length > 0) {
+    where.apartmentId = { in: apartmentIds };
+  }
+
+  const bookings = await prisma.booking.findMany({
+    where,
+    select: {
+      id: true,
+      apartmentId: true,
+      pricePerNight: true,
+      totalPrice: true,
+      startDate: true,
+      endDate: true,
+    },
+  });
+
+  let gross = 0;
+  const unitBreakdown = {};
+
+  for (const b of bookings) {
+    const start = new Date(b.startDate);
+    const end = new Date(b.endDate);
+    const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    const revenue = b.totalPrice !== null
+      ? Number(b.totalPrice)
+      : Number(b.pricePerNight) * nights;
+    gross += revenue;
+
+    if (!unitBreakdown[b.apartmentId]) {
+      unitBreakdown[b.apartmentId] = { revenue: 0, nights: 0 };
+    }
+    unitBreakdown[b.apartmentId].revenue += revenue;
+    unitBreakdown[b.apartmentId].nights += nights;
+  }
+
+  return { gross, unitBreakdown };
+}
+
+/**
+ * Expense calculation helper — mirrors the logic in analytics.js.
+ * Returns total expenses for the given scope and period.
+ */
+async function calculateExpenses(userId, apartmentIds, periodStart, periodEnd) {
+  // 1. Per-booking fees (platform + cleaning) from bookings in scope
+  const bookingWhere = {
+    userId,
+    startDate: { lt: periodEnd },
+    endDate: { gt: periodStart },
+  };
+  if (apartmentIds.length > 0) {
+    bookingWhere.apartmentId = { in: apartmentIds };
+  }
+
+  const bookings = await prisma.booking.findMany({
+    where: bookingWhere,
+    include: {
+      apartment: {
+        select: {
+          id: true,
+          platformFee: true,
+          platformFeeType: true,
+          cleaningFeePerStay: true,
+        },
+      },
+    },
+  });
+
+  let feesTotal = 0;
+  for (const b of bookings) {
+    if (b.apartment.cleaningFeePerStay) {
+      feesTotal += Number(b.apartment.cleaningFeePerStay);
+    }
+    if (b.apartment.platformFee) {
+      const revenue = b.totalPrice !== null
+        ? Number(b.totalPrice)
+        : Number(b.pricePerNight) * Math.ceil((new Date(b.endDate) - new Date(b.startDate)) / (1000 * 60 * 60 * 24));
+      if (b.apartment.platformFeeType === 'percentage') {
+        feesTotal += revenue * (Number(b.apartment.platformFee) / 100);
+      } else {
+        feesTotal += Number(b.apartment.platformFee);
+      }
+    }
+  }
+
+  // 2. Ledger expenses (Expense model)
+  const expenseWhere = {
+    userId,
+    date: { gte: periodStart, lte: periodEnd },
+  };
+  // Note: expenses with scope='global' need pro-rating based on apartment count
+  // This mirrors analytics.js logic
+
+  const expenses = await prisma.expense.findMany({
+    where: expenseWhere,
+    select: {
+      id: true,
+      amount: true,
+      isRecurring: true,
+      recurringPeriod: true,
+      recurringUntil: true,
+      date: true,
+      scope: true,
+      apartmentId: true,
+    },
+  });
+
+  // Get apartment count for pro-rating
+  const totalAptCount = await prisma.apartment.count({ where: { userId } });
+  const filteredAptCount = apartmentIds.length > 0 ? apartmentIds.length : totalAptCount;
+  const scopeRatio = totalAptCount > 0 ? filteredAptCount / totalAptCount : 0;
+
+  // Helper to count occurrences of recurring expense in period
+  function countOccurrences(expense, pStart, pEnd) {
+    if (!expense.isRecurring || !expense.recurringPeriod) return 0;
+    const start = new Date(expense.date);
+    const end = expense.recurringUntil ? new Date(expense.recurringUntil) : pEnd;
+    const periodEnd = end < pEnd ? end : pEnd;
+    if (start > periodEnd) return 0;
+
+    let count = 0;
+    const current = new Date(start);
+    while (current <= periodEnd) {
+      if (current >= pStart) count++;
+      if (expense.recurringPeriod === 'monthly') {
+        current.setMonth(current.getMonth() + 1);
+      } else if (expense.recurringPeriod === 'yearly') {
+        current.setFullYear(current.getFullYear() + 1);
+      } else {
+        break;
+      }
+    }
+    return count;
+  }
+
+  let ledgerTotal = 0;
+  for (const e of expenses) {
+    let contrib = 0;
+    if (!e.isRecurring) {
+      const expDate = new Date(e.date);
+      if (expDate >= periodStart && expDate <= periodEnd) {
+        contrib = Number(e.amount);
+      }
+    } else {
+      const occ = countOccurrences(e, periodStart, periodEnd);
+      contrib = Number(e.amount) * occ;
+    }
+
+    if (e.scope === 'unit' && e.apartmentId) {
+      if (apartmentIds.length === 0 || apartmentIds.includes(e.apartmentId)) {
+        ledgerTotal += contrib;
+      }
+    } else {
+      ledgerTotal += contrib * scopeRatio;
+    }
+  }
+
+  return { total: feesTotal + ledgerTotal, fees: feesTotal, ledger: ledgerTotal };
+}
+
+/**
+ * Core compensation engine — single source of truth for payout calculation.
+ * Returns { amount, formulaLabel, basis }.
+ */
+function computePartnerCompensation(partner, basisGross, basisExpenses) {
+  const basisNet = basisGross - basisExpenses;
+  const pct = partner.percentage != null ? Number(partner.percentage) : 0;
+  const fixed = partner.fixedAmount != null ? Number(partner.fixedAmount) : 0;
+
+  let amount;
+  let label;
+
+  switch (partner.compType) {
+    case 'percentage_gross':
+      amount = basisGross * (pct / 100);
+      label = `${pct}% من إجمالي الإيرادات`;
+      break;
+    case 'percentage_net':
+      amount = basisNet * (pct / 100);
+      label = `${pct}% من صافي الربح`;
+      break;
+    case 'fixed':
+      amount = fixed;
+      label = `مبلغ ثابت ${fixed.toLocaleString()} ر.س`;
+      break;
+    case 'fixed_percentage':
+      amount = fixed + basisGross * (pct / 100);
+      label = `مبلغ ثابت ${fixed.toLocaleString()} ر.س + ${pct}% من الإجمالي`;
+      break;
+    default:
+      amount = basisGross * (pct / 100);
+      label = `${pct}% من إجمالي الإيرادات`;
+  }
+
+  return {
+    amount: Math.round(amount * 100) / 100,
+    formulaLabel: label,
+    basis: { gross: basisGross, expenses: basisExpenses, net: basisNet },
+  };
+}
+
+async function partnersHandler(req, res, user) {
+  const targetUserId = user.adminId || user.userId;
+
+  // Feature flag gate — server-side enforcement
+  const owner = await prisma.user.findUnique({ where: { id: targetUserId }, select: { partnersRevenueSharingEnabled: true } });
+  if (!owner?.partnersRevenueSharingEnabled) {
+    return res.status(403).json({ message: 'ميزة الشركاء غير مفعّلة' });
+  }
+
+  try {
+    const { action, id } = req.query;
+
+    // GET /api/admin-resources?resource=partners&action=list
+    if (req.method === 'GET' && action === 'list') {
+      const { status, search } = req.query;
+      const where = { userId: targetUserId };
+      if (status) where.status = status;
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+
+      const partners = await prisma.partner.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          settlements: {
+            where: { status: { not: 'void' } },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { id: true, amount: true, status: true, periodEnd: true },
+          },
+        },
+      });
+
+      // Add estimated payout for each partner (based on last 30 days)
+      const periodEnd = new Date();
+      const periodStart = new Date();
+      periodStart.setDate(periodStart.getDate() - 30);
+
+      const enriched = await Promise.all(partners.map(async (p) => {
+        const aptIds = p.apartmentIds.length > 0 ? p.apartmentIds : [];
+        const { gross } = await calculateGrossRevenue(targetUserId, aptIds, periodStart, periodEnd);
+        const { total: expenses } = await calculateExpenses(targetUserId, aptIds, periodStart, periodEnd);
+        const { amount: estimatedPayout, formulaLabel } = computePartnerCompensation(p, gross, expenses);
+
+        return {
+          ...p,
+          latestSettlement: p.settlements[0] || null,
+          estimatedPayout,
+          formulaLabel,
+        };
+      }));
+
+      return res.status(200).json(enriched);
+    }
+
+    // GET /api/admin-resources?resource=partners&id=<id> — partner detail + settlements
+    if (req.method === 'GET' && id) {
+      const partner = await prisma.partner.findUnique({
+        where: { id },
+        include: {
+          settlements: {
+            where: { status: { not: 'void' } },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+          },
+        },
+      });
+      if (!partner || partner.userId !== targetUserId) {
+        return res.status(404).json({ message: 'الشريك غير موجود' });
+      }
+      return res.status(200).json(partner);
+    }
+
+    // GET /api/admin-resources?resource=partners&action=calculate&id=<id>&periodStart&periodEnd
+    if (req.method === 'GET' && action === 'calculate') {
+      if (!id) return res.status(400).json({ message: 'partner id required' });
+      const { periodStart, periodEnd } = req.query;
+      if (!periodStart || !periodEnd) {
+        return res.status(400).json({ message: 'periodStart and periodEnd required' });
+      }
+
+      const partner = await prisma.partner.findUnique({ where: { id } });
+      if (!partner || partner.userId !== targetUserId) {
+        return res.status(404).json({ message: 'الشريك غير موجود' });
+      }
+
+      const aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
+      const { gross, unitBreakdown } = await calculateGrossRevenue(targetUserId, aptIds, new Date(periodStart), new Date(periodEnd));
+      const { total: expenses, fees, ledger } = await calculateExpenses(targetUserId, aptIds, new Date(periodStart), new Date(periodEnd));
+      const { amount, formulaLabel, basis } = computePartnerCompensation(partner, gross, expenses);
+
+      return res.status(200).json({
+        gross,
+        expenses,
+        fees,
+        ledger,
+        net: basis.net,
+        amount,
+        formulaLabel,
+        unitBreakdown,
+      });
+    }
+
+    // POST /api/admin-resources?resource=partners — create partner
+    if (req.method === 'POST') {
+      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status } = req.body;
+
+      if (!name) return res.status(400).json({ message: 'اسم الشريك مطلوب' });
+
+      const type = compType || 'percentage_gross';
+      const validTypes = ['percentage_gross', 'percentage_net', 'fixed', 'fixed_percentage'];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ message: 'نوع التعويض غير صالح' });
+      }
+
+      // Validate based on type
+      if (type === 'percentage_gross' || type === 'percentage_net' || type === 'fixed_percentage') {
+        if (percentage == null || percentage === '') {
+          return res.status(400).json({ message: 'النسبة المئوية مطلوبة لهذا النوع' });
+        }
+        const pct = Number(percentage);
+        if (isNaN(pct) || pct < 0 || pct > 100) {
+          return res.status(400).json({ message: 'النسبة يجب أن تكون بين 0 و 100' });
+        }
+      }
+      if (type === 'fixed' || type === 'fixed_percentage') {
+        if (fixedAmount == null || fixedAmount === '') {
+          return res.status(400).json({ message: 'المبلغ الثابت مطلوب لهذا النوع' });
+        }
+        const amt = Number(fixedAmount);
+        if (isNaN(amt) || amt < 0) {
+          return res.status(400).json({ message: 'المبلغ يجب أن يكون أكبر من أو يساوي الصفر' });
+        }
+      }
+
+      const partner = await prisma.partner.create({
+        data: {
+          userId: targetUserId,
+          name: String(name).trim(),
+          phone: phone || null,
+          email: email || null,
+          notes: notes || null,
+          compType: type,
+          percentage: type === 'fixed' ? null : (percentage ? parseFloat(percentage) : null),
+          fixedAmount: (type === 'fixed' || type === 'fixed_percentage') ? parseFloat(fixedAmount) : null,
+          apartmentIds: Array.isArray(apartmentIds) ? apartmentIds : [],
+          status: status || 'active',
+        },
+      });
+      return res.status(201).json(partner);
+    }
+
+    // PUT /api/admin-resources?resource=partners&id=<id> — update partner
+    if (req.method === 'PUT' && id) {
+      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status } = req.body;
+
+      const existing = await prisma.partner.findUnique({ where: { id } });
+      if (!existing || existing.userId !== targetUserId) {
+        return res.status(404).json({ message: 'الشريك غير موجود' });
+      }
+
+      // Validate type if provided
+      if (compType) {
+        const validTypes = ['percentage_gross', 'percentage_net', 'fixed', 'fixed_percentage'];
+        if (!validTypes.includes(compType)) {
+          return res.status(400).json({ message: 'نوع التعويض غير صالح' });
+        }
+      }
+
+      const type = compType || existing.compType;
+      const pct = percentage != null ? (percentage === '' ? null : parseFloat(percentage)) : existing.percentage;
+      const fixed = fixedAmount != null ? (fixedAmount === '' ? null : parseFloat(fixedAmount)) : existing.fixedAmount;
+
+      // Validate based on type
+      if (type === 'percentage_gross' || type === 'percentage_net' || type === 'fixed_percentage') {
+        if (pct == null) {
+          return res.status(400).json({ message: 'النسبة المئوية مطلوبة لهذا النوع' });
+        }
+        if (isNaN(pct) || pct < 0 || pct > 100) {
+          return res.status(400).json({ message: 'النسبة يجب أن تكون بين 0 و 100' });
+        }
+      }
+      if (type === 'fixed' || type === 'fixed_percentage') {
+        if (fixed == null) {
+          return res.status(400).json({ message: 'المبلغ الثابت مطلوب لهذا النوع' });
+        }
+        if (isNaN(fixed) || fixed < 0) {
+          return res.status(400).json({ message: 'المبلغ يجب أن يكون أكبر من أو يساوي الصفر' });
+        }
+      }
+
+      const updateData = {};
+      if (name !== undefined) updateData.name = String(name).trim();
+      if (phone !== undefined) updateData.phone = phone || null;
+      if (email !== undefined) updateData.email = email || null;
+      if (notes !== undefined) updateData.notes = notes || null;
+      if (compType !== undefined) updateData.compType = type;
+      if (percentage !== undefined) updateData.percentage = type === 'fixed' ? null : pct;
+      if (fixedAmount !== undefined) updateData.fixedAmount = (type === 'fixed' || type === 'fixed_percentage') ? fixed : null;
+      if (apartmentIds !== undefined) updateData.apartmentIds = Array.isArray(apartmentIds) ? apartmentIds : [];
+      if (status !== undefined) updateData.status = status;
+
+      const updated = await prisma.partner.update({ where: { id }, data: updateData });
+      return res.status(200).json(updated);
+    }
+
+    // POST /api/admin-resources?resource=partners&action=settle&id=<id>&periodStart&periodEnd&memo
+    if (req.method === 'POST' && action === 'settle') {
+      if (!id) return res.status(400).json({ message: 'partner id required' });
+      const { periodStart, periodEnd, memo } = req.body;
+      if (!periodStart || !periodEnd) {
+        return res.status(400).json({ message: 'periodStart and periodEnd required' });
+      }
+
+      const partner = await prisma.partner.findUnique({ where: { id } });
+      if (!partner || partner.userId !== targetUserId) {
+        return res.status(404).json({ message: 'الشريك غير موجود' });
+      }
+
+      const aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
+      const pStart = new Date(periodStart);
+      const pEnd = new Date(periodEnd);
+      const { gross } = await calculateGrossRevenue(targetUserId, aptIds, pStart, pEnd);
+      const { total: expenses } = await calculateExpenses(targetUserId, aptIds, pStart, pEnd);
+      const { amount, formulaLabel, basis } = computePartnerCompensation(partner, gross, expenses);
+
+      const settlement = await prisma.settlement.create({
+        data: {
+          partnerId: partner.id,
+          userId: targetUserId,
+          compTypeSnap: partner.compType,
+          percentageSnap: partner.percentage,
+          fixedAmountSnap: partner.fixedAmount,
+          scopeSnap: [...partner.apartmentIds],
+          periodStart: pStart,
+          periodEnd: pEnd,
+          basisGross: gross,
+          basisExpenses: expenses,
+          basisNet: basis.net,
+          amount,
+          currency: 'sar',
+          status: 'draft',
+          memo: memo || null,
+        },
+      });
+
+      return res.status(201).json({ ...settlement, formulaLabel });
+    }
+
+    // POST /api/admin-resources?resource=partners&action=mark-paid&id=<settlementId>
+    if (req.method === 'POST' && action === 'mark-paid') {
+      const settlementId = req.query.settlementId;
+      if (!settlementId) return res.status(400).json({ message: 'settlementId required' });
+
+      const settlement = await prisma.settlement.findUnique({ where: { id: settlementId } });
+      if (!settlement || settlement.userId !== targetUserId) {
+        return res.status(404).json({ message: 'التسوية غير موجودة' });
+      }
+
+      const updated = await prisma.settlement.update({
+        where: { id: settlementId },
+        data: { status: 'paid', paidAt: new Date() },
+      });
+      return res.status(200).json(updated);
+    }
+
+    // POST /api/admin-resources?resource=partners&action=void-settlement&id=<settlementId>
+    if (req.method === 'POST' && action === 'void-settlement') {
+      const settlementId = req.query.settlementId;
+      if (!settlementId) return res.status(400).json({ message: 'settlementId required' });
+
+      const settlement = await prisma.settlement.findUnique({ where: { id: settlementId } });
+      if (!settlement || settlement.userId !== targetUserId) {
+        return res.status(404).json({ message: 'التسوية غير موجودة' });
+      }
+
+      const updated = await prisma.settlement.update({
+        where: { id: settlementId },
+        data: { status: 'void' },
+      });
+      return res.status(200).json(updated);
+    }
+
+    // DELETE /api/admin-resources?resource=partners&id=<id> — delete partner (cascades settlements)
+    if (req.method === 'DELETE' && id) {
+      const existing = await prisma.partner.findUnique({ where: { id } });
+      if (!existing || existing.userId !== targetUserId) {
+        return res.status(404).json({ message: 'الشريك غير موجود' });
+      }
+
+      await prisma.partner.delete({ where: { id } });
+      return res.status(204).end();
+    }
+
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  } catch (error) {
+    console.error('Partners handler error:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
 }

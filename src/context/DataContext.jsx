@@ -36,6 +36,8 @@ export const DataProvider = ({ children }) => {
   const [pricingRules, setPricingRules] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [cleaningTasks, setCleaningTasks] = useState([]);
+  const [partners, setPartners] = useState([]);
+  const [settlements, setSettlements] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
   const [loading] = useState(false);
@@ -52,6 +54,7 @@ export const DataProvider = ({ children }) => {
   const shouldFetchCleaning = isAdmin || perms.canClean;
   const shouldFetchExpenses = isAdmin || perms.canViewAnalytics; // expenses share analytics permission
   const shouldFetchBalances = isAdmin || perms.canViewBalances;
+  const shouldFetchPartners = isAdmin && user?.partnersRevenueSharingEnabled;
 
   const buildBookingsUrl = (params = {}) => {
     const url = new URL(`${API_BASE_URL}/bookings`, window.location.origin);
@@ -143,6 +146,40 @@ export const DataProvider = ({ children }) => {
     );
   };
 
+  const fetchPartners = async () => {
+    if (!shouldFetchPartners) return;
+    await fetchWithTTL(
+      `${API_BASE_URL}/admin-resources?resource=partners&action=list`,
+      setPartners,
+      'partners'
+    );
+  };
+
+  const fetchPartnerDetail = async (id) => {
+    if (!shouldFetchPartners) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=partners&id=${id}`);
+      return res.data;
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchPartnerSettlements = async (id) => {
+    if (!shouldFetchPartners) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=partners&id=${id}`);
+      setSettlements(res.data.settlements || []);
+      return res.data.settlements || [];
+    } catch (err) { console.error(err); }
+  };
+
+  const calculatePartnerSettlement = async (id, periodStart, periodEnd) => {
+    if (!shouldFetchPartners) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=partners&action=calculate&id=${id}&periodStart=${periodStart}&periodEnd=${periodEnd}`);
+      return res.data;
+    } catch (err) { console.error(err); }
+  };
+
   const createCleaningTask = async (data) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=cleaning`, data);
@@ -166,6 +203,82 @@ export const DataProvider = ({ children }) => {
       await axios.delete(`${API_BASE_URL}/admin-resources?resource=cleaning&id=${id}`);
       setCleaningTasks(prev => prev.filter(t => t.id !== id));
     } catch (err) { console.error(err); throw err; }
+  };
+
+  const createPartner = async (data) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners`, data);
+      setPartners(prev => [res.data, ...prev]);
+      toast.success('تم إنشاء الشريك بنجاح');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في إنشاء الشريك');
+      throw err;
+    }
+  };
+
+  const updatePartner = async (data) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=partners&id=${data.id}`, data);
+      setPartners(prev => prev.map(p => p.id === data.id ? res.data : p));
+      toast.success('تم حفظ التعديلات');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الحفظ');
+      throw err;
+    }
+  };
+
+  const deletePartner = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=partners&id=${id}`);
+      setPartners(prev => prev.filter(p => p.id !== id));
+      toast.success('تم حذف الشريك');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الحذف');
+      throw err;
+    }
+  };
+
+  const settlePartner = async (id, periodStart, periodEnd, memo) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=settle&id=${id}`, { periodStart, periodEnd, memo });
+      toast.success('تم إنشاء التسوية (مسودة)');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في إنشاء التسوية');
+      throw err;
+    }
+  };
+
+  const markSettlementPaid = async (settlementId) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=mark-paid&settlementId=${settlementId}`);
+      setSettlements(prev => prev.map(s => s.id === settlementId ? res.data : s));
+      toast.success('تم تحديد التسوية كمدفوعة');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في التحديث');
+      throw err;
+    }
+  };
+
+  const voidSettlement = async (settlementId) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=void-settlement&settlementId=${settlementId}`);
+      setSettlements(prev => prev.map(s => s.id === settlementId ? res.data : s));
+      toast.success('تم إلغاء التسوية');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الإلغاء');
+      throw err;
+    }
   };
 
   const createExpense = async (data) => {
@@ -232,7 +345,8 @@ export const DataProvider = ({ children }) => {
     if (shouldFetchPricing) fetchPricingRules();
     if (shouldFetchExpenses) fetchExpenses();
     if (shouldFetchCleaning) fetchCleaningTasks();
-  }, [token, shouldFetchMaintenance, shouldFetchPricing, shouldFetchExpenses, shouldFetchCleaning]);
+    if (shouldFetchPartners) fetchPartners();
+  }, [token, shouldFetchMaintenance, shouldFetchPricing, shouldFetchExpenses, shouldFetchCleaning, shouldFetchPartners]);
 
   // Analytics fetch — gated and dependent on filter
   useEffect(() => {
@@ -475,6 +589,19 @@ export const DataProvider = ({ children }) => {
       updateCleaningTask,
       deleteCleaningTask,
 
+      partners,
+      settlements,
+      fetchPartners,
+      fetchPartnerDetail,
+      fetchPartnerSettlements,
+      calculatePartnerSettlement,
+      createPartner,
+      updatePartner,
+      deletePartner,
+      settlePartner,
+      markSettlementPaid,
+      voidSettlement,
+
       loading,
       isAnalyticsLoading,
       // Expose permission flags so views can conditionally render
@@ -486,6 +613,7 @@ export const DataProvider = ({ children }) => {
         canViewCleaning: shouldFetchCleaning,
         canViewExpenses: shouldFetchExpenses,
         canViewBalances: shouldFetchBalances,
+        canViewPartners: shouldFetchPartners,
       }
     }}>
       {children}

@@ -1,4 +1,4 @@
-import { Home, Wallet, Wrench, Tag, BarChart2, Settings, Moon, Sun, LogOut, User as UserIcon, ChevronLeft, ArrowDownCircle, Sparkles } from 'lucide-react';
+import { Home, Wallet, Wrench, Tag, BarChart2, Settings, Moon, Sun, LogOut, User as UserIcon, ChevronLeft, ArrowDownCircle, Sparkles, Handshake } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -74,6 +74,9 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
         )}
         {canSeePricing && (
           <MenuItem icon={Tag}     label="الأسعار الموسمية" onClick={() => setView('pricing')} />
+        )}
+        {user?.role === 'admin' && user?.partnersRevenueSharingEnabled && (
+          <MenuItem icon={Handshake} label="الشركاء والتقاسم" onClick={() => setView('partners')} />
         )}
 
         {(canSeeAnalytics || canSeeSettings) && <SectionTitle>التقارير والإعدادات</SectionTitle>}

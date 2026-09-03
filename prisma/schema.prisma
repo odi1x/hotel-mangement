@@ -38,6 +38,9 @@ model User {
 
   generalExpenses  Decimal?
 
+  // Partners / Revenue Sharing feature flag
+  partnersRevenueSharingEnabled  Boolean     @default(false)
+
   createdAt        DateTime    @default(now())
 
   admin            User?       @relation("AdminStaff", fields: [adminId], references: [id])
@@ -54,6 +57,8 @@ model User {
   cleaningTasksOwned    CleaningTask[] @relation("CleaningTaskOwner")
   cleaningTasksStarted  CleaningTask[] @relation("CleaningTaskStarter")
   cleaningTasksCompleted CleaningTask[] @relation("CleaningTaskCompleter")
+  partners              Partner[]
+  settlements           Settlement[]
 }
 
 model License {
@@ -322,4 +327,65 @@ model CleaningTask {
   @@index([userId, status])
   @@index([apartmentId])
   @@index([bookingId])
+}
+
+/// Revenue Sharing Partner — a person/entity who receives a share of revenue/profit.
+/// Admin-only module, gated by the tenant's `partnersRevenueSharingEnabled` flag.
+model Partner {
+  id            String   @id @default(uuid())
+  userId        String                        // tenant owner (admin)
+  name          String
+  phone         String?
+  email         String?
+  notes         String?
+  // Compensation
+  compType      String   @default("percentage_gross") // percentage_gross | percentage_net | fixed | fixed_percentage
+  percentage    Decimal?                       // for %-type, and the % part of fixed+%
+  fixedAmount   Decimal?                       // for fixed, and the fixed part of fixed+%
+  // Scope
+  apartmentIds  String[]  @default([])         // [] = all units; else explicit units
+  // Status
+  status        String   @default("active")    // active | inactive | paused
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settlements   Settlement[]
+
+  @@index([userId, status])
+}
+
+/// Immutable financial snapshot for a partner settlement.
+/// Each record freezes the agreement terms AND the financial basis at settlement time
+/// so future partner agreement updates never alter past payouts.
+model Settlement {
+  id             String   @id @default(uuid())
+  partnerId      String
+  userId         String
+  // Snapshot of the comp terms AT settlement time (immutable)
+  compTypeSnap   String
+  percentageSnap Decimal?
+  fixedAmountSnap Decimal?
+  scopeSnap      String[]   // apartmentIds captured at settlement
+  // Financial basis snapshot
+  periodStart    DateTime
+  periodEnd      DateTime
+  basisGross     Decimal   // gross revenue for the period
+  basisExpenses  Decimal   // net basis: expenses subtracted
+  basisNet       Decimal   // net profit = basisGross - basisExpenses
+  // Payout
+  amount         Decimal   // final computed payout (Signed: refunds → negative)
+  currency       String    @default("sar")
+  // Ledger/state
+  status         String    @default("draft") // draft | paid | void
+  paidAt         DateTime?
+  memo           String?
+  createdAt      DateTime  @default(now())
+
+  partner        Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId, createdAt])
+  @@index([userId, periodStart, periodEnd])
+  @@index([userId, status])
 }
