@@ -160,6 +160,11 @@ export default function PartnerDetailView({ partnerId, onBack }) {
             <p className="text-sm text-ink dark:text-white mt-0.5">{getCompLabel(partner.compType, partner.percentage, partner.fixedAmount)}</p>
           </div>
           <div className="flex-1" />
+          {partner.recurringPeriod === 'monthly' && (
+            <span className="badge-pill badge-ghost text-sm" title="يُنشئ النظام تسوية تلقائية عن كل شهر مكتمل">
+              تسوية تلقائية شهرية
+            </span>
+          )}
           {partner.apartmentIds.length === 0 ? (
             <span className="badge-pill badge-ghost text-sm">كل الوحدات</span>
           ) : (

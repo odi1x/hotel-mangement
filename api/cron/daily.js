@@ -1,6 +1,92 @@
 /* global process */
 import prisma from '../../prisma.js';
 import { sendWebPush } from '../../push-helper.js';
+import { calculateGrossRevenue, calculateExpenses, computePartnerCompensation } from '../admin-resources.js';
+
+/**
+ * Auto-generate draft settlements for recurring partners.
+ * Runs on the 1st day of each month, covering the PREVIOUS complete month.
+ * Only if the tenant has the partners feature flag enabled and partner is active.
+ */
+async function generateMonthlyPartnerSettlements(today) {
+  // Detect first week of the month OR allow a grace buffer (cron at 05:00 day 1).
+  // Use the 1st through 7th to tolerate outages without missing a month.
+  if (today.getDate() > 7) {
+    return { skip: true, reason: 'not in first week of month' };
+  }
+
+  // Previous complete month
+  const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  prevMonthStart.setHours(0, 0, 0, 0);
+  const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  prevMonthEnd.setHours(23, 59, 59, 999);
+
+  const owners = await prisma.user.findMany({
+    where: { partnersRevenueSharingEnabled: true },
+    select: { id: true },
+  });
+
+  let created = 0;
+  let skipped = 0;
+
+  for (const owner of owners) {
+    const partners = await prisma.partner.findMany({
+      where: { userId: owner.id, status: 'active', recurringPeriod: 'monthly' },
+    });
+
+    for (const partner of partners) {
+      const aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
+
+      // Skip if a non-void settlement already exists for this partner within the previous month
+      const existing = await prisma.settlement.findFirst({
+        where: {
+          partnerId: partner.id,
+          status: { not: 'void' },
+          periodStart: { gte: prevMonthStart, lt: prevMonthEnd },
+        },
+      });
+      if (existing) { skipped++; continue; }
+
+      const { gross } = await calculateGrossRevenue(owner.id, aptIds, prevMonthStart, prevMonthEnd);
+      const { total: expenses } = await calculateExpenses(owner.id, aptIds, prevMonthStart, prevMonthEnd);
+      const { amount, formulaLabel, basis } = computePartnerCompensation(partner, gross, expenses);
+
+      await prisma.settlement.create({
+        data: {
+          partnerId: partner.id,
+          userId: owner.id,
+          compTypeSnap: partner.compType,
+          percentageSnap: partner.percentage,
+          fixedAmountSnap: partner.fixedAmount,
+          scopeSnap: [...partner.apartmentIds],
+          periodStart: prevMonthStart,
+          periodEnd: prevMonthEnd,
+          basisGross: gross,
+          basisExpenses: expenses,
+          basisNet: basis.net,
+          amount,
+          currency: 'sar',
+          status: 'draft',
+          memo: `تسوية تلقائية لهذا الشهر`,
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          userId: owner.id,
+          title: 'تسوية جديدة للشريك',
+          message: `تم إنشاء تسوية تلقائية للشريك ${partner.name} عن شهر ${prevMonthStart.toLocaleDateString('ar', { month: 'long', year: 'numeric' })} (${amount} ر.س). راجعها وسددها.`,
+          type: 'info',
+        },
+      });
+      await sendWebPush(owner.id, 'تسوية جديدة للشريك', `الشريك ${partner.name} — ${amount} ر.س`);
+
+      created++;
+    }
+  }
+
+  return { created, skipped };
+}
 
 export default async function handler(req, res) {
   // Verify Vercel Cron Authorization
@@ -15,6 +101,9 @@ export default async function handler(req, res) {
 
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Auto-generate partner settlements (previous complete month)
+    const partnerSettlements = await generateMonthlyPartnerSettlements(today);
 
     // 1. Expected Arrivals Today
     const arrivals = await prisma.booking.findMany({
@@ -123,8 +212,9 @@ export default async function handler(req, res) {
             arrivals: arrivals.length,
             departures: departures.length,
             licenses30Days: licenses30Days.length,
-            licenses7Days: licenses7Days.length
-        }
+            licenses7Days: licenses7Days.length,
+        },
+        partnerSettlements,
     });
 
   } catch (error) {

@@ -155,6 +155,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
     fixedAmount: '',
     apartmentIds: [],
     status: 'active',
+    recurringPeriod: '',
   });
   const initialDataRef = useRef(initialData);
   const isOpenRef = useRef(isOpen);
@@ -181,6 +182,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
           fixedAmount: data.fixedAmount != null ? String(data.fixedAmount) : '',
           apartmentIds: data.apartmentIds || [],
           status: data.status || 'active',
+          recurringPeriod: data.recurringPeriod || '',
         });
       } else {
         setFormData({
@@ -193,6 +195,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
           fixedAmount: '',
           apartmentIds: [],
           status: 'active',
+          recurringPeriod: '',
         });
       }
     }
@@ -245,6 +248,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
         fixedAmount: (formData.compType === 'fixed' || formData.compType === 'fixed_percentage') ? parseFloat(formData.fixedAmount) : null,
         apartmentIds: formData.apartmentIds,
         status: formData.status,
+        recurringPeriod: formData.recurringPeriod || null,
       };
 
       if (isEdit) {
@@ -498,6 +502,32 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
                     {s === 'active' && 'نشط'}
                     {s === 'inactive' && 'غير نشط'}
                     {s === 'paused' && 'موقوف مؤقتاً'}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* Recurring Settlement */}
+          <fieldset className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-4 space-y-3">
+            <legend className="eyebrow mb-2">تسوية تلقائية</legend>
+            <p className="text-xs text-muted-soft dark:text-body-dark">
+              عند التفعيل، يُنشئ النظام تسوية مسودة تلقائياً عن كل شهر مكتمل لهذا الشريك. تحتاج فقط للمراجعة والدفع.
+            </p>
+            <div className="nav-pill-group">
+              {[
+                { value: '', label: 'يدوي (بدون تلقائي)' },
+                { value: 'monthly', label: 'شهري تلقائي' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleChange('recurringPeriod', opt.value)}
+                  className={`h-9 px-4 rounded-full text-sm font-semibold transition-colors ${
+                    formData.recurringPeriod === opt.value
+                      ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
+                      : 'text-muted hover:text-ink dark:hover:text-white'
+                  }`}>
+                  {opt.label}
                 </button>
               ))}
             </div>

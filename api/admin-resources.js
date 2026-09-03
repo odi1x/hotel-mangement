@@ -870,7 +870,7 @@ export async function completeActiveTasksForApartment(apartmentId, userId, compl
  * Revenue calculation helper — mirrors the logic in analytics.js.
  * Returns gross revenue for bookings within a date range and apartment scope.
  */
-async function calculateGrossRevenue(userId, apartmentIds, periodStart, periodEnd) {
+export async function calculateGrossRevenue(userId, apartmentIds, periodStart, periodEnd) {
   const where = {
     userId,
     startDate: { lt: periodEnd },
@@ -918,7 +918,7 @@ async function calculateGrossRevenue(userId, apartmentIds, periodStart, periodEn
  * Expense calculation helper — mirrors the logic in analytics.js.
  * Returns total expenses for the given scope and period.
  */
-async function calculateExpenses(userId, apartmentIds, periodStart, periodEnd) {
+export async function calculateExpenses(userId, apartmentIds, periodStart, periodEnd) {
   // 1. Per-booking fees (platform + cleaning) from bookings in scope
   const bookingWhere = {
     userId,
@@ -1039,7 +1039,7 @@ async function calculateExpenses(userId, apartmentIds, periodStart, periodEnd) {
  * Core compensation engine — single source of truth for payout calculation.
  * Returns { amount, formulaLabel, basis }.
  */
-function computePartnerCompensation(partner, basisGross, basisExpenses) {
+export function computePartnerCompensation(partner, basisGross, basisExpenses) {
   const basisNet = basisGross - basisExpenses;
   const pct = partner.percentage != null ? Number(partner.percentage) : 0;
   const fixed = partner.fixedAmount != null ? Number(partner.fixedAmount) : 0;
@@ -1206,7 +1206,7 @@ async function partnersHandler(req, res, user) {
 
     // POST /api/admin-resources?resource=partners — create partner
     if (req.method === 'POST') {
-      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status } = req.body;
+      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod } = req.body;
 
       if (!name) return res.status(400).json({ message: 'اسم الشريك مطلوب' });
 
@@ -1248,6 +1248,7 @@ async function partnersHandler(req, res, user) {
           fixedAmount: (type === 'fixed' || type === 'fixed_percentage') ? parseFloat(fixedAmount) : null,
           apartmentIds: Array.isArray(apartmentIds) ? apartmentIds : [],
           status: status || 'active',
+          recurringPeriod: ['monthly', 'quarterly', 'yearly'].includes(recurringPeriod) ? recurringPeriod : null,
         },
       });
       return res.status(201).json(partner);
@@ -1255,7 +1256,7 @@ async function partnersHandler(req, res, user) {
 
     // PUT /api/admin-resources?resource=partners&id=<id> — update partner
     if (req.method === 'PUT' && id) {
-      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status } = req.body;
+      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod } = req.body;
 
       const existing = await prisma.partner.findUnique({ where: { id } });
       if (!existing || existing.userId !== targetUserId) {
@@ -1302,6 +1303,7 @@ async function partnersHandler(req, res, user) {
       if (fixedAmount !== undefined) updateData.fixedAmount = (type === 'fixed' || type === 'fixed_percentage') ? fixed : null;
       if (apartmentIds !== undefined) updateData.apartmentIds = Array.isArray(apartmentIds) ? apartmentIds : [];
       if (status !== undefined) updateData.status = status;
+      if (recurringPeriod !== undefined) updateData.recurringPeriod = ['monthly', 'quarterly', 'yearly'].includes(recurringPeriod) ? recurringPeriod : null;
 
       const updated = await prisma.partner.update({ where: { id }, data: updateData });
       return res.status(200).json(updated);
