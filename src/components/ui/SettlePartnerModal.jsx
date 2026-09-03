@@ -124,7 +124,7 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
           </div>
 
           {/* Transparent Basis Breakdown Card */}
-          {preview && (
+          {preview && preview.gross !== undefined && preview.gross !== null && (
             <div className="bg-accent-soft border border-accent/60 rounded-lg p-4 animate-tab space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-accent-strong">
                 <CheckCircle size={16} />
@@ -135,25 +135,25 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
                 <div className="flex justify-between py-1 border-b border-accent/30">
                   <span className="text-muted">إجمالي الإيرادات (النطاق + الفترة)</span>
                   <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {preview.gross.toLocaleString()} ر.س
+                    {Number(preview.gross).toLocaleString()} ر.س
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-accent/30">
                   <span className="text-muted">− المصروفات (بالتخصيص)</span>
                   <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {preview.expenses.toLocaleString()} ر.س
+                    {Number(preview.expenses).toLocaleString()} ر.س
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-accent/30">
                   <span className="text-muted">= صافي الربح</span>
                   <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {preview.net.toLocaleString()} ر.س
+                    {Number(preview.net).toLocaleString()} ر.س
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-t-2 border-accent/60">
                   <span className="text-muted">التطبيق: {preview.formulaLabel}</span>
                   <span className="font-bold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    مبلغ التسوية: {preview.amount.toLocaleString()} ر.س
+                    مبلغ التسوية: {Number(preview.amount).toLocaleString()} ر.س
                   </span>
                 </div>
               </div>
@@ -168,7 +168,7 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
                     {Object.entries(preview.unitBreakdown).map(([aptId, data]) => (
                       <div key={aptId} className="flex justify-between text-muted-soft">
                         <span>{aptId}</span>
-                        <span>{data.revenue.toLocaleString()} ر.س ({data.nights} ليلة)</span>
+                        <span>{Number(data.revenue).toLocaleString()} ر.س ({data.nights} ليلة)</span>
                       </div>
                     ))}
                   </div>
