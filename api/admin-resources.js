@@ -1155,19 +1155,39 @@ async function partnersHandler(req, res, user) {
     }
 
     // GET /api/admin-resources?resource=partners&action=calculate&id=<id>&periodStart&periodEnd
-    if (req.method === 'GET' && action === 'calculate') {
-      if (!id) return res.status(400).json({ message: 'partner id required' });
-      const { periodStart, periodEnd } = req.query;
+    // POST /api/admin-resources?resource=partners&action=calculate — for preview with form data (no saved partner needed)
+    if ((req.method === 'GET' || req.method === 'POST') && action === 'calculate') {
+      const { periodStart, periodEnd } = req.method === 'GET' ? req.query : req.body;
       if (!periodStart || !periodEnd) {
         return res.status(400).json({ message: 'periodStart and periodEnd required' });
       }
 
-      const partner = await prisma.partner.findUnique({ where: { id } });
-      if (!partner || partner.userId !== targetUserId) {
-        return res.status(404).json({ message: 'الشريك غير موجود' });
+      let partner;
+      let aptIds;
+
+      if (req.method === 'GET') {
+        // Existing partner lookup
+        if (!id) return res.status(400).json({ message: 'partner id required' });
+        partner = await prisma.partner.findUnique({ where: { id } });
+        if (!partner || partner.userId !== targetUserId) {
+          return res.status(404).json({ message: 'الشريك غير موجود' });
+        }
+        aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
+      } else {
+        // Preview with form data from request body
+        const { compType, percentage, fixedAmount, apartmentIds } = req.body;
+        if (!compType) return res.status(400).json({ message: 'compType required for preview' });
+
+        // Build a temporary partner object from form data
+        partner = {
+          compType,
+          percentage: percentage != null ? parseFloat(percentage) : null,
+          fixedAmount: fixedAmount != null ? parseFloat(fixedAmount) : null,
+          apartmentIds: Array.isArray(apartmentIds) ? apartmentIds : [],
+        };
+        aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
       }
 
-      const aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
       const { gross, unitBreakdown } = await calculateGrossRevenue(targetUserId, aptIds, new Date(periodStart), new Date(periodEnd));
       const { total: expenses, fees, ledger } = await calculateExpenses(targetUserId, aptIds, new Date(periodStart), new Date(periodEnd));
       const { amount, formulaLabel, basis } = computePartnerCompensation(partner, gross, expenses);

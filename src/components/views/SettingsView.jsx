@@ -431,6 +431,33 @@ export default function SettingsView() {
                     </button>
                   </div>
 
+                  {/* Partners Revenue Sharing Toggle */}
+                  <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2">
+                        <Shield size={18} className="text-ink dark:text-white" />
+                        وحدة الشركاء وتقاسم الإيرادات
+                      </h3>
+                      <p className="text-xs text-muted dark:text-body-dark mt-1">تفعيل ميزة إدارة الشركاء وحساب التسويات المالية</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); handleChange({ target: { name: 'partnersRevenueSharingEnabled', type: 'checkbox', checked: !formData.partnersRevenueSharingEnabled } }); }}
+                      disabled={loading}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${
+                        formData.partnersRevenueSharingEnabled
+                          ? 'bg-ink dark:bg-white'
+                          : 'bg-surface-strong dark:bg-hairline-dark-soft hover:bg-muted-soft cursor-pointer'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-ink shadow-micro transition-transform ${
+                          formData.partnersRevenueSharingEnabled ? '-translate-x-6' : '-translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
                   {/* Accent color theme */}
                   <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg mb-6">
                     <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2 mb-1">

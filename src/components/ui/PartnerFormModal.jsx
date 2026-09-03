@@ -21,7 +21,14 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
     async function fetchPreview() {
       setLoading(true);
       try {
-        const res = await calculateSettlement('temp', periodStart, periodEnd);
+        // Send form data directly for preview calculation
+        const partnerData = {
+          compType: partner.compType,
+          percentage: partner.percentage ? parseFloat(partner.percentage) : null,
+          fixedAmount: partner.fixedAmount ? parseFloat(partner.fixedAmount) : null,
+          apartmentIds: partner.apartmentIds || [],
+        };
+        const res = await calculateSettlement(partnerData, periodStart, periodEnd);
         if (!cancelled && res) {
           setPreview({
             gross: res.gross,

@@ -172,7 +172,19 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); }
   };
 
-  const calculatePartnerSettlement = async (id, periodStart, periodEnd) => {
+  const calculatePartnerSettlement = async (partnerData, periodStart, periodEnd) => {
+    if (!shouldFetchPartners) return;
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=calculate`, {
+        ...partnerData,
+        periodStart,
+        periodEnd,
+      });
+      return res.data;
+    } catch (err) { console.error(err); }
+  };
+
+  const calculatePartnerSettlementById = async (id, periodStart, periodEnd) => {
     if (!shouldFetchPartners) return;
     try {
       const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=partners&action=calculate&id=${id}&periodStart=${periodStart}&periodEnd=${periodEnd}`);
@@ -595,6 +607,7 @@ export const DataProvider = ({ children }) => {
       fetchPartnerDetail,
       fetchPartnerSettlements,
       calculatePartnerSettlement,
+      calculatePartnerSettlementById,
       createPartner,
       updatePartner,
       deletePartner,

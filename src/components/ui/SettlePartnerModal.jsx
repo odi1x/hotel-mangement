@@ -5,7 +5,7 @@ import { useData } from '../../context/DataContext';
 import toast from 'react-hot-toast';
 
 export default function SettlePartnerModal({ isOpen, onClose, partner }) {
-  const { settlePartner, calculatePartnerSettlement } = useData();
+  const { settlePartner, calculatePartnerSettlementById } = useData();
   const [saving, setSaving] = useState(false);
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
@@ -34,7 +34,7 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
     async function fetchPreview() {
       setPreviewLoading(true);
       try {
-        const res = await calculatePartnerSettlement(partner.id, periodStart, periodEnd);
+        const res = await calculatePartnerSettlementById(partner.id, periodStart, periodEnd);
         if (!cancelled && res) {
           setPreview(res);
         }
@@ -46,7 +46,7 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
     }
     fetchPreview();
     return () => { cancelled = true; };
-  }, [isOpen, partner, periodStart, periodEnd, calculatePartnerSettlement]);
+  }, [isOpen, partner, periodStart, periodEnd, calculatePartnerSettlementById]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
