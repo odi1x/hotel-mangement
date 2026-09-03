@@ -57,7 +57,16 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
     return () => { cancelled = true; };
   }, [partner?.compType, partner?.percentage, partner?.fixedAmount, partner?.apartmentIds, apartments, periodStart, periodEnd, calculateSettlement]);
 
-  if (!preview && !loading) {
+  if (loading && !preview) {
+    return (
+      <div className="bg-surface-soft dark:bg-surface-dark-elevated rounded-lg p-4 mb-4 text-center">
+        <Calculator className="animate-spin h-5 w-5 mx-auto text-accent mb-2" />
+        <p className="text-sm text-muted">جاري حساب المعاينة...</p>
+      </div>
+    );
+  }
+
+  if (!preview) {
     if (error) {
       return (
         <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-4 mb-4 animate-tab">
@@ -82,40 +91,34 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">إجمالي الإيرادات</p>
           <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview.gross.toLocaleString()} ر.س
+            {Number(preview.gross || 0).toLocaleString()} ر.س
           </p>
         </div>
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">المصروفات (مخصومة)</p>
           <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview.expenses.toLocaleString()} ر.س
+            {Number(preview.expenses || 0).toLocaleString()} ر.س
           </p>
         </div>
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">صافي الربح</p>
           <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview.net.toLocaleString()} ر.س
+            {Number(preview.net || 0).toLocaleString()} ر.س
           </p>
         </div>
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">التطبيق</p>
           <p className="font-semibold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview.formulaLabel}
+            {preview.formulaLabel || '—'}
           </p>
         </div>
       </div>
       <div className="mt-3 pt-3 border-t border-accent/40 flex justify-between items-center">
         <span className="text-sm text-muted">مبلغ التسوية المتوقع:</span>
         <span className="text-xl font-bold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {preview.amount.toLocaleString()} ر.س
+          {Number(preview.amount || 0).toLocaleString()} ر.س
         </span>
       </div>
-      {!preview && loading && (
-        <div className="flex items-center justify-center py-4 text-muted">
-          <Calculator className="animate-spin h-5 w-5 mr-2" />
-          جاري حساب المعاينة...
-        </div>
-      )}
     </div>
   );
 }
