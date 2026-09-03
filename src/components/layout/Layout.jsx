@@ -263,7 +263,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
             {view === 'pricing' && <PricingView addTrigger={pricingAddTrigger} />}
             {view === 'analytics' && <AnalyticsView setView={setView} />}
             {view === 'settings' && <SettingsView />}
-            {view === 'partners' && <PartnersView addTrigger={partnersAddTrigger} />}
+            {view === 'partners' && <PartnersView addTrigger={partnersAddTrigger} onSelectPartner={(id) => { setSelectedPartnerId(id); setView('partner-detail'); }} />}
             {view === 'partner-detail' && <PartnerDetailView partnerId={selectedPartnerId} onBack={() => { setSelectedPartnerId(null); setView('partners'); }} />}
             {view === 'more' && (
               <MobileMoreMenu

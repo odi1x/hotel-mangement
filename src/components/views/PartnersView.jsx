@@ -36,7 +36,7 @@ function getStatusConfig(status) {
   }
 }
 
-export default function PartnersView({ addTrigger }) {
+export default function PartnersView({ addTrigger, onSelectPartner }) {
   const { partners, fetchPartners, deletePartner, apartments } = useData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -274,7 +274,7 @@ export default function PartnersView({ addTrigger }) {
                     <li
                       key={partner.id}
                       className="px-6 py-4 hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors group cursor-pointer"
-                      onClick={() => { setShowAdd(true); setEditingPartner(partner); }}
+                      onClick={() => onSelectPartner ? onSelectPartner(partner.id) : null}
                     >
                       <div className="flex items-center gap-4">
                         {/* Color indicator based on comp type */}

@@ -32,12 +32,17 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
         };
         const res = await calculateSettlement(partnerData, periodStart, periodEnd);
         if (!cancelled && res && typeof res === 'object' && res.gross !== undefined) {
+          const gross = Number(res.gross) || 0;
+          const expenses = Number(res.expenses) || 0;
+          const net = Number(res.net) || 0;
+          const amount = Number(res.amount) || 0;
           setPreview({
-            gross: Number(res.gross) || 0,
-            expenses: Number(res.expenses) || 0,
-            net: Number(res.net) || 0,
-            amount: Number(res.amount) || 0,
+            gross,
+            expenses,
+            net,
+            amount,
             formulaLabel: res.formulaLabel || '—',
+            isEmpty: gross === 0 && expenses === 0 && amount === 0,
           });
         } else if (!cancelled) {
           setError('Invalid response from server');
@@ -87,6 +92,11 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
         <Sparkles size={16} />
         <span>معاينة حية للتسوية (تقديري)</span>
       </div>
+      {preview.isEmpty && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-3 text-xs text-amber-700 dark:text-amber-300">
+          لا توجد إيرادات أو مصروفات في هذه الفترة. تأكد من تحديد الفترة الصحيحة والوحدات.
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">إجمالي الإيرادات</p>
