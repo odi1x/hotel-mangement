@@ -6,7 +6,9 @@ import SettlementStatusBadge from '../ui/SettlementStatusBadge';
 import toast from 'react-hot-toast';
 
 function formatCurrency(amount) {
-  return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(amount);
+  const num = Number(amount);
+  if (isNaN(num)) return '—';
+  return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(num);
 }
 
 function formatDate(dateStr) {
