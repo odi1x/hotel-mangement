@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calculator, Sparkles, CheckCircle, Handshake } from 'lucide-react';
+import { X, Calculator, Sparkles, CheckCircle, Handshake, AlertTriangle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import toast from 'react-hot-toast';
 
@@ -14,12 +14,14 @@ const COMP_TYPES = [
 function CompensationPreview({ partner, apartments, calculateSettlement, periodStart, periodEnd }) {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!partner?.name) return;
     let cancelled = false;
     async function fetchPreview() {
       setLoading(true);
+      setError(null);
       try {
         // Send form data directly for preview calculation
         const partnerData = {
@@ -29,17 +31,24 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
           apartmentIds: partner.apartmentIds || [],
         };
         const res = await calculateSettlement(partnerData, periodStart, periodEnd);
-        if (!cancelled && res) {
+        if (!cancelled && res && typeof res === 'object' && res.gross !== undefined) {
           setPreview({
-            gross: res.gross,
-            expenses: res.expenses,
-            net: res.net,
-            amount: res.amount,
-            formulaLabel: res.formulaLabel,
+            gross: Number(res.gross) || 0,
+            expenses: Number(res.expenses) || 0,
+            net: Number(res.net) || 0,
+            amount: Number(res.amount) || 0,
+            formulaLabel: res.formulaLabel || '—',
           });
+        } else if (!cancelled) {
+          setError('Invalid response from server');
+          setPreview(null);
         }
       } catch (e) {
         console.error('Preview calculation failed:', e);
+        if (!cancelled) {
+          setError('فشل في حساب المعاينة');
+          setPreview(null);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -48,7 +57,20 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
     return () => { cancelled = true; };
   }, [partner?.compType, partner?.percentage, partner?.fixedAmount, partner?.apartmentIds, apartments, periodStart, periodEnd, calculateSettlement]);
 
-  if (!preview && !loading) return null;
+  if (!preview && !loading) {
+    if (error) {
+      return (
+        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-4 mb-4 animate-tab">
+          <div className="flex items-center gap-2 text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2">
+            <AlertTriangle size={16} />
+            <span>تعذر حساب المعاينة</span>
+          </div>
+          <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>
+        </div>
+      );
+    }
+    return null;
+  }
 
   return (
     <div className="bg-accent-soft border border-accent/60 rounded-lg p-4 mb-4 animate-tab">
@@ -60,36 +82,34 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">إجمالي الإيرادات</p>
           <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview ? preview.gross.toLocaleString() : '—'} ر.س
+            {preview.gross.toLocaleString()} ر.س
           </p>
         </div>
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">المصروفات (مخصومة)</p>
           <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview ? preview.expenses.toLocaleString() : '—'} ر.س
+            {preview.expenses.toLocaleString()} ر.س
           </p>
         </div>
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">صافي الربح</p>
           <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview ? preview.net.toLocaleString() : '—'} ر.س
+            {preview.net.toLocaleString()} ر.س
           </p>
         </div>
         <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
           <p className="text-muted-soft mb-1">التطبيق</p>
           <p className="font-semibold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview ? preview.formulaLabel : '—'}
+            {preview.formulaLabel}
           </p>
         </div>
       </div>
-      {preview && (
-        <div className="mt-3 pt-3 border-t border-accent/40 flex justify-between items-center">
-          <span className="text-sm text-muted">مبلغ التسوية المتوقع:</span>
-          <span className="text-xl font-bold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview.amount.toLocaleString()} ر.س
-          </span>
-        </div>
-      )}
+      <div className="mt-3 pt-3 border-t border-accent/40 flex justify-between items-center">
+        <span className="text-sm text-muted">مبلغ التسوية المتوقع:</span>
+        <span className="text-xl font-bold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {preview.amount.toLocaleString()} ر.س
+        </span>
+      </div>
       {!preview && loading && (
         <div className="flex items-center justify-center py-4 text-muted">
           <Calculator className="animate-spin h-5 w-5 mr-2" />
