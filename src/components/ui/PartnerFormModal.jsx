@@ -15,6 +15,10 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const calculateSettlementRef = useRef(calculateSettlement);
+  useEffect(() => {
+    calculateSettlementRef.current = calculateSettlement;
+  }, [calculateSettlement]);
 
   useEffect(() => {
     if (!partner?.name) return;
@@ -30,7 +34,7 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
           fixedAmount: partner.fixedAmount ? parseFloat(partner.fixedAmount) : null,
           apartmentIds: partner.apartmentIds || [],
         };
-        const res = await calculateSettlement(partnerData, periodStart, periodEnd);
+        const res = await calculateSettlementRef.current(partnerData, periodStart, periodEnd);
         if (!cancelled && res && typeof res === 'object' && res.gross !== undefined) {
           const gross = Number(res.gross) || 0;
           const expenses = Number(res.expenses) || 0;
@@ -60,7 +64,7 @@ function CompensationPreview({ partner, apartments, calculateSettlement, periodS
     }
     fetchPreview();
     return () => { cancelled = true; };
-  }, [partner?.compType, partner?.percentage, partner?.fixedAmount, partner?.apartmentIds, apartments, periodStart, periodEnd, calculateSettlement]);
+  }, [partner?.compType, partner?.percentage, partner?.fixedAmount, partner?.apartmentIds, apartments, periodStart, periodEnd]);
 
   if (loading && !preview) {
     return (
@@ -137,6 +141,10 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
   const { createPartner, updatePartner, calculatePartnerSettlement } = useData();
   const isEdit = !!initialData?.id;
   const [saving, setSaving] = useState(false);
+  const [previewPeriodStart, setPreviewPeriodStart] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0];
+  });
+  const [previewPeriodEnd, setPreviewPeriodEnd] = useState(() => new Date().toISOString().split('T')[0]);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -256,13 +264,6 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
 
   const needsPercentage = ['percentage_gross', 'percentage_net', 'fixed_percentage'].includes(formData.compType);
   const needsFixed = ['fixed', 'fixed_percentage'].includes(formData.compType);
-
-  // Calculate preview period (last 30 days)
-  const periodEnd = new Date();
-  const periodStart = new Date();
-  periodStart.setDate(periodStart.getDate() - 30);
-  const periodStartStr = periodStart.toISOString().split('T')[0];
-  const periodEndStr = periodEnd.toISOString().split('T')[0];
 
   if (!isOpen) return null;
 
@@ -403,12 +404,34 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
             </div>
 
             {/* Live Preview Card */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block eyebrow mb-1.5">فترة المعاينة (من)</label>
+                <input
+                  type="date"
+                  className="input-field w-full"
+                  value={previewPeriodStart}
+                  onChange={(e) => setPreviewPeriodStart(e.target.value)}
+                  max={previewPeriodEnd}
+                />
+              </div>
+              <div>
+                <label className="block eyebrow mb-1.5">فترة المعاينة (إلى)</label>
+                <input
+                  type="date"
+                  className="input-field w-full"
+                  value={previewPeriodEnd}
+                  onChange={(e) => setPreviewPeriodEnd(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
             <CompensationPreview
               partner={formData}
               apartments={apartments}
               calculateSettlement={calculatePartnerSettlement}
-              periodStart={periodStartStr}
-              periodEnd={periodEndStr}
+              periodStart={previewPeriodStart}
+              periodEnd={previewPeriodEnd}
             />
           </fieldset>
 

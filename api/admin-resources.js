@@ -1137,7 +1137,7 @@ async function partnersHandler(req, res, user) {
     }
 
     // GET /api/admin-resources?resource=partners&id=<id> — partner detail + settlements
-    if (req.method === 'GET' && id) {
+    if (req.method === 'GET' && !action && id) {
       const partner = await prisma.partner.findUnique({
         where: { id },
         include: {

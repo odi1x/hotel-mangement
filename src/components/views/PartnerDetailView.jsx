@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, Calculator, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import SettlePartnerModal from '../ui/SettlePartnerModal';
@@ -49,27 +49,37 @@ export default function PartnerDetailView({ partnerId, onBack }) {
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(false);
   const [expandingId, setExpandingId] = useState(null);
+  const fetchPartnerDetailRef = useRef(fetchPartnerDetail);
+  const fetchPartnerSettlementsRef = useRef(fetchPartnerSettlements);
+  useEffect(() => {
+    fetchPartnerDetailRef.current = fetchPartnerDetail;
+    fetchPartnerSettlementsRef.current = fetchPartnerSettlements;
+  }, [fetchPartnerDetail, fetchPartnerSettlements]);
 
   useEffect(() => {
     if (!partnerId) return;
+    let cancelled = false;
     async function load() {
       setLoading(true);
       try {
         const [p, s] = await Promise.all([
-          fetchPartnerDetail(partnerId),
-          fetchPartnerSettlements(partnerId),
+          fetchPartnerDetailRef.current(partnerId),
+          fetchPartnerSettlementsRef.current(partnerId),
         ]);
-        setPartner(p);
-        setSettlements(s || []);
+        if (!cancelled) {
+          setPartner(p);
+          setSettlements(s || []);
+        }
       } catch (e) {
         console.error('Failed to load partner detail:', e);
-        toast.error('فشل في تحميل بيانات الشريك');
+        if (!cancelled) toast.error('فشل في تحميل بيانات الشريك');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     load();
-  }, [partnerId, fetchPartnerDetail, fetchPartnerSettlements]);
+    return () => { cancelled = true; };
+  }, [partnerId]);
 
   const handleMarkPaid = async (id) => {
     try {

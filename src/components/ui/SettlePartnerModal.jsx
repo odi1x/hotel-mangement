@@ -12,19 +12,24 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
   const [memo, setMemo] = useState('');
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const initializedRef = useRef(false);
-
-  // Default to last 30 days on first open
+  const calculateRef = useRef(calculatePartnerSettlementById);
   useEffect(() => {
-    if (isOpen && !initializedRef.current) {
-      initializedRef.current = true;
+    calculateRef.current = calculatePartnerSettlementById;
+  }, [calculatePartnerSettlementById]);
+  const prevPartnerRef = useRef(null);
+
+  // Reset period defaults per partner; initialize on first open
+  useEffect(() => {
+    if (isOpen && partner?.id !== prevPartnerRef.current) {
+      prevPartnerRef.current = partner?.id || null;
       const end = new Date();
       const start = new Date();
       start.setDate(start.getDate() - 30);
       setPeriodStart(start.toISOString().split('T')[0]);
       setPeriodEnd(end.toISOString().split('T')[0]);
+      setPreview(null);
     }
-  }, [isOpen]);
+  }, [isOpen, partner?.id]);
 
   // Fetch preview when period changes
   useEffect(() => {
@@ -34,7 +39,7 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
     async function fetchPreview() {
       setPreviewLoading(true);
       try {
-        const res = await calculatePartnerSettlementById(partner.id, periodStart, periodEnd);
+        const res = await calculateRef.current(partner.id, periodStart, periodEnd);
         if (!cancelled && res) {
           setPreview(res);
         }
@@ -46,7 +51,7 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
     }
     fetchPreview();
     return () => { cancelled = true; };
-  }, [isOpen, partner, periodStart, periodEnd, calculatePartnerSettlementById]);
+  }, [isOpen, partner, periodStart, periodEnd]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

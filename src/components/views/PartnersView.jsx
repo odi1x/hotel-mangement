@@ -55,9 +55,13 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
   }, [addTrigger]);
 
   // Fetch on mount
+  const fetchPartnersRef = useRef(fetchPartners);
   useEffect(() => {
-    fetchPartners();
+    fetchPartnersRef.current = fetchPartners;
   }, [fetchPartners]);
+  useEffect(() => {
+    fetchPartnersRef.current();
+  }, []);
 
   // Stats
   const activeCount = partners.filter(p => p.status === 'active').length;
