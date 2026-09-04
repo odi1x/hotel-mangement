@@ -258,11 +258,23 @@ export const DataProvider = ({ children }) => {
   const settlePartner = async (id, periodStart, periodEnd, memo) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=settle&id=${id}`, { periodStart, periodEnd, memo });
-      toast.success('تم إنشاء التسوية (مسودة)');
       return res.data;
     } catch (err) {
       console.error(err);
       toast.error(err?.response?.data?.message || 'فشل في إنشاء التسوية');
+      throw err;
+    }
+  };
+
+  const paySettlements = async ({ settlementIds, method, date, notes }) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=pay-settlements`, { settlementIds, method, date, notes });
+      setSettlements(prev => prev.map(s => settlementIds.includes(s.id) ? { ...s, status: 'paid', paidAt: res.data.payment?.date || new Date().toISOString() } : s));
+      toast.success(`تم دفع ${res.data.count} تسويات دفعة واحدة (${Number(res.data.total).toLocaleString()} ر.س)`);
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الدفع');
       throw err;
     }
   };
@@ -614,6 +626,7 @@ export const DataProvider = ({ children }) => {
       settlePartner,
       markSettlementPaid,
       voidSettlement,
+      paySettlements,
 
       loading,
       isAnalyticsLoading,

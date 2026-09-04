@@ -55,6 +55,7 @@ async function generateMonthlyPartnerSettlements(today) {
         data: {
           partnerId: partner.id,
           userId: owner.id,
+          partnerNameSnap: partner.name,
           compTypeSnap: partner.compType,
           percentageSnap: partner.percentage,
           fixedAmountSnap: partner.fixedAmount,
@@ -68,6 +69,7 @@ async function generateMonthlyPartnerSettlements(today) {
           currency: 'sar',
           status: 'draft',
           memo: `تسوية تلقائية لهذا الشهر`,
+          source: 'auto',
         },
       });
 

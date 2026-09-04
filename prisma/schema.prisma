@@ -59,6 +59,7 @@ model User {
   cleaningTasksCompleted CleaningTask[] @relation("CleaningTaskCompleter")
   partners              Partner[]
   settlements           Settlement[]
+  settlementPayments    SettlementPayment[]
 }
 
 model License {
@@ -365,6 +366,7 @@ model Settlement {
   partnerId      String
   userId         String
   // Snapshot of the comp terms AT settlement time (immutable)
+  partnerNameSnap String  // frozen partner name at creation time
   compTypeSnap   String
   percentageSnap Decimal?
   fixedAmountSnap Decimal?
@@ -381,13 +383,36 @@ model Settlement {
   // Ledger/state
   status         String    @default("draft") // draft | paid | void
   paidAt         DateTime?
+  paymentId      String?   // SettlementPayment id if paid as part of a batch
   memo           String?
+  source         String    @default("manual") // manual | auto
   createdAt      DateTime  @default(now())
 
   partner        Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment        SettlementPayment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@index([partnerId, createdAt])
   @@index([userId, periodStart, periodEnd])
   @@index([userId, status])
+  @@index([paymentId])
+}
+
+/// A batch payment that settles MULTIPLE partner settlements as one transaction.
+/// Selecting several settlements and paying creates one record here; each
+/// referenced settlement gets its `status` set to paid and `paymentId` linked.
+model SettlementPayment {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Decimal
+  method      String   @default("cash")
+  date        DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  settlements Settlement[]
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

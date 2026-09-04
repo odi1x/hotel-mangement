@@ -319,8 +319,8 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                           <SettlementStatusBadge status={latestSettlement.status} />
                         )}
 
-                        {/* Action buttons (reveal on hover) */}
-                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Action buttons (always visible for mobile reachability) */}
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             onClick={(e) => { e.stopPropagation(); setShowAdd(true); setEditingPartner(partner); }}
                             className="icon-action hover:text-accent"

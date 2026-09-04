@@ -1322,9 +1322,30 @@ async function partnersHandler(req, res, user) {
         return res.status(404).json({ message: 'الشريك غير موجود' });
       }
 
-      const aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
       const pStart = new Date(periodStart);
+      pStart.setHours(0, 0, 0, 0);
       const pEnd = new Date(periodEnd);
+      pEnd.setHours(23, 59, 59, 999);
+
+      // CONFLICT DETECTION: reject if a non-void settlement already overlaps this period
+      const existing = await prisma.settlement.findFirst({
+        where: {
+          partnerId: partner.id,
+          status: { not: 'void' },
+          periodStart: { lte: pEnd },
+          periodEnd: { gte: pStart },
+        },
+        select: { id: true, periodStart: true, periodEnd: true, status: true },
+      });
+      if (existing) {
+        const label = `${new Date(existing.periodStart).toLocaleDateString('ar', { day: 'numeric', month: 'long' })} — ${new Date(existing.periodEnd).toLocaleDateString('ar', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        return res.status(409).json({
+          message: `يوجد بالفعل تسوية لهذا الشريك في الفترة (${label}). لا يمكن إنشاء تسوية تتعارض مع تسوية موجودة.`,
+          existing,
+        });
+      }
+
+      const aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
       const { gross } = await calculateGrossRevenue(targetUserId, aptIds, pStart, pEnd);
       const { total: expenses } = await calculateExpenses(targetUserId, aptIds, pStart, pEnd);
       const { amount, formulaLabel, basis } = computePartnerCompensation(partner, gross, expenses);
@@ -1333,6 +1354,7 @@ async function partnersHandler(req, res, user) {
         data: {
           partnerId: partner.id,
           userId: targetUserId,
+          partnerNameSnap: partner.name,
           compTypeSnap: partner.compType,
           percentageSnap: partner.percentage,
           fixedAmountSnap: partner.fixedAmount,
@@ -1346,6 +1368,7 @@ async function partnersHandler(req, res, user) {
           currency: 'sar',
           status: 'draft',
           memo: memo || null,
+          source: 'manual',
         },
       });
 
@@ -1384,6 +1407,51 @@ async function partnersHandler(req, res, user) {
         data: { status: 'void' },
       });
       return res.status(200).json(updated);
+    }
+
+    // POST /api/admin-resources?resource=partners&action=pay-settlements
+    // Body: { settlementIds: [], method, date, notes }
+    // Creates ONE SettlementPayment covering all selected draft settlements,
+    // then marks each settlement paid and links it to the payment.
+    if (req.method === 'POST' && action === 'pay-settlements') {
+      const { settlementIds, method, date, notes } = req.body;
+      if (!Array.isArray(settlementIds) || settlementIds.length === 0) {
+        return res.status(400).json({ message: 'settlementIds (array) required' });
+      }
+
+      const settlements = await prisma.settlement.findMany({
+        where: { id: { in: settlementIds }, userId: targetUserId },
+      });
+      if (settlements.length !== settlementIds.length) {
+        return res.status(404).json({ message: 'تسوية أو أكثر غير موجودة' });
+      }
+      const nonDraft = settlements.find(s => s.status !== 'draft');
+      if (nonDraft) {
+        return res.status(409).json({ message: 'لا يمكن دفع تسوية ليست بمسودة: ' + nonDraft.partnerNameSnap });
+      }
+
+      const total = settlements.reduce((sum, s) => sum + Number(s.amount), 0);
+      const paidAt = date ? new Date(date) : new Date();
+
+      const payment = await prisma.settlementPayment.create({
+        data: {
+          userId: targetUserId,
+          amount: Math.round(total * 100) / 100,
+          method: method || 'cash',
+          date: paidAt,
+          notes: notes || null,
+          settlements: {
+            connect: settlements.map(s => ({ id: s.id })),
+          },
+        },
+      });
+
+      await prisma.settlement.updateMany({
+        where: { id: { in: settlementIds }, userId: targetUserId },
+        data: { status: 'paid', paidAt, paymentId: payment.id },
+      });
+
+      return res.status(201).json({ payment, count: settlements.length, total });
     }
 
     // DELETE /api/admin-resources?resource=partners&id=<id> — delete partner (cascades settlements)

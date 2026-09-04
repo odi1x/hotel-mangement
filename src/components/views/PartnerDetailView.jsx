@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Calculator, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronLeft, Calculator, CheckCircle, XCircle, AlertTriangle, FileText, X, Wallet } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import SettlePartnerModal from '../ui/SettlePartnerModal';
 import SettlementStatusBadge from '../ui/SettlementStatusBadge';
@@ -43,12 +44,16 @@ function getStatusConfig(status) {
 }
 
 export default function PartnerDetailView({ partnerId, onBack }) {
-  const { fetchPartnerDetail, fetchPartnerSettlements, markSettlementPaid, voidSettlement, apartments } = useData();
+  const { fetchPartnerDetail, fetchPartnerSettlements, markSettlementPaid, voidSettlement, paySettlements, apartments } = useData();
   const [partner, setPartner] = useState(null);
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(false);
   const [expandingId, setExpandingId] = useState(null);
+  const [selected, setSelected] = useState([]);
+  const [payOpen, setPayOpen] = useState(false);
+  const [payMethod, setPayMethod] = useState('cash');
+  const [paying, setPaying] = useState(false);
   const fetchPartnerDetailRef = useRef(fetchPartnerDetail);
   const fetchPartnerSettlementsRef = useRef(fetchPartnerSettlements);
   useEffect(() => {
@@ -99,6 +104,33 @@ export default function PartnerDetailView({ partnerId, onBack }) {
       toast.success('تم إلغاء التسوية');
     } catch {
       // toast handled in context
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const selectedSettlements = settlements.filter(s => selected.includes(s.id));
+  const selectedTotal = selectedSettlements.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+  const selectedDrafts = settlements.filter(s => selected.includes(s.id) && s.status === 'draft');
+
+  const handleBulkPay = async () => {
+    if (selectedDrafts.length === 0) return;
+    setPaying(true);
+    try {
+      await paySettlements({
+        settlementIds: selected,
+        method: payMethod,
+        date: new Date().toISOString().split('T')[0],
+        notes: `دفعة لـ ${partner.name}`,
+      });
+      setSettlements(prev => prev.map(s => selected.includes(s.id) ? { ...s, status: 'paid', paidAt: new Date().toISOString() } : s));
+      setSelected([]);
+      setPayOpen(false);
+      setPaying(false);
+    } catch {
+      setPaying(false);
     }
   };
 
@@ -199,14 +231,47 @@ export default function PartnerDetailView({ partnerId, onBack }) {
               </button>
             </div>
 
-            <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden">
+            {/* Bulk pay bar */}
+            {selected.length > 0 && (
+              <div className="mb-4 p-4 rounded-lg border border-accent/50 bg-accent-soft flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-ink dark:text-white">
+                    تم اختيار {selected.length} تسوية
+                  </p>
+                  <p className="text-xs text-muted-soft">
+                    الإجمالي: <span className="font-semibold text-accent-strong">{Number(selectedTotal).toLocaleString('ar-SA')} ر.س</span>
+                    {selectedDrafts.length < selected.length && ` (${selectedDrafts.length} منها قابلة للدفع)`}
+                  </p>
+                </div>
+                <button onClick={() => setPayOpen(true)} disabled={selectedDrafts.length === 0} className="btn-accent h-10 px-5 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <CheckCircle size={16} />
+                  <span>دفع كدفعة واحدة</span>
+                </button>
+                <button onClick={() => setSelected([])} className="btn-secondary h-10 px-4 text-sm">إلغاء التحديد</button>
+              </div>
+            )}
+
+              <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden">
               <ul className="divide-y divide-hairline-soft dark:divide-hairline-dark">
                 {settlements.map((s) => {
                   const isExpanded = expandingId === s.id;
+                  const isSelected = selected.includes(s.id);
 
                   return (
                     <li key={s.id} className="px-6 py-4 hover:bg-surface-soft/50 dark:hover:bg-surface-dark-elevated/30 transition-colors">
                       <div className="flex items-start gap-4">
+                        {/* Selection checkbox for draft settlements */}
+                        {s.status === 'draft' && (
+                          <label className={`mt-1 shrink-0 cursor-pointer flex items-center justify-center w-5 h-5 rounded border-2 transition-colors ${isSelected ? 'bg-accent border-accent' : 'border-hairline dark:border-hairline-dark'}`}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelect(s.id)}
+                              className="appearance-none"
+                            />
+                            {isSelected && <span className="text-white text-xs leading-none">✓</span>}
+                          </label>
+                        )}
                         {/* Status badge + amount */}
                         <div className="flex flex-col items-center gap-2 shrink-0 w-36 md:w-40">
                           <SettlementStatusBadge status={s.status} />
@@ -343,6 +408,66 @@ export default function PartnerDetailView({ partnerId, onBack }) {
         partner={partner}
         apartments={apartments}
       />
+
+      {/* Bulk Payment Modal */}
+      {payOpen && createPortal(
+        <div className="fixed inset-0 z-[80] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
+          <div className="absolute inset-0" onClick={() => setPayOpen(false)} />
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft flex flex-col anim-sheet">
+            <div className="sheet-handle" />
+            <div className="px-5 py-4 border-b border-hairline-soft dark:border-hairline-dark-soft flex items-center gap-3 shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Wallet size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold tracking-tight text-ink dark:text-white leading-tight text-base">دفع التسويات كدفعة واحدة</h2>
+                <p className="text-xs text-muted dark:text-body-dark mt-0.5">
+                  {selectedDrafts.length} تسوية · الإجمالي {Number(selectedTotal).toLocaleString('ar-SA')} ر.س
+                </p>
+              </div>
+              <button onClick={() => setPayOpen(false)} className="icon-action shrink-0" aria-label="إغلاق"><X size={20} /></button>
+            </div>
+
+            <div className="p-4 md:p-5 space-y-4">
+              <div>
+                <label className="block eyebrow mb-1.5">طريقة الدفع</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'cash', label: 'نقدي' },
+                    { value: 'transfer', label: 'تحويل' },
+                    { value: 'card', label: 'بطاقة' },
+                  ].map(m => (
+                    <button key={m.value} type="button" onClick={() => setPayMethod(m.value)}
+                      className={`h-10 rounded-lg text-sm font-semibold transition-colors ${payMethod === m.value ? 'bg-accent text-white' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark'}`}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-accent/40 bg-accent-soft p-3 space-y-1 text-sm">
+                {selectedDrafts.map(s => (
+                  <div key={s.id} className="flex justify-between text-muted-soft">
+                    <span>{s.partnerNameSnap || '—'} · {s.periodStart ? new Date(s.periodStart).toLocaleDateString('ar', { month: 'long' }) : ''}</span>
+                    <span className="font-semibold text-ink dark:text-white">{Number(s.amount).toLocaleString('ar-SA')} ر.س</span>
+                  </div>
+                ))}
+                <div className="pt-2 mt-1 border-t border-accent/30 flex justify-between font-bold text-ink dark:text-white">
+                  <span>الإجمالي</span>
+                  <span>{Number(selectedTotal).toLocaleString('ar-SA')} ر.س</span>
+                </div>
+              </div>
+
+              <button onClick={handleBulkPay} disabled={paying || selectedDrafts.length === 0}
+                className="btn-accent w-full h-11 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                <CheckCircle size={16} />
+                <span>{paying ? 'جاري الدفع...' : `تأكيد الدفع (${Number(selectedTotal).toLocaleString('ar-SA')} ر.س)`}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
