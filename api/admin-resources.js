@@ -1204,8 +1204,8 @@ async function partnersHandler(req, res, user) {
       });
     }
 
-    // POST /api/admin-resources?resource=partners — create partner
-    if (req.method === 'POST') {
+    // POST /api/admin-resources?resource=partners — create partner (NOT action-routed calls like settle/pay-settlements/mark-paid/void)
+    if (req.method === 'POST' && !action) {
       const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod } = req.body;
 
       if (!name) return res.status(400).json({ message: 'اسم الشريك مطلوب' });
