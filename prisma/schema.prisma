@@ -347,6 +347,7 @@ model Partner {
   apartmentIds  String[]  @default([])         // [] = all units; else explicit units
   // Recurring settlement
   recurringPeriod String? // null = manual only | monthly | quarterly | yearly
+  startMonth      String? // "YYYY-MM" — first eligible month for per-month splitting/backfill
   // Status
   status        String   @default("active")    // active | inactive | paused
   createdAt     DateTime @default(now())

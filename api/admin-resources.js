@@ -2,6 +2,13 @@ import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 import { sendWebPush } from '../push-helper.js';
 
+/** Return the next calendar month in "YYYY-MM" format. */
+function nextMonth(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + 1, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 /**
  * /api/admin-resources?resource=maintenance      → maintenance CRUD
  * /api/admin-resources?resource=pricing-rules    → pricing rules CRUD
@@ -1206,7 +1213,7 @@ async function partnersHandler(req, res, user) {
 
     // POST /api/admin-resources?resource=partners — create partner (NOT action-routed calls like settle/pay-settlements/mark-paid/void)
     if (req.method === 'POST' && !action) {
-      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod } = req.body;
+      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod, startMonth } = req.body;
 
       if (!name) return res.status(400).json({ message: 'اسم الشريك مطلوب' });
 
@@ -1249,6 +1256,7 @@ async function partnersHandler(req, res, user) {
           apartmentIds: Array.isArray(apartmentIds) ? apartmentIds : [],
           status: status || 'active',
           recurringPeriod: ['monthly', 'quarterly', 'yearly'].includes(recurringPeriod) ? recurringPeriod : null,
+          startMonth: startMonth || null,
         },
       });
       return res.status(201).json(partner);
@@ -1256,7 +1264,7 @@ async function partnersHandler(req, res, user) {
 
     // PUT /api/admin-resources?resource=partners&id=<id> — update partner
     if (req.method === 'PUT' && id) {
-      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod } = req.body;
+      const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod, startMonth } = req.body;
 
       const existing = await prisma.partner.findUnique({ where: { id } });
       if (!existing || existing.userId !== targetUserId) {
@@ -1304,6 +1312,7 @@ async function partnersHandler(req, res, user) {
       if (apartmentIds !== undefined) updateData.apartmentIds = Array.isArray(apartmentIds) ? apartmentIds : [];
       if (status !== undefined) updateData.status = status;
       if (recurringPeriod !== undefined) updateData.recurringPeriod = ['monthly', 'quarterly', 'yearly'].includes(recurringPeriod) ? recurringPeriod : null;
+      if (startMonth !== undefined) updateData.startMonth = startMonth || null;
 
       const updated = await prisma.partner.update({ where: { id }, data: updateData });
       return res.status(200).json(updated);
@@ -1373,6 +1382,118 @@ async function partnersHandler(req, res, user) {
       });
 
       return res.status(201).json({ ...settlement, formulaLabel });
+    }
+
+    // POST /api/admin-resources?resource=partners&action=backfill-missing-months&id=<partnerId>
+    // Body: { startMonth: "2026-05" } (optional; defaults to partner.startMonth or the earliest booking month)
+    // Generates ONE draft settlement per full calendar month, from startMonth up to the previous
+    // complete month, sized by each month's actual bookings. Skips any month already covered by a
+    // non-void settlement (conflict-safe), and skips months with no revenue.
+    if (req.method === 'POST' && action === 'backfill-missing-months') {
+      if (!id) return res.status(400).json({ message: 'partner id required' });
+      const { startMonth } = req.body;
+
+      const partner = await prisma.partner.findUnique({ where: { id } });
+      if (!partner || partner.userId !== targetUserId) {
+        return res.status(404).json({ message: 'الشريك غير موجود' });
+      }
+
+      const aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
+      const now = new Date();
+
+      // First eligible month: provided startMonth, else partner.startMonth, else January 2020
+      let cursorStartMonth = '';
+      if (startMonth && /^\d{4}-\d{2}$/.test(startMonth)) {
+        cursorStartMonth = startMonth;
+      } else if (partner.startMonth) {
+        cursorStartMonth = partner.startMonth;
+      } else {
+        cursorStartMonth = '2020-01';
+      }
+
+      // The previous COMPLETE month is the last eligible period
+      const prevComplete = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastEligible = `${prevComplete.getFullYear()}-${String(prevComplete.getMonth() + 1).padStart(2, '0')}`;
+
+      if (cursorStartMonth > lastEligible) {
+        return res.status(200).json({ created: 0, skipped: 0, message: 'لا توجد أشهر مكتملة بعد للترحيل' });
+      }
+
+      const created = [];
+      const skipped = [];
+
+      // Helper to build month period boundaries
+      const monthBounds = (ym) => {
+        const [y, m] = ym.split('-').map(Number);
+        const start = new Date(y, m - 1, 1); start.setHours(0, 0, 0, 0);
+        const end = new Date(y, m, 1); end.setHours(0, 0, 0, 0);
+        end.setSeconds(-1);
+        return { pStart: start, pEnd: end };
+      };
+
+      // Iterate month by month
+      let cursor = cursorStartMonth;
+      while (cursor <= lastEligible) {
+        const { pStart, pEnd } = monthBounds(cursor);
+
+        // Skip if a non-void settlement already covers this month
+        const existing = await prisma.settlement.findFirst({
+          where: {
+            partnerId: partner.id,
+            status: { not: 'void' },
+            periodStart: { lte: pEnd },
+            periodEnd: { gte: pStart },
+          },
+          select: { id: true },
+        });
+        if (existing) {
+          skipped.push(cursor);
+          cursor = nextMonth(cursor);
+          continue;
+        }
+
+        const { gross } = await calculateGrossRevenue(targetUserId, aptIds, pStart, pEnd);
+        const { total: expenses } = await calculateExpenses(targetUserId, aptIds, pStart, pEnd);
+        const { amount, formulaLabel, basis } = computePartnerCompensation(partner, gross, expenses);
+
+        if (Number(gross) <= 0) {
+          // No revenue that month → don't create a zero settlement, just skip
+          skipped.push(`${cursor} (لا إيرادات)`);
+          cursor = nextMonth(cursor);
+          continue;
+        }
+
+        const settlement = await prisma.settlement.create({
+          data: {
+            partnerId: partner.id,
+            userId: targetUserId,
+            partnerNameSnap: partner.name,
+            compTypeSnap: partner.compType,
+            percentageSnap: partner.percentage,
+            fixedAmountSnap: partner.fixedAmount,
+            scopeSnap: [...partner.apartmentIds],
+            periodStart: pStart,
+            periodEnd: pEnd,
+            basisGross: gross,
+            basisExpenses: expenses,
+            basisNet: basis.net,
+            amount,
+            currency: 'sar',
+            status: 'draft',
+            memo: 'تسوية شهرية تلقائية (ترحيل فترات سابقة)',
+            source: 'manual',
+          },
+        });
+        created.push({ ...settlement, formulaLabel, month: cursor });
+        cursor = nextMonth(cursor);
+      }
+
+      return res.status(201).json({
+        created,
+        skipped,
+        partnerName: partner.name,
+        message: `تم إنشاء ${created.length} تسوية شهرية وتجاوز ${skipped.length} شهر.`,
+      });
     }
 
     // POST /api/admin-resources?resource=partners&action=mark-paid&id=<settlementId>

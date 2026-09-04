@@ -258,10 +258,26 @@ export const DataProvider = ({ children }) => {
   const settlePartner = async (id, periodStart, periodEnd, memo) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=settle&id=${id}`, { periodStart, periodEnd, memo });
+      setSettlements(prev => [res.data, ...prev]);
       return res.data;
     } catch (err) {
       console.error(err);
       toast.error(err?.response?.data?.message || 'فشل في إنشاء التسوية');
+      throw err;
+    }
+  };
+
+  const backfillMissingMonths = async (id, startMonth) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=backfill-missing-months&id=${id}`, { startMonth });
+      if (Array.isArray(res.data.created) && res.data.created.length > 0) {
+        setSettlements(prev => [...res.data.created, ...prev]);
+      }
+      toast.success(res.data.message || 'تم إنشاء التسويات');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في إنشاء التسويات الشهرية');
       throw err;
     }
   };
@@ -624,6 +640,7 @@ export const DataProvider = ({ children }) => {
       updatePartner,
       deletePartner,
       settlePartner,
+      backfillMissingMonths,
       markSettlementPaid,
       voidSettlement,
       paySettlements,

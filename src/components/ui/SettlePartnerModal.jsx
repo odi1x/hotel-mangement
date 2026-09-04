@@ -7,8 +7,7 @@ import toast from 'react-hot-toast';
 export default function SettlePartnerModal({ isOpen, onClose, partner }) {
   const { settlePartner, calculatePartnerSettlementById } = useData();
   const [saving, setSaving] = useState(false);
-  const [periodStart, setPeriodStart] = useState('');
-  const [periodEnd, setPeriodEnd] = useState('');
+  const [month, setMonth] = useState('');
   const [memo, setMemo] = useState('');
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -18,28 +17,33 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
   }, [calculatePartnerSettlementById]);
   const prevPartnerRef = useRef(null);
 
-  // Reset period defaults per partner; initialize on first open
+  // Map a "YYYY-MM" month to [periodStart, periodEnd] covering the full calendar month
+  function monthBounds(ym) {
+    if (!/^\d{4}-\d{2}$/.test(ym)) return null;
+    const [y, m] = ym.split('-').map(Number);
+    const start = new Date(y, m - 1, 1); start.setHours(0, 0, 0, 0);
+    const end = new Date(y, m, 1); end.setHours(0, 0, 0, 0); end.setSeconds(-1);
+    return { periodStart: start.toISOString(), periodEnd: end.toISOString() };
+  }
+
+  // Reset month initial value per partner; initialize on first open
   useEffect(() => {
     if (isOpen && partner?.id !== prevPartnerRef.current) {
       prevPartnerRef.current = partner?.id || null;
-      const end = new Date();
-      const start = new Date();
-      start.setDate(start.getDate() - 30);
-      setPeriodStart(start.toISOString().split('T')[0]);
-      setPeriodEnd(end.toISOString().split('T')[0]);
+      setMonth(new Date().toISOString().slice(0, 7));
       setPreview(null);
     }
   }, [isOpen, partner?.id]);
 
-  // Fetch preview when period changes
+  // Fetch preview when month changes
+  const activeMonth = monthBounds(month);
   useEffect(() => {
     let cancelled = false;
-    if (!isOpen || !periodStart || !periodEnd || !partner) return;
-
+    if (!isOpen || !activeMonth || !partner) return;
     async function fetchPreview() {
       setPreviewLoading(true);
       try {
-        const res = await calculateRef.current(partner.id, periodStart, periodEnd);
+        const res = await calculateRef.current(partner.id, activeMonth.periodStart, activeMonth.periodEnd);
         if (!cancelled && res) {
           setPreview(res);
         }
@@ -51,22 +55,20 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
     }
     fetchPreview();
     return () => { cancelled = true; };
-  }, [isOpen, partner, periodStart, periodEnd]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, partner, month]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!periodStart || !periodEnd) {
-      toast.error('يرجى تحديد فترة التسوية');
+    if (!month || !monthBounds(month)) {
+      toast.error('يرجى تحديد الشهر');
       return;
     }
-    if (new Date(periodStart) > new Date(periodEnd)) {
-      toast.error('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
-      return;
-    }
+    const bounds = monthBounds(month);
 
     setSaving(true);
     try {
-      await settlePartner(partner.id, periodStart, periodEnd, memo);
+      await settlePartner(partner.id, bounds.periodStart, bounds.periodEnd, memo);
       toast.success('تم إنشاء التسوية كمسودة');
       onClose();
     } catch {
@@ -102,30 +104,19 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0 p-4 md:p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block eyebrow mb-1.5">تاريخ البداية</label>
-              <input
-                type="date"
-                className="input-field w-full"
-                value={periodStart}
-                onChange={(e) => setPeriodStart(e.target.value)}
-                required
-                max={periodEnd || new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div>
-              <label className="block eyebrow mb-1.5">تاريخ النهاية</label>
-              <input
-                type="date"
-                className="input-field w-full"
-                value={periodEnd}
-                onChange={(e) => setPeriodEnd(e.target.value)}
-                required
-                min={periodStart}
-                max={new Date().toISOString().split('T')[0]}
-              />
-            </div>
+          <div>
+            <label className="block eyebrow mb-1.5">شهر التسوية <span className="text-rose-500">*</span></label>
+            <input
+              type="month"
+              className="input-field w-full"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              required
+              max={new Date().toISOString().slice(0, 7)}
+            />
+            <p className="text-xs text-muted-soft dark:text-body-dark mt-1">
+              تُنشئ تسوية واحدة عن الشهر المحدد بالكامل (من أول يوم إلى آخر يوم).
+            </p>
           </div>
 
           {/* Transparent Basis Breakdown Card */}
@@ -133,7 +124,7 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
             <div className="bg-accent-soft border border-accent/60 rounded-lg p-4 animate-tab space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-accent-strong">
                 <CheckCircle size={16} />
-                <span>تفصيل الأساس المالي للفترة المحددة</span>
+                <span>تفصيل الأساس المالي للشهر المحدد</span>
               </div>
 
               <div className="space-y-1.5 text-sm">

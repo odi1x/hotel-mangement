@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, Calculator, CheckCircle, XCircle, AlertTriangle, FileText, X, Wallet } from 'lucide-react';
+import { ChevronLeft, Calculator, CheckCircle, XCircle, AlertTriangle, FileText, X, Wallet, CalendarRange } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import SettlePartnerModal from '../ui/SettlePartnerModal';
 import SettlementStatusBadge from '../ui/SettlementStatusBadge';
@@ -44,7 +44,7 @@ function getStatusConfig(status) {
 }
 
 export default function PartnerDetailView({ partnerId, onBack }) {
-  const { fetchPartnerDetail, fetchPartnerSettlements, markSettlementPaid, voidSettlement, paySettlements, apartments } = useData();
+  const { fetchPartnerDetail, fetchPartnerSettlements, markSettlementPaid, voidSettlement, paySettlements, backfillMissingMonths, apartments } = useData();
   const [partner, setPartner] = useState(null);
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,12 +54,19 @@ export default function PartnerDetailView({ partnerId, onBack }) {
   const [payOpen, setPayOpen] = useState(false);
   const [payMethod, setPayMethod] = useState('cash');
   const [paying, setPaying] = useState(false);
+  const [backfillOpen, setBackfillOpen] = useState(false);
+  const [backfillMonth, setBackfillMonth] = useState('');
+  const [backfilling, setBackfilling] = useState(false);
   const fetchPartnerDetailRef = useRef(fetchPartnerDetail);
   const fetchPartnerSettlementsRef = useRef(fetchPartnerSettlements);
   useEffect(() => {
     fetchPartnerDetailRef.current = fetchPartnerDetail;
     fetchPartnerSettlementsRef.current = fetchPartnerSettlements;
   }, [fetchPartnerDetail, fetchPartnerSettlements]);
+  const backfillRef = useRef(backfillMissingMonths);
+  useEffect(() => {
+    backfillRef.current = backfillMissingMonths;
+  }, [backfillMissingMonths]);
 
   useEffect(() => {
     if (!partnerId) return;
@@ -131,6 +138,28 @@ export default function PartnerDetailView({ partnerId, onBack }) {
       setPaying(false);
     } catch {
       setPaying(false);
+    }
+  };
+
+  const handleBackfill = async () => {
+    if (!backfillMonth) {
+      toast.error('يرجى اختيار شهر البداية');
+      return;
+    }
+    setBackfilling(true);
+    try {
+      const res = await backfillRef.current(partner.id, backfillMonth);
+      if (Array.isArray(res.created) && res.created.length > 0) {
+        setSettlements(prev => {
+          const existingIds = new Set(prev.map(s => s.id));
+          return [...res.created.filter(s => !existingIds.has(s.id)), ...prev];
+        });
+      }
+      setBackfillOpen(false);
+    } catch {
+      // toast handled in DataContext
+    } finally {
+      setBackfilling(false);
     }
   };
 
@@ -223,12 +252,18 @@ export default function PartnerDetailView({ partnerId, onBack }) {
           </div>
         ) : (
           <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <h2 className="font-semibold text-ink dark:text-white">سجل التسويات</h2>
-              <button onClick={() => setSettling(true)} className="btn-accent h-9 px-4 text-sm">
-                <Calculator size={16} />
-                <span>تسوية جديدة</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setBackfillOpen(true)} className="btn-secondary h-9 px-4 text-sm" title="إنشاء تسوية مستقلة لكل شهر من الأشهر السابقة">
+                  <CalendarRange size={16} />
+                  <span>ترحيل الأشهر السابقة</span>
+                </button>
+                <button onClick={() => setSettling(true)} className="btn-accent h-9 px-4 text-sm">
+                  <Calculator size={16} />
+                  <span>تسوية جديدة</span>
+                </button>
+              </div>
             </div>
 
             {/* Bulk pay bar */}
@@ -462,6 +497,50 @@ export default function PartnerDetailView({ partnerId, onBack }) {
                 className="btn-accent w-full h-11 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                 <CheckCircle size={16} />
                 <span>{paying ? 'جاري الدفع...' : `تأكيد الدفع (${Number(selectedTotal).toLocaleString('ar-SA')} ر.س)`}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Backfill Past Months Modal */}
+      {backfillOpen && createPortal(
+        <div className="fixed inset-0 z-[80] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
+          <div className="absolute inset-0" onClick={() => setBackfillOpen(false)} />
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft flex flex-col anim-sheet">
+            <div className="sheet-handle" />
+            <div className="px-5 py-4 border-b border-hairline-soft dark:border-hairline-dark-soft flex items-center gap-3 shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-accent-soft dark:bg-accent/20 text-accent-strong flex items-center justify-center shrink-0">
+                <CalendarRange size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold tracking-tight text-ink dark:text-white leading-tight text-base">ترحيل الأشهر السابقة</h2>
+                <p className="text-xs text-muted dark:text-body-dark mt-0.5">تسوية مستقلة لكل شهر منذ البداية حتى آخر شهر مكتمل</p>
+              </div>
+              <button onClick={() => setBackfillOpen(false)} className="icon-action shrink-0" aria-label="إغلاق"><X size={20} /></button>
+            </div>
+
+            <div className="p-4 md:p-5 space-y-4">
+              <div>
+                <label className="block eyebrow mb-1.5">من شهر <span className="text-rose-500">*</span></label>
+                <input
+                  type="month"
+                  className="input-field w-full"
+                  value={backfillMonth}
+                  onChange={(e) => setBackfillMonth(e.target.value)}
+                  max={new Date().toISOString().slice(0, 7)}
+                  required
+                />
+                <p className="text-xs text-muted-soft dark:text-body-dark mt-1">
+                  مثال: إذا كانت الشقة تحقق إيرادات منذ مايو، اختر مايو وسيُنشئ النظام تسوية لكل شهر (مايو، يونيو، يوليو، أغسطس...) حتى آخر شهر مكتمل.
+                </p>
+              </div>
+              <div className="rounded-lg border border-accent/40 bg-accent-soft p-3 text-sm text-muted-soft dark:text-body-dark">
+                يُحتسب كل شهر من إيرادات الحجوزات الفعلية لنطاق الشريك في ذلك الشهر، ويُتخطى أي شهر لديه تسوية سابقة أو لا توجد فيه إيرادات.
+              </div>
+              <button onClick={handleBackfill} disabled={backfilling} className="btn-accent w-full h-11 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                {backfilling ? 'جاري إنشاء التسويات...' : 'إنشاء التسويات الشهرية'}
               </button>
             </div>
           </div>

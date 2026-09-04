@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calculator, Sparkles, CheckCircle, Handshake, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle, Handshake } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import toast from 'react-hot-toast';
 
@@ -11,140 +11,10 @@ const COMP_TYPES = [
   { value: 'fixed_percentage', label: 'ثابت + نسبة', desc: 'مبلغ ثابت + نسبة من إجمالي الإيرادات' },
 ];
 
-function CompensationPreview({ partner, apartments, calculateSettlement, periodStart, periodEnd }) {
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const calculateSettlementRef = useRef(calculateSettlement);
-  useEffect(() => {
-    calculateSettlementRef.current = calculateSettlement;
-  }, [calculateSettlement]);
-
-  useEffect(() => {
-    if (!partner?.name) return;
-    let cancelled = false;
-    async function fetchPreview() {
-      setLoading(true);
-      setError(null);
-      try {
-        // Send form data directly for preview calculation
-        const partnerData = {
-          compType: partner.compType,
-          percentage: partner.percentage ? parseFloat(partner.percentage) : null,
-          fixedAmount: partner.fixedAmount ? parseFloat(partner.fixedAmount) : null,
-          apartmentIds: partner.apartmentIds || [],
-        };
-        const res = await calculateSettlementRef.current(partnerData, periodStart, periodEnd);
-        if (!cancelled && res && typeof res === 'object' && res.gross !== undefined) {
-          const gross = Number(res.gross) || 0;
-          const expenses = Number(res.expenses) || 0;
-          const net = Number(res.net) || 0;
-          const amount = Number(res.amount) || 0;
-          setPreview({
-            gross,
-            expenses,
-            net,
-            amount,
-            formulaLabel: res.formulaLabel || '—',
-            isEmpty: gross === 0 && expenses === 0 && amount === 0,
-          });
-        } else if (!cancelled) {
-          setError('Invalid response from server');
-          setPreview(null);
-        }
-      } catch (e) {
-        console.error('Preview calculation failed:', e);
-        if (!cancelled) {
-          setError('فشل في حساب المعاينة');
-          setPreview(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    fetchPreview();
-    return () => { cancelled = true; };
-  }, [partner?.compType, partner?.percentage, partner?.fixedAmount, partner?.apartmentIds, apartments, periodStart, periodEnd]);
-
-  if (loading && !preview) {
-    return (
-      <div className="bg-surface-soft dark:bg-surface-dark-elevated rounded-lg p-4 mb-4 text-center">
-        <Calculator className="animate-spin h-5 w-5 mx-auto text-accent mb-2" />
-        <p className="text-sm text-muted">جاري حساب المعاينة...</p>
-      </div>
-    );
-  }
-
-  if (!preview) {
-    if (error) {
-      return (
-        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-4 mb-4 animate-tab">
-          <div className="flex items-center gap-2 text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2">
-            <AlertTriangle size={16} />
-            <span>تعذر حساب المعاينة</span>
-          </div>
-          <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>
-        </div>
-      );
-    }
-    return null;
-  }
-
-  return (
-    <div className="bg-accent-soft border border-accent/60 rounded-lg p-4 mb-4 animate-tab">
-      <div className="flex items-center gap-2 text-sm font-semibold text-accent-strong mb-3">
-        <Sparkles size={16} />
-        <span>معاينة حية للتسوية (تقديري)</span>
-      </div>
-      {preview.isEmpty && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-3 text-xs text-amber-700 dark:text-amber-300">
-          لا توجد إيرادات أو مصروفات في هذه الفترة. تأكد من تحديد الفترة الصحيحة والوحدات.
-        </div>
-      )}
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
-          <p className="text-muted-soft mb-1">إجمالي الإيرادات</p>
-          <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {Number(preview.gross || 0).toLocaleString()} ر.س
-          </p>
-        </div>
-        <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
-          <p className="text-muted-soft mb-1">المصروفات (مخصومة)</p>
-          <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {Number(preview.expenses || 0).toLocaleString()} ر.س
-          </p>
-        </div>
-        <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
-          <p className="text-muted-soft mb-1">صافي الربح</p>
-          <p className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {Number(preview.net || 0).toLocaleString()} ر.س
-          </p>
-        </div>
-        <div className="bg-canvas dark:bg-surface-dark-elevated p-3 rounded-md">
-          <p className="text-muted-soft mb-1">التطبيق</p>
-          <p className="font-semibold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {preview.formulaLabel || '—'}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 pt-3 border-t border-accent/40 flex justify-between items-center">
-        <span className="text-sm text-muted">مبلغ التسوية المتوقع:</span>
-        <span className="text-xl font-bold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {Number(preview.amount || 0).toLocaleString()} ر.س
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export default function PartnerFormModal({ isOpen, onClose, initialData, apartments, addTrigger }) {
-  const { createPartner, updatePartner, calculatePartnerSettlement } = useData();
+  const { createPartner, updatePartner } = useData();
   const isEdit = !!initialData?.id;
   const [saving, setSaving] = useState(false);
-  const [previewPeriodStart, setPreviewPeriodStart] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0];
-  });
-  const [previewPeriodEnd, setPreviewPeriodEnd] = useState(() => new Date().toISOString().split('T')[0]);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -156,6 +26,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
     apartmentIds: [],
     status: 'active',
     recurringPeriod: '',
+    startMonth: '',
   });
   const initialDataRef = useRef(initialData);
   const isOpenRef = useRef(isOpen);
@@ -183,6 +54,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
           apartmentIds: data.apartmentIds || [],
           status: data.status || 'active',
           recurringPeriod: data.recurringPeriod || '',
+          startMonth: data.startMonth || '',
         });
       } else {
         setFormData({
@@ -196,6 +68,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
           apartmentIds: [],
           status: 'active',
           recurringPeriod: '',
+          startMonth: '',
         });
       }
     }
@@ -249,6 +122,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
         apartmentIds: formData.apartmentIds,
         status: formData.status,
         recurringPeriod: formData.recurringPeriod || null,
+        startMonth: formData.startMonth || null,
       };
 
       if (isEdit) {
@@ -406,37 +280,6 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
                 </div>
               )}
             </div>
-
-            {/* Live Preview Card */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block eyebrow mb-1.5">فترة المعاينة (من)</label>
-                <input
-                  type="date"
-                  className="input-field w-full"
-                  value={previewPeriodStart}
-                  onChange={(e) => setPreviewPeriodStart(e.target.value)}
-                  max={previewPeriodEnd}
-                />
-              </div>
-              <div>
-                <label className="block eyebrow mb-1.5">فترة المعاينة (إلى)</label>
-                <input
-                  type="date"
-                  className="input-field w-full"
-                  value={previewPeriodEnd}
-                  onChange={(e) => setPreviewPeriodEnd(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-            </div>
-            <CompensationPreview
-              partner={formData}
-              apartments={apartments}
-              calculateSettlement={calculatePartnerSettlement}
-              periodStart={previewPeriodStart}
-              periodEnd={previewPeriodEnd}
-            />
           </fieldset>
 
           {/* Scope Selector */}
@@ -530,6 +373,20 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
                   {opt.label}
                 </button>
               ))}
+            </div>
+
+            <div>
+              <label className="block eyebrow mb-1.5">شهر البداية (أول شهر يبدأ فيه التقاسم)</label>
+              <input
+                type="month"
+                className="input-field w-full"
+                value={formData.startMonth}
+                onChange={(e) => handleChange('startMonth', e.target.value)}
+                max={new Date().toISOString().split('T')[0].slice(0, 7)}
+              />
+              <p className="text-2xs text-muted-soft dark:text-body-dark mt-1">
+                يُستخدم لتقسيم إيرادات الفترات السابقة إلى تسوية مستقلة لكل شهر، بدءاً من هذا الشهر.
+              </p>
             </div>
           </fieldset>
 
