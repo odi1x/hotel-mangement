@@ -245,10 +245,16 @@ export default function PartnerDetailView({ partnerId, onBack }) {
             <p className="text-sm text-muted dark:text-body-dark mb-6 max-w-sm">
               أنشئ أول تسوية لحساب مستحقات الشريك عن فترة محددة
             </p>
-            <button onClick={() => setSettling(true)} className="btn-accent h-10 px-5">
-              <Calculator size={16} />
-              <span>إنشاء تسوية جديدة</span>
-            </button>
+            <div className="flex flex-col items-center gap-3 sm:flex-row">
+              <button onClick={() => setSettling(true)} className="btn-accent h-10 px-5">
+                <Calculator size={16} />
+                <span>إنشاء تسوية جديدة</span>
+              </button>
+              <button onClick={() => setBackfillOpen(true)} className="btn-secondary h-10 px-5" title="إنشاء تسوية مستقلة لكل شهر من الأشهر السابقة">
+                <CalendarRange size={16} />
+                <span>ترحيل الأشهر السابقة</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col">
