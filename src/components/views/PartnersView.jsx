@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Search, Trash2, Edit, Calculator, Users, FileText, MoreVertical } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useData } from '../../context/DataContext';
@@ -30,9 +30,9 @@ function getCompLabel(compType, percentage, fixedAmount) {
 
 function getStatusConfig(status) {
   switch (status) {
-    case 'active': return { label: 'نشط', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' };
-    case 'inactive': return { label: 'غير نشط', className: 'bg-stone-100 text-stone-800 dark:bg-stone-900/30 dark:text-stone-300' };
-    case 'paused': return { label: 'موقوف', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' };
+    case 'active': return { label: 'نشط', className: 'bg-ink text-white dark:bg-white dark:text-ink' };
+    case 'inactive': return { label: 'غير نشط', className: 'bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated dark:text-body-dark' };
+    case 'paused': return { label: 'موقوف', className: 'bg-transparent text-muted border border-dashed border-muted-soft' };
     default: return { label: status, className: 'bg-surface-card text-ink dark:bg-surface-dark-elevated dark:text-white' };
   }
 }
@@ -126,6 +126,29 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
     };
   }, [menuOpenFor]);
 
+  // Keep the ⋯ menu inside the viewport. It's anchored with its RIGHT edge at
+  // the button (extends left), so in these RTL rows — where the action column
+  // sits at the viewport's left/bottom edges — the menu bleeds off-screen.
+  // Measure the rendered menu in a layout effect and nudge it back in before
+  // paint; no visible flash, no stored state to reconcile.
+  useLayoutEffect(() => {
+    if (!menuOpenFor || !menuRef.current) return;
+    const m = menuRef.current;
+    const rect = m.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const M = 8;
+    if (rect.left < M) {
+      m.style.right = 'auto';
+      m.style.left = '8px';
+    } else if (rect.right > vw - M) {
+      m.style.right = 'auto';
+      m.style.left = `${vw - rect.width - M}px`;
+    }
+    if (rect.top < M) m.style.top = '8px';
+    else if (rect.bottom > vh - M) m.style.top = `${vh - rect.height - M}px`;
+  }, [menuOpenFor, menuPos]);
+
   return (
     <>
       {/* PartnerFormModal */}
@@ -209,8 +232,8 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
           </div>
           <div className="card-surface p-4">
             <div className="flex items-center gap-2 mb-1.5">
-              <div className="p-1.5 rounded-md bg-emerald-50 dark:bg-emerald-900/30">
-                <Users size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
+                <Users size={13} className="text-muted dark:text-body-dark" />
               </div>
               <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
                 الشركاء النشطون
@@ -261,7 +284,7 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
               </p>
             </div>
             <div className="px-2 py-1 flex flex-col items-center">
-              <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 mb-0.5">
+              <div className="flex items-center gap-1 text-muted dark:text-body-dark mb-0.5">
                 <Users size={11} strokeWidth={2} />
                 <span className="text-[10px] font-semibold">نشط</span>
               </div>
@@ -294,8 +317,8 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
         <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
           {/* Toolbar */}
           <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0">
-            <div className="flex-1 flex items-center gap-3 min-w-0">
-              <div className="relative flex-1 max-w-md">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 min-w-0">
+              <div className="relative w-full md:w-auto md:flex-1 md:max-w-md">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted size-5" />
                 <input
                   type="text"
@@ -305,17 +328,15 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="nav-pill-group shrink-0" role="tablist">
+              <div className="nav-pill-group w-full md:w-auto shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
                 {['all', 'active', 'inactive', 'paused'].map((status) => (
                   <button
                     key={status}
                     role="tab"
                     aria-selected={statusFilter === status}
                     onClick={() => setStatusFilter(status)}
-                    className={`h-9 px-4 rounded-full text-sm font-semibold transition-colors ${
-                      statusFilter === status
-                        ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
-                        : 'text-muted hover:text-ink dark:hover:text-white'
+                    className={`nav-pill text-2xs md:text-xs ${
+                      statusFilter === status ? 'nav-pill-active' : ''
                     }`}>
                     {status === 'all' && 'الكل'}
                     {status === 'active' && 'نشط'}

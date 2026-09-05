@@ -37,9 +37,9 @@ function getCompLabel(compType, percentage, fixedAmount) {
 
 function getStatusConfig(status) {
   switch (status) {
-    case 'draft': return { label: 'مسودة', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300', icon: AlertTriangle };
-    case 'paid': return { label: 'مدفوعة', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300', icon: CheckCircle };
-    case 'void': return { label: 'ملغية', className: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300', icon: XCircle };
+    case 'draft': return { label: 'مسودة', className: 'bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated dark:text-body-dark', icon: AlertTriangle };
+    case 'paid': return { label: 'مدفوعة', className: 'bg-ink text-white dark:bg-white dark:text-ink', icon: CheckCircle };
+    case 'void': return { label: 'ملغية', className: 'bg-transparent text-muted border border-dashed border-muted-soft', icon: XCircle };
     default: return { label: status, className: 'bg-surface-card text-ink dark:bg-surface-dark-elevated dark:text-white', icon: AlertTriangle };
   }
 }
@@ -408,21 +408,21 @@ export default function PartnerDetailView({ partnerId, onBack }) {
                                       <CheckCircle size={16} />
                                       <span>تحديد كمدفوعة</span>
                                     </button>
-                                    <button onClick={() => handleVoid(s.id)} className="btn-secondary h-9 px-4 text-sm border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex-1">
+                                    <button onClick={() => handleVoid(s.id)} className="btn-secondary h-9 px-4 text-sm border-hairline-soft text-muted hover:bg-surface-soft dark:border-hairline-dark dark:text-body-dark dark:hover:bg-hairline-dark flex-1">
                                       <XCircle size={16} />
                                       <span>إلغاء</span>
                                     </button>
                                   </>
                                 )}
                                 {s.status === 'paid' && (
-                                  <span className="text-xs text-emerald-600 dark:text-emerald-400 flex-1 text-center">
-                                    مدفوعة في {formatDateShort(s.paidAt)}
-                                  </span>
+<span className="text-xs text-ink dark:text-white font-semibold flex-1 text-center">
+                                  مدفوعة في {formatDateShort(s.paidAt)}
+                                </span>
                                 )}
                                 {s.status === 'void' && (
-                                  <span className="text-xs text-rose-600 dark:text-rose-400 flex-1 text-center">
-                                    ملغية — لا يمكن التعديل
-                                  </span>
+<span className="text-xs text-muted dark:text-body-dark flex-1 text-center">
+                                  ملغية — لا يمكن التعديل
+                                </span>
                                 )}
                               </div>
                             </div>
@@ -458,7 +458,7 @@ export default function PartnerDetailView({ partnerId, onBack }) {
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft flex flex-col anim-sheet">
             <div className="sheet-handle" />
             <div className="px-5 py-4 border-b border-hairline-soft dark:border-hairline-dark-soft flex items-center gap-3 shrink-0">
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-accent-soft text-accent flex items-center justify-center shrink-0">
                 <Wallet size={20} />
               </div>
               <div className="flex-1 min-w-0">

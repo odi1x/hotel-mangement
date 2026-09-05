@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users, MoreVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
@@ -91,6 +91,29 @@ export default function ResidentsView({ openBookingForm }) {
       document.removeEventListener('touchstart', onClick);
     };
   }, [menuOpenFor]);
+
+  // Keep the ⋯ menu inside the viewport. It's anchored with its RIGHT edge at
+  // the button (extends left), so in these RTL rows — where the action column
+  // sits at the viewport's left/bottom edges — the menu bleeds off-screen.
+  // Measure the rendered menu in a layout effect and nudge it back in before
+  // paint; no visible flash, no stored state to reconcile.
+  useLayoutEffect(() => {
+    if (!menuOpenFor || !menuRef.current) return;
+    const m = menuRef.current;
+    const rect = m.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const M = 8;
+    if (rect.left < M) {
+      m.style.right = 'auto';
+      m.style.left = '8px';
+    } else if (rect.right > vw - M) {
+      m.style.right = 'auto';
+      m.style.left = `${vw - rect.width - M}px`;
+    }
+    if (rect.top < M) m.style.top = '8px';
+    else if (rect.bottom > vh - M) m.style.top = `${vh - rect.height - M}px`;
+  }, [menuOpenFor, menuPos]);
 
   // Shared ⋯ action menu for a booking (used by desktop table + mobile cards),
   // anchored from the same portal pattern as the partners page.

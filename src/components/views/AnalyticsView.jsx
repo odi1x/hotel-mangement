@@ -261,58 +261,85 @@ export default function AnalyticsView({ setView }) {
 
   if (isAnalyticsLoading) {
     return (
-      <div className="h-full overflow-hidden flex flex-col space-y-4 animate-pulse">
-        <div className="flex justify-between items-center mb-4">
-          <div className="h-10 w-48 bg-surface-card dark:bg-surface-dark-elevated rounded-md"></div>
-          <div className="h-10 w-32 bg-surface-card dark:bg-surface-dark-elevated rounded-md"></div>
+      <div className="h-full overflow-hidden flex flex-col animate-pulse">
+        {/* Compact action strip — mirrors the filter chip + period chips + export row */}
+        <div className="flex justify-between items-center mb-5 gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-24 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+            <div className="hidden md:flex items-center gap-2">
+              <div className="h-7 w-14 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+              <div className="h-7 w-16 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+              <div className="h-7 w-14 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+              <div className="h-7 w-12 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+            </div>
+          </div>
+          <div className="h-9 w-20 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
         </div>
 
-        {/* 4 KPI Skeleton Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg h-28 flex flex-col justify-center">
-              <div className="h-4 w-20 bg-surface-strong dark:bg-hairline-dark rounded mb-3"></div>
+        {/* Hero — net profit card with the leading accent bar */}
+        <div className="relative bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-6 md:p-7 overflow-hidden shrink-0 mb-5">
+          <span className="absolute right-0 top-6 bottom-6 w-[3px] rounded-l-full bg-surface-strong dark:bg-hairline-dark"></span>
+          <div className="pr-3">
+            <div className="h-3 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-3"></div>
+            <div className="h-10 w-56 bg-surface-strong dark:bg-hairline-dark rounded mb-3"></div>
+            <div className="h-3 w-40 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+          </div>
+        </div>
+
+        {/* 3 KPI cards — revenue, occupancy, nights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 shrink-0 mb-5">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg">
+              <div className="h-3 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-3"></div>
               <div className="h-8 w-32 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
-              <div className="h-3 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+              <div className="h-3 w-28 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
             </div>
           ))}
         </div>
 
-        <div className="flex-1 min-h-0 w-full overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
-          {/* Top Performers and Pie Chart Skeleton */}
-          <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
-            <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col">
-               <div className="h-5 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
-               <div className="h-3 w-32 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-4"></div>
-               <div className="flex-1 flex flex-col gap-3 justify-center">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="flex justify-between items-center">
-                       <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-surface-strong dark:bg-hairline-dark"></div><div className="h-4 w-20 bg-surface-strong dark:bg-hairline-dark rounded"></div></div>
-                       <div className="h-6 w-16 bg-surface-strong dark:bg-hairline-dark rounded"></div>
-                    </div>
-                  ))}
-               </div>
-            </div>
-
-            <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col items-center justify-center">
-              <div className="self-start h-5 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
-              <div className="self-start h-3 w-32 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-4"></div>
-              <div className="w-32 h-32 rounded-full border-8 border-surface-strong dark:border-hairline-dark mt-4"></div>
-            </div>
-          </div>
-
-          {/* Area Chart Skeleton */}
-          <div className="lg:col-span-2 bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-5 flex flex-col h-full min-h-0">
-            <div className="flex justify-between items-center mb-6">
-              <div className="h-5 w-40 bg-surface-strong dark:bg-hairline-dark rounded"></div>
-              <div className="h-8 w-48 bg-surface-strong/60 dark:bg-hairline-dark rounded-full"></div>
-            </div>
-            <div className="flex gap-6 mb-6">
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+        {/* Trend chart (2/3) + Sources (1/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-0 shrink-0">
+          <div className="bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[280px]">
+            <div className="h-5 w-44 bg-surface-strong dark:bg-hairline-dark rounded mb-5"></div>
+            <div className="flex gap-6 mb-5">
+              <div className="h-4 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+              <div className="h-4 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+              <div className="h-4 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
             </div>
             <div className="flex-1 w-full bg-surface-soft dark:bg-hairline-dark rounded-lg"></div>
+          </div>
+          <div className="bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-5 flex flex-col gap-4">
+            <div className="h-5 w-36 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+            <div className="h-3 w-40 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+            {[1,2,3].map(i => (
+              <div key={i}>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <div className="h-3 w-20 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                  <div className="h-3 w-14 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                </div>
+                <div className="h-1.5 rounded-full bg-surface-soft dark:bg-hairline-dark/60 overflow-hidden">
+                  <div className="h-full w-3/5 rounded-full bg-surface-strong dark:bg-hairline-dark"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Per-unit P&L rows */}
+        <div className="bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-4 md:p-5 shrink-0 mt-5">
+          <div className="h-5 w-40 bg-surface-strong dark:bg-hairline-dark rounded mb-4"></div>
+          <div className="space-y-3.5">
+            {[1,2,3,4,5].map(i => (
+              <div key={i} className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-6 h-6 rounded-full bg-surface-strong dark:bg-hairline-dark shrink-0"></div>
+                  <div className="h-3 w-32 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                </div>
+                <div className="h-3 w-16 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                <div className="h-3 w-16 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                <div className="hidden sm:block h-3 w-16 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -591,7 +618,7 @@ export default function AnalyticsView({ setView }) {
           </div>
 
           <div className="flex-1 w-full min-h-[280px] relative overflow-hidden" dir="ltr">
-            <div className="absolute inset-0 pb-8 pr-4">
+            <div className="absolute inset-0 pb-8 pl-6">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <defs>
@@ -735,7 +762,7 @@ export default function AnalyticsView({ setView }) {
                           className={`px-3 py-3 text-left font-bold ${isLoss ? 'text-accent-strong' : 'text-ink dark:text-white'}`}
                           style={{ fontVariantNumeric: 'tabular-nums' }}
                         >
-                          {isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}
+                          <span dir="ltr">{isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}</span>
                           <span className="text-2xs font-medium text-muted-soft mr-0.5">ر.س</span>
                         </td>
                         <td
@@ -797,7 +824,7 @@ export default function AnalyticsView({ setView }) {
                           className={`text-lg font-bold leading-none mt-0.5 ${isLoss ? 'text-accent-strong' : 'text-ink dark:text-white'}`}
                           style={{ fontVariantNumeric: 'tabular-nums' }}
                         >
-                          {isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}
+                          <span dir="ltr">{isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}</span>
                           <span className="text-2xs font-medium text-muted-soft mr-0.5">ر.س</span>
                         </p>
                       </div>
@@ -832,7 +859,7 @@ export default function AnalyticsView({ setView }) {
           reaches the true viewport and blurs the header, no matter what
           stacking context our view ancestors have. */}
       {breakdownModal && createPortal(
-        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-hairline-dark-soft">
             <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">

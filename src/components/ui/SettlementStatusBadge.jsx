@@ -5,17 +5,17 @@ export default function SettlementStatusBadge({ status }) {
     draft: {
       label: 'مسودة',
       icon: Clock,
-      className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      className: 'bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated dark:text-body-dark',
     },
     paid: {
       label: 'مدفوعة',
       icon: CheckCircle,
-      className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+      className: 'bg-ink text-white dark:bg-white dark:text-ink',
     },
     void: {
       label: 'ملغية',
       icon: XCircle,
-      className: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
+      className: 'bg-transparent text-muted border border-dashed border-muted-soft',
     },
   };
 

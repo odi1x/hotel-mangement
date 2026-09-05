@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useData } from '../../context/DataContext';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check, Building2, ArrowDownCircle } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check, Building2, ArrowDownCircle, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
 import ShareLinkModal from '../ui/ShareLinkModal';
@@ -20,6 +20,7 @@ export default function ApartmentsView({ setView }) {
   const [showAdvancedFinancials, setShowAdvancedFinancials] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
 
   // Public booking URL — computed inline so the mobile Share button
   // in this view can pass it to ShareLinkModal. Isolated from Layout's
@@ -182,10 +183,16 @@ export default function ApartmentsView({ setView }) {
   const handleToggleCleaningStatus = async (apt) => {
     await updateApartment({ ...apt, needsCleaning: !apt.needsCleaning });
   };
-  const totalPages = Math.ceil(apartments.length / itemsPerPage);
-  const paginatedApartments = apartments.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  const filteredApartments = apartments.filter(a => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (a.name || '').toLowerCase().includes(q) || (a.type || '').toLowerCase().includes(q);
+  });
+  const totalPages = Math.ceil(filteredApartments.length / itemsPerPage);
+  const clampedPage = Math.min(currentPage, totalPages || 1);
+  const paginatedApartments = filteredApartments.slice(
+    (clampedPage - 1) * itemsPerPage,
+    clampedPage * itemsPerPage
   );
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
@@ -203,6 +210,19 @@ export default function ApartmentsView({ setView }) {
         </button>
       )}
 
+      {/* Search — filters the grid by unit name or type. Compact field,
+          same pattern as the maintenance/expenses toolbars. */}
+      <div className="relative w-full sm:w-72 shrink-0 mb-4 md:mb-5">
+        <input
+          type="text"
+          placeholder="ابحث بالاسم أو النوع..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input-field pl-10 pr-4 py-2 w-full"
+        />
+        <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
+      </div>
+
       <div className="flex-1 overflow-y-auto pt-2 md:pt-0 pb-24 md:pb-0">
         {apartments.length === 0 ? (
           <EmptyState
@@ -218,6 +238,13 @@ export default function ApartmentsView({ setView }) {
                 </button>
               )
             }
+          />
+        ) : filteredApartments.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title="لا توجد نتائج مطابقة"
+            subtitle="جرّب تعديل مصطلح البحث."
+            variant="dashed"
           />
         ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-4">
@@ -330,18 +357,18 @@ export default function ApartmentsView({ setView }) {
         <div className="flex justify-center items-center py-4 border-t border-hairline-soft dark:border-hairline-dark shrink-0">
           <div className="nav-pill-group">
             <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(Math.max(1, clampedPage - 1))}
+              disabled={clampedPage === 1}
               className="nav-pill disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight size={18} />
             </button>
             <span className="nav-pill nav-pill-active text-sm font-semibold">
-              صفحة {currentPage} من {totalPages}
+              صفحة {clampedPage} من {totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(Math.min(totalPages, clampedPage + 1))}
+              disabled={clampedPage === totalPages}
               className="nav-pill disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={18} />

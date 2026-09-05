@@ -243,7 +243,7 @@ export default function MaintenanceView({ addTrigger = 0 }) {
           <div className="flex items-center gap-2 md:flex-wrap overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0 pb-1 md:pb-0 scrollbar-none">
             <div className="flex items-center gap-1.5 mr-1 shrink-0">
               <Filter size={12} className="text-muted-soft" />
-              <span className="text-2xs font-semibold uppercase tracking-wider text-muted-soft">تصفية:</span>
+              <span className="hidden md:inline text-2xs font-semibold uppercase tracking-wider text-muted-soft">تصفية:</span>
             </div>
 
             <div className="nav-pill-group shrink-0">
@@ -272,7 +272,7 @@ export default function MaintenanceView({ addTrigger = 0 }) {
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="input-field h-7 py-0 text-xs w-auto shrink-0"
             >
-              <option value="all">كل التصنيفات</option>
+              <option value="all">الكل</option>
               {MAINTENANCE_CATEGORIES.map(c => (
                 <option key={c.value} value={c.value}>{c.label}</option>
               ))}

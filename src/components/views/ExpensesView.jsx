@@ -1,9 +1,9 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus, Search, Filter, Wallet, Home, Zap, Users, Wrench, Megaphone,
   Shield, Package, ShieldCheck, HandCoins, MoreHorizontal, TrendingUp, TrendingDown,
-  Pencil, Trash2, Repeat, Building2, X,
+  Pencil, Trash2, Repeat, Building2, X, MoreVertical,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -45,6 +45,9 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [menuOpenFor, setMenuOpenFor] = useState(null);
+  const [menuPos, setMenuPos] = useState(null);
+  const menuRef = useRef(null);
 
   // React to Layout's "New Expense" button. The counter increments per click;
   // we open the add modal only when it actually changes vs the last-seen
@@ -66,6 +69,44 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
 
   const canEdit = user?.role === 'admin' || user?.permissions?.canEdit;
   const canDelete = user?.role === 'admin' || user?.permissions?.canDelete;
+
+  // Close the ⋯ menu when clicking anywhere outside the open menu
+  useEffect(() => {
+    if (!menuOpenFor) return;
+    function onClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenFor(null);
+      }
+    }
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('touchstart', onClick, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('touchstart', onClick);
+    };
+  }, [menuOpenFor]);
+
+  // Keep the ⋯ menu inside the viewport. It's anchored with its RIGHT edge at
+  // the button (extends left), so in these RTL rows — where the action sits at
+  // the viewport's left/bottom edges — the menu bleeds off-screen. Measure the
+  // rendered menu in a layout effect and nudge it back in before paint.
+  useLayoutEffect(() => {
+    if (!menuOpenFor || !menuRef.current) return;
+    const m = menuRef.current;
+    const rect = m.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const M = 8;
+    if (rect.left < M) {
+      m.style.right = 'auto';
+      m.style.left = '8px';
+    } else if (rect.right > vw - M) {
+      m.style.right = 'auto';
+      m.style.left = `${vw - rect.width - M}px`;
+    }
+    if (rect.top < M) m.style.top = '8px';
+    else if (rect.bottom > vh - M) m.style.top = `${vh - rect.height - M}px`;
+  }, [menuOpenFor, menuPos]);
 
   const stats = useMemo(() => computeExpenseStats(expenses), [expenses]);
 
@@ -353,7 +394,7 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
           <div className="flex items-center gap-2 overflow-x-auto md:overflow-visible -mx-3 md:mx-0 px-3 md:px-0 pb-1 md:pb-0 scrollbar-none">
             <div className="flex items-center gap-1.5 mr-1 shrink-0">
               <Filter size={12} className="text-muted-soft" />
-              <span className="text-2xs font-semibold uppercase tracking-wider text-muted-soft">
+              <span className="hidden md:inline text-2xs font-semibold uppercase tracking-wider text-muted-soft">
                 تصفية:
               </span>
             </div>
@@ -378,7 +419,7 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="input-field h-7 py-0 text-xs w-auto shrink-0"
             >
-              <option value="all">كل التصنيفات</option>
+              <option value="all">الكل</option>
               {EXPENSE_CATEGORIES.map(c => (
                 <option key={c.value} value={c.value}>{c.label}</option>
               ))}
@@ -480,26 +521,50 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
                         </div>
                       </div>
 
-                      {/* Row actions — always visible on mobile (44px tap targets
-                          via the icon-action utility) since there's no hover. */}
-                      <div className="flex items-center gap-0 shrink-0 -mr-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        {canEdit && (
-                          <button
-                            onClick={() => setEditingRow(row)}
-                            className="icon-action"
-                            aria-label="تعديل"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            onClick={() => setConfirmDeleteId(row.id)}
-                            className="icon-action"
-                            aria-label="حذف"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                      {/* Row actions — single ⋯ menu (same pattern as the
+                          partners/residents pages: always visible, portaled). */}
+                      <div className="relative shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const r = e.currentTarget.getBoundingClientRect();
+                            setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                            setMenuOpenFor(row.id);
+                          }}
+                          className="icon-action"
+                          title="إجراءات"
+                          aria-label="إجراءات"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                        {menuOpenFor === row.id && (
+                          createPortal(
+                            <div ref={menuRef} style={{ position: 'fixed', right: menuPos.right, top: menuPos.top, zIndex: 60 }}
+                              className="w-48 rounded-xl border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark shadow-soft overflow-hidden anim-pop">
+                              {canEdit && (
+                                <button
+                                  onClick={() => { setEditingRow(row); setMenuOpenFor(null); }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                                >
+                                  <Pencil size={15} className="text-muted dark:text-body-dark" />
+                                  تعديل
+                                </button>
+                              )}
+                              {canDelete && (
+                                <>
+                                  <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
+                                  <button
+                                    onClick={() => { setConfirmDeleteId(row.id); setMenuOpenFor(null); }}
+                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                                  >
+                                    <Trash2 size={15} className="text-muted dark:text-body-dark" />
+                                    حذف
+                                  </button>
+                                </>
+                              )}
+                            </div>,
+                            document.body
+                          )
                         )}
                       </div>
                     </div>
