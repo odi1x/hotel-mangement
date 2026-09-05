@@ -318,7 +318,7 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
           {/* Toolbar */}
           <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0">
             <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 min-w-0">
-              <div className="relative w-full md:w-auto md:flex-1 md:max-w-md">
+              <div className="relative w-full md:w-auto md:flex-1 md:max-w-xl">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted size-5" />
                 <input
                   type="text"
@@ -328,14 +328,14 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="nav-pill-group max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
+              <div className="nav-pill-group flex-1 min-w-0 max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
                 {['all', 'active', 'inactive', 'paused'].map((status) => (
                   <button
                     key={status}
                     role="tab"
                     aria-selected={statusFilter === status}
                     onClick={() => setStatusFilter(status)}
-                    className={`nav-pill text-2xs md:text-xs ${
+                    className={`nav-pill text-2xs md:text-xs flex-1 md:flex-none text-center ${
                       statusFilter === status ? 'nav-pill-active' : ''
                     }`}>
                     {status === 'all' && 'الكل'}

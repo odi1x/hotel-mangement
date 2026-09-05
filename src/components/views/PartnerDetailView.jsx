@@ -270,7 +270,7 @@ export default function PartnerDetailView({ partnerId, onBack }) {
         </div>
 
         {/* Compensation Basis Badge */}
-        <div className="bg-accent-soft border border-accent/60 rounded-lg p-3 flex flex-col md:flex-row md:items-center md:flex-wrap md:gap-x-3 gap-y-2">
+        <div className="bg-accent-soft border border-accent/60 rounded-lg p-3 flex flex-col gap-2">
           <div className="flex items-center gap-x-3">
             <Calculator size={20} className="text-accent-strong shrink-0" />
             <div className="min-w-0">
