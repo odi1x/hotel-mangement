@@ -270,22 +270,26 @@ export default function PartnerDetailView({ partnerId, onBack }) {
         </div>
 
         {/* Compensation Basis Badge */}
-        <div className="bg-accent-soft border border-accent/60 rounded-lg p-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Calculator size={20} className="text-accent-strong shrink-0" />
-          <div className="min-w-0 flex-1 md:flex-none">
-            <p className="text-xs font-semibold text-accent-strong">أساس التعويض</p>
-            <p className="text-sm text-ink dark:text-white mt-0.5">{getCompLabel(partner.compType, partner.percentage, partner.fixedAmount)}</p>
+        <div className="bg-accent-soft border border-accent/60 rounded-lg p-3 flex flex-col md:flex-row md:items-center md:flex-wrap md:gap-x-3 gap-y-2">
+          <div className="flex items-center gap-x-3">
+            <Calculator size={20} className="text-accent-strong shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-accent-strong">أساس التعويض</p>
+              <p className="text-sm text-ink dark:text-white mt-0.5">{getCompLabel(partner.compType, partner.percentage, partner.fixedAmount)}</p>
+            </div>
           </div>
-          {partner.recurringPeriod === 'monthly' && (
-            <span className="badge-pill badge-ghost text-xs md:text-sm" title="يُنشئ النظام تسوية تلقائية عن كل شهر مكتمل">
-              تسوية تلقائية شهرية
-            </span>
-          )}
-          {partner.apartmentIds.length === 0 ? (
-            <span className="badge-pill badge-ghost text-xs md:text-sm">كل الوحدات</span>
-          ) : (
-            <span className="badge-pill badge-ghost text-xs md:text-sm">{partner.apartmentIds.length} وحدة محددة</span>
-          )}
+          <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-2">
+            {partner.recurringPeriod === 'monthly' && (
+              <span className="badge-pill badge-ghost text-xs md:text-sm md:w-auto w-fit" title="يُنشئ النظام تسوية تلقائية عن كل شهر مكتمل">
+                تسوية تلقائية شهرية
+              </span>
+            )}
+            {partner.apartmentIds.length === 0 ? (
+              <span className="badge-pill badge-ghost text-xs md:text-sm md:w-auto w-fit">كل الوحدات</span>
+            ) : (
+              <span className="badge-pill badge-ghost text-xs md:text-sm md:w-auto w-fit">{partner.apartmentIds.length} وحدة محددة</span>
+            )}
+          </div>
         </div>
       </div>
 

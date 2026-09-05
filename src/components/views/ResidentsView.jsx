@@ -36,6 +36,7 @@ export default function ResidentsView({ openBookingForm }) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [menuOpenFor, setMenuOpenFor] = useState(null);
+  const [menuSource, setMenuSource] = useState(null);
   const [menuPos, setMenuPos] = useState(null);
   const menuRef = useRef(null);
 
@@ -374,6 +375,7 @@ export default function ResidentsView({ openBookingForm }) {
                               e.stopPropagation();
                               const r = e.currentTarget.getBoundingClientRect();
                               setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                              setMenuSource('desktop');
                               setMenuOpenFor(booking.id);
                             }}
                             className="icon-action hover:bg-surface-soft dark:hover:bg-surface-dark-elevated"
@@ -382,7 +384,7 @@ export default function ResidentsView({ openBookingForm }) {
                           >
                             <MoreVertical size={18} />
                           </button>
-                          {menuOpenFor === booking.id && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
+{menuOpenFor === booking.id && menuSource === 'desktop' && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
                         </div>
                       </div>
                     </td>
@@ -497,6 +499,7 @@ export default function ResidentsView({ openBookingForm }) {
                         e.stopPropagation();
                         const r = e.currentTarget.getBoundingClientRect();
                         setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                        setMenuSource('mobile');
                         setMenuOpenFor(booking.id);
                       }}
                       className="icon-action p-2.5 hover:bg-surface-soft dark:hover:bg-surface-dark-elevated"
@@ -505,7 +508,7 @@ export default function ResidentsView({ openBookingForm }) {
                     >
                       <MoreVertical size={18} />
                     </button>
-                    {menuOpenFor === booking.id && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
+                    {menuOpenFor === booking.id && menuSource === 'mobile' && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
                   </div>
                 </div>
               );

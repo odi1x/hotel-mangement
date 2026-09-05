@@ -430,14 +430,14 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                               <div ref={menuRef} style={{ position: 'fixed', right: menuPos.right, top: menuPos.top, zIndex: 60 }}
                                 className="w-48 rounded-xl border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark shadow-soft overflow-hidden anim-pop">
                                 <button
-                                  onClick={() => { setShowAdd(true); setEditingPartner(partner); setMenuOpenFor(null); }}
+                                  onClick={(e) => { e.stopPropagation(); setShowAdd(true); setEditingPartner(partner); setMenuOpenFor(null); }}
                                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
                                 >
                                   <Edit size={15} className="text-muted dark:text-body-dark" />
                                   تعديل
                                 </button>
                                 <button
-                                  onClick={() => { setSettlingPartner(partner); setMenuOpenFor(null); }}
+                                  onClick={(e) => { e.stopPropagation(); setSettlingPartner(partner); setMenuOpenFor(null); }}
                                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
                                 >
                                   <Calculator size={15} className="text-muted dark:text-body-dark" />
@@ -445,7 +445,7 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                                 </button>
                                 <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
                                 <button
-                                  onClick={() => handleDelete(partner.id)}
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(partner.id); }}
                                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
                                 >
                                   <Trash2 size={15} className="text-muted dark:text-body-dark" />
