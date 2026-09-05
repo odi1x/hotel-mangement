@@ -328,7 +328,7 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="nav-pill-group w-full md:w-auto shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
+              <div className="nav-pill-group max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
                 {['all', 'active', 'inactive', 'paused'].map((status) => (
                   <button
                     key={status}

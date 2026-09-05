@@ -393,7 +393,7 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
               Horizontal scroll on mobile for the time chips. */}
           <div className="flex items-center gap-2 overflow-x-auto md:overflow-visible -mx-3 md:mx-0 px-3 md:px-0 pb-1 md:pb-0 scrollbar-none">
             <div className="flex items-center gap-1.5 mr-1 shrink-0">
-              <Filter size={12} className="text-muted-soft" />
+              <Filter size={12} className="hidden md:block text-muted-soft" />
               <span className="hidden md:inline text-2xs font-semibold uppercase tracking-wider text-muted-soft">
                 تصفية:
               </span>

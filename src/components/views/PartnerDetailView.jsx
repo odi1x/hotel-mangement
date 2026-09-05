@@ -164,6 +164,61 @@ export default function PartnerDetailView({ partnerId, onBack }) {
     }
   };
 
+  // Full breakdown (timestamps + actions) — shared by the desktop row and the
+  // mobile card so both stay in sync.
+  const renderExpandedDetails = (s) => (
+    <div className="mt-3 pt-3 border-t border-hairline-soft dark:border-hairline-dark-soft space-y-2 animate-tab">
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
+          <p className="text-muted-soft">تاريخ الإنشاء</p>
+          <p className="font-medium text-ink dark:text-white">{formatDate(s.createdAt)}</p>
+        </div>
+        <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
+          <p className="text-muted-soft">الحالة</p>
+          <SettlementStatusBadge status={s.status} />
+        </div>
+        {s.paidAt && (
+          <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
+            <p className="text-muted-soft">تاريخ الدفع</p>
+            <p className="font-medium text-ink dark:text-white">{formatDate(s.paidAt)}</p>
+          </div>
+        )}
+        {s.memo && (
+          <div className="col-span-2 bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
+            <p className="text-muted-soft">ملاحظة</p>
+            <p className="font-medium text-ink dark:text-white">{s.memo}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 pt-2 border-t border-hairline-soft dark:border-hairline-dark-soft">
+        {s.status === 'draft' && (
+          <>
+            <button onClick={() => handleMarkPaid(s.id)} className="btn-secondary h-9 px-4 text-sm flex-1">
+              <CheckCircle size={16} />
+              <span>تحديد كمدفوعة</span>
+            </button>
+            <button onClick={() => handleVoid(s.id)} className="btn-secondary h-9 px-4 text-sm border-hairline-soft text-muted hover:bg-surface-soft dark:border-hairline-dark dark:text-body-dark dark:hover:bg-hairline-dark flex-1">
+              <XCircle size={16} />
+              <span>إلغاء</span>
+            </button>
+          </>
+        )}
+        {s.status === 'paid' && (
+          <span className="text-xs text-ink dark:text-white font-semibold flex-1 text-center">
+            مدفوعة في {formatDateShort(s.paidAt)}
+          </span>
+        )}
+        {s.status === 'void' && (
+          <span className="text-xs text-muted dark:text-body-dark flex-1 text-center">
+            ملغية — لا يمكن التعديل
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-page dark:bg-surface-dark">
@@ -215,22 +270,21 @@ export default function PartnerDetailView({ partnerId, onBack }) {
         </div>
 
         {/* Compensation Basis Badge */}
-        <div className="bg-accent-soft border border-accent/60 rounded-lg p-3 flex items-center gap-3">
+        <div className="bg-accent-soft border border-accent/60 rounded-lg p-3 flex flex-wrap items-center gap-x-3 gap-y-2">
           <Calculator size={20} className="text-accent-strong shrink-0" />
-          <div>
+          <div className="min-w-0 flex-1 md:flex-none">
             <p className="text-xs font-semibold text-accent-strong">أساس التعويض</p>
             <p className="text-sm text-ink dark:text-white mt-0.5">{getCompLabel(partner.compType, partner.percentage, partner.fixedAmount)}</p>
           </div>
-          <div className="flex-1" />
           {partner.recurringPeriod === 'monthly' && (
-            <span className="badge-pill badge-ghost text-sm" title="يُنشئ النظام تسوية تلقائية عن كل شهر مكتمل">
+            <span className="badge-pill badge-ghost text-xs md:text-sm" title="يُنشئ النظام تسوية تلقائية عن كل شهر مكتمل">
               تسوية تلقائية شهرية
             </span>
           )}
           {partner.apartmentIds.length === 0 ? (
-            <span className="badge-pill badge-ghost text-sm">كل الوحدات</span>
+            <span className="badge-pill badge-ghost text-xs md:text-sm">كل الوحدات</span>
           ) : (
-            <span className="badge-pill badge-ghost text-sm">{partner.apartmentIds.length} وحدة محددة</span>
+            <span className="badge-pill badge-ghost text-xs md:text-sm">{partner.apartmentIds.length} وحدة محددة</span>
           )}
         </div>
       </div>
@@ -300,8 +354,9 @@ export default function PartnerDetailView({ partnerId, onBack }) {
                   const isSelected = selected.includes(s.id);
 
                   return (
-                    <li key={s.id} className="px-6 py-4 hover:bg-surface-soft/50 dark:hover:bg-surface-dark-elevated/30 transition-colors">
-                      <div className="flex items-start gap-4">
+                    <li key={s.id} className="p-4 md:px-6 md:py-4 hover:bg-surface-soft/50 dark:hover:bg-surface-dark-elevated/30 transition-colors">
+                      {/* ---- Desktop row (md+) ---- */}
+                      <div className="hidden md:flex items-start gap-4">
                         {/* Selection checkbox for draft settlements */}
                         {s.status === 'draft' && (
                           <label className={`mt-1 shrink-0 cursor-pointer flex items-center justify-center w-5 h-5 rounded border-2 transition-colors ${isSelected ? 'bg-accent border-accent' : 'border-hairline dark:border-hairline-dark'}`}>
@@ -375,64 +430,94 @@ export default function PartnerDetailView({ partnerId, onBack }) {
                             <ChevronLeft size={12} className={isExpanded ? '-rotate-180' : ''} />
                           </button>
 
-                          {isExpanded && (
-                            <div className="mt-3 pt-3 border-t border-hairline-soft dark:border-hairline-dark-soft space-y-2 animate-tab">
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
-                                  <p className="text-muted-soft">تاريخ الإنشاء</p>
-                                  <p className="font-medium text-ink dark:text-white">{formatDate(s.createdAt)}</p>
-                                </div>
-                                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
-                                  <p className="text-muted-soft">الحالة</p>
-                                  <SettlementStatusBadge status={s.status} />
-                                </div>
-                                {s.paidAt && (
-                                  <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
-                                    <p className="text-muted-soft">تاريخ الدفع</p>
-                                    <p className="font-medium text-ink dark:text-white">{formatDate(s.paidAt)}</p>
-                                  </div>
-                                )}
-                                {s.memo && (
-                                  <div className="col-span-2 bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
-                                    <p className="text-muted-soft">ملاحظة</p>
-                                    <p className="font-medium text-ink dark:text-white">{s.memo}</p>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Actions */}
-                              <div className="flex items-center gap-2 pt-2 border-t border-hairline-soft dark:border-hairline-dark-soft">
-                                {s.status === 'draft' && (
-                                  <>
-                                    <button onClick={() => handleMarkPaid(s.id)} className="btn-secondary h-9 px-4 text-sm flex-1">
-                                      <CheckCircle size={16} />
-                                      <span>تحديد كمدفوعة</span>
-                                    </button>
-                                    <button onClick={() => handleVoid(s.id)} className="btn-secondary h-9 px-4 text-sm border-hairline-soft text-muted hover:bg-surface-soft dark:border-hairline-dark dark:text-body-dark dark:hover:bg-hairline-dark flex-1">
-                                      <XCircle size={16} />
-                                      <span>إلغاء</span>
-                                    </button>
-                                  </>
-                                )}
-                                {s.status === 'paid' && (
-<span className="text-xs text-ink dark:text-white font-semibold flex-1 text-center">
-                                  مدفوعة في {formatDateShort(s.paidAt)}
-                                </span>
-                                )}
-                                {s.status === 'void' && (
-<span className="text-xs text-muted dark:text-body-dark flex-1 text-center">
-                                  ملغية — لا يمكن التعديل
-                                </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                          {isExpanded && renderExpandedDetails(s)}
                         </div>
 
                         {/* Chevron indicator */}
                         <div className="shrink-0 text-muted-soft">
                           <ChevronLeft size={20} className={isExpanded ? '-rotate-180' : ''} />
                         </div>
+                      </div>
+
+                      {/* ---- Mobile card (phone) — stacked, tap-friendly ---- */}
+                      <div className="md:hidden">
+                        {/* Header: checkbox + status + period … chevron */}
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {s.status === 'draft' && (
+                              <label className={`shrink-0 cursor-pointer flex items-center justify-center w-5 h-5 rounded border-2 transition-colors ${isSelected ? 'bg-accent border-accent' : 'border-hairline dark:border-hairline-dark'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSelect(s.id)}
+                                  className="appearance-none"
+                                />
+                                {isSelected && <span className="text-white text-xs leading-none">✓</span>}
+                              </label>
+                            )}
+                            <SettlementStatusBadge status={s.status} />
+                            <span className="text-xs text-muted-soft truncate">
+                              {formatDateShort(s.periodStart)} — {formatDateShort(s.periodEnd)}
+                            </span>
+                          </div>
+                          <ChevronLeft size={20} className={`shrink-0 text-muted-soft transition-transform ${isExpanded ? '-rotate-180' : ''}`} />
+                        </div>
+
+                        {/* Amount */}
+                        <p className="text-2xl font-bold text-ink dark:text-white mb-3 leading-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCurrency(s.amount)}
+                        </p>
+
+                        {/* Basis stat row */}
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
+                            <p className="text-muted-soft text-[11px]">الإيرادات</p>
+                            <p className="font-semibold text-ink dark:text-white text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              {formatCurrency(s.basisGross)}
+                            </p>
+                          </div>
+                          <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
+                            <p className="text-muted-soft text-[11px]">المصروفات</p>
+                            <p className="font-semibold text-ink dark:text-white text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              {formatCurrency(s.basisExpenses)}
+                            </p>
+                          </div>
+                          <div className="bg-surface-soft dark:bg-surface-dark-elevated p-2 rounded-md">
+                            <p className="text-muted-soft text-[11px]">صافي الربح</p>
+                            <p className="font-semibold text-ink dark:text-white text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                              {formatCurrency(s.basisNet)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Meta: comp snapshot + scope + memo */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-soft mb-1">
+                          <span className="badge-pill badge-ghost">
+                            {s.compTypeSnap === 'percentage_gross' && `${s.percentageSnap}% من إجمالي الإيرادات`}
+                            {s.compTypeSnap === 'percentage_net' && `${s.percentageSnap}% من صافي الربح`}
+                            {s.compTypeSnap === 'fixed' && `مبلغ ثابت ${Number(s.fixedAmountSnap || 0).toLocaleString()} ر.س`}
+                            {s.compTypeSnap === 'fixed_percentage' && `مبلغ ثابت ${Number(s.fixedAmountSnap || 0).toLocaleString()} ر.س + ${s.percentageSnap}% من الإجمالي`}
+                          </span>
+                          <span className="text-muted-soft">·</span>
+                          <span>الوحدات: {s.scopeSnap.length === 0 ? 'الكل' : `${s.scopeSnap.length} وحدة`}</span>
+                          {s.memo && (
+                            <>
+                              <span className="text-muted-soft">·</span>
+                              <span className="line-clamp-1 min-w-0 flex-1">{s.memo}</span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Expand toggle */}
+                        <button
+                          onClick={() => setExpandingId(isExpanded ? null : s.id)}
+                          className="flex items-center gap-1 text-xs text-muted hover:text-accent transition-colors"
+                        >
+                          {isExpanded ? 'إخفاء التفاصيل' : 'عرض التفاصيل الكاملة'}
+                          <ChevronLeft size={12} className={isExpanded ? '-rotate-180' : ''} />
+                        </button>
+
+                        {isExpanded && renderExpandedDetails(s)}
                       </div>
                     </li>
                   );
