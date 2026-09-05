@@ -292,7 +292,7 @@ export default function AvailabilityView({ openBookingForm }) {
   return (
     <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
       <div className="p-3 md:p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center gap-2 bg-canvas dark:bg-surface-dark">
-        <div className="flex items-center space-x-reverse space-x-2 md:space-x-4 min-w-0 flex-1">
+        <div className="flex items-center space-x-reverse space-x-2 md:space-x-4 min-w-0 flex-1 md:flex-none">
           <h3 className="font-semibold text-ink dark:text-white flex items-center gap-1 md:gap-2 text-xs md:text-lg tracking-tight leading-tight whitespace-nowrap shrink-0">
             <Calendar size={14} className="text-ink dark:text-white shrink-0 md:hidden" />
             <Calendar size={20} className="text-ink dark:text-white shrink-0 hidden md:block" />
@@ -308,12 +308,12 @@ export default function AvailabilityView({ openBookingForm }) {
           {/* View mode: pills on both platforms. Compact sizing on mobile so
               all three options stay visible and no dropdown menu covers the
               availability grid below. */}
-          <div className="nav-pill-group shrink-0 flex-1 md:flex-1 min-w-0">
+          <div className="nav-pill-group shrink-0 flex-1 md:flex-none min-w-0">
             {[{ id: 'week', t: 'أسبوع' }, { id: 'half', t: 'نصف شهر' }, { id: 'month', t: 'شهر' }].map(v => (
               <button
                 key={v.id}
                 onClick={() => setViewMode(v.id)}
-                className={`nav-pill text-2xs md:text-xs px-1.5 md:px-3 py-1 md:py-1.5 flex-1 md:flex-1 text-center ${viewMode === v.id ? 'nav-pill-active' : ''}`}
+                className={`nav-pill text-2xs md:text-xs px-1.5 md:px-3 py-1 md:py-1.5 flex-1 md:flex-none text-center ${viewMode === v.id ? 'nav-pill-active' : ''}`}
               >
                 {v.t}
               </button>
