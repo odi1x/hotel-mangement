@@ -353,6 +353,17 @@ export default function AnalyticsView({ setView }) {
             <ChevronDown size={13} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
 
+          {/* Mobile Excel export — sits directly next to the filter chip.
+              Desktop keeps the trailing export group (hidden here). */}
+          <button
+            onClick={() => exportToExcel(false)}
+            className="md:hidden inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold bg-ink text-white dark:bg-white dark:text-ink transition-colors hover:opacity-90"
+            title="تحميل تقرير Excel"
+          >
+            <Download size={13} />
+            <span>Excel</span>
+          </button>
+
           {hasActiveFilters && (
             <button
               onClick={() => { const empty = { apartmentIds: [], startDate: null, endDate: null }; setAnalyticsFilter(empty); setTempFilter(empty); setIsFilterOpen(false); }}
@@ -435,8 +446,9 @@ export default function AnalyticsView({ setView }) {
           )}
         </div>
 
-        {/* Excel export — trailing side (RTL end) */}
-        <div className="flex items-center gap-2">
+        {/* Excel export — trailing side (RTL end). Desktop only; on mobile the
+            Excel button renders inline next to the filter chip above. */}
+        <div className="hidden md:flex items-center gap-2">
           {hasActiveFilters && (
             <button
               onClick={() => exportToExcel(true)}

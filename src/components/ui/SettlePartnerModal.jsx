@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Calculator, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import toast from 'react-hot-toast';
+import MonthPicker from './MonthPicker';
 
 export default function SettlePartnerModal({ isOpen, onClose, partner }) {
   const { settlePartner, calculatePartnerSettlementById } = useData();
@@ -106,12 +107,9 @@ export default function SettlePartnerModal({ isOpen, onClose, partner }) {
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0 p-4 md:p-5 space-y-4">
           <div>
             <label className="block eyebrow mb-1.5">شهر التسوية <span className="text-rose-500">*</span></label>
-            <input
-              type="month"
-              className="input-field w-full"
+            <MonthPicker
               value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              required
+              onChange={(ym) => setMonth(ym)}
               max={new Date().toISOString().slice(0, 7)}
             />
             <p className="text-xs text-muted-soft dark:text-body-dark mt-1">

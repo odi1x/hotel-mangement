@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, CheckCircle, Handshake } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import toast from 'react-hot-toast';
+import MonthPicker from './MonthPicker';
 
 const COMP_TYPES = [
   { value: 'percentage_gross', label: '% من إجمالي الإيرادات', desc: 'نسبة من إجمالي إيرادات الوحدات المحددة' },
@@ -377,12 +378,10 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
 
             <div>
               <label className="block eyebrow mb-1.5">شهر البداية (أول شهر يبدأ فيه التقاسم)</label>
-              <input
-                type="month"
-                className="input-field w-full"
+              <MonthPicker
                 value={formData.startMonth}
-                onChange={(e) => handleChange('startMonth', e.target.value)}
-                max={new Date().toISOString().split('T')[0].slice(0, 7)}
+                onChange={(ym) => handleChange('startMonth', ym)}
+                max={new Date().toISOString().slice(0, 7)}
               />
               <p className="text-2xs text-muted-soft dark:text-body-dark mt-1">
                 يُستخدم لتقسيم إيرادات الفترات السابقة إلى تسوية مستقلة لكل شهر، بدءاً من هذا الشهر.

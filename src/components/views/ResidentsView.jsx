@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users, MoreVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -35,6 +35,9 @@ export default function ResidentsView({ openBookingForm }) {
     }
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [menuOpenFor, setMenuOpenFor] = useState(null);
+  const [menuPos, setMenuPos] = useState(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const fetchPaginatedBookings = async () => {
@@ -71,6 +74,86 @@ export default function ResidentsView({ openBookingForm }) {
 
     return () => clearTimeout(timeoutId);
   }, [currentPage, searchQuery, bookings]); // Depend on bookings to re-fetch when global context bookings update (like after adding/deleting)
+
+
+  // Close the row menu when clicking anywhere outside the open menu
+  useEffect(() => {
+    if (!menuOpenFor) return;
+    function onClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenFor(null);
+      }
+    }
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('touchstart', onClick, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('touchstart', onClick);
+    };
+  }, [menuOpenFor]);
+
+  // Shared ⋯ action menu for a booking (used by desktop table + mobile cards),
+  // anchored from the same portal pattern as the partners page.
+  const renderBookingMenu = (booking, canCheckout) => (
+    createPortal(
+      <div ref={menuRef} style={{ position: 'fixed', right: menuPos.right, top: menuPos.top, zIndex: 60 }}
+        className="w-52 rounded-xl border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark shadow-soft overflow-hidden anim-pop">
+        {canCheckout && (
+          <>
+            <button
+              onClick={() => { handleCheckout(booking); setMenuOpenFor(null); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+            >
+              <LogOut size={15} className="text-muted dark:text-body-dark" />
+              تسجيل خروج مبكر
+            </button>
+            <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
+          </>
+        )}
+        <button
+          onClick={() => { setPrintSelectorBooking(booking); setMenuOpenFor(null); }}
+          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+        >
+          <Printer size={15} className="text-muted dark:text-body-dark" />
+          طباعة العقد
+        </button>
+        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+          <button
+            onClick={() => { openNoteModal(booking); setMenuOpenFor(null); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+          >
+            <MessageSquare size={15} className="text-muted dark:text-body-dark" />
+            ملاحظات النزيل
+            {booking.notes && booking.notes.trim() !== '' && (
+              <span className="w-1.5 h-1.5 bg-accent rounded-full mr-auto"></span>
+            )}
+          </button>
+        )}
+        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+          <button
+            onClick={() => { openBookingForm(booking); setMenuOpenFor(null); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+          >
+            <Edit2 size={15} className="text-muted dark:text-body-dark" />
+            تعديل الحجز
+          </button>
+        )}
+        {(user?.role === 'admin' || user?.permissions?.canDelete) && (
+          <>
+            <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
+            <button
+              onClick={() => handleDelete(booking.id)}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+            >
+              <Trash2 size={15} className="text-muted dark:text-body-dark" />
+              حذف الحجز
+            </button>
+          </>
+        )}
+      </div>,
+      document.body
+    )
+  );
 
 
   const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
@@ -215,7 +298,7 @@ export default function ResidentsView({ openBookingForm }) {
                       <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-16"></div>
                     </td>
                     <td className="px-6 py-4"><div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-20"></div></td>
-                    <td className="px-6 py-4"><div className="h-8 bg-surface-card dark:bg-surface-dark-elevated rounded-md w-24"></div></td>
+                    <td className="px-6 py-4"><div className="h-8 bg-surface-card dark:bg-surface-dark-elevated rounded-md w-8 mx-auto"></div></td>
                   </tr>
                 ))
               ) : currentBookings.map((booking) => {
@@ -260,47 +343,24 @@ export default function ResidentsView({ openBookingForm }) {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-center space-x-reverse space-x-1">
-                        {isCurrent && booking.status !== 'checked_out_early' && (
+                      <div className="flex items-center justify-center">
+                        {/* Overflow (⋯) action menu */}
+                        <div className="relative shrink-0">
                           <button
-                            onClick={() => handleCheckout(booking)}
-                            className="icon-action hover:text-accent"
-                            title="تسجيل خروج مبكر"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const r = e.currentTarget.getBoundingClientRect();
+                              setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                              setMenuOpenFor(booking.id);
+                            }}
+                            className="icon-action hover:bg-surface-soft dark:hover:bg-surface-dark-elevated"
+                            title="إجراءات"
+                            aria-label="إجراءات"
                           >
-                            <LogOut size={18} />
+                            <MoreVertical size={18} />
                           </button>
-                        )}
-
-                        <button
-                          onClick={() => setPrintSelectorBooking(booking)}
-                          className="icon-action hover:text-accent"
-                          title="طباعة العقد"
-                        >
-                          <Printer size={18} />
-                        </button>
-                        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                          <button
-                            onClick={() => openNoteModal(booking)}
-                            className={`icon-action hover:text-accent ${booking.notes && booking.notes.trim() !== '' ? 'opacity-100 text-accent' : ''}`}
-                            title="ملاحظات النزيل"
-                          >
-                            <MessageSquare size={18} />
-                          </button>
-                        )}
-                        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                          <button
-                            onClick={() => openBookingForm(booking)}
-                            className="icon-action hover:text-accent"
-                            title="تعديل الحجز"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                        )}
-                        {(user?.role === 'admin' || user?.permissions?.canDelete) && (
-                          <button onClick={() => handleDelete(booking.id)} className="icon-action hover:text-accent" title="حذف الحجز">
-                            <Trash2 size={18} />
-                          </button>
-                        )}
+                          {menuOpenFor === booking.id && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -340,6 +400,7 @@ export default function ResidentsView({ openBookingForm }) {
                     <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-24"></div>
                   </div>
                   <div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-20 shrink-0"></div>
+                  <div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-md w-6 shrink-0"></div>
                 </div>
                 <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-full"></div>
               </div>
@@ -406,47 +467,22 @@ export default function ResidentsView({ openBookingForm }) {
                     </p>
                   )}
 
-                  {/* Actions — trailing, tap-target sized */}
-                  <div className="flex items-center gap-1 justify-end -mr-2">
-                    {isCurrent && booking.status !== 'checked_out_early' && (
-                      <button
-                        onClick={() => handleCheckout(booking)}
-                        className="icon-action p-2.5 hover:text-accent"
-                        title="تسجيل خروج مبكر"
-                      >
-                        <LogOut size={18} />
-                      </button>
-                    )}
+                  {/* Actions — single ⋯ menu, tap-target sized */}
+                  <div className="flex items-center gap-1 justify-end -mr-2 relative shrink-0">
                     <button
-                      onClick={() => setPrintSelectorBooking(booking)}
-                      className="icon-action p-2.5 hover:text-accent"
-                      title="طباعة العقد"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const r = e.currentTarget.getBoundingClientRect();
+                        setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                        setMenuOpenFor(booking.id);
+                      }}
+                      className="icon-action p-2.5 hover:bg-surface-soft dark:hover:bg-surface-dark-elevated"
+                      title="إجراءات"
+                      aria-label="إجراءات"
                     >
-                      <Printer size={18} />
+                      <MoreVertical size={18} />
                     </button>
-                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                      <button
-                        onClick={() => openNoteModal(booking)}
-                        className={`icon-action p-2.5 hover:text-accent ${booking.notes && booking.notes.trim() !== '' ? 'opacity-100 text-accent' : ''}`}
-                        title="ملاحظات النزيل"
-                      >
-                        <MessageSquare size={18} />
-                      </button>
-                    )}
-                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                      <button
-                        onClick={() => openBookingForm(booking)}
-                        className="icon-action p-2.5 hover:text-accent"
-                        title="تعديل الحجز"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                    )}
-                    {(user?.role === 'admin' || user?.permissions?.canDelete) && (
-                      <button onClick={() => handleDelete(booking.id)} className="icon-action p-2.5 hover:text-accent" title="حذف الحجز">
-                        <Trash2 size={18} />
-                      </button>
-                    )}
+                    {menuOpenFor === booking.id && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
                   </div>
                 </div>
               );

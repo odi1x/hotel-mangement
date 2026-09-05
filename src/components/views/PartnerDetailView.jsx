@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, Calculator, CheckCircle, XCircle, AlertTriangle, FileText, X, Wallet, CalendarRange } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import toast from 'react-hot-toast';
+import MonthPicker from '../ui/MonthPicker';
 import SettlePartnerModal from '../ui/SettlePartnerModal';
 import SettlementStatusBadge from '../ui/SettlementStatusBadge';
-import toast from 'react-hot-toast';
 
 function formatCurrency(amount) {
   const num = Number(amount);
@@ -530,13 +531,10 @@ export default function PartnerDetailView({ partnerId, onBack }) {
             <div className="p-4 md:p-5 space-y-4">
               <div>
                 <label className="block eyebrow mb-1.5">من شهر <span className="text-rose-500">*</span></label>
-                <input
-                  type="month"
-                  className="input-field w-full"
+                <MonthPicker
                   value={backfillMonth}
-                  onChange={(e) => setBackfillMonth(e.target.value)}
+                  onChange={(ym) => setBackfillMonth(ym)}
                   max={new Date().toISOString().slice(0, 7)}
-                  required
                 />
                 <p className="text-xs text-muted-soft dark:text-body-dark mt-1">
                   مثال: إذا كانت الشقة تحقق إيرادات منذ مايو، اختر مايو وسيُنشئ النظام تسوية لكل شهر (مايو، يونيو، يوليو، أغسطس...) حتى آخر شهر مكتمل.

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Trash2, Edit, Calculator, Users, FileText } from 'lucide-react';
+import { Search, Trash2, Edit, Calculator, Users, FileText, MoreVertical } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useData } from '../../context/DataContext';
 import PartnerFormModal from '../ui/PartnerFormModal';
 import SettlePartnerModal from '../ui/SettlePartnerModal';
@@ -43,6 +44,10 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
   const [showAdd, setShowAdd] = useState(false);
   const [editingPartner, setEditingPartner] = useState(null);
   const [settlingPartner, setSettlingPartner] = useState(null);
+  const [menuOpenFor, setMenuOpenFor] = useState(null);
+  const [menuPos, setMenuPos] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const menuRef = useRef(null);
   const addTriggerRef = useRef(addTrigger);
 
   // Watch addTrigger to open modal
@@ -60,7 +65,21 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
     fetchPartnersRef.current = fetchPartners;
   }, [fetchPartners]);
   useEffect(() => {
-    fetchPartnersRef.current();
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        await fetchPartnersRef.current();
+      } catch {
+        // toast handled in context
+      }
+      if (!cancelled) {
+        // Small min-delay so the skeleton isn't an unreadable flash
+        setTimeout(() => { if (!cancelled) setLoading(false); }, 250);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   // Stats
@@ -88,7 +107,24 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
         // toast handled in context
       }
     }
+    setMenuOpenFor(null);
   };
+
+  // Close the row menu when clicking anywhere outside the open menu
+  useEffect(() => {
+    if (!menuOpenFor) return;
+    function onClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenFor(null);
+      }
+    }
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('touchstart', onClick, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('touchstart', onClick);
+    };
+  }, [menuOpenFor]);
 
   return (
     <>
@@ -110,8 +146,54 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
       />
 
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Desktop Stats Cards */}
-        <div className="hidden md:grid md:grid-cols-4 gap-4 mb-6">
+        {/* ---- Skeleton loading state ---- */}
+        {loading ? (
+          <div className="animate-pulse flex-1 flex flex-col min-h-0">
+            {/* Desktop stats skeleton */}
+            <div className="hidden md:grid md:grid-cols-4 gap-4 mb-6">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg h-24 flex flex-col justify-center">
+                  <div className="h-3 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-3"></div>
+                  <div className="h-7 w-16 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile stats skeleton */}
+            <div className="md:hidden bg-surface-card dark:bg-surface-dark-elevated p-3 rounded-lg mb-4">
+              <div className="grid grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="flex flex-col items-center gap-1.5">
+                    <div className="h-3 w-10 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                    <div className="h-5 w-8 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* List container skeleton */}
+            <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
+              <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark">
+                <div className="h-10 w-full max-w-md bg-surface-strong dark:bg-hairline-dark rounded-md"></div>
+              </div>
+              <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-hairline-soft dark:divide-hairline-dark">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="px-6 py-4 flex items-center gap-4">
+                    <div className="h-9 w-2 rounded-full bg-surface-strong dark:bg-hairline-dark"></div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="h-4 w-40 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                      <div className="h-3 w-64 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                    </div>
+                    <div className="h-6 w-6 bg-surface-strong dark:bg-hairline-dark rounded-md"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+        <>
+          {/* Desktop Stats Cards */}
+          <div className="hidden md:grid md:grid-cols-4 gap-4 mb-6">
           <div className="card-surface p-4">
             <div className="flex items-center gap-2 mb-1.5">
               <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
@@ -243,13 +325,6 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                 ))}
               </div>
             </div>
-            <button
-              onClick={() => { setShowAdd(true); setEditingPartner(null); }}
-              className="btn-accent h-10 shrink-0"
-            >
-              <Plus size={18} />
-              <span>شريك جديد</span>
-            </button>
           </div>
 
           {/* List */}
@@ -262,12 +337,6 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                   ? 'جرّب تغيير البحث أو الفلترة'
                   : 'ابدأ بإضافة أول شريك لتقاسم الإيرادات'}
                 variant="dashed"
-                action={
-                  <button onClick={() => { setShowAdd(true); setEditingPartner(null); }} className="btn-accent h-10 px-5">
-                    <Plus size={16} />
-                    <span>إضافة أول شريك</span>
-                  </button>
-                }
               />
             ) : (
               <ul className="divide-y divide-hairline-soft dark:divide-hairline-dark">
@@ -319,29 +388,52 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                           <SettlementStatusBadge status={latestSettlement.status} />
                         )}
 
-                        {/* Action buttons (always visible for mobile reachability) */}
-                        <div className="flex items-center gap-1 shrink-0">
+                        {/* Overflow (⋯) action menu */}
+                        <div className="relative shrink-0">
                           <button
-                            onClick={(e) => { e.stopPropagation(); setShowAdd(true); setEditingPartner(partner); }}
-                            className="icon-action hover:text-accent"
-                            title="تعديل"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const r = e.currentTarget.getBoundingClientRect();
+                              setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                              setMenuOpenFor(partner.id);
+                            }}
+                            className="icon-action hover:bg-surface-soft dark:hover:bg-surface-dark-elevated"
+                            title="إجراءات"
+                            aria-label="إجراءات"
                           >
-                            <Edit size={16} />
+                            <MoreVertical size={18} />
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setSettlingPartner(partner); }}
-                            className="icon-action hover:text-emerald-600"
-                            title="تسوية جديدة"
-                          >
-                            <Calculator size={16} />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(partner.id); }}
-                            className="icon-action hover:text-rose-600"
-                            title="حذف"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+
+                          {menuOpenFor === partner.id && (
+                            createPortal(
+                              <div ref={menuRef} style={{ position: 'fixed', right: menuPos.right, top: menuPos.top, zIndex: 60 }}
+                                className="w-48 rounded-xl border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark shadow-soft overflow-hidden anim-pop">
+                                <button
+                                  onClick={() => { setShowAdd(true); setEditingPartner(partner); setMenuOpenFor(null); }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                                >
+                                  <Edit size={15} className="text-muted dark:text-body-dark" />
+                                  تعديل
+                                </button>
+                                <button
+                                  onClick={() => { setSettlingPartner(partner); setMenuOpenFor(null); }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                                >
+                                  <Calculator size={15} className="text-muted dark:text-body-dark" />
+                                  تسوية جديدة
+                                </button>
+                                <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
+                                <button
+                                  onClick={() => handleDelete(partner.id)}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                                >
+                                  <Trash2 size={15} className="text-muted dark:text-body-dark" />
+                                  حذف
+                                </button>
+                              </div>,
+                              document.body
+                            )
+                          )}
                         </div>
                       </div>
                     </li>
@@ -351,6 +443,8 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
     </>
   );
