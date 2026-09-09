@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   try {
     if (action === 'apartments' && req.method === 'GET') {
-      const { adminId } = req.query;
+      const { adminId, category } = req.query;
 
       if (!adminId) {
         return res.status(400).json({ message: 'adminId is required' });
@@ -27,8 +27,12 @@ export default async function handler(req, res) {
 
       // 2. Fetch apartments belonging ONLY to this admin
       // Use precise select to expose only public-facing fields (hides internal fields like platformFee, needsCleaning)
+      // If a `category` filter came with the link, only show units of that economic category.
       const apartments = await prisma.apartment.findMany({
-        where: { userId: adminId },
+        where: {
+          userId: adminId,
+          ...(category ? { economicCategory: category } : {})
+        },
         select: {
           id: true,
           name: true,
@@ -37,6 +41,7 @@ export default async function handler(req, res) {
           description: true,
           images: true,
           type: true,
+          economicCategory: true,
         }
       });
 

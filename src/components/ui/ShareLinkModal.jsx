@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Copy, Check, ExternalLink, Link2 } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Link2, Tags } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 /**
@@ -10,16 +10,26 @@ import toast from 'react-hot-toast';
  * the toolbar. Now sharing is a one-click discoverable action: an icon
  * button in the toolbar opens this modal.
  *
+ * The sharer can optionally target one economic category (الفئة) — e.g.
+ * "VIP" or "غرف" — so the shared link only shows guests the units of that
+ * category. Category names come from the user's settings; passing none
+ * renders the modal exactly as before (all units).
+ *
  * Portaled to document.body so its `fixed inset-0` reaches the true
  * viewport — the header blurs behind it on mobile, same as any other
  * modal in the app.
  */
-export default function ShareLinkModal({ link, businessName, onClose }) {
+export default function ShareLinkModal({ link, businessName, categories = [], onClose }) {
   const [isCopied, setIsCopied] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+
+  const activeLink = selectedCategory
+    ? `${link}${link.includes('?') ? '&' : '?'}category=${encodeURIComponent(selectedCategory)}`
+    : link;
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(activeLink);
       setIsCopied(true);
       toast.success('تم نسخ الرابط');
       setTimeout(() => setIsCopied(false), 2500);
@@ -37,7 +47,7 @@ export default function ShareLinkModal({ link, businessName, onClose }) {
       await navigator.share({
         title: `${businessName || 'صفحة الحجز'} — منصة الحجز الإلكتروني`,
         text: `احجز عبر ${businessName || 'صفحتنا'}:`,
-        url: link,
+        url: activeLink,
       });
     } catch (err) {
       // User cancelled — silent
@@ -80,7 +90,7 @@ export default function ShareLinkModal({ link, businessName, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="p-5 flex flex-col gap-4">
+        <div className="p-5 flex flex-col gap-4 overflow-y-auto">
           {/* URL display — code-style card. Selectable, monospace-ish. */}
           <div className="bg-surface-soft dark:bg-surface-dark-elevated border border-hairline-soft dark:border-hairline-dark-soft rounded-lg px-3 py-2.5">
             <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark mb-1">
@@ -89,12 +99,57 @@ export default function ShareLinkModal({ link, businessName, onClose }) {
             <input
               type="text"
               readOnly
-              value={link}
+              value={activeLink}
               onFocus={(e) => e.target.select()}
               className="w-full bg-transparent border-none outline-none text-sm text-ink dark:text-white font-medium tracking-tight text-left truncate p-0"
               dir="ltr"
             />
           </div>
+
+          {/* Category targeting — pick which unit category this link shows.
+              Shown only when the account has configured economic categories. */}
+          {categories.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Tags size={14} className="text-muted-soft" />
+                  <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
+                    الفئة المستهدفة
+                  </p>
+                </div>
+                <p className="text-2xs text-muted-soft">
+                  {selectedCategory ? 'وحدات هذه الفئة فقط' : 'جميع الوحدات'}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="الفئة المستهدفة">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('')}
+                  className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
+                    selectedCategory === ''
+                      ? 'bg-ink text-white dark:bg-white dark:text-ink'
+                      : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'
+                  }`}
+                >
+                  الكل
+                </button>
+                {categories.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setSelectedCategory(selectedCategory === c ? '' : c)}
+                    className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
+                      selectedCategory === c
+                        ? 'bg-ink text-white dark:bg-white dark:text-ink'
+                        : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Primary: copy button, full width, big. */}
           <button
@@ -131,7 +186,7 @@ export default function ShareLinkModal({ link, businessName, onClose }) {
               </button>
             )}
             <a
-              href={link}
+              href={activeLink}
               target="_blank"
               rel="noopener noreferrer"
               className={`h-10 rounded-lg text-xs font-semibold border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors inline-flex items-center justify-center gap-1.5 ${
@@ -145,7 +200,9 @@ export default function ShareLinkModal({ link, businessName, onClose }) {
 
           {/* Helper */}
           <p className="text-2xs text-muted-soft leading-relaxed text-center px-2">
-            العملاء يستطيعون تصفح الوحدات والحجز مباشرة عبر هذا الرابط.
+            {selectedCategory
+              ? `سيرى ضيفك وحدات فئة «${selectedCategory}» فقط عبر هذا الرابط.`
+              : 'العملاء يستطيعون تصفح الوحدات والحجز مباشرة عبر هذا الرابط.'}
           </p>
         </div>
       </div>

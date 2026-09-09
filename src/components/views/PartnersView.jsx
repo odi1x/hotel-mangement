@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Search, Trash2, Edit, Calculator, Users, FileText, MoreVertical } from 'lucide-react';
+import { Search, Trash2, Edit, Calculator, Users, FileText, MoreVertical, AlertTriangle } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useData } from '../../context/DataContext';
 import PartnerFormModal from '../ui/PartnerFormModal';
@@ -46,6 +46,7 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
   const [settlingPartner, setSettlingPartner] = useState(null);
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [menuPos, setMenuPos] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [loading, setLoading] = useState(true);
   const menuRef = useRef(null);
   const addTriggerRef = useRef(addTrigger);
@@ -99,14 +100,13 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
     return matchesSearch && matchesStatus;
   });
 
-  const handleDelete = async (id) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا الشريك؟ سيتم حذف جميع تسوياته أيضاً.')) {
-      try {
-        await deletePartner(id);
-      } catch {
-        // toast handled in context
-      }
+  const confirmDelete = async () => {
+    try {
+      await deletePartner(deleteConfirmId);
+    } catch {
+      // toast handled in context
     }
+    setDeleteConfirmId(null);
     setMenuOpenFor(null);
   };
 
@@ -167,6 +167,34 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
         partner={settlingPartner}
         apartments={apartments}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && createPortal(
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
+          <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)} />
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full md:max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-5">
+                <AlertTriangle className="h-8 w-8 text-ink dark:text-white" />
+              </div>
+              <h3 className="text-xl font-semibold tracking-tight text-ink dark:text-white mb-2">
+                تأكيد الحذف
+              </h3>
+              <p className="text-sm text-muted dark:text-body-dark font-medium">
+                هل أنت متأكد من حذف هذا الشريك؟ سيتم حذف جميع تسوياته أيضاً. لا يمكن التراجع عن هذا الإجراء.
+              </p>
+            </div>
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex space-x-reverse space-x-3">
+              <button onClick={confirmDelete} className="btn-primary flex-1">
+                تأكيد الحذف
+              </button>
+              <button onClick={() => setDeleteConfirmId(null)} className="btn-secondary flex-1">
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
 
       <div className="flex-1 flex flex-col min-h-0">
         {/* ---- Skeleton loading state ---- */}
@@ -317,8 +345,8 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
         <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
           {/* Toolbar */}
           <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0">
-            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 min-w-0">
-              <div className="relative w-full md:w-auto md:flex-1 md:max-w-xl">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 min-w-0 flex-wrap">
+              <div className="relative w-full md:w-auto md:flex-1 md:max-w-xl min-w-[280px]">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted size-5" />
                 <input
                   type="text"
@@ -328,7 +356,7 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="nav-pill-group flex-1 min-w-0 max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
+              <div className="nav-pill-group flex-none w-fit max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
                 {['all', 'active', 'inactive', 'paused'].map((status) => (
                   <button
                     key={status}
@@ -445,7 +473,7 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                                 </button>
                                 <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(partner.id); }}
+                                  onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(partner.id); setMenuOpenFor(null); }}
                                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
                                 >
                                   <Trash2 size={15} className="text-muted dark:text-body-dark" />

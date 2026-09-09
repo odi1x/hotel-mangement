@@ -45,13 +45,14 @@ export default async function handler(req, res) {
         name, type, description, basePrice,
         cleaningFeePerStay,
         platformFeeType, platformFee,
-        licenseId, images, coverPhoto
+        licenseId, images, coverPhoto, economicCategory
       } = req.body;
       const apartment = await prisma.apartment.create({
         data: {
           userId: targetUserId,
           name,
           type,
+          economicCategory: economicCategory || null,
           description,
           basePrice: parseFloat(basePrice) || 0,
           cleaningFeePerStay: cleaningFeePerStay ? parseFloat(cleaningFeePerStay) : null,
@@ -70,7 +71,7 @@ export default async function handler(req, res) {
         id, name, type, description, basePrice, needsCleaning,
         cleaningFeePerStay,
         platformFeeType, platformFee,
-        licenseId, images, coverPhoto
+        licenseId, images, coverPhoto, economicCategory
       } = req.body;
 
       // Verify ownership
@@ -82,6 +83,7 @@ export default async function handler(req, res) {
       const updateData = {
         name,
         type,
+        economicCategory: economicCategory !== undefined ? economicCategory : existing.economicCategory,
         description,
         basePrice: parseFloat(basePrice) || 0,
         cleaningFeePerStay: cleaningFeePerStay ? parseFloat(cleaningFeePerStay) : null,

@@ -12,6 +12,7 @@ export default function ApartmentsView({ setView }) {
   const { user } = useAuth();
   const customTypes = user?.apartmentTypes ? user.apartmentTypes.split(',').map(t => t.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة', 'استوديو', 'شقة'];
   const defaultType = customTypes.length > 0 ? customTypes[0] : 'استوديو';
+  const customCategories = user?.economicCategories ? user.economicCategories.split(',').map(c => c.trim()).filter(Boolean) : [];
   const [isModalOpen, setIsModalOpen] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -36,7 +37,7 @@ export default function ApartmentsView({ setView }) {
       name: '', type: defaultType, description: '', basePrice: '',
       cleaningFeePerStay: '',
       platformFeeType: 'percentage', platformFee: '',
-      licenseId: ''
+      licenseId: '', economicCategory: ''
   });
 
 
@@ -132,7 +133,7 @@ export default function ApartmentsView({ setView }) {
           name: '', type: defaultType, description: '', basePrice: '',
           cleaningFeePerStay: '',
           platformFeeType: 'percentage', platformFee: '',
-          licenseId: ''
+          licenseId: '', economicCategory: ''
       });
       setEditingId(null);
     }
@@ -186,7 +187,7 @@ export default function ApartmentsView({ setView }) {
   const filteredApartments = apartments.filter(a => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
-    return (a.name || '').toLowerCase().includes(q) || (a.type || '').toLowerCase().includes(q);
+    return (a.name || '').toLowerCase().includes(q) || (a.type || '').toLowerCase().includes(q) || (a.economicCategory || '').toLowerCase().includes(q);
   });
   const totalPages = Math.ceil(filteredApartments.length / itemsPerPage);
   const clampedPage = Math.min(currentPage, totalPages || 1);
@@ -318,7 +319,12 @@ export default function ApartmentsView({ setView }) {
 
             {/* Body — name & price lead; type is a quiet eyebrow */}
             <div className="p-5 flex flex-col flex-1">
-              <p className="text-xs font-semibold text-muted-soft mb-1">{apt.type}</p>
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                <p className="text-xs font-semibold text-muted-soft">{apt.type}</p>
+                {apt.economicCategory && (
+                  <span className="badge-pill text-[10px] px-2 py-0 text-muted dark:text-body-dark">{apt.economicCategory}</span>
+                )}
+              </div>
               <h3 className="text-lg font-bold tracking-tight text-ink dark:text-white leading-tight">{apt.name}</h3>
               {apt.description && (
                 <p className="text-xs text-muted dark:text-body-dark mt-1 line-clamp-1">{apt.description}</p>
@@ -414,6 +420,13 @@ export default function ApartmentsView({ setView }) {
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-soft font-medium pointer-events-none">ر.س</span>
                     </div>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">الفئة</label>
+                  <select className="input-field" value={formData.economicCategory || ''} onChange={(e) => setFormData({ ...formData, economicCategory: e.target.value })}>
+                    <option value="">بدون فئة</option>
+                    {customCategories.map((c, idx) => (<option key={idx} value={c}>{c}</option>))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">ملاحظات / وصف</label>
@@ -550,6 +563,7 @@ export default function ApartmentsView({ setView }) {
         <ShareLinkModal
           link={shareableLink}
           businessName={user?.businessName || user?.name}
+          categories={customCategories}
           onClose={() => setIsShareOpen(false)}
         />
       )}

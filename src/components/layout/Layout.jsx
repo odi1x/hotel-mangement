@@ -323,6 +323,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
         <ShareLinkModal
           link={shareableLink}
           businessName={user?.businessName || user?.name}
+          categories={user?.economicCategories ? user.economicCategories.split(',').map(c => c.trim()).filter(Boolean) : []}
           onClose={() => setIsShareOpen(false)}
         />
       )}

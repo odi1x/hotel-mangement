@@ -30,11 +30,15 @@ export default function SettingsView() {
     taxPercentage: '',
     apartmentTypes: 'غرفة,غرفة وصالة,غرفتين وصالة',
     bookingSources: 'زيارة مباشرة,Booking.com,Airbnb',
+    economicCategories: 'اقتصادية,فاخرة',
     generalExpenses: ''
   });
 
   const [apartmentTypesList, setApartmentTypesList] = useState(['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
   const [newApartmentType, setNewApartmentType] = useState('');
+
+  const [economicCategoriesList, setEconomicCategoriesList] = useState(['اقتصادية', 'فاخرة']);
+  const [newEconomicCategory, setNewEconomicCategory] = useState('');
 
   const [bookingSourcesList, setBookingSourcesList] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
   const [newBookingSource, setNewBookingSource] = useState('');
@@ -69,10 +73,12 @@ export default function SettingsView() {
         taxPercentage: user.taxPercentage || '',
         apartmentTypes: user.apartmentTypes || 'غرفة,غرفة وصالة,غرفتين وصالة',
         bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb',
+        economicCategories: user.economicCategories || 'اقتصادية,فاخرة',
         generalExpenses: user.generalExpenses || ''
       });
       setApartmentTypesList(user.apartmentTypes ? user.apartmentTypes.split(',').map(s => s.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
       setBookingSourcesList(user.bookingSources ? user.bookingSources.split(',').map(s => s.trim()).filter(Boolean) : ['زيارة مباشرة', 'Booking.com', 'Airbnb']);
+      setEconomicCategoriesList(user.economicCategories ? user.economicCategories.split(',').map(s => s.trim()).filter(Boolean) : ['اقتصادية', 'فاخرة']);
     }
   }, [user]);
 
@@ -147,6 +153,21 @@ export default function SettingsView() {
     const updatedList = bookingSourcesList.filter(source => source !== sourceToRemove);
     setBookingSourcesList(updatedList);
     setFormData({ ...formData, bookingSources: updatedList.join(',') });
+  };
+
+  const handleAddEconomicCategory = () => {
+    if (newEconomicCategory.trim() && !economicCategoriesList.includes(newEconomicCategory.trim())) {
+      const updatedList = [...economicCategoriesList, newEconomicCategory.trim()];
+      setEconomicCategoriesList(updatedList);
+      setFormData({ ...formData, economicCategories: updatedList.join(',') });
+      setNewEconomicCategory('');
+    }
+  };
+
+  const handleRemoveEconomicCategory = (categoryToRemove) => {
+    const updatedList = economicCategoriesList.filter(category => category !== categoryToRemove);
+    setEconomicCategoriesList(updatedList);
+    setFormData({ ...formData, economicCategories: updatedList.join(',') });
   };
 
   const handleSubmit = async (e) => {
@@ -514,6 +535,42 @@ export default function SettingsView() {
                       </div>
                     ))}
                     {apartmentTypesList.length === 0 && <span className="text-sm text-muted">لا توجد أنواع مضافة</span>}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">الفئات الاقتصادية</label>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newEconomicCategory}
+                      onChange={(e) => setNewEconomicCategory(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEconomicCategory())}
+                      className="input-field flex-1"
+                      placeholder="أضف فئة اقتصادية جديدة (مثال: فاخرة)"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddEconomicCategory}
+                      className="btn-primary h-auto px-5"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {economicCategoriesList.map((category, index) => (
+                      <div key={index} className="badge-pill">
+                        <span className="text-sm font-semibold">{category}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEconomicCategory(category)}
+                          className="text-muted-soft hover:text-ink dark:hover:text-white transition-colors mr-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {economicCategoriesList.length === 0 && <span className="text-sm text-muted">لا توجد فئات مضافة</span>}
                   </div>
                 </div>
 

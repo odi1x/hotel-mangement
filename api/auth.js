@@ -121,6 +121,7 @@ export default async function handler(req, res) {
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
+        economicCategories: user.economicCategories,
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
@@ -131,7 +132,7 @@ export default async function handler(req, res) {
 
     // ME PUT
     if (action === 'me' && req.method === 'PUT') {
-      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses } = req.body;
+      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses, economicCategories } = req.body;
       const user = await prisma.user.update({
         where: { id: decoded.userId },
         data: {
@@ -141,6 +142,7 @@ export default async function handler(req, res) {
           taxPercentage: taxPercentage ? parseFloat(taxPercentage) : null,
           apartmentTypes: apartmentTypes !== undefined ? apartmentTypes : null,
           bookingSources: bookingSources !== undefined ? bookingSources : null,
+          economicCategories: economicCategories !== undefined ? economicCategories : null,
           generalExpenses: generalExpenses ? parseFloat(generalExpenses) : null
         }
       });
@@ -150,6 +152,7 @@ export default async function handler(req, res) {
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
+        economicCategories: user.economicCategories,
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
