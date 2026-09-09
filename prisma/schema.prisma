@@ -36,6 +36,7 @@ model User {
   apartmentTypes   String?
   bookingSources   String?
   economicCategories String?
+  locations         String?
 
   generalExpenses  Decimal?
 
@@ -80,10 +81,12 @@ model Apartment {
   name          String
   type          String
   economicCategory String?
+  location      String?
   description   String?
   basePrice     Decimal
   needsCleaning Boolean   @default(false)
   lastCleanedAt DateTime  @default(now())
+  isActive      Boolean   @default(true)
 
   // Per-booking fees — these are pricing parameters, not expenses.
   // Applied to each booking's math; not tracked separately in the ledger.

@@ -27,10 +27,13 @@ export default async function handler(req, res) {
 
       // 2. Fetch apartments belonging ONLY to this admin
       // Use precise select to expose only public-facing fields (hides internal fields like platformFee, needsCleaning)
-      // If a `category` filter came with the link, only show units of that economic category.
+      // Inactive (hidden) units never appear on the public page, and if a
+      // `category` filter came with the link, only units of that economic
+      // category are shown.
       const apartments = await prisma.apartment.findMany({
         where: {
           userId: adminId,
+          isActive: true,
           ...(category ? { economicCategory: category } : {})
         },
         select: {
@@ -113,6 +116,9 @@ export default async function handler(req, res) {
       // Create Booking
       // Fetch apartment to get the name
       const apt = await prisma.apartment.findUnique({ where: { id: apartmentId } });
+      if (!apt || !apt.isActive) {
+        return res.status(403).json({ message: 'هذه الوحدة غير متاحة حالياً' });
+      }
       const aptName = apt ? apt.name : 'غير معروف';
 
       const booking = await prisma.booking.create({

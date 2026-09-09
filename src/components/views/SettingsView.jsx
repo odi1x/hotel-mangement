@@ -31,6 +31,7 @@ export default function SettingsView() {
     apartmentTypes: 'غرفة,غرفة وصالة,غرفتين وصالة',
     bookingSources: 'زيارة مباشرة,Booking.com,Airbnb',
     economicCategories: 'اقتصادية,فاخرة',
+    locations: '',
     generalExpenses: ''
   });
 
@@ -39,6 +40,9 @@ export default function SettingsView() {
 
   const [economicCategoriesList, setEconomicCategoriesList] = useState(['اقتصادية', 'فاخرة']);
   const [newEconomicCategory, setNewEconomicCategory] = useState('');
+
+  const [locationsList, setLocationsList] = useState([]);
+  const [newLocation, setNewLocation] = useState('');
 
   const [bookingSourcesList, setBookingSourcesList] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
   const [newBookingSource, setNewBookingSource] = useState('');
@@ -74,11 +78,13 @@ export default function SettingsView() {
         apartmentTypes: user.apartmentTypes || 'غرفة,غرفة وصالة,غرفتين وصالة',
         bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb',
         economicCategories: user.economicCategories || 'اقتصادية,فاخرة',
+        locations: user.locations || '',
         generalExpenses: user.generalExpenses || ''
       });
       setApartmentTypesList(user.apartmentTypes ? user.apartmentTypes.split(',').map(s => s.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
       setBookingSourcesList(user.bookingSources ? user.bookingSources.split(',').map(s => s.trim()).filter(Boolean) : ['زيارة مباشرة', 'Booking.com', 'Airbnb']);
       setEconomicCategoriesList(user.economicCategories ? user.economicCategories.split(',').map(s => s.trim()).filter(Boolean) : ['اقتصادية', 'فاخرة']);
+      setLocationsList(user.locations ? user.locations.split(',').map(s => s.trim()).filter(Boolean) : []);
     }
   }, [user]);
 
@@ -168,6 +174,21 @@ export default function SettingsView() {
     const updatedList = economicCategoriesList.filter(category => category !== categoryToRemove);
     setEconomicCategoriesList(updatedList);
     setFormData({ ...formData, economicCategories: updatedList.join(',') });
+  };
+
+  const handleAddLocation = () => {
+    if (newLocation.trim() && !locationsList.includes(newLocation.trim())) {
+      const updatedList = [...locationsList, newLocation.trim()];
+      setLocationsList(updatedList);
+      setFormData({ ...formData, locations: updatedList.join(',') });
+      setNewLocation('');
+    }
+  };
+
+  const handleRemoveLocation = (locationToRemove) => {
+    const updatedList = locationsList.filter(location => location !== locationToRemove);
+    setLocationsList(updatedList);
+    setFormData({ ...formData, locations: updatedList.join(',') });
   };
 
   const handleSubmit = async (e) => {
@@ -571,6 +592,42 @@ export default function SettingsView() {
                       </div>
                     ))}
                     {economicCategoriesList.length === 0 && <span className="text-sm text-muted">لا توجد فئات مضافة</span>}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">المواقع</label>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newLocation}
+                      onChange={(e) => setNewLocation(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLocation())}
+                      className="input-field flex-1"
+                      placeholder="أضف موقع جديد (مثال: حي الياسمين، الرياض)"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddLocation}
+                      className="btn-primary h-auto px-5"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {locationsList.map((location, index) => (
+                      <div key={index} className="badge-pill">
+                        <span className="text-sm font-semibold">{location}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLocation(location)}
+                          className="text-muted-soft hover:text-ink dark:hover:text-white transition-colors mr-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {locationsList.length === 0 && <span className="text-sm text-muted">لا توجد مواقع مضافة</span>}
                   </div>
                 </div>
 

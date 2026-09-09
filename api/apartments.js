@@ -45,7 +45,7 @@ export default async function handler(req, res) {
         name, type, description, basePrice,
         cleaningFeePerStay,
         platformFeeType, platformFee,
-        licenseId, images, coverPhoto, economicCategory
+        licenseId, images, coverPhoto, economicCategory, location, isActive
       } = req.body;
       const apartment = await prisma.apartment.create({
         data: {
@@ -53,6 +53,7 @@ export default async function handler(req, res) {
           name,
           type,
           economicCategory: economicCategory || null,
+          location: location || null,
           description,
           basePrice: parseFloat(basePrice) || 0,
           cleaningFeePerStay: cleaningFeePerStay ? parseFloat(cleaningFeePerStay) : null,
@@ -61,6 +62,7 @@ export default async function handler(req, res) {
           licenseId: licenseId || null,
           images: images || [],
           coverPhoto: coverPhoto || null,
+          isActive: isActive !== undefined ? isActive : true,
         },
       });
       return res.status(201).json(apartment);
@@ -71,7 +73,7 @@ export default async function handler(req, res) {
         id, name, type, description, basePrice, needsCleaning,
         cleaningFeePerStay,
         platformFeeType, platformFee,
-        licenseId, images, coverPhoto, economicCategory
+        licenseId, images, coverPhoto, economicCategory, location, isActive
       } = req.body;
 
       // Verify ownership
@@ -84,6 +86,7 @@ export default async function handler(req, res) {
         name,
         type,
         economicCategory: economicCategory !== undefined ? economicCategory : existing.economicCategory,
+        location: location !== undefined ? location : existing.location,
         description,
         basePrice: parseFloat(basePrice) || 0,
         cleaningFeePerStay: cleaningFeePerStay ? parseFloat(cleaningFeePerStay) : null,
@@ -99,6 +102,10 @@ export default async function handler(req, res) {
         if (needsCleaning === false) {
           updateData.lastCleanedAt = new Date();
         }
+      }
+
+      if (isActive !== undefined) {
+        updateData.isActive = isActive;
       }
 
       const apartment = await prisma.apartment.update({
