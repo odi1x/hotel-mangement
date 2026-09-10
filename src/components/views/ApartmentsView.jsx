@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useData } from '../../context/DataContext';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Building2, ArrowDownCircle, Search, LayoutGrid, List as ListIcon, Rows3, Eye, EyeOff, MapPin } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Building2, ArrowDownCircle, Search, LayoutGrid, List as ListIcon, Rows3, Eye, EyeOff, MapPin, SlidersHorizontal, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
 import ShareLinkModal from '../ui/ShareLinkModal';
@@ -35,6 +35,8 @@ export default function ApartmentsView({ setView }) {
   });
   const [sortKey, setSortKey] = useState('');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   useEffect(() => {
     window.localStorage.setItem('apartmentsLayout', layout);
@@ -225,6 +227,9 @@ export default function ApartmentsView({ setView }) {
     if (locationFilter !== 'all' && (a.location || '').trim() !== locationFilter) {
       return false;
     }
+    if (categoryFilter !== 'all' && (a.economicCategory || '').trim() !== categoryFilter) {
+      return false;
+    }
     return true;
   });
 
@@ -294,19 +299,36 @@ export default function ApartmentsView({ setView }) {
   );
   const layoutIcon = layout === 'grid' ? <LayoutGrid size={16} /> : layout === 'list' ? <ListIcon size={16} /> : <Rows3 size={16} />;
 
-    const selectCls = "h-10 min-w-24 sm:min-w-32 max-w-full shrink-0 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md px-3 pr-3 text-sm font-medium text-body dark:text-body-dark outline-none focus:border-ink dark:focus:border-white transition-colors cursor-pointer";
+  const sortOptions = [
+    { value: '', label: 'الافتراضي' },
+    { value: 'category', label: 'الفئة' },
+    { value: 'priceAsc', label: 'السعر: من الأقل' },
+    { value: 'priceDesc', label: 'السعر: من الأعلى' },
+    { value: 'type', label: 'النوع' },
+    { value: 'name', label: 'الاسم' },
+  ];
+  const activeFilterCount = (sortKey !== '' ? 1 : 0) + (locationFilter !== 'all' ? 1 : 0) + (categoryFilter !== 'all' ? 1 : 0);
+  const clearAllFilters = () => { setSortKey(''); setLocationFilter('all'); setCategoryFilter('all'); };
+
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
 
-      {/* Toolbar — responsive split:
-          PHONE: controls row (share icon + sort + location + layout) wraps
-          on top, search full-width below.
-          DESKTOP: search flex-1 then controls inline to the left. The share
-          button lives in the Header on desktop, so it's hidden here. */}
+      {/* Toolbar — search + filter button + layout toggle.
+          PHONE: wraps into two rows. DESKTOP: inline. */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4 md:mb-5 shrink-0">
+        <div className="relative flex-1 min-w-0 w-full order-2 sm:order-1">
+          <input
+            type="text"
+            placeholder="ابحث بالاسم أو النوع أو الفئة أو الموقع..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="input-field pl-10 pr-4 py-2 w-full"
+          />
+          <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
+        </div>
+
         <div className="flex flex-wrap items-center gap-2 shrink-0 order-1 sm:order-2">
-          {/* Mobile-only share icon — icon only, no label; positioned
-              in the same controls row so phone layout stays compact. */}
+          {/* Mobile-only share icon */}
           {(user?.role === 'admin' || user?.permissions?.canBook) && (
             <button
               onClick={() => setIsShareOpen(true)}
@@ -317,32 +339,107 @@ export default function ApartmentsView({ setView }) {
             </button>
           )}
 
-          <select
-            value={sortKey}
-            onChange={(e) => { setSortKey(e.target.value); setCurrentPage(1); }}
-            className={selectCls}
-            aria-label="ترتيب الوحدات"
-          >
-            <option value="">ترتيب: الافتراضي</option>
-            <option value="category">ترتيب: الفئة</option>
-            <option value="priceAsc">السعر: من الأقل</option>
-            <option value="priceDesc">السعر: من الأعلى</option>
-            <option value="type">ترتيب: النوع</option>
-            <option value="name">ترتيب: الاسم</option>
-          </select>
-
-          {allLocations.length > 0 && (
-            <select
-              value={locationFilter}
-              onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
-              className={selectCls}
-              aria-label="تصفية حسب الموقع"
+          {/* Advanced filter button — opens popover panel */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setShowFilterPanel(p => !p)}
+              className={`inline-flex items-center justify-center gap-2 h-10 px-3 rounded-md border transition-colors text-sm font-semibold shrink-0 ${activeFilterCount > 0
+                ? 'bg-ink text-white dark:bg-white dark:text-ink border-ink dark:border-white'
+                : 'bg-canvas dark:bg-surface-dark-elevated border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:border-ink dark:hover:border-white'}`}
             >
-              <option value="all">الموقع: الكل</option>
-              {allLocations.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
-          )}
+              <SlidersHorizontal size={15} />
+              <span className="hidden sm:inline">التصفية</span>
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[11px] font-bold leading-none">{activeFilterCount}</span>
+              )}
+            </button>
 
+            {/* Filter popover panel */}
+            {showFilterPanel && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowFilterPanel(false)} />
+                <div className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 top-full mt-2 z-50 w-[min(380px,calc(100vw-2rem))] bg-canvas dark:bg-surface-dark rounded-xl border border-hairline dark:border-hairline-dark-soft shadow-xl overflow-hidden" dir="rtl">
+                  {/* Sort section */}
+                  <div className="px-5 pt-5 pb-3">
+                    <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الترتيب</p>
+                    <div className="space-y-1">
+                      {sortOptions.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setSortKey(opt.value); setCurrentPage(1); }}
+                          className="flex items-center gap-3 w-full py-2 px-3 rounded-lg hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                        >
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${sortKey === opt.value ? 'border-ink dark:border-white' : 'border-hairline dark:border-hairline-dark'}`}>
+                            {sortKey === opt.value && <div className="w-2 h-2 rounded-full bg-ink dark:bg-white" />}
+                          </div>
+                          <span className={`text-sm ${sortKey === opt.value ? 'font-semibold text-ink dark:text-white' : 'text-body dark:text-body-dark'}`}>{opt.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-hairline-soft dark:border-hairline-dark-soft" />
+
+                  {/* Category section */}
+                  {customCategories.length > 0 && (
+                    <div className="px-5 py-3">
+                      <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الفئة الاقتصادية</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => { setCategoryFilter('all'); setCurrentPage(1); }}
+                          className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${categoryFilter === 'all' ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
+                        >الكل</button>
+                        {customCategories.map(c => (
+                          <button
+                            key={c}
+                            onClick={() => { setCategoryFilter(categoryFilter === c ? 'all' : c); setCurrentPage(1); }}
+                            className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${categoryFilter === c ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
+                          >{c}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Location section */}
+                  {allLocations.length > 0 && (
+                    <>
+                      <div className="border-t border-hairline-soft dark:border-hairline-dark-soft" />
+                      <div className="px-5 py-3">
+                        <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الموقع</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => { setLocationFilter('all'); setCurrentPage(1); }}
+                            className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${locationFilter === 'all' ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
+                          >الكل</button>
+                          {allLocations.map(l => (
+                            <button
+                              key={l}
+                              onClick={() => { setLocationFilter(locationFilter === l ? 'all' : l); setCurrentPage(1); }}
+                              className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${locationFilter === l ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
+                            >{l}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Footer */}
+                  <div className="border-t border-hairline-soft dark:border-hairline-dark-soft px-5 py-3 flex items-center justify-between">
+                    <button
+                      onClick={() => { clearAllFilters(); setCurrentPage(1); }}
+                      className="text-sm font-semibold text-muted hover:text-ink dark:hover:text-white transition-colors"
+                    >مسح الكل</button>
+                    <button
+                      onClick={() => setShowFilterPanel(false)}
+                      className="btn-primary h-9 px-5 text-sm"
+                    >تم</button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Layout toggle */}
           <button
             onClick={cycleLayout}
             className="inline-flex items-center justify-center gap-2 h-10 px-3 rounded-md bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:border-ink dark:hover:border-white transition-colors text-sm font-semibold shrink-0"
@@ -351,17 +448,6 @@ export default function ApartmentsView({ setView }) {
             {layoutIcon}
             <span className="hidden sm:inline">عرض</span>
           </button>
-        </div>
-
-        <div className="relative flex-1 min-w-0 w-full order-2 sm:order-1">
-          <input
-            type="text"
-            placeholder="ابحث بالاسم أو النوع أو الفئة أو الموقع..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="input-field pl-10 pr-4 py-2 w-full"
-          />
-          <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
         </div>
       </div>
 
