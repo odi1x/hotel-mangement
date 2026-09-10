@@ -294,39 +294,29 @@ export default function ApartmentsView({ setView }) {
   );
   const layoutIcon = layout === 'grid' ? <LayoutGrid size={16} /> : layout === 'list' ? <ListIcon size={16} /> : <Rows3 size={16} />;
 
-  const selectCls = "h-10 min-w-24 sm:min-w-32 max-w-full shrink-0 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md px-3 pr-3 text-sm font-medium text-body dark:text-body-dark outline-none focus:border-ink dark:focus:border-white transition-colors cursor-pointer";
+    const selectCls = "h-10 min-w-24 sm:min-w-32 max-w-full shrink-0 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md px-3 pr-3 text-sm font-medium text-body dark:text-body-dark outline-none focus:border-ink dark:focus:border-white transition-colors cursor-pointer";
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
 
-      {/* Mobile-only share button. Opens ShareLinkModal (same component
-          the desktop Share button opens). Sits above the grid, only for
-          admin + canBook. Clean icon+label button — no ugly inline card. */}
-      {(user?.role === 'admin' || user?.permissions?.canBook) && (
-        <button
-          onClick={() => setIsShareOpen(true)}
-          className="md:hidden inline-flex items-center gap-2 h-10 px-3.5 rounded-md bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white transition-colors text-sm font-semibold mb-3 shrink-0 self-start"
-        >
-          <Share2 size={15} />
-          <span>مشاركة رابط الحجز</span>
-        </button>
-      )}
+      {/* Toolbar — responsive split:
+          PHONE: controls row (share icon + sort + location + layout) wraps
+          on top, search full-width below.
+          DESKTOP: search flex-1 then controls inline to the left. The share
+          button lives in the Header on desktop, so it's hidden here. */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4 md:mb-5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 order-1 sm:order-2">
+          {/* Mobile-only share icon — icon only, no label; positioned
+              in the same controls row so phone layout stays compact. */}
+          {(user?.role === 'admin' || user?.permissions?.canBook) && (
+            <button
+              onClick={() => setIsShareOpen(true)}
+              className="sm:hidden inline-flex items-center justify-center h-10 w-10 rounded-md bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white transition-colors shrink-0"
+              title="مشاركة رابط الحجز"
+            >
+              <Share2 size={15} />
+            </button>
+          )}
 
-      {/* Toolbar — search leads full width; sort + location filter + layout
-          toggle wrap below on phone and sit inline on desktop. Nothing
-          scrolls horizontally. Reset to page 1 whenever a control changes. */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 md:mb-5 shrink-0">
-        <div className="relative flex-1 min-w-0 w-full">
-          <input
-            type="text"
-            placeholder="ابحث بالاسم أو النوع أو الفئة أو الموقع..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="input-field pl-10 pr-4 py-2 w-full"
-          />
-          <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <select
             value={sortKey}
             onChange={(e) => { setSortKey(e.target.value); setCurrentPage(1); }}
@@ -361,6 +351,17 @@ export default function ApartmentsView({ setView }) {
             {layoutIcon}
             <span className="hidden sm:inline">عرض</span>
           </button>
+        </div>
+
+        <div className="relative flex-1 min-w-0 w-full order-2 sm:order-1">
+          <input
+            type="text"
+            placeholder="ابحث بالاسم أو النوع أو الفئة أو الموقع..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="input-field pl-10 pr-4 py-2 w-full"
+          />
+          <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
         </div>
       </div>
 
