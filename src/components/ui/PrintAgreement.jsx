@@ -1,12 +1,20 @@
-import { Printer } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Printer, Share2, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { sanitizePhone } from '../../lib/phoneUtils';
+import { fillTemplate, shareDocumentToWhatsApp, buildDocumentFilename } from '../../lib/documentShare';
+import toast from 'react-hot-toast';
+
+const DEFAULT_PRELIMINARY_MESSAGE = 'مرحباً {name}، مرفق لكم الحجز المبدئي من {businessName}. المرجع: {ref}';
+const DEFAULT_CONFIRMED_MESSAGE = 'مرحباً {name}، تم تأكيد حجزكم لدى {businessName}. المرجع: {ref}';
 
 export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
   const { apartments } = useData();
   const { user } = useAuth();
+  const paperRef = useRef(null);
+  const [sharing, setSharing] = useState(false);
   const apartment = apartments.find(a => a.id === booking.apartmentId);
   const licenseNumber = apartment?.licenseNumber || user?.tourismLicense;
 
@@ -37,7 +45,6 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
   const { totalReceived, balanceDue } = computeBookingTotals(booking);
 
   const handlePrint = () => {
-
     const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
     const resName = booking.residentName ? booking.residentName.replace(/\s+/g, '_') : 'نزيل';
     const startDateStr = booking.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
@@ -50,10 +57,39 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
     }, 100); // slight delay to let the browser register the title change before print dialog
   };
 
+  const messageTemplate = documentType === 'voucher'
+    ? (user?.whatsappMessagePreliminary || DEFAULT_PRELIMINARY_MESSAGE)
+    : (user?.whatsappMessageConfirmed || DEFAULT_CONFIRMED_MESSAGE);
+
+  const shareMessage = fillTemplate(messageTemplate, {
+    name: booking.residentName || '',
+    businessName: user?.businessName || '',
+    ref: `#${booking.id.toUpperCase()}`
+  });
+
+  const handleShareWhatsApp = async () => {
+    if (!paperRef.current) return;
+    setSharing(true);
+    try {
+      const result = await shareDocumentToWhatsApp({
+        node: paperRef.current,
+        filename: buildDocumentFilename(booking, apartment),
+        message: shareMessage,
+        phone: booking.phone
+      });
+      if (result === 'cancelled') return;
+      toast.success('تمت مشاركة المستند');
+    } catch (err) {
+      toast.error('تعذر إنشاء المستند للمشاركة');
+    } finally {
+      setSharing(false);
+    }
+  };
+
 
   return (
     <div className="print-root fixed inset-0 bg-white z-[100] flex flex-col items-center p-10 overflow-y-auto" dir="rtl">
-      <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper">
+      <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper" ref={paperRef}>
         <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
             <div>
                 <h1 className="text-3xl font-black tracking-tighter text-gray-900">
@@ -188,8 +224,16 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
       <div className="mt-8 flex space-x-reverse space-x-4 print:hidden">
         <button
+            onClick={handleShareWhatsApp}
+            disabled={sharing}
+            className="bg-accent hover:bg-accent-strong text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+            {sharing ? <Loader2 size={20} className="animate-spin"/> : <Share2 size={20}/>}
+            <span className="mr-2">{sharing ? 'جارٍ التحضير...' : 'إرسال عبر واتساب'}</span>
+        </button>
+        <button
             onClick={handlePrint}
-            className="bg-accent hover:bg-accent-strong text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95"
+            className="bg-primary hover:bg-primary-active text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95"
         >
             <Printer size={20}/>
             <span className="mr-2">طباعة المستند</span>

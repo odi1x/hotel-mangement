@@ -3,11 +3,35 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud, Check } from 'lucide-react';
+import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud, Check, ChevronDown } from 'lucide-react';
 import { ACCENTS, applyAccent, getAccentId } from '../../lib/accent';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
+
+const WHATSAPP_MESSAGE_OPTIONS = [
+  {
+    key: 'phone',
+    field: 'whatsappMessage',
+    label: 'عند الضغط على رقم النزيل',
+    hint: 'تُفتح المحادثة عند الضغط على رقم النزيل في قائمة النزلاء',
+    placeholder: 'مثال: مرحباً {name}، نرحب بك في {businessName}...'
+  },
+  {
+    key: 'preliminary',
+    field: 'whatsappMessagePreliminary',
+    label: 'إرسال «حجز مبدئي»',
+    hint: 'يُرسل مع مستند الحجز المبدئي',
+    placeholder: 'مثال: مرحباً {name}، مرفق الحجز المبدئي من {businessName}...'
+  },
+  {
+    key: 'confirmed',
+    field: 'whatsappMessageConfirmed',
+    label: 'إرسال «حجز مؤكد»',
+    hint: 'يُرسل مع مستند الحجز المؤكد',
+    placeholder: 'مثال: مرحباً {name}، تم تأكيد حجزك لدى {businessName}...'
+  }
+];
 
 export default function SettingsView() {
   const { user, updateProfile, changePassword } = useAuth();
@@ -33,6 +57,8 @@ export default function SettingsView() {
     economicCategories: 'اقتصادية,فاخرة',
     locations: '',
     whatsappMessage: '',
+    whatsappMessagePreliminary: '',
+    whatsappMessageConfirmed: '',
     generalExpenses: ''
   });
 
@@ -63,6 +89,9 @@ export default function SettingsView() {
   const [pwdSuccessMsg, setPwdSuccessMsg] = useState('');
   const [pwdErrorMsg, setPwdErrorMsg] = useState('');
 
+  const [waMessageKey, setWaMessageKey] = useState('phone');
+  const [waMenuOpen, setWaMenuOpen] = useState(false);
+
 
 
   useEffect(() => {
@@ -81,6 +110,8 @@ export default function SettingsView() {
         economicCategories: user.economicCategories || 'اقتصادية,فاخرة',
         locations: user.locations || '',
         whatsappMessage: user.whatsappMessage || '',
+        whatsappMessagePreliminary: user.whatsappMessagePreliminary || '',
+        whatsappMessageConfirmed: user.whatsappMessageConfirmed || '',
         generalExpenses: user.generalExpenses || ''
       });
       setApartmentTypesList(user.apartmentTypes ? user.apartmentTypes.split(',').map(s => s.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
@@ -438,16 +469,61 @@ export default function SettingsView() {
                   ></textarea>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">رسالة واتساب الافتراضية (تُرسل عند فتح محادثة من رقم النزيل)</label>
-                  <textarea
-                    name="whatsappMessage"
-                    value={formData.whatsappMessage}
-                    onChange={handleChange}
-                    rows="3"
-                    className="input-field leading-relaxed"
-                    placeholder="مثال: مرحباً بك في {businessName}، حجزك مؤكد..."
-                  ></textarea>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">رسائل واتساب</label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setWaMenuOpen(o => !o)}
+                        className="input-field flex items-center justify-between gap-3 text-right cursor-pointer"
+                      >
+                        <span className="truncate">{WHATSAPP_MESSAGE_OPTIONS.find(m => m.key === waMessageKey)?.label}</span>
+                        <ChevronDown size={16} className={`text-muted shrink-0 transition-transform ${waMenuOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {waMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setWaMenuOpen(false)}></div>
+                          <div className="absolute z-30 mt-2 w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark shadow-soft anim-dropdown overflow-hidden">
+                            {WHATSAPP_MESSAGE_OPTIONS.map(opt => {
+                              const isActive = opt.key === waMessageKey;
+                              return (
+                                <button
+                                  type="button"
+                                  key={opt.key}
+                                  onClick={() => { setWaMessageKey(opt.key); setWaMenuOpen(false); }}
+                                  className={`w-full text-right px-4 py-3 flex items-start justify-between gap-3 transition-colors cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated ${isActive ? 'bg-accent-soft' : ''}`}
+                                >
+                                  <span className="min-w-0">
+                                    <span className={`block text-sm font-semibold ${isActive ? 'text-accent' : 'text-ink dark:text-white'}`}>{opt.label}</span>
+                                    <span className="block text-2xs text-muted dark:text-body-dark mt-0.5 leading-snug">{opt.hint}</span>
+                                  </span>
+                                  {isActive && <Check size={16} className="text-accent shrink-0 mt-0.5" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark mb-2">
+                      الرموز: <span className="font-mono normal-case">{'{name}'}</span> لاسم النزيل,
+                      <span className="font-mono normal-case"> {'{businessName}'}</span> لاسم المنشأة,
+                      <span className="font-mono normal-case"> {'{ref}'}</span> لرقم المرجع
+                    </label>
+                    <textarea
+                      name={WHATSAPP_MESSAGE_OPTIONS.find(m => m.key === waMessageKey)?.field}
+                      value={formData[WHATSAPP_MESSAGE_OPTIONS.find(m => m.key === waMessageKey)?.field] || ''}
+                      onChange={handleChange}
+                      rows="4"
+                      className="input-field leading-relaxed"
+                      placeholder={WHATSAPP_MESSAGE_OPTIONS.find(m => m.key === waMessageKey)?.placeholder}
+                    ></textarea>
+                  </div>
                 </div>
               </div>
           )}

@@ -8,18 +8,8 @@ import PrintAgreement from '../ui/PrintAgreement';
 import EmptyState from '../ui/EmptyState';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import { computeBookingTotals } from '../../lib/paymentUtils';
+import { fillTemplate, buildWhatsAppUrl } from '../../lib/documentShare';
 import toast from 'react-hot-toast';
-
-// WhatsApp deep link built from the sanitized number + the admin's
-// configured default message (settings → identity tab). Digits-only
-// number as wa.me requires; message is URL-encoded.
-function openWhatsApp(phone, message) {
-  const digits = sanitizePhone(phone).replace(/\D/g, '');
-  if (!digits) return;
-  const text = (message || '').trim();
-  const url = `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
 
 export default function ResidentsView({ openBookingForm }) {
   const { apartments, bookings, deleteBooking, checkoutBooking, updateBooking, fetchBookings, fetchApartments } = useData(); // eslint-disable-line no-unused-vars
@@ -353,13 +343,15 @@ export default function ResidentsView({ openBookingForm }) {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => openWhatsApp(booking.phone, user?.whatsappMessage)}
+                      <a
+                        href={buildWhatsAppUrl(booking.phone, fillTemplate(user?.whatsappMessage, { name: booking.residentName || "", businessName: user?.businessName || "", ref: booking.id }))}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-sm font-medium flex items-center text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
                         title="فتح محادثة واتساب"
                       >
                         <Phone size={14} className="ml-1.5 text-muted-soft" /> <span dir="ltr">{sanitizePhone(booking.phone)}</span>
-                      </button>
+                      </a>
                       <div className="text-xs text-muted dark:text-body-dark mt-1">هوية: {booking.residentId}</div>
                     </td>
                     <td className="px-6 py-4">
@@ -475,14 +467,16 @@ export default function ResidentsView({ openBookingForm }) {
                       <p className="font-semibold text-ink dark:text-white truncate leading-tight">
                         {booking.residentName}
                       </p>
-                      <button
-                        onClick={() => openWhatsApp(booking.phone, user?.whatsappMessage)}
+                      <a
+                        href={buildWhatsAppUrl(booking.phone, fillTemplate(user?.whatsappMessage, { name: booking.residentName || "", businessName: user?.businessName || "", ref: booking.id }))}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5 hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
                         title="فتح محادثة واتساب"
                       >
                         <Phone size={12} className="text-muted-soft shrink-0" />
                         <span dir="ltr" className="truncate">{sanitizePhone(booking.phone)}</span>
-                      </button>
+                      </a>
                     </div>
                     <div className="shrink-0">
                       {booking.status === 'checked_out_early' ? (

@@ -122,6 +122,7 @@ export default async function handler(req, res) {
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
         economicCategories: user.economicCategories, locations: user.locations, whatsappMessage: user.whatsappMessage,
+        whatsappMessagePreliminary: user.whatsappMessagePreliminary, whatsappMessageConfirmed: user.whatsappMessageConfirmed,
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
@@ -132,7 +133,7 @@ export default async function handler(req, res) {
 
     // ME PUT
     if (action === 'me' && req.method === 'PUT') {
-      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses, economicCategories, locations, whatsappMessage } = req.body;
+      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses, economicCategories, locations, whatsappMessage, whatsappMessagePreliminary, whatsappMessageConfirmed } = req.body;
       const user = await prisma.user.update({
         where: { id: decoded.userId },
         data: {
@@ -145,6 +146,8 @@ export default async function handler(req, res) {
           economicCategories: economicCategories !== undefined ? economicCategories : null,
           locations: locations !== undefined ? locations : null,
           whatsappMessage: whatsappMessage !== undefined ? whatsappMessage : null,
+          whatsappMessagePreliminary: whatsappMessagePreliminary !== undefined ? whatsappMessagePreliminary : null,
+          whatsappMessageConfirmed: whatsappMessageConfirmed !== undefined ? whatsappMessageConfirmed : null,
           generalExpenses: generalExpenses ? parseFloat(generalExpenses) : null
         }
       });
@@ -155,6 +158,7 @@ export default async function handler(req, res) {
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
         economicCategories: user.economicCategories, locations: user.locations, whatsappMessage: user.whatsappMessage,
+        whatsappMessagePreliminary: user.whatsappMessagePreliminary, whatsappMessageConfirmed: user.whatsappMessageConfirmed,
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,

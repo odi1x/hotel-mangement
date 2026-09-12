@@ -38,6 +38,8 @@ model User {
   economicCategories String?
   locations         String?
   whatsappMessage   String?
+  whatsappMessagePreliminary String?
+  whatsappMessageConfirmed   String?
 
   generalExpenses  Decimal?
 
