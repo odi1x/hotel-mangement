@@ -870,7 +870,7 @@ export default function ResidentsView({ openBookingForm }) {
                 className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="flex flex-col text-right">
-                  <span className="font-semibold text-lg mb-1 tracking-tight">طباعة تقرير مالي</span>
+                  <span className="font-semibold text-lg mb-1 tracking-tight">عقد إيجار مبدئي</span>
                   <span className="text-sm text-muted dark:text-body-dark">سند قبض للمبالغ المدفوعة</span>
                 </div>
                 <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
@@ -886,7 +886,7 @@ export default function ResidentsView({ openBookingForm }) {
                 className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="flex flex-col text-right">
-                  <span className="font-semibold text-lg mb-1 tracking-tight">طباعة تأكيد الحجز</span>
+                  <span className="font-semibold text-lg mb-1 tracking-tight">عقد إيجار مؤكد</span>
                   <span className="text-sm text-muted dark:text-body-dark">تفاصيل الحجز وشروطه</span>
                 </div>
                 <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">

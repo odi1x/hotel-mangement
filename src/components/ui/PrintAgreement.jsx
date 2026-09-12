@@ -57,7 +57,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
         <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
             <div>
                 <h1 className="text-3xl font-black tracking-tighter text-gray-900">
-                  {documentType === 'voucher' ? 'سند قبض / تقرير مالي' : 'عقد إيجار وحدات سكنية'}
+                  {documentType === 'voucher' ? 'عقد إيجار مبدئي' : 'عقد إيجار مؤكد'}
                 </h1>
                 <p className="text-gray-500 font-bold">المرجع: #{booking.id.toUpperCase()}</p>
             </div>
@@ -146,7 +146,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                       </div>
                       <div>
                           <p className="text-xs font-bold text-gray-400 uppercase mb-1">المبلغ المتبقي</p>
-                          <p className="text-lg font-black text-red-600">
+                          <p className="text-lg font-black text-accent">
                             {formatSAR(balanceDue)} ر.س
                           </p>
                       </div>
