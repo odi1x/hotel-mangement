@@ -32,6 +32,7 @@ export default function SettingsView() {
     bookingSources: 'زيارة مباشرة,Booking.com,Airbnb',
     economicCategories: 'اقتصادية,فاخرة',
     locations: '',
+    whatsappMessage: '',
     generalExpenses: ''
   });
 
@@ -79,6 +80,7 @@ export default function SettingsView() {
         bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb',
         economicCategories: user.economicCategories || 'اقتصادية,فاخرة',
         locations: user.locations || '',
+        whatsappMessage: user.whatsappMessage || '',
         generalExpenses: user.generalExpenses || ''
       });
       setApartmentTypesList(user.apartmentTypes ? user.apartmentTypes.split(',').map(s => s.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
@@ -433,6 +435,18 @@ export default function SettingsView() {
                     rows="5"
                     className="input-field leading-relaxed"
                     placeholder="أدخل الشروط والأحكام الخاصة بمنشأتك هنا..."
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">رسالة واتساب الافتراضية (تُرسل عند فتح محادثة من رقم النزيل)</label>
+                  <textarea
+                    name="whatsappMessage"
+                    value={formData.whatsappMessage}
+                    onChange={handleChange}
+                    rows="3"
+                    className="input-field leading-relaxed"
+                    placeholder="مثال: مرحباً بك في {businessName}، حجزك مؤكد..."
                   ></textarea>
                 </div>
               </div>

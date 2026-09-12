@@ -10,6 +10,17 @@ import { sanitizePhone } from '../../lib/phoneUtils';
 import { computeBookingTotals } from '../../lib/paymentUtils';
 import toast from 'react-hot-toast';
 
+// WhatsApp deep link built from the sanitized number + the admin's
+// configured default message (settings → identity tab). Digits-only
+// number as wa.me requires; message is URL-encoded.
+function openWhatsApp(phone, message) {
+  const digits = sanitizePhone(phone).replace(/\D/g, '');
+  if (!digits) return;
+  const text = (message || '').trim();
+  const url = `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export default function ResidentsView({ openBookingForm }) {
   const { apartments, bookings, deleteBooking, checkoutBooking, updateBooking, fetchBookings, fetchApartments } = useData(); // eslint-disable-line no-unused-vars
   const { user } = useAuth();
@@ -342,7 +353,13 @@ export default function ResidentsView({ openBookingForm }) {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium flex items-center text-body dark:text-body-dark"><Phone size={14} className="ml-1.5 text-muted-soft"/> <span dir="ltr">{sanitizePhone(booking.phone)}</span></div>
+                      <button
+                        onClick={() => openWhatsApp(booking.phone, user?.whatsappMessage)}
+                        className="text-sm font-medium flex items-center text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
+                        title="فتح محادثة واتساب"
+                      >
+                        <Phone size={14} className="ml-1.5 text-muted-soft" /> <span dir="ltr">{sanitizePhone(booking.phone)}</span>
+                      </button>
                       <div className="text-xs text-muted dark:text-body-dark mt-1">هوية: {booking.residentId}</div>
                     </td>
                     <td className="px-6 py-4">
@@ -458,10 +475,14 @@ export default function ResidentsView({ openBookingForm }) {
                       <p className="font-semibold text-ink dark:text-white truncate leading-tight">
                         {booking.residentName}
                       </p>
-                      <p className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5">
+                      <button
+                        onClick={() => openWhatsApp(booking.phone, user?.whatsappMessage)}
+                        className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5 hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
+                        title="فتح محادثة واتساب"
+                      >
                         <Phone size={12} className="text-muted-soft shrink-0" />
                         <span dir="ltr" className="truncate">{sanitizePhone(booking.phone)}</span>
-                      </p>
+                      </button>
                     </div>
                     <div className="shrink-0">
                       {booking.status === 'checked_out_early' ? (
@@ -870,7 +891,7 @@ export default function ResidentsView({ openBookingForm }) {
                 className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="flex flex-col text-right">
-                  <span className="font-semibold text-lg mb-1 tracking-tight">عقد إيجار مبدئي</span>
+                  <span className="font-semibold text-lg mb-1 tracking-tight">حجز مبدئي</span>
                   <span className="text-sm text-muted dark:text-body-dark">سند قبض للمبالغ المدفوعة</span>
                 </div>
                 <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
@@ -886,7 +907,7 @@ export default function ResidentsView({ openBookingForm }) {
                 className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="flex flex-col text-right">
-                  <span className="font-semibold text-lg mb-1 tracking-tight">عقد إيجار مؤكد</span>
+                  <span className="font-semibold text-lg mb-1 tracking-tight">حجز مؤكد</span>
                   <span className="text-sm text-muted dark:text-body-dark">تفاصيل الحجز وشروطه</span>
                 </div>
                 <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">

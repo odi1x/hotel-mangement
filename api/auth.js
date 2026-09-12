@@ -121,7 +121,7 @@ export default async function handler(req, res) {
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
-        economicCategories: user.economicCategories, locations: user.locations,
+        economicCategories: user.economicCategories, locations: user.locations, whatsappMessage: user.whatsappMessage,
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
@@ -132,7 +132,7 @@ export default async function handler(req, res) {
 
     // ME PUT
     if (action === 'me' && req.method === 'PUT') {
-      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses, economicCategories, locations } = req.body;
+      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses, economicCategories, locations, whatsappMessage } = req.body;
       const user = await prisma.user.update({
         where: { id: decoded.userId },
         data: {
@@ -144,6 +144,7 @@ export default async function handler(req, res) {
           bookingSources: bookingSources !== undefined ? bookingSources : null,
           economicCategories: economicCategories !== undefined ? economicCategories : null,
           locations: locations !== undefined ? locations : null,
+          whatsappMessage: whatsappMessage !== undefined ? whatsappMessage : null,
           generalExpenses: generalExpenses ? parseFloat(generalExpenses) : null
         }
       });
@@ -153,7 +154,7 @@ export default async function handler(req, res) {
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
-        economicCategories: user.economicCategories, locations: user.locations,
+        economicCategories: user.economicCategories, locations: user.locations, whatsappMessage: user.whatsappMessage,
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,

@@ -299,7 +299,7 @@ export default function AvailabilityView({ openBookingForm }) {
             <span className="md:hidden">{rangeLabelShort}</span>
             <span className="hidden md:inline">{rangeLabel}</span>
           </h3>
-          <div className="hidden md:flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-0.5 md:p-1 mr-0 md:mr-4 shrink-0">
+          <div className="hidden md:flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-0.5 md:p-1 shrink-0">
             <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={14} className="md:hidden" /><ChevronRight size={18} className="hidden md:block" /></button>
             <button onClick={handleToday} className="px-1.5 md:px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-0.5 md:py-1 transition-colors">اليوم</button>
             <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={14} className="md:hidden" /><ChevronLeft size={18} className="hidden md:block" /></button>

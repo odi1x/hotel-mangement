@@ -37,6 +37,7 @@ model User {
   bookingSources   String?
   economicCategories String?
   locations         String?
+  whatsappMessage   String?
 
   generalExpenses  Decimal?
 

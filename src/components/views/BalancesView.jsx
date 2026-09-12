@@ -261,7 +261,7 @@ export default function BalancesView() {
                         <button
                           onClick={() => setPrintBooking(booking)}
                           className="icon-action hover:text-accent"
-                          title="طباعة عقد إيجار مبدئي"
+                          title="طباعة حجز مبدئي"
                         >
                           <Printer size={18} />
                         </button>
