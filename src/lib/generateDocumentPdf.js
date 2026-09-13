@@ -10,19 +10,50 @@ const GREY_900 = '#111111';
 const GREY_600 = '#4b5563';
 const GREY_400 = '#9ca3af';
 
-// pdfmake needs images as data URLs — fetch any remote logo/stamp and
-// base64-encode it just-in-time. A missing/broken image falls back to null
-// (the element is simply skipped) instead of breaking the whole document.
+// pdfmake needs images as PNG/JPEG data URLs — fetch any remote logo/stamp
+// just-in-time and convert. ImageKit often serves WebP/AVIF, which pdfmake
+// can't embed, so non-PNG/JPEG sources are re-encoded to PNG via canvas. A
+// missing/broken image falls back to null (the element is skipped) instead
+// of breaking the whole document.
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function toDataUrl(url) {
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
     const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(blob);
+    const type = blob.type || '';
+    if (type === 'image/png' || type === 'image/jpeg') {
+      return blobToDataUrl(blob);
+    }
+    return await new Promise((resolve, reject) => {
+      const objUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } catch (err) {
+          reject(err);
+        } finally {
+          URL.revokeObjectURL(objUrl);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+        reject(new Error('image decode failed'));
+      };
+      img.src = objUrl;
     });
   } catch {
     return null;
