@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users, MoreVertical } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users, MoreVertical, PhoneCall, MessageCircle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +40,7 @@ export default function ResidentsView({ openBookingForm }) {
   const [menuSource, setMenuSource] = useState(null);
   const [menuPos, setMenuPos] = useState(null);
   const menuRef = useRef(null);
+  const [phoneActionBooking, setPhoneActionBooking] = useState(null);
 
   useEffect(() => {
     const fetchPaginatedBookings = async () => {
@@ -343,15 +344,13 @@ export default function ResidentsView({ openBookingForm }) {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <a
-                        href={buildWhatsAppUrl(booking.phone, fillTemplate(user?.whatsappMessage, { name: booking.residentName || "", businessName: user?.businessName || "", apartment: apt?.name || "", ref: booking.id }))}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => setPhoneActionBooking(booking)}
                         className="text-sm font-medium flex items-center text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
-                        title="فتح محادثة واتساب"
+                        title="خيارات الاتصال"
                       >
                         <Phone size={14} className="ml-1.5 text-muted-soft" /> <span dir="ltr">{sanitizePhone(booking.phone)}</span>
-                      </a>
+                      </button>
                       <div className="text-xs text-muted dark:text-body-dark mt-1">هوية: {booking.residentId}</div>
                     </td>
                     <td className="px-6 py-4">
@@ -467,16 +466,14 @@ export default function ResidentsView({ openBookingForm }) {
                       <p className="font-semibold text-ink dark:text-white truncate leading-tight">
                         {booking.residentName}
                       </p>
-                      <a
-                        href={buildWhatsAppUrl(booking.phone, fillTemplate(user?.whatsappMessage, { name: booking.residentName || "", businessName: user?.businessName || "", apartment: apt?.name || "", ref: booking.id }))}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => setPhoneActionBooking(booking)}
                         className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5 hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
-                        title="فتح محادثة واتساب"
+                        title="خيارات الاتصال"
                       >
                         <Phone size={12} className="text-muted-soft shrink-0" />
                         <span dir="ltr" className="truncate">{sanitizePhone(booking.phone)}</span>
-                      </a>
+                      </button>
                     </div>
                     <div className="shrink-0">
                       {booking.status === 'checked_out_early' ? (
@@ -855,6 +852,81 @@ export default function ResidentsView({ openBookingForm }) {
                 className="btn-secondary flex-1"
               >
                 إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+
+      {/* Phone Actions Modal */}
+      {phoneActionBooking && createPortal(
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
+          <div className="absolute inset-0" onClick={() => setPhoneActionBooking(null)}></div>
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+            <div className="px-6 py-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
+              <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
+                <Phone size={20} className="text-ink dark:text-white" />
+                <span dir="ltr">{sanitizePhone(phoneActionBooking.phone)}</span>
+              </h3>
+              <button onClick={() => setPhoneActionBooking(null)} className="icon-action hover:text-accent">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <button
+                onClick={() => {
+                  window.open(buildWhatsAppUrl(phoneActionBooking.phone), '_blank', 'noopener,noreferrer');
+                  setPhoneActionBooking(null);
+                }}
+                className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
+              >
+                <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
+                  <MessageCircle size={24} />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="font-semibold text-lg mb-0.5 tracking-tight">فتح واتساب</span>
+                  <span className="text-sm text-muted dark:text-body-dark">بدون رسالة</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  const apt = apartments.find(a => a.id === phoneActionBooking.apartmentId);
+                  const message = fillTemplate(user?.whatsappMessage, {
+                    name: phoneActionBooking.residentName || "",
+                    businessName: user?.businessName || "",
+                    apartment: apt?.name || "",
+                    ref: phoneActionBooking.id
+                  });
+                  window.open(buildWhatsAppUrl(phoneActionBooking.phone, message), '_blank', 'noopener,noreferrer');
+                  setPhoneActionBooking(null);
+                }}
+                className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
+              >
+                <div className="bg-accent/10 text-accent p-3 rounded-md">
+                  <MessageSquare size={24} />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="font-semibold text-lg mb-0.5 tracking-tight">فتح واتساب مع رسالة</span>
+                  <span className="text-sm text-muted dark:text-body-dark">رسالة الترحيب المخصصة</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  window.open(`tel:${sanitizePhone(phoneActionBooking.phone)}`, '_blank', 'noopener,noreferrer');
+                  setPhoneActionBooking(null);
+                }}
+                className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
+              >
+                <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
+                  <PhoneCall size={24} />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="font-semibold text-lg mb-0.5 tracking-tight">اتصال بالرقم</span>
+                  <span className="text-sm text-muted dark:text-body-dark">بدء مكالمة</span>
+                </div>
               </button>
             </div>
           </div>

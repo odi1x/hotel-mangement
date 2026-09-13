@@ -270,10 +270,5 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
   };
 
   const pdfDoc = pdfMake.createPdf(docDefinition);
-  return new Promise((resolve, reject) => {
-    pdfDoc.getBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('PDF generation returned no blob'));
-    });
-  });
+  return pdfDoc.getBlob();
 }
