@@ -3,13 +3,104 @@
 // ~500KB embedded fonts are only fetched when someone actually clicks
 // "إرسال عبر واتساب". The layout mirrors PrintAgreement's preview but is
 // typeset here, not rasterized — so no font-fallback / page-slicing issues.
+//
+// Bidi rules the whole file obeys:
+//   * pdfmake lays `columns` and `table.body` OUT in array order, always
+//     left → right physically. It does NOT auto-reverse for RTL.
+//   * Therefore every visually-RTL table is authored here in REVERSE order —
+//     the first array cell is rendered leftmost, the last cell rightmost —
+//     so the reader sees [rightmost … leftmost] = [first label … last label].
+//   * Digits runs (IDs, years, phones, amounts) are never reversed; pdfmake's
+//     embedded shaper keeps their logical LTR order inside RTL paragraphs.
 import { computeBookingTotals, formatSAR } from './paymentUtils';
 import { sanitizePhone } from './phoneUtils';
 
 const GREY_900 = '#111111';
 const GREY_600 = '#4b5563';
+const GREY_500 = '#6b7280';
 const GREY_400 = '#9ca3af';
 const ACCENT = '#0f766e';
+
+// ---------------------------------------------------------------------------
+// RTL pre-processing helpers — every value injected into the document passes
+// through these so pdfmake reproduces the preview exactly.
+// ---------------------------------------------------------------------------
+
+// Normalize any raw field before it reaches the shaper: null-guard, trim,
+// and collapse whitespace runs. Never reorders characters, so Arabic stays
+// RTL while digit runs (IDs, years, phones, amounts) keep their logical
+// Left-to-Right orientation and colons stay glued to their label.
+export function prepRtl(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
+// Currency is always a PREFIX: ر.س 275, ر.س 0.00. The numeric part is passed
+// in already-formatted (a string) so null/zero/fractional values are never
+// dropped or turned into a bare ".".
+export function formatAmount(value) {
+  return `ر.س ${prepRtl(value)}`;
+}
+
+// Small grey label used as the header row cell of the financial tables.
+export function rtlTableHeader(label) {
+  return { text: prepRtl(label), fontSize: 8, bold: true, color: GREY_400 };
+}
+
+// Bold value cell for the financial tables.
+export function rtlTableValue(value, opts = {}) {
+  return {
+    text: prepRtl(value),
+    fontSize: opts.fontSize || 12,
+    bold: true,
+    color: opts.color || GREY_900
+  };
+}
+
+// Section heading — light-grey pill with a solid accent bar on the RIGHT
+// edge (mirrors `bg-gray-100 border-r-4 border-accent`). Because pdfmake
+// lays table columns left→right, the 4pt accent cell is placed LAST, which
+// lands it on the right side. Margin [0, 8, 0, 4] = consistent vertical
+// rhythm between sections.
+function sectionTitle(text) {
+  return {
+    margin: [0, 8, 0, 4],
+    table: {
+      widths: ['*', 4],
+      body: [[
+        {
+          text: prepRtl(text),
+          fillColor: '#f3f4f6',
+          color: GREY_900,
+          bold: true,
+          fontSize: 12,
+          padding: [8, 6, 8, 6]
+        },
+        { text: '', fillColor: ACCENT, padding: [0, 0, 0, 0] }
+      ]]
+    },
+    layout: {
+      hLineWidth: () => 0,
+      vLineWidth: () => 0,
+      paddingLeft: () => 0,
+      paddingRight: () => 0,
+      paddingTop: () => 0,
+      paddingBottom: () => 0
+    }
+  };
+}
+
+// Two-column list block (أطراف العقد / العقار ومدة الإيجار). The first item
+// in `columns` renders leftmost, so pass the LEFT block first.
+function rtlColumn(headerText, lines, { alignment = 'right' } = {}) {
+  return {
+    width: '*',
+    stack: [
+      { text: prepRtl(headerText), fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 4], alignment },
+      ...lines.map((line) => ({ ...line, alignment: line.alignment || alignment }))
+    ]
+  };
+}
 
 // pdfmake needs images as PNG/JPEG data URLs — fetch any remote logo/stamp
 // just-in-time and convert. ImageKit often serves WebP/AVIF, which pdfmake
@@ -99,65 +190,11 @@ const calculateNights = (start, end) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 };
 
-// Section heading — light-grey pill with a solid accent bar on the *right*
-// edge (mirrors `bg-gray-100 border-r-4 border-accent`). pdfmake renders
-// table columns left→right, so the 4pt accent cell sits last = right side.
-function sectionTitle(text) {
-  return {
-    margin: [0, 0, 0, 12],
-    table: {
-      widths: ['*', 4],
-      body: [[
-        {
-          text,
-          fillColor: '#f3f4f6',
-          color: GREY_900,
-          bold: true,
-          fontSize: 12,
-          padding: [8, 6, 8, 6],
-          alignment: 'right'
-        },
-        { text: '', fillColor: ACCENT, padding: [0, 0, 0, 0] }
-      ]]
-    },
-    layout: {
-      hLineWidth: () => 0,
-      vLineWidth: () => 0,
-      paddingLeft: () => 0,
-      paddingRight: () => 0,
-      paddingTop: () => 0,
-      paddingBottom: () => 0
-    }
-  };
-}
-
-// Two-column row with a header label + stacked content lines, RTL-first.
-function rtlColumn(headerText, lines) {
-  return {
-    width: '*',
-    stack: [
-      { text: headerText, fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 4] },
-      ...lines
-    ]
-  };
-}
-
-// Horizontal grid of labeled values (for financial rows).
-function labelValue(label, value, opts = {}) {
-  return {
-    width: '*',
-    stack: [
-      { text: label, fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 3] },
-      { text: value, fontSize: opts.fontSize || 11, bold: true, color: opts.color || GREY_900, margin: [0, 0, 0, 0] }
-    ]
-  };
-}
-
 // Build a fully-styled A4 document definition from the same booking data
-// the preview uses. Mirrors the on-screen sections: parties, unit/rental
-// period, financial terms, payment status (voucher only), terms + signatures
-// (confirmation only).
-export default async function generateDocumentPdf({ booking, apartment, user, documentType, message }) {
+// the preview uses. Mirrors the on-screen sections: header, parties,
+// unit/rental period, financial terms (table), payment status (voucher
+// only), terms + signatures (confirmation only).
+export default async function generateDocumentPdf({ booking, apartment, user, documentType }) {
   await ensurePdfMake();
 
   const [logoDataUrl, stampDataUrl] = await Promise.all([
@@ -178,19 +215,27 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
   const docTitle = isVoucher ? 'حجز مبدئي' : 'حجز مؤكد';
   const pageWidth = 515; // A4 minus 40px margins each side
 
+  const taxLabel = user?.taxEnabled && user?.taxPercentage
+    ? `الضريبة (${user.taxPercentage}%)`
+    : 'الضريبة';
+  const paymentStatus = balanceDue <= 0.01
+    ? 'مسدد بالكامل'
+    : totalReceived > 0.01 ? 'سداد جزئي' : 'غير مسدد';
+
   const content = [
-    /* ── Header: title + ref (right) and business identity (left),
-       separated by the document's 2px bottom rule — mirrors the preview's
-       `border-b-2 border-gray-900 pb-6 mb-8`. ── */
+    /* ── Header — title + ref on the RIGHT, business identity on the LEFT,
+       separated by the document's 2px bottom rule (border-b-2). Because
+       pdfmake lays columns left→right, the LEFT block (business) is listed
+       first in the array. ── */
     {
       columns: [
         {
           width: 'auto',
           stack: [
             ...(logoDataUrl ? [{ image: logoDataUrl, width: 64, fit: [64, 64], alignment: 'left', margin: [0, 0, 0, 4] }] : []),
-            { text: user?.businessName || 'رنت فلو العقارية', fontSize: 15, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 2] },
+            { text: prepRtl(user?.businessName || 'رنت فلو العقارية'), fontSize: 15, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 2] },
             ...(licenseNumber ? [
-              { text: `ترخيص رقم: ${licenseNumber}`, fontSize: 8, color: GREY_600, alignment: 'left' }
+              { text: prepRtl(`ترخيص رقم: ${licenseNumber}`), fontSize: 8, color: GREY_500, alignment: 'left' }
             ] : [])
           ]
         },
@@ -198,57 +243,35 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           width: '*',
           stack: [
             { text: docTitle, fontSize: 26, bold: true, color: GREY_900, margin: [0, 0, 0, 2] },
-            { text: `المرجع: #${booking.id.toUpperCase()}`, fontSize: 9, color: GREY_600, margin: [0, 0, 0, 4] }
+            { text: prepRtl(`المرجع: #${booking.id.toUpperCase()}`), fontSize: 9, color: GREY_500, margin: [0, 0, 0, 4] }
           ]
         }
       ],
       columnGap: 16,
-      margin: [0, 0, 0, 22],
-      direction: 'rtl'
+      margin: [0, 0, 0, 14]
     },
-    /* ~2px solid bottom rule (border-b-2) */
-    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 2, lineColor: GREY_900 }], margin: [0, 0, 0, 20] },
+    /* 2px solid bottom rule (border-b-2) */
+    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 2, lineColor: GREY_900 }], margin: [0, 0, 0, 18] },
 
-    /* Share message box — shown on-screen only, keeps the text when sharing. */
-    ...(message ? [
-      {
-        table: {
-          widths: ['*'],
-          body: [[{
-            text: message,
-            fontSize: 11,
-            bold: true,
-            color: ACCENT,
-            margin: [0, 0, 0, 0]
-          }]]
-        },
-        layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => '#99f6e4', vLineColor: () => '#99f6e4', fillColor: () => '#f0fdfa', paddingLeft: () => 8, paddingRight: () => 8, paddingTop: () => 8, paddingBottom: () => 8 },
-        margin: [0, 4, 0, 16],
-        direction: 'rtl'
-      }
-    ] : []),
-
-    /* 1) Parties — pdfmake lays columns left→right in array order, so to
-       mirror the RTL preview (first DOM child = rightmost) the LEFT visual
-       block goes first in the array. */
+    /* 1) أطراف العقد — LEFT col = المستأجر, RIGHT col = المؤجر */
     sectionTitle('أولاً: أطراف العقد'),
     {
       columns: [
         rtlColumn('المستأجر / النزيل', [
-          { text: booking.residentName, fontSize: 12, bold: true, color: GREY_900 },
-          { text: `رقم الهوية: ${booking.residentId}`, fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0], direction: 'ltr' },
-          { text: `هاتف: ${sanitizePhone(booking.phone)}`, fontSize: 9, color: GREY_600, direction: 'ltr' },
-          ...(booking.address ? [{ text: booking.address, fontSize: 8, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
+          { text: prepRtl(booking.residentName), fontSize: 12, bold: true, color: GREY_900 },
+          { text: prepRtl(`رقم الهوية: ${booking.residentId}`), fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] },
+          { text: prepRtl(`هاتف: ${sanitizePhone(booking.phone)}`), fontSize: 9, color: GREY_600 },
+          ...(booking.address ? [{ text: prepRtl(booking.address), fontSize: 8, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
         ]),
         rtlColumn('المؤجر / المدير', [
-          { text: user?.businessName || 'مجموعة رنت فلو العقارية', fontSize: 12, bold: true, color: GREY_900 }
+          { text: prepRtl(user?.businessName || 'مجموعة رنت فلو العقارية'), fontSize: 12, bold: true, color: GREY_900 }
         ])
       ],
       columnGap: 20,
-      margin: [0, 0, 0, 16]
+      margin: [0, 6, 0, 10]
     },
 
-    /* 2) Unit & rental period */
+    /* 2) العقار ومدة الإيجار — LEFT col = فترة الإيجار, RIGHT col = بيانات الوحدة */
     sectionTitle('ثانياً: العقار ومدة الإيجار'),
     {
       columns: [
@@ -257,67 +280,108 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           { text: `${nights} ليلة إجمالية`, fontSize: 10, bold: true, color: ACCENT, margin: [0, 2, 0, 0] }
         ]),
         rtlColumn('بيانات الوحدة', [
-          { text: apartment?.name || '', fontSize: 12, bold: true, color: GREY_900 },
-          ...(apartment?.type ? [{ text: apartment.type, fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
+          { text: prepRtl(apartment?.name || ''), fontSize: 12, bold: true, color: GREY_900 },
+          ...(apartment?.type ? [{ text: prepRtl(apartment.type), fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
         ])
       ],
       columnGap: 20,
-      margin: [0, 0, 0, 16]
+      margin: [0, 6, 0, 10]
     },
 
-    /* 3) Financial terms — tabular grid */
+    /* 3) الشروط المالية — a real table with a header row. pdfmake renders
+       table columns in array order left→right, so both rows are authored in
+       REVERSE order here: الإجمالي الشامل is the first (leftmost) cell and
+       سعر الليلة the last (rightmost) — giving the reader, from the right:
+       [سعر الليلة | المبلغ الأساسي | الضريبة | الإجمالي الشامل]. */
     sectionTitle('ثالثاً: الشروط المالية'),
     {
-      columns: [
-        labelValue('الإجمالي الشامل', `${total.toFixed(2)} ر.س`, { fontSize: 13, color: ACCENT }),
-        labelValue(`الضريبة${user?.taxEnabled && user?.taxPercentage ? ` (${user.taxPercentage}%)` : ''}`, `${taxAmount.toFixed(2)} ر.س`),
-        labelValue('المبلغ الأساسي', `${subtotal} ر.س`),
-        labelValue('سعر الليلة', `${booking.pricePerNight} ر.س`)
-      ],
-      columnGap: 12,
-      margin: [0, 0, 0, 16]
+      table: {
+        widths: ['*', '*', '*', '*'],
+        body: [
+          [
+            rtlTableHeader('الإجمالي الشامل'),
+            rtlTableHeader(taxLabel),
+            rtlTableHeader('المبلغ الأساسي'),
+            rtlTableHeader('سعر الليلة')
+          ],
+          [
+            rtlTableValue(formatAmount(total.toFixed(2)), { fontSize: 14, color: ACCENT }),
+            rtlTableValue(formatAmount(taxAmount.toFixed(2))),
+            rtlTableValue(formatAmount(String(subtotal))),
+            rtlTableValue(formatAmount(booking.pricePerNight))
+          ]
+        ]
+      },
+      direction: 'rtl',
+      layout: {
+        hLineWidth: () => 0,
+        vLineWidth: () => 0,
+        paddingLeft: () => 6,
+        paddingRight: () => 6,
+        paddingTop: () => 4,
+        paddingBottom: () => 4
+      },
+      margin: [0, 0, 0, 10]
     },
 
-    /* 4) Payment status — voucher only */
+    /* 4) حالة السداد — voucher only. Same reversal pattern: from the right
+       [المبلغ المدفوع | المبلغ المتبقي | حالة السداد]. */
     ...(isVoucher ? [
       sectionTitle('رابعاً: حالة السداد'),
       {
-        columns: [
-          labelValue('حالة السداد', balanceDue <= 0.01 ? 'مسدد بالكامل' : totalReceived > 0.01 ? 'سداد جزئي' : 'غير مسدد'),
-          labelValue('المبلغ المتبقي', `${formatSAR(balanceDue)} ر.س`, { fontSize: 12, color: ACCENT }),
-          labelValue('المبلغ المدفوع', `${formatSAR(totalReceived)} ر.س`)
-        ],
-        columnGap: 12,
-        margin: [0, 0, 0, 16]
+        table: {
+          widths: ['*', '*', '*'],
+          body: [
+            [
+              rtlTableHeader('حالة السداد'),
+              rtlTableHeader('المبلغ المتبقي'),
+              rtlTableHeader('المبلغ المدفوع')
+            ],
+            [
+              rtlTableValue(paymentStatus),
+              rtlTableValue(formatAmount(formatSAR(balanceDue)), { fontSize: 13, color: ACCENT }),
+              rtlTableValue(formatAmount(formatSAR(totalReceived)))
+            ]
+          ]
+        },
+        direction: 'rtl',
+        layout: {
+          hLineWidth: () => 0,
+          vLineWidth: () => 0,
+          paddingLeft: () => 6,
+          paddingRight: () => 6,
+          paddingTop: () => 4,
+          paddingBottom: () => 4
+        },
+        margin: [0, 0, 0, 10]
       }
     ] : []),
 
     /* Terms + signatures — confirmation only */
     ...(!isVoucher ? [
-      /* dashed divider */
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 0.5, lineColor: '#d1d5db', dash: { length: 4 } }], margin: [0, 8, 0, 14] },
+      /* dashed divider (border-t-2 border-dashed) */
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 1, lineColor: '#e5e7eb', dash: { length: 4 } }], margin: [0, 8, 0, 14] },
       {
-        text: user?.customTerms
+        text: prepRtl(user?.customTerms
           ? user.customTerms
-          : 'يقر المستأجر بموجب هذا العقد بالالتزام بكافة لوائح المبنى والحفاظ على الوحدة السكنية بحالة جيدة وإخلائها في موعد تسجيل الخروج المحدد. أي تلفيات تلحق بالوحدة سيتحمل المستأجر تكاليف إصلاحها. تم إعداد هذا العقد لتوثيق فترة الإقامة وحقوق الطرفين.',
+          : 'يقر المستأجر بموجب هذا العقد بالالتزام بكافة لوائح المبنى والحفاظ على الوحدة السكنية بحالة جيدة وإخلائها في موعد تسجيل الخروج المحدد. أي تلفيات تلحق بالوحدة سيتحمل المستأجر تكاليف إصلاحها. تم إعداد هذا العقد لتوثيق فترة الإقامة وحقوق الطرفين.'),
         fontSize: 9,
         color: GREY_600,
         alignment: 'justify',
-        direction: 'rtl',
         margin: [0, 0, 0, 24]
       },
+      /* signatures — LEFT = المستأجر, RIGHT = المؤجر + stamp */
       {
         columns: [
           rtlColumn('توقيع المستأجر', [
-            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 1, lineColor: GREY_400 }], margin: [0, 0, 0, 4] }
-          ]),
+            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 1, lineColor: '#d1d5db' }], margin: [0, 0, 0, 4] }
+          ], { alignment: 'center' }),
           rtlColumn('توقيع وختم المؤجر', [
             ...(stampDataUrl ? [{ image: stampDataUrl, width: 65, fit: [65, 65], alignment: 'center', margin: [0, 0, 0, 6] }] : []),
-            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 1, lineColor: GREY_400 }], margin: [0, 0, 0, 4] }
-          ])
+            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 1, lineColor: '#d1d5db' }], margin: [0, 0, 0, 4] }
+          ], { alignment: 'center' })
         ],
-        columnGap: 30,
-        direction: 'rtl'
+        columnGap: 30
       }
     ] : [])
   ];
@@ -330,8 +394,9 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
       font: 'Zain',
       fontSize: 10,
       color: GREY_900,
-      lineHeight: 1.4,
-      direction: 'rtl'
+      lineHeight: 1.35,
+      direction: 'rtl',
+      alignment: 'right'
     }
   };
 

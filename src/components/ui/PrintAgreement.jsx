@@ -77,8 +77,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
           booking,
           apartment,
           user,
-          documentType,
-          message: shareMessage
+          documentType
         }),
         filename: buildDocumentFilename(booking, apartment),
         message: shareMessage,
