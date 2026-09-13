@@ -344,7 +344,7 @@ export default function ResidentsView({ openBookingForm }) {
                     </td>
                     <td className="px-6 py-4">
                       <a
-                        href={buildWhatsAppUrl(booking.phone, fillTemplate(user?.whatsappMessage, { name: booking.residentName || "", businessName: user?.businessName || "", ref: booking.id }))}
+                        href={buildWhatsAppUrl(booking.phone, fillTemplate(user?.whatsappMessage, { name: booking.residentName || "", businessName: user?.businessName || "", apartment: apt?.name || "", ref: booking.id }))}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm font-medium flex items-center text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
@@ -468,7 +468,7 @@ export default function ResidentsView({ openBookingForm }) {
                         {booking.residentName}
                       </p>
                       <a
-                        href={buildWhatsAppUrl(booking.phone, fillTemplate(user?.whatsappMessage, { name: booking.residentName || "", businessName: user?.businessName || "", ref: booking.id }))}
+                        href={buildWhatsAppUrl(booking.phone, fillTemplate(user?.whatsappMessage, { name: booking.residentName || "", businessName: user?.businessName || "", apartment: apt?.name || "", ref: booking.id }))}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5 hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"

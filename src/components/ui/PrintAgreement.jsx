@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, Share2, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
@@ -6,15 +6,15 @@ import { useAuth } from '../../context/AuthContext';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import { fillTemplate, shareDocumentToWhatsApp, buildDocumentFilename } from '../../lib/documentShare';
+import generateDocumentPdf from '../../lib/generateDocumentPdf';
 import toast from 'react-hot-toast';
 
-const DEFAULT_PRELIMINARY_MESSAGE = 'مرحباً {name}، مرفق لكم الحجز المبدئي من {businessName}. المرجع: {ref}';
-const DEFAULT_CONFIRMED_MESSAGE = 'مرحباً {name}، تم تأكيد حجزكم لدى {businessName}. المرجع: {ref}';
+const DEFAULT_PRELIMINARY_MESSAGE = 'مرحباً {name}، مرفق لكم الحجز المبدئي للشقة {apartment} من {businessName}. المرجع: {ref}';
+const DEFAULT_CONFIRMED_MESSAGE = 'مرحباً {name}، تم تأكيد حجزكم للشقة {apartment} لدى {businessName}. المرجع: {ref}';
 
 export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
   const { apartments } = useData();
   const { user } = useAuth();
-  const paperRef = useRef(null);
   const [sharing, setSharing] = useState(false);
   const apartment = apartments.find(a => a.id === booking.apartmentId);
   const licenseNumber = apartment?.licenseNumber || user?.tourismLicense;
@@ -65,15 +65,21 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
   const shareMessage = fillTemplate(messageTemplate, {
     name: booking.residentName || '',
     businessName: user?.businessName || '',
+    apartment: apartment?.name || '',
     ref: `#${booking.id.toUpperCase()}`
   });
 
   const handleShareWhatsApp = async () => {
-    if (!paperRef.current) return;
     setSharing(true);
     try {
       const result = await shareDocumentToWhatsApp({
-        node: paperRef.current,
+        generateBlob: () => generateDocumentPdf({
+          booking,
+          apartment,
+          user,
+          documentType,
+          message: shareMessage
+        }),
         filename: buildDocumentFilename(booking, apartment),
         message: shareMessage,
         phone: booking.phone
@@ -90,7 +96,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
   return createPortal(
     <div className="print-root fixed inset-0 bg-white z-[100] flex flex-col items-center p-10 overflow-y-auto" dir="rtl">
-      <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper" ref={paperRef}>
+      <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper">
         <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
             <div>
                 <h1 className="text-3xl font-black tracking-tighter text-gray-900">

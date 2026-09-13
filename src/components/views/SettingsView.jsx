@@ -22,14 +22,14 @@ const WHATSAPP_MESSAGE_OPTIONS = [
     field: 'whatsappMessagePreliminary',
     label: 'إرسال «حجز مبدئي»',
     hint: 'يُرسل مع مستند الحجز المبدئي',
-    placeholder: 'مثال: مرحباً {name}، مرفق الحجز المبدئي من {businessName}...'
+    placeholder: 'مثال: مرحباً {name}، مرفق الحجز المبدئي للشقة {apartment} من {businessName}...'
   },
   {
     key: 'confirmed',
     field: 'whatsappMessageConfirmed',
     label: 'إرسال «حجز مؤكد»',
     hint: 'يُرسل مع مستند الحجز المؤكد',
-    placeholder: 'مثال: مرحباً {name}، تم تأكيد حجزك لدى {businessName}...'
+    placeholder: 'مثال: مرحباً {name}، تم تأكيد حجزك للشقة {apartment} لدى {businessName}...'
   }
 ];
 
@@ -513,6 +513,7 @@ export default function SettingsView() {
                     <label className="block text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark mb-2">
                       الرموز: <span className="font-mono normal-case">{'{name}'}</span> لاسم النزيل,
                       <span className="font-mono normal-case"> {'{businessName}'}</span> لاسم المنشأة,
+                      <span className="font-mono normal-case"> {'{apartment}'}</span> لاسم الشقة,
                       <span className="font-mono normal-case"> {'{ref}'}</span> لرقم المرجع
                     </label>
                     <textarea
