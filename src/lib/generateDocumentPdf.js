@@ -1,17 +1,28 @@
 // Programmatic PDF generation (pdfmake) — a clean, reliable A4 document
 // with properly-shaped Arabic text. Registered with pdfmake lazily so the
-// ~500KB embedded fonts are only fetched when someone actually clicks
+// embedded fonts are only fetched when someone actually clicks
 // "إرسال عبر واتساب". The layout mirrors PrintAgreement's preview but is
 // typeset here, not rasterized — so no font-fallback / page-slicing issues.
 //
-// Bidi rules the whole file obeys:
-//   * pdfmake lays `columns` and `table.body` OUT in array order, always
-//     left → right physically. It does NOT auto-reverse for RTL.
-//   * Therefore every visually-RTL table is authored here in REVERSE order —
-//     the first array cell is rendered leftmost, the last cell rightmost —
-//     so the reader sees [rightmost … leftmost] = [first label … last label].
-//   * Digits runs (IDs, years, phones, amounts) are never reversed; pdfmake's
-//     embedded shaper keeps their logical LTR order inside RTL paragraphs.
+// Arabic rendering model (the important part):
+//   * pdfmake 0.3 does NOT shape (no OpenType GSUB pass) and does NOT run
+//     the Unicode Bidi Algorithm. Zain also had no presentation forms; this
+//     file therefore swaps to Amiri (full Naskh with complete cmap coverage
+//     of the Arabic Presentation Forms the reshaper emits).
+//   * Every string is pre-processed by rtlPdf.processRTL:
+//       1) arabic-persian-reshaper converts the base Arabic block into
+//          Presentation Forms (positionally correct initial/medial/final
+//          glyphs, incl. lam-alef ligatures) — no font shaping needed;
+//       2) bidi-js re-orders the line into VISUAL order (RTL runs reversed,
+//          digit runs kept LTR, mirrored parens swapped).
+//   * pdfmake then lays each glyph left→right exactly as the reader should
+//     see it: `direction` is intentionally NOT set anywhere, and alignment
+//     is 'right' globally so lines hug the right edge like the preview.
+//   * Columns / table bodies are still laid out in array order (left→right),
+//     so every visually-RTL table is authored in REVERSE order here — the
+//     first array cell is rendered leftmost, the last cell rightmost — giving
+//     the reader, from the right: [rightmost … leftmost] = [first … last].
+import { processRTL, wrapProcessRTL } from './rtlPdf';
 import { computeBookingTotals, formatSAR } from './paymentUtils';
 import { sanitizePhone } from './phoneUtils';
 
@@ -21,36 +32,23 @@ const GREY_500 = '#6b7280';
 const GREY_400 = '#9ca3af';
 const ACCENT = '#0f766e';
 
-// ---------------------------------------------------------------------------
-// RTL pre-processing helpers — every value injected into the document passes
-// through these so pdfmake reproduces the preview exactly.
-// ---------------------------------------------------------------------------
-
-// Normalize any raw field before it reaches the shaper: null-guard, trim,
-// and collapse whitespace runs. Never reorders characters, so Arabic stays
-// RTL while digit runs (IDs, years, phones, amounts) keep their logical
-// Left-to-Right orientation and colons stay glued to their label.
-export function prepRtl(value, fallback = '') {
-  if (value === null || value === undefined) return fallback;
-  return String(value).replace(/\s+/g, ' ').trim();
-}
-
 // Currency is always a PREFIX: ر.س 275, ر.س 0.00. The numeric part is passed
 // in already-formatted (a string) so null/zero/fractional values are never
-// dropped or turned into a bare ".".
+// dropped or turned into a bare ".". The cell wrapper (rtlTableValue) runs
+// processRTL over the final "ر.س 275" string.
 export function formatAmount(value) {
-  return `ر.س ${prepRtl(value)}`;
+  return `ر.س ${value === null || value === undefined ? '' : value}`;
 }
 
 // Small grey label used as the header row cell of the financial tables.
 export function rtlTableHeader(label) {
-  return { text: prepRtl(label), fontSize: 8, bold: true, color: GREY_400 };
+  return { text: processRTL(label), fontSize: 8, bold: true, color: GREY_400 };
 }
 
 // Bold value cell for the financial tables.
 export function rtlTableValue(value, opts = {}) {
   return {
-    text: prepRtl(value),
+    text: processRTL(value),
     fontSize: opts.fontSize || 12,
     bold: true,
     color: opts.color || GREY_900
@@ -69,7 +67,7 @@ function sectionTitle(text) {
       widths: ['*', 4],
       body: [[
         {
-          text: prepRtl(text),
+          text: processRTL(text),
           fillColor: '#f3f4f6',
           color: GREY_900,
           bold: true,
@@ -96,7 +94,7 @@ function rtlColumn(headerText, lines, { alignment = 'right' } = {}) {
   return {
     width: '*',
     stack: [
-      { text: prepRtl(headerText), fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 4], alignment },
+      { text: processRTL(headerText), fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 4], alignment },
       ...lines.map((line) => ({ ...line, alignment: line.alignment || alignment }))
     ]
   };
@@ -163,15 +161,15 @@ async function ensurePdfMake() {
 
   const maker = pdfmakeMod.default || pdfmakeMod;
   maker.addVirtualFileSystem({
-    'Zain-Regular.ttf': fontMod.ZAIN_REGULAR_B64,
-    'Zain-Bold.ttf': fontMod.ZAIN_BOLD_B64
+    'Amiri-Regular.ttf': fontMod.AMIRI_REGULAR_B64,
+    'Amiri-Bold.ttf': fontMod.AMIRI_BOLD_B64
   });
   maker.addFonts({
-    Zain: {
-      normal: 'Zain-Regular.ttf',
-      bold: 'Zain-Bold.ttf',
-      italics: 'Zain-Regular.ttf',
-      bolditalics: 'Zain-Bold.ttf'
+    Amiri: {
+      normal: 'Amiri-Regular.ttf',
+      bold: 'Amiri-Bold.ttf',
+      italics: 'Amiri-Regular.ttf',
+      bolditalics: 'Amiri-Bold.ttf'
     }
   });
   pdfMake = maker;
@@ -233,17 +231,17 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           width: 'auto',
           stack: [
             ...(logoDataUrl ? [{ image: logoDataUrl, width: 64, fit: [64, 64], alignment: 'left', margin: [0, 0, 0, 4] }] : []),
-            { text: prepRtl(user?.businessName || 'رنت فلو العقارية'), fontSize: 15, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 2] },
+            { text: processRTL(user?.businessName || 'رنت فلو العقارية'), fontSize: 15, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 2] },
             ...(licenseNumber ? [
-              { text: prepRtl(`ترخيص رقم: ${licenseNumber}`), fontSize: 8, color: GREY_500, alignment: 'left' }
+              { text: processRTL(`ترخيص رقم: ${licenseNumber}`), fontSize: 8, color: GREY_500, alignment: 'left' }
             ] : [])
           ]
         },
         {
           width: '*',
           stack: [
-            { text: docTitle, fontSize: 26, bold: true, color: GREY_900, margin: [0, 0, 0, 2] },
-            { text: prepRtl(`المرجع: #${booking.id.toUpperCase()}`), fontSize: 9, color: GREY_500, margin: [0, 0, 0, 4] }
+            { text: processRTL(docTitle), fontSize: 26, bold: true, color: GREY_900, margin: [0, 0, 0, 2] },
+            { text: processRTL(`المرجع: #${booking.id.toUpperCase()}`), fontSize: 9, color: GREY_500, margin: [0, 0, 0, 4] }
           ]
         }
       ],
@@ -258,13 +256,13 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
     {
       columns: [
         rtlColumn('المستأجر / النزيل', [
-          { text: prepRtl(booking.residentName), fontSize: 12, bold: true, color: GREY_900 },
-          { text: prepRtl(`رقم الهوية: ${booking.residentId}`), fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] },
-          { text: prepRtl(`هاتف: ${sanitizePhone(booking.phone)}`), fontSize: 9, color: GREY_600 },
-          ...(booking.address ? [{ text: prepRtl(booking.address), fontSize: 8, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
+          { text: processRTL(booking.residentName), fontSize: 12, bold: true, color: GREY_900 },
+          { text: processRTL(`رقم الهوية: ${booking.residentId}`), fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] },
+          { text: processRTL(`هاتف: ${sanitizePhone(booking.phone)}`), fontSize: 9, color: GREY_600 },
+          ...(booking.address ? [{ text: processRTL(booking.address), fontSize: 8, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
         ]),
         rtlColumn('المؤجر / المدير', [
-          { text: prepRtl(user?.businessName || 'مجموعة رنت فلو العقارية'), fontSize: 12, bold: true, color: GREY_900 }
+          { text: processRTL(user?.businessName || 'مجموعة رنت فلو العقارية'), fontSize: 12, bold: true, color: GREY_900 }
         ])
       ],
       columnGap: 20,
@@ -276,12 +274,12 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
     {
       columns: [
         rtlColumn('فترة الإيجار', [
-          { text: `${formatDate(booking.startDate)} — ${formatDate(booking.endDate)}`, fontSize: 11, bold: true, color: GREY_900 },
-          { text: `${nights} ليلة إجمالية`, fontSize: 10, bold: true, color: ACCENT, margin: [0, 2, 0, 0] }
+          { text: processRTL(`${formatDate(booking.startDate)} — ${formatDate(booking.endDate)}`), fontSize: 11, bold: true, color: GREY_900 },
+          { text: processRTL(`${nights} ليلة إجمالية`), fontSize: 10, bold: true, color: ACCENT, margin: [0, 2, 0, 0] }
         ]),
         rtlColumn('بيانات الوحدة', [
-          { text: prepRtl(apartment?.name || ''), fontSize: 12, bold: true, color: GREY_900 },
-          ...(apartment?.type ? [{ text: prepRtl(apartment.type), fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
+          { text: processRTL(apartment?.name || ''), fontSize: 12, bold: true, color: GREY_900 },
+          ...(apartment?.type ? [{ text: processRTL(apartment.type), fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
         ])
       ],
       columnGap: 20,
@@ -312,7 +310,6 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           ]
         ]
       },
-      direction: 'rtl',
       layout: {
         hLineWidth: () => 0,
         vLineWidth: () => 0,
@@ -344,7 +341,6 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
             ]
           ]
         },
-        direction: 'rtl',
         layout: {
           hLineWidth: () => 0,
           vLineWidth: () => 0,
@@ -362,7 +358,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
       /* dashed divider (border-t-2 border-dashed) */
       { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 1, lineColor: '#e5e7eb', dash: { length: 4 } }], margin: [0, 8, 0, 14] },
       {
-        text: prepRtl(user?.customTerms
+        text: wrapProcessRTL(user?.customTerms
           ? user.customTerms
           : 'يقر المستأجر بموجب هذا العقد بالالتزام بكافة لوائح المبنى والحفاظ على الوحدة السكنية بحالة جيدة وإخلائها في موعد تسجيل الخروج المحدد. أي تلفيات تلحق بالوحدة سيتحمل المستأجر تكاليف إصلاحها. تم إعداد هذا العقد لتوثيق فترة الإقامة وحقوق الطرفين.'),
         fontSize: 9,
@@ -391,11 +387,10 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
     pageSize: 'A4',
     pageMargins: [40, 40, 40, 40],
     defaultStyle: {
-      font: 'Zain',
+      font: 'Amiri',
       fontSize: 10,
       color: GREY_900,
       lineHeight: 1.35,
-      direction: 'rtl',
       alignment: 'right'
     }
   };
