@@ -31,12 +31,21 @@ export function buildDocumentFilename(booking, apartment) {
 }
 
 // Rasterize a DOM node and lay it out on A4 pages, returning a PDF blob.
+// Rendered in a fixed A4-width clone so the output matches the print
+// layout regardless of the device's screen width (html2canvas would
+// otherwise capture at the phone's narrow width → completely different
+// document). Fonts are awaited so the Zain typeface is embedded.
 export async function renderNodeToPdfBlob(node) {
+  await document.fonts.ready;
+
   const canvas = await html2canvas(node, {
     scale: 2,
     backgroundColor: '#ffffff',
     useCORS: true,
-    logging: false
+    logging: false,
+    windowWidth: 794,   // A4 width @96dpi — reflows the paper like print
+    scrollX: 0,
+    scrollY: 0
   });
   const imgData = canvas.toDataURL('image/png');
 

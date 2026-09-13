@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Printer, Share2, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -58,8 +59,8 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
   };
 
   const messageTemplate = documentType === 'voucher'
-    ? (user?.whatsappMessagePreliminary || DEFAULT_PRELIMINARY_MESSAGE)
-    : (user?.whatsappMessageConfirmed || DEFAULT_CONFIRMED_MESSAGE);
+    ? (user?.whatsappMessagePreliminary || user?.whatsappMessage || DEFAULT_PRELIMINARY_MESSAGE)
+    : (user?.whatsappMessageConfirmed || user?.whatsappMessage || DEFAULT_CONFIRMED_MESSAGE);
 
   const shareMessage = fillTemplate(messageTemplate, {
     name: booking.residentName || '',
@@ -87,7 +88,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
   };
 
 
-  return (
+  return createPortal(
     <div className="print-root fixed inset-0 bg-white z-[100] flex flex-col items-center p-10 overflow-y-auto" dir="rtl">
       <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper" ref={paperRef}>
         <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
@@ -245,6 +246,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
             إغلاق المعاينة
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
