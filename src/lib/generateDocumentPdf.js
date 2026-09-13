@@ -21,18 +21,18 @@ async function ensurePdfMake() {
   ]);
 
   const maker = pdfmakeMod.default || pdfmakeMod;
-  maker.vfs = {
+  maker.addVirtualFileSystem({
     'Zain-Regular.ttf': fontMod.ZAIN_REGULAR_B64,
     'Zain-Bold.ttf': fontMod.ZAIN_BOLD_B64
-  };
-  maker.fonts = {
+  });
+  maker.addFonts({
     Zain: {
       normal: 'Zain-Regular.ttf',
       bold: 'Zain-Bold.ttf',
       italics: 'Zain-Regular.ttf',
       bolditalics: 'Zain-Bold.ttf'
     }
-  };
+  });
   pdfMake = maker;
   fontsReady = true;
 }
