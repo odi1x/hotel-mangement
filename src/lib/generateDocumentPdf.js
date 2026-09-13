@@ -9,6 +9,7 @@ import { sanitizePhone } from './phoneUtils';
 const GREY_900 = '#111111';
 const GREY_600 = '#4b5563';
 const GREY_400 = '#9ca3af';
+const ACCENT = '#0f766e';
 
 // pdfmake needs images as PNG/JPEG data URLs — fetch any remote logo/stamp
 // just-in-time and convert. ImageKit often serves WebP/AVIF, which pdfmake
@@ -61,7 +62,6 @@ async function toDataUrl(url) {
 }
 
 let pdfMake = null;
-let fontsReady = false;
 
 async function ensurePdfMake() {
   if (pdfMake) return;
@@ -84,7 +84,6 @@ async function ensurePdfMake() {
     }
   });
   pdfMake = maker;
-  fontsReady = true;
 }
 
 const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
@@ -100,27 +99,57 @@ const calculateNights = (start, end) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 };
 
-function column(prefixLabel, lines) {
+// Section heading — light-grey pill with a solid accent bar on the *right*
+// edge (mirrors `bg-gray-100 border-r-4 border-accent`). pdfmake renders
+// table columns left→right, so the 4pt accent cell sits last = right side.
+function sectionTitle(text) {
   return {
+    margin: [0, 0, 0, 12],
+    table: {
+      widths: ['*', 4],
+      body: [[
+        {
+          text,
+          fillColor: '#f3f4f6',
+          color: GREY_900,
+          bold: true,
+          fontSize: 12,
+          padding: [8, 6, 8, 6],
+          alignment: 'right'
+        },
+        { text: '', fillColor: ACCENT, padding: [0, 0, 0, 0] }
+      ]]
+    },
+    layout: {
+      hLineWidth: () => 0,
+      vLineWidth: () => 0,
+      paddingLeft: () => 0,
+      paddingRight: () => 0,
+      paddingTop: () => 0,
+      paddingBottom: () => 0
+    }
+  };
+}
+
+// Two-column row with a header label + stacked content lines, RTL-first.
+function rtlColumn(headerText, lines) {
+  return {
+    width: '*',
     stack: [
-      { text: prefixLabel, fontSize: 8, color: GREY_400, bold: true, decoration: 'underline', decorationColor: GREY_400, margin: [0, 0, 0, 4] },
+      { text: headerText, fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 4] },
       ...lines
     ]
   };
 }
 
-function sectionTitle(text) {
+// Horizontal grid of labeled values (for financial rows).
+function labelValue(label, value, opts = {}) {
   return {
-    text,
-    fontSize: 11,
-    bold: true,
-    color: GREY_900,
-    background: '#f3f4f6',
-    margin: [0, 0, 0, 10],
-    padding: [8, 6, 8, 6],
-    decoration: 'underline',
-    decorationColor: '#9ca3af',
-    decorationStyle: 'dashed'
+    width: '*',
+    stack: [
+      { text: label, fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 3] },
+      { text: value, fontSize: opts.fontSize || 11, bold: true, color: opts.color || GREY_900, margin: [0, 0, 0, 0] }
+    ]
   };
 }
 
@@ -147,39 +176,75 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
 
   const isVoucher = documentType === 'voucher';
   const docTitle = isVoucher ? 'حجز مبدئي' : 'حجز مؤكد';
+  const pageWidth = 515; // A4 minus 40px margins each side
 
   const content = [
-    { text: docTitle, fontSize: 22, bold: true, color: GREY_900, margin: [0, 0, 0, 2] },
-    { text: `المرجع: #${booking.id.toUpperCase()}`, fontSize: 9, color: GREY_600, margin: [0, 0, 0, 6] },
+    /* ── Header: title + ref (right) and business identity (left),
+       separated by the document's 2px bottom rule — mirrors the preview's
+       `border-b-2 border-gray-900 pb-6 mb-8`. ── */
+    {
+      columns: [
+        {
+          width: 'auto',
+          stack: [
+            ...(logoDataUrl ? [{ image: logoDataUrl, width: 64, fit: [64, 64], alignment: 'left', margin: [0, 0, 0, 4] }] : []),
+            { text: user?.businessName || 'رنت فلو العقارية', fontSize: 15, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 2] },
+            ...(licenseNumber ? [
+              { text: `ترخيص رقم: ${licenseNumber}`, fontSize: 8, color: GREY_600, alignment: 'left' }
+            ] : [])
+          ]
+        },
+        {
+          width: '*',
+          stack: [
+            { text: docTitle, fontSize: 26, bold: true, color: GREY_900, margin: [0, 0, 0, 2] },
+            { text: `المرجع: #${booking.id.toUpperCase()}`, fontSize: 9, color: GREY_600, margin: [0, 0, 0, 4] }
+          ]
+        }
+      ],
+      columnGap: 16,
+      margin: [0, 0, 0, 22],
+      direction: 'rtl'
+    },
+    /* ~2px solid bottom rule (border-b-2) */
+    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 2, lineColor: GREY_900 }], margin: [0, 0, 0, 20] },
+
+    /* Share message box — shown on-screen only, keeps the text when sharing. */
     ...(message ? [
-      { text: message, fontSize: 11, bold: true, color: '#0f766e', background: '#f0fdfa', margin: [0, 2, 0, 10], padding: [8, 6, 8, 6] }
+      {
+        table: {
+          widths: ['*'],
+          body: [[{
+            text: message,
+            fontSize: 11,
+            bold: true,
+            color: ACCENT,
+            margin: [0, 0, 0, 0]
+          }]]
+        },
+        layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => '#99f6e4', vLineColor: () => '#99f6e4', fillColor: () => '#f0fdfa', paddingLeft: () => 8, paddingRight: () => 8, paddingTop: () => 8, paddingBottom: () => 8 },
+        margin: [0, 4, 0, 16],
+        direction: 'rtl'
+      }
     ] : []),
 
-    /* Business header — logo (if present) above the business name + license */
-    ...(logoDataUrl ? [
-      { image: logoDataUrl, width: 70, alignment: 'left', margin: [0, 6, 0, 4] }
-    ] : []),
-    { text: user?.businessName || 'رنت فلو العقارية', fontSize: 14, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 2] },
-    ...(licenseNumber ? [
-      { text: `ترخيص رقم: ${licenseNumber}`, fontSize: 9, color: GREY_600, alignment: 'left', margin: [0, 0, 0, 10] }
-    ] : [
-      { text: '', margin: [0, 0, 0, 8] }
-    ]),
-
-    /* 1) Parties */
+    /* 1) Parties — pdfmake lays columns left→right in array order, so to
+       mirror the RTL preview (first DOM child = rightmost) the LEFT visual
+       block goes first in the array. */
     sectionTitle('أولاً: أطراف العقد'),
     {
       columns: [
-        column('المؤجر / المدير', [
-          { text: user?.businessName || 'مجموعة رنت فلو العقارية', fontSize: 11, bold: true, color: GREY_900 }
+        rtlColumn('المستأجر / النزيل', [
+          { text: booking.residentName, fontSize: 12, bold: true, color: GREY_900 },
+          { text: `رقم الهوية: ${booking.residentId}`, fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0], direction: 'ltr' },
+          { text: `هاتف: ${sanitizePhone(booking.phone)}`, fontSize: 9, color: GREY_600, direction: 'ltr' },
+          ...(booking.address ? [{ text: booking.address, fontSize: 8, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
         ]),
-        column('المستأجر / النزيل', [
-          { text: booking.residentName, fontSize: 11, bold: true, color: GREY_900 },
-          { text: `رقم الهوية: ${booking.residentId}`, fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] },
-          { text: `هاتف: ${sanitizePhone(booking.phone)}`, fontSize: 9, color: GREY_600 },
-          { text: booking.address || '', fontSize: 8, color: GREY_600, margin: [0, 2, 0, 0] }
+        rtlColumn('المؤجر / المدير', [
+          { text: user?.businessName || 'مجموعة رنت فلو العقارية', fontSize: 12, bold: true, color: GREY_900 }
         ])
       ],
+      columnGap: 20,
       margin: [0, 0, 0, 16]
     },
 
@@ -187,27 +252,29 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
     sectionTitle('ثانياً: العقار ومدة الإيجار'),
     {
       columns: [
-        column('بيانات الوحدة', [
-          { text: apartment?.name || '', fontSize: 11, bold: true, color: GREY_900 },
-          { text: apartment?.type || '', fontSize: 9, color: GREY_600 }
-        ]),
-        column('فترة الإيجار', [
+        rtlColumn('فترة الإيجار', [
           { text: `${formatDate(booking.startDate)} — ${formatDate(booking.endDate)}`, fontSize: 11, bold: true, color: GREY_900 },
-          { text: `${nights} ليلة إجمالية`, fontSize: 9, bold: true, color: '#0f766e', margin: [0, 2, 0, 0] }
+          { text: `${nights} ليلة إجمالية`, fontSize: 10, bold: true, color: ACCENT, margin: [0, 2, 0, 0] }
+        ]),
+        rtlColumn('بيانات الوحدة', [
+          { text: apartment?.name || '', fontSize: 12, bold: true, color: GREY_900 },
+          ...(apartment?.type ? [{ text: apartment.type, fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
         ])
       ],
+      columnGap: 20,
       margin: [0, 0, 0, 16]
     },
 
-    /* 3) Financial terms */
+    /* 3) Financial terms — tabular grid */
     sectionTitle('ثالثاً: الشروط المالية'),
     {
       columns: [
-        { stack: [{ text: 'سعر الليلة', fontSize: 8, color: GREY_400, bold: true }, { text: `${booking.pricePerNight} ر.س`, fontSize: 11, bold: true, color: GREY_900, margin: [0, 4, 0, 0] }] },
-        { stack: [{ text: 'المبلغ الأساسي', fontSize: 8, color: GREY_400, bold: true }, { text: `${subtotal} ر.س`, fontSize: 11, bold: true, color: GREY_900, margin: [0, 4, 0, 0] }] },
-        { stack: [{ text: `الضريبة${user?.taxEnabled && user?.taxPercentage ? ` (${user.taxPercentage}%)` : ''}`, fontSize: 8, color: GREY_400, bold: true }, { text: `${taxAmount.toFixed(2)} ر.س`, fontSize: 11, bold: true, color: GREY_900, margin: [0, 4, 0, 0] }] },
-        { stack: [{ text: 'الإجمالي الشامل', fontSize: 8, color: GREY_400, bold: true }, { text: `${total.toFixed(2)} ر.س`, fontSize: 13, bold: true, color: '#0f766e', margin: [0, 4, 0, 0] }] }
+        labelValue('الإجمالي الشامل', `${total.toFixed(2)} ر.س`, { fontSize: 13, color: ACCENT }),
+        labelValue(`الضريبة${user?.taxEnabled && user?.taxPercentage ? ` (${user.taxPercentage}%)` : ''}`, `${taxAmount.toFixed(2)} ر.س`),
+        labelValue('المبلغ الأساسي', `${subtotal} ر.س`),
+        labelValue('سعر الليلة', `${booking.pricePerNight} ر.س`)
       ],
+      columnGap: 12,
       margin: [0, 0, 0, 16]
     },
 
@@ -216,17 +283,19 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
       sectionTitle('رابعاً: حالة السداد'),
       {
         columns: [
-          { stack: [{ text: 'المبلغ المدفوع', fontSize: 8, color: GREY_400, bold: true }, { text: `${formatSAR(totalReceived)} ر.س`, fontSize: 11, bold: true, color: GREY_900, margin: [0, 4, 0, 0] }] },
-          { stack: [{ text: 'المبلغ المتبقي', fontSize: 8, color: GREY_400, bold: true }, { text: `${formatSAR(balanceDue)} ر.س`, fontSize: 11, bold: true, color: '#0f766e', margin: [0, 4, 0, 0] }] },
-          { stack: [{ text: 'حالة السداد', fontSize: 8, color: GREY_400, bold: true }, { text: balanceDue <= 0.01 ? 'مسدد بالكامل' : totalReceived > 0.01 ? 'سداد جزئي' : 'غير مسدد', fontSize: 11, bold: true, color: GREY_900, margin: [0, 4, 0, 0] }] }
+          labelValue('حالة السداد', balanceDue <= 0.01 ? 'مسدد بالكامل' : totalReceived > 0.01 ? 'سداد جزئي' : 'غير مسدد'),
+          labelValue('المبلغ المتبقي', `${formatSAR(balanceDue)} ر.س`, { fontSize: 12, color: ACCENT }),
+          labelValue('المبلغ المدفوع', `${formatSAR(totalReceived)} ر.س`)
         ],
+        columnGap: 12,
         margin: [0, 0, 0, 16]
       }
     ] : []),
 
     /* Terms + signatures — confirmation only */
     ...(!isVoucher ? [
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: '#d1d5db', dash: { length: 3 } }], margin: [0, 8, 0, 14] },
+      /* dashed divider */
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 0.5, lineColor: '#d1d5db', dash: { length: 4 } }], margin: [0, 8, 0, 14] },
       {
         text: user?.customTerms
           ? user.customTerms
@@ -234,25 +303,21 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
         fontSize: 9,
         color: GREY_600,
         alignment: 'justify',
+        direction: 'rtl',
         margin: [0, 0, 0, 24]
       },
       {
         columns: [
-          {
-            stack: [
-              ...(stampDataUrl ? [{ image: stampDataUrl, width: 70, fit: [70, 70], margin: [0, 0, 0, 4] }] : []),
-              { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 1, lineColor: GREY_600 }] },
-              { text: 'توقيع وختم المؤجر', fontSize: 9, bold: true, color: GREY_600, alignment: 'center', margin: [0, 4, 0, 0] }
-            ]
-          },
-          {
-            stack: [
-              { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 1, lineColor: GREY_600 }] },
-              { text: 'توقيع المستأجر', fontSize: 9, bold: true, color: GREY_600, alignment: 'center', margin: [0, 4, 0, 0] }
-            ]
-          }
+          rtlColumn('توقيع المستأجر', [
+            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 1, lineColor: GREY_400 }], margin: [0, 0, 0, 4] }
+          ]),
+          rtlColumn('توقيع وختم المؤجر', [
+            ...(stampDataUrl ? [{ image: stampDataUrl, width: 65, fit: [65, 65], alignment: 'center', margin: [0, 0, 0, 6] }] : []),
+            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 1, lineColor: GREY_400 }], margin: [0, 0, 0, 4] }
+          ])
         ],
-        columnGap: 60
+        columnGap: 30,
+        direction: 'rtl'
       }
     ] : [])
   ];
@@ -265,7 +330,8 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
       font: 'Zain',
       fontSize: 10,
       color: GREY_900,
-      lineHeight: 1.35
+      lineHeight: 1.4,
+      direction: 'rtl'
     }
   };
 

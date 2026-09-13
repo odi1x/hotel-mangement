@@ -874,11 +874,11 @@ export default function ResidentsView({ openBookingForm }) {
             </div>
 
             <div className="p-6 space-y-4">
-              <button
-                onClick={() => {
-                  window.open(buildWhatsAppUrl(phoneActionBooking.phone), '_blank', 'noopener,noreferrer');
-                  setPhoneActionBooking(null);
-                }}
+              <a
+                href={buildWhatsAppUrl(phoneActionBooking.phone)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setPhoneActionBooking(null)}
                 className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
@@ -888,20 +888,21 @@ export default function ResidentsView({ openBookingForm }) {
                   <span className="font-semibold text-lg mb-0.5 tracking-tight">فتح واتساب</span>
                   <span className="text-sm text-muted dark:text-body-dark">بدون رسالة</span>
                 </div>
-              </button>
+              </a>
 
-              <button
-                onClick={() => {
+              <a
+                href={buildWhatsAppUrl(phoneActionBooking.phone, (() => {
                   const apt = apartments.find(a => a.id === phoneActionBooking.apartmentId);
-                  const message = fillTemplate(user?.whatsappMessage, {
+                  return fillTemplate(user?.whatsappMessage, {
                     name: phoneActionBooking.residentName || "",
                     businessName: user?.businessName || "",
                     apartment: apt?.name || "",
                     ref: phoneActionBooking.id
                   });
-                  window.open(buildWhatsAppUrl(phoneActionBooking.phone, message), '_blank', 'noopener,noreferrer');
-                  setPhoneActionBooking(null);
-                }}
+                })())}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setPhoneActionBooking(null)}
                 className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="bg-accent/10 text-accent p-3 rounded-md">
@@ -911,13 +912,11 @@ export default function ResidentsView({ openBookingForm }) {
                   <span className="font-semibold text-lg mb-0.5 tracking-tight">فتح واتساب مع رسالة</span>
                   <span className="text-sm text-muted dark:text-body-dark">رسالة الترحيب المخصصة</span>
                 </div>
-              </button>
+              </a>
 
-              <button
-                onClick={() => {
-                  window.open(`tel:${sanitizePhone(phoneActionBooking.phone)}`, '_blank', 'noopener,noreferrer');
-                  setPhoneActionBooking(null);
-                }}
+              <a
+                href={`tel:${sanitizePhone(phoneActionBooking.phone)}`}
+                onClick={() => setPhoneActionBooking(null)}
                 className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
@@ -927,7 +926,7 @@ export default function ResidentsView({ openBookingForm }) {
                   <span className="font-semibold text-lg mb-0.5 tracking-tight">اتصال بالرقم</span>
                   <span className="text-sm text-muted dark:text-body-dark">بدء مكالمة</span>
                 </div>
-              </button>
+              </a>
             </div>
           </div>
         </div>
