@@ -10,6 +10,25 @@ const GREY_900 = '#111111';
 const GREY_600 = '#4b5563';
 const GREY_400 = '#9ca3af';
 
+// pdfmake needs images as data URLs — fetch any remote logo/stamp and
+// base64-encode it just-in-time. A missing/broken image falls back to null
+// (the element is simply skipped) instead of breaking the whole document.
+async function toDataUrl(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 let pdfMake = null;
 let fontsReady = false;
 
@@ -81,6 +100,11 @@ function sectionTitle(text) {
 export default async function generateDocumentPdf({ booking, apartment, user, documentType, message }) {
   await ensurePdfMake();
 
+  const [logoDataUrl, stampDataUrl] = await Promise.all([
+    user?.logoUrl ? toDataUrl(user.logoUrl) : null,
+    user?.stampUrl ? toDataUrl(user.stampUrl) : null
+  ]);
+
   const licenseNumber = apartment?.licenseNumber || user?.tourismLicense;
   const nights = calculateNights(booking.startDate, booking.endDate);
   const subtotal = parseFloat(booking.pricePerNight) * nights;
@@ -101,8 +125,8 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
     ] : []),
 
     /* Business header — logo (if present) above the business name + license */
-    ...(user?.logoUrl ? [
-      { image: user.logoUrl, width: 70, alignment: 'left', margin: [0, 6, 0, 4] }
+    ...(logoDataUrl ? [
+      { image: logoDataUrl, width: 70, alignment: 'left', margin: [0, 6, 0, 4] }
     ] : []),
     { text: user?.businessName || 'رنت فلو العقارية', fontSize: 14, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 2] },
     ...(licenseNumber ? [
@@ -185,7 +209,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
         columns: [
           {
             stack: [
-              ...(user?.stampUrl ? [{ image: user.stampUrl, width: 70, fit: [70, 70], margin: [0, 0, 0, 4] }] : []),
+              ...(stampDataUrl ? [{ image: stampDataUrl, width: 70, fit: [70, 70], margin: [0, 0, 0, 4] }] : []),
               { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 1, lineColor: GREY_600 }] },
               { text: 'توقيع وختم المؤجر', fontSize: 9, bold: true, color: GREY_600, alignment: 'center', margin: [0, 4, 0, 0] }
             ]
