@@ -5,16 +5,21 @@
 // typeset here, not rasterized — so no font-fallback / page-slicing issues.
 //
 // Arabic rendering model (the important part):
-//   * pdfmake 0.3 does NOT shape (no OpenType GSUB pass) and does NOT run
-//     the Unicode Bidi Algorithm. Zain also had no presentation forms; this
-//     file therefore swaps to Amiri (full Naskh with complete cmap coverage
-//     of the Arabic Presentation Forms the reshaper emits).
+//   * pdfmake 0.3 does NOT shape (no OpenType GSUB pass) and does NOT apply
+//     the Unicode Bidi Algorithm per word, but pdfkit DOES flip each
+//     space-delimited word into visual order before placement. The usable
+//     fonts are therefore only those whose cmap ships the Arabic
+//     Presentation Forms (U+FE70–FEFC) STATICALLY — GSUB-only fonts (Zain,
+//     Tajawal, Almarai, …) render connected text as blank/disconnected.
+//     Noto Sans Arabic v2.013 (full build) passes 140/141 (U+FE75 is never
+//     emitted by the reshaper).
 //   * Every string is pre-processed by rtlPdf.processRTL:
 //       1) arabic-persian-reshaper converts the base Arabic block into
 //          Presentation Forms (positionally correct initial/medial/final
 //          glyphs, incl. lam-alef ligatures) — no font shaping needed;
-//       2) bidi-js re-orders the line into VISUAL order (RTL runs reversed,
-//          digit runs kept LTR, mirrored parens swapped).
+//       2) TOKEN order is reversed (shaped text split on whitespace).
+//          Characters INSIDE a word are NOT touched — pdfkit re-flips them
+//          during layout, and digits/Latin tokens must keep their order.
 //   * pdfmake then lays each glyph left→right exactly as the reader should
 //     see it: `direction` is intentionally NOT set anywhere, and alignment
 //     is 'right' globally so lines hug the right edge like the preview.
@@ -161,21 +166,26 @@ async function ensurePdfMake() {
 
   const maker = pdfmakeMod.default || pdfmakeMod;
   maker.addVirtualFileSystem({
-    'Amiri-Regular.ttf': fontMod.AMIRI_REGULAR_B64,
-    'Amiri-Bold.ttf': fontMod.AMIRI_BOLD_B64
+    'NotoSansArabic-Regular.ttf': fontMod.NOTO_SANS_REGULAR_B64,
+    'NotoSansArabic-Bold.ttf': fontMod.NOTO_SANS_BOLD_B64
   });
   maker.addFonts({
-    Amiri: {
-      normal: 'Amiri-Regular.ttf',
-      bold: 'Amiri-Bold.ttf',
-      italics: 'Amiri-Regular.ttf',
-      bolditalics: 'Amiri-Bold.ttf'
+    NotoSansArabic: {
+      normal: 'NotoSansArabic-Regular.ttf',
+      bold: 'NotoSansArabic-Bold.ttf',
+      italics: 'NotoSansArabic-Regular.ttf',
+      bolditalics: 'NotoSansArabic-Bold.ttf'
     }
   });
   pdfMake = maker;
 }
 
-const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
+// Dates keep ARABIC month names but LATIN (Western) numerals via the
+// `-u-nu-latn` locale extension. Arabic-Indic digits (U+0660–U+0669) are bidi
+// class AN: pdfkit classifies a word made of them as RTL and reverses the
+// digits internally (2026 → 6202). Western digits are class EN and are placed
+// verbatim, so `22 سبتمبر 2026` stays correct after processRTL.
+const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG-u-nu-latn', {
   month: 'long',
   day: 'numeric',
   year: 'numeric'
@@ -321,8 +331,11 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
       margin: [0, 0, 0, 10]
     },
 
-    /* 4) حالة السداد — voucher only. Same reversal pattern: from the right
-       [المبلغ المدفوع | المبلغ المتبقي | حالة السداد]. */
+    /* 4) حالة السداد — voucher only. A proper horizontal 3-column row that
+       reads right→left exactly like the reference: from the right
+       [حالة السداد | المبلغ المتبقي | المبلغ المدفوع]. Because pdfmake lays
+       table columns left→right, the row is authored in REVERSE order: the
+       LAST array cell (حالة السداد / مسدد بالكامل) renders rightmost. */
     ...(isVoucher ? [
       sectionTitle('رابعاً: حالة السداد'),
       {
@@ -330,14 +343,14 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           widths: ['*', '*', '*'],
           body: [
             [
-              rtlTableHeader('حالة السداد'),
+              rtlTableHeader('المبلغ المدفوع'),
               rtlTableHeader('المبلغ المتبقي'),
-              rtlTableHeader('المبلغ المدفوع')
+              rtlTableHeader('حالة السداد')
             ],
             [
-              rtlTableValue(paymentStatus),
+              rtlTableValue(formatAmount(formatSAR(totalReceived))),
               rtlTableValue(formatAmount(formatSAR(balanceDue)), { fontSize: 13, color: ACCENT }),
-              rtlTableValue(formatAmount(formatSAR(totalReceived)))
+              rtlTableValue(paymentStatus)
             ]
           ]
         },
@@ -387,7 +400,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
     pageSize: 'A4',
     pageMargins: [40, 40, 40, 40],
     defaultStyle: {
-      font: 'Amiri',
+      font: 'NotoSansArabic',
       fontSize: 10,
       color: GREY_900,
       lineHeight: 1.35,
