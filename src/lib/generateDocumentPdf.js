@@ -27,7 +27,7 @@
 //     so every visually-RTL table is authored in REVERSE order here — the
 //     first array cell is rendered leftmost, the last cell rightmost — giving
 //     the reader, from the right: [rightmost … leftmost] = [first … last].
-import { processRTL, wrapProcessRTL } from './rtlPdf';
+import { processRTL, processRTLPhone, wrapProcessRTL } from './rtlPdf';
 import { computeBookingTotals, formatSAR } from './paymentUtils';
 import { sanitizePhone } from './phoneUtils';
 
@@ -67,7 +67,7 @@ export function rtlTableValue(value, opts = {}) {
 // rhythm between sections.
 function sectionTitle(text) {
   return {
-    margin: [0, 8, 0, 4],
+    margin: [0, 5, 0, 3],
     table: {
       widths: ['*', 4],
       body: [[
@@ -77,7 +77,7 @@ function sectionTitle(text) {
           color: GREY_900,
           bold: true,
           fontSize: 12,
-          padding: [8, 6, 8, 6]
+          padding: [8, 5, 8, 5]
         },
         { text: '', fillColor: ACCENT, padding: [0, 0, 0, 0] }
       ]]
@@ -99,7 +99,7 @@ function rtlColumn(headerText, lines, { alignment = 'right' } = {}) {
   return {
     width: '*',
     stack: [
-      { text: processRTL(headerText), fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 4], alignment },
+      { text: processRTL(headerText), fontSize: 8, color: GREY_400, bold: true, margin: [0, 0, 0, 2], alignment },
       ...lines.map((line) => ({ ...line, alignment: line.alignment || alignment }))
     ]
   };
@@ -240,8 +240,8 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
         {
           width: 'auto',
           stack: [
-            ...(logoDataUrl ? [{ image: logoDataUrl, width: 64, fit: [64, 64], alignment: 'left', margin: [0, 0, 0, 4] }] : []),
-            { text: processRTL(user?.businessName || 'رنت فلو العقارية'), fontSize: 15, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 2] },
+            ...(logoDataUrl ? [{ image: logoDataUrl, width: 56, fit: [56, 56], alignment: 'left', margin: [0, 0, 0, 2] }] : []),
+            { text: processRTL(user?.businessName || 'رنت فلو العقارية'), fontSize: 15, bold: true, color: GREY_900, alignment: 'left', margin: [0, 0, 0, 1] },
             ...(licenseNumber ? [
               { text: processRTL(`ترخيص رقم: ${licenseNumber}`), fontSize: 8, color: GREY_500, alignment: 'left' }
             ] : [])
@@ -250,16 +250,16 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
         {
           width: '*',
           stack: [
-            { text: processRTL(docTitle), fontSize: 26, bold: true, color: GREY_900, margin: [0, 0, 0, 2] },
-            { text: processRTL(`المرجع: #${booking.id.toUpperCase()}`), fontSize: 9, color: GREY_500, margin: [0, 0, 0, 4] }
+            { text: processRTL(docTitle), fontSize: 26, bold: true, color: GREY_900, margin: [0, 0, 0, 1] },
+            { text: processRTL(`المرجع: #${booking.id.toUpperCase()}`), fontSize: 9, color: GREY_500, margin: [0, 0, 0, 2] }
           ]
         }
       ],
       columnGap: 16,
-      margin: [0, 0, 0, 14]
+      margin: [0, 0, 0, 8]
     },
     /* 2px solid bottom rule (border-b-2) */
-    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 2, lineColor: GREY_900 }], margin: [0, 0, 0, 18] },
+    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: pageWidth, y2: 0, lineWidth: 2, lineColor: GREY_900 }], margin: [0, 0, 0, 12] },
 
     /* 1) أطراف العقد — LEFT col = المستأجر, RIGHT col = المؤجر */
     sectionTitle('أولاً: أطراف العقد'),
@@ -268,7 +268,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
         rtlColumn('المستأجر / النزيل', [
           { text: processRTL(booking.residentName), fontSize: 12, bold: true, color: GREY_900 },
           { text: processRTL(`رقم الهوية: ${booking.residentId}`), fontSize: 9, color: GREY_600, margin: [0, 2, 0, 0] },
-          { text: processRTL(`هاتف: ${sanitizePhone(booking.phone)}`), fontSize: 9, color: GREY_600 },
+          { text: processRTLPhone('هاتف:', sanitizePhone(booking.phone)), fontSize: 9, color: GREY_600 },
           ...(booking.address ? [{ text: processRTL(booking.address), fontSize: 8, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
         ]),
         rtlColumn('المؤجر / المدير', [
@@ -276,7 +276,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
         ])
       ],
       columnGap: 20,
-      margin: [0, 6, 0, 10]
+      margin: [0, 4, 0, 6]
     },
 
     /* 2) العقار ومدة الإيجار — LEFT col = فترة الإيجار, RIGHT col = بيانات الوحدة */
@@ -293,7 +293,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
         ])
       ],
       columnGap: 20,
-      margin: [0, 6, 0, 10]
+      margin: [0, 4, 0, 6]
     },
 
     /* 3) الشروط المالية — a real table with a header row. pdfmake renders
@@ -328,14 +328,17 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
         paddingTop: () => 4,
         paddingBottom: () => 4
       },
-      margin: [0, 0, 0, 10]
+      margin: [0, 0, 0, 6]
     },
 
-    /* 4) حالة السداد — voucher only. A proper horizontal 3-column row that
-       reads right→left exactly like the reference: from the right
-       [حالة السداد | المبلغ المتبقي | المبلغ المدفوع]. Because pdfmake lays
-       table columns left→right, the row is authored in REVERSE order: the
-       LAST array cell (حالة السداد / مسدد بالكامل) renders rightmost. */
+    /* 4) حالة السداد — voucher only. A single horizontal 3-column table that
+       NEVER wraps rows or spills past the page end. pdfmake lays table columns
+       in array order left→right, so this body is authored exactly as rendered
+       (NOT reversed like the financial table): the FIRST cells (حالة السداد /
+       مسدد بالكامل) render leftmost, the LAST cells (المبلغ المدفوع /
+       1,100 ر.س) rightmost — matching the mandatory reading order of the
+       template. The voucher is compacted so this table always fits page 1,
+       keeping it separated from the document rule/edges. */
     ...(isVoucher ? [
       sectionTitle('رابعاً: حالة السداد'),
       {
@@ -343,14 +346,14 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           widths: ['*', '*', '*'],
           body: [
             [
-              rtlTableHeader('المبلغ المدفوع'),
+              rtlTableHeader('حالة السداد'),
               rtlTableHeader('المبلغ المتبقي'),
-              rtlTableHeader('حالة السداد')
+              rtlTableHeader('المبلغ المدفوع')
             ],
             [
-              rtlTableValue(formatAmount(formatSAR(totalReceived))),
+              rtlTableValue(paymentStatus),
               rtlTableValue(formatAmount(formatSAR(balanceDue)), { fontSize: 13, color: ACCENT }),
-              rtlTableValue(paymentStatus)
+              rtlTableValue(formatAmount(formatSAR(totalReceived)))
             ]
           ]
         },
@@ -362,7 +365,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           paddingTop: () => 4,
           paddingBottom: () => 4
         },
-        margin: [0, 0, 0, 10]
+        margin: [0, 0, 0, 5]
       }
     ] : []),
 
@@ -386,7 +389,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
             { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 1, lineColor: '#d1d5db' }], margin: [0, 0, 0, 4] }
           ], { alignment: 'center' }),
           rtlColumn('توقيع وختم المؤجر', [
-            ...(stampDataUrl ? [{ image: stampDataUrl, width: 65, fit: [65, 65], alignment: 'center', margin: [0, 0, 0, 6] }] : []),
+            ...(stampDataUrl ? [{ image: stampDataUrl, width: 56, fit: [56, 56], alignment: 'center', margin: [0, 0, 0, 4] }] : []),
             { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 1, lineColor: '#d1d5db' }], margin: [0, 0, 0, 4] }
           ], { alignment: 'center' })
         ],

@@ -24,8 +24,32 @@ export function processRTL(value, fallback = '') {
 
   // 2) Reverse TOKEN order, never splitting characters inside a word. Every
   //    reversed token is joined with exactly one standard space (U+0020) so
-  //    adjacent words keep visible separation in the rendered PDF.
-  return shaped.trim().split(/\s+/).reverse().join(' ');
+  //    adjacent words keep visible separation in the rendered PDF. Splitting
+  //    on the literal space (already collapsed above) keeps `/`, `:` and any
+  //    punctuation glued to its word instead of being misread as a separator.
+  return shaped.trim().split(' ').reverse().join(' ');
+}
+
+// For a "label: number" pair whose number contains spaces (e.g. a phone
+// "+966 54 488 1113"). pdfmake lays glyphs left→right with no bidi pass, so
+// feeding the phone through the generic token-reversal turns its chunks into
+// separate flipped tokens ("1113 488 54 +966"). Gluing the spaces into
+// non-breaking spaces (U+00A0) keeps the number ONE atomic EN run that the
+// canvas places verbatim left→right, while the Arabic label stays its own
+// shaped word. (Unicode bidi controls like U+202A/U+202C cannot isolate here:
+// pdfmake has no bidi algorithm, Noto Sans Arabic carries no glyph for those
+// code points, and sanitizePhone strips them anyway — a NBSP-joined token
+// achieves the same isolation safely.)
+export function processRTLPhone(label, number, fallback = '') {
+  const labelPart = processRTL(label, fallback);
+  const digits = String(number === null || number === undefined ? '' : number)
+    .replace(/\s+/g, '\u00A0')
+    .trim();
+  if (!digits) return labelPart;
+  // Physical left→right layout: the whole phone first, the shaped label last
+  // so it hugs the right edge (right-aligned line). Reading right→left the
+  // reader hits "هاتف:" then the intact "+966 54 488 1113".
+  return `${digits} ${labelPart}`;
 }
 
 // For long paragraphs that wrap across multiple physical lines, each wrapped
