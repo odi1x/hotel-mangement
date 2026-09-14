@@ -1,21 +1,18 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, Share2, Loader2 } from 'lucide-react';
+import { Printer, Download, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { sanitizePhone } from '../../lib/phoneUtils';
-import { fillTemplate, shareDocumentToWhatsApp, buildDocumentFilename } from '../../lib/documentShare';
+import { buildDocumentFilename } from '../../lib/documentShare';
 import generateDocumentPdf from '../../lib/generateDocumentPdf';
 import toast from 'react-hot-toast';
-
-const DEFAULT_PRELIMINARY_MESSAGE = 'مرحباً {name}، مرفق لكم الحجز المبدئي للشقة {apartment} من {businessName}. المرجع: {ref}';
-const DEFAULT_CONFIRMED_MESSAGE = 'مرحباً {name}، تم تأكيد حجزكم للشقة {apartment} لدى {businessName}. المرجع: {ref}';
 
 export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
   const { apartments } = useData();
   const { user } = useAuth();
-  const [sharing, setSharing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const apartment = apartments.find(a => a.id === booking.apartmentId);
   const licenseNumber = apartment?.licenseNumber || user?.tourismLicense;
 
@@ -58,37 +55,28 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
     }, 100); // slight delay to let the browser register the title change before print dialog
   };
 
-  const messageTemplate = documentType === 'voucher'
-    ? (user?.whatsappMessagePreliminary || user?.whatsappMessage || DEFAULT_PRELIMINARY_MESSAGE)
-    : (user?.whatsappMessageConfirmed || user?.whatsappMessage || DEFAULT_CONFIRMED_MESSAGE);
-
-  const shareMessage = fillTemplate(messageTemplate, {
-    name: booking.residentName || '',
-    businessName: user?.businessName || '',
-    apartment: apartment?.name || '',
-    ref: `#${booking.id.toUpperCase()}`
-  });
-
-  const handleShareWhatsApp = async () => {
-    setSharing(true);
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
     try {
-      const result = await shareDocumentToWhatsApp({
-        generateBlob: () => generateDocumentPdf({
-          booking,
-          apartment,
-          user,
-          documentType
-        }),
-        filename: buildDocumentFilename(booking, apartment),
-        message: shareMessage,
-        phone: booking.phone
+      const blob = await generateDocumentPdf({
+        booking,
+        apartment,
+        user,
+        documentType
       });
-      if (result === 'cancelled') return;
-      toast.success('تمت مشاركة المستند');
-    } catch (err) {
-      toast.error('تعذر إنشاء المستند للمشاركة');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = buildDocumentFilename(booking, apartment);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('تم تحميل المستند');
+    } catch {
+      toast.error('تعذر إنشاء المستند');
     } finally {
-      setSharing(false);
+      setDownloading(false);
     }
   };
 
@@ -230,12 +218,12 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
       <div className="mt-8 flex space-x-reverse space-x-4 print:hidden">
         <button
-            onClick={handleShareWhatsApp}
-            disabled={sharing}
+            onClick={handleDownloadPdf}
+            disabled={downloading}
             className="bg-accent hover:bg-accent-strong text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-            {sharing ? <Loader2 size={20} className="animate-spin"/> : <Share2 size={20}/>}
-            <span className="mr-2">{sharing ? 'جارٍ التحضير...' : 'إرسال عبر واتساب'}</span>
+            {downloading ? <Loader2 size={20} className="animate-spin"/> : <Download size={20}/>}
+            <span className="mr-2">{downloading ? 'جارٍ التحضير...' : 'تحميل PDF'}</span>
         </button>
         <button
             onClick={handlePrint}

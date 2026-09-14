@@ -28,35 +28,3 @@ export function buildDocumentFilename(booking, apartment) {
   const startDateStr = booking?.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
   return `حجز_${resName}_${aptName}${startDateStr ? '_' + startDateStr : ''}.pdf`;
 }
-
-// Mobile: hand the PDF + prefilled text to the OS share sheet so the user
-// picks WhatsApp and then the contact. Desktop (or unsupported browsers):
-// download the PDF and open the WhatsApp chat with the text.
-// Returns 'shared' | 'cancelled' | 'downloaded'.
-export async function shareDocumentToWhatsApp({ generateBlob, filename, message, phone }) {
-  const blob = await generateBlob();
-  const file = new File([blob], filename, { type: 'application/pdf' });
-
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], text: message || undefined });
-      return 'shared';
-    } catch (err) {
-      if (err?.name === 'AbortError') return 'cancelled';
-      // any other failure → fall through to the download + link path
-    }
-  }
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-
-  const waUrl = buildWhatsAppUrl(phone, message);
-  if (waUrl) window.open(waUrl, '_blank', 'noopener,noreferrer');
-  return 'downloaded';
-}
