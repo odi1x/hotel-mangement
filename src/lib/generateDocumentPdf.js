@@ -30,6 +30,7 @@
 import { processRTL, processRTLPhone, wrapProcessRTL } from './rtlPdf';
 import { computeBookingTotals, formatSAR } from './paymentUtils';
 import { sanitizePhone } from './phoneUtils';
+import { bookingRef } from './bookingRef';
 
 const GREY_900 = '#111111';
 const GREY_600 = '#4b5563';
@@ -251,7 +252,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           width: '*',
           stack: [
             { text: processRTL(docTitle), fontSize: 26, bold: true, color: GREY_900, margin: [0, 0, 0, 1] },
-            { text: processRTL(`المرجع: #${booking.id.toUpperCase()}`), fontSize: 9, color: GREY_500, margin: [0, 0, 0, 2] }
+            { text: processRTL(`المرجع: #${bookingRef(booking)}`), fontSize: 9, color: GREY_500, margin: [0, 0, 0, 2] }
           ]
         }
       ],

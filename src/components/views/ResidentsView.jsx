@@ -9,6 +9,7 @@ import EmptyState from '../ui/EmptyState';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import { computeBookingTotals } from '../../lib/paymentUtils';
 import { fillTemplate, buildWhatsAppUrl } from '../../lib/documentShare';
+import { bookingRef } from '../../lib/bookingRef';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
@@ -897,7 +898,7 @@ export default function ResidentsView({ openBookingForm }) {
                     name: phoneActionBooking.residentName || "",
                     businessName: user?.businessName || "",
                     apartment: apt?.name || "",
-                    ref: phoneActionBooking.id
+                    ref: bookingRef(phoneActionBooking)
                   });
                 })())}
                 target="_blank"

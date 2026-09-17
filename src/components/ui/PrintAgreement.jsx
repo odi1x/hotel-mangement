@@ -7,6 +7,7 @@ import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import { buildDocumentFilename } from '../../lib/documentShare';
 import generateDocumentPdf from '../../lib/generateDocumentPdf';
+import { bookingRef } from '../../lib/bookingRef';
 import toast from 'react-hot-toast';
 
 export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
@@ -89,7 +90,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                 <h1 className="text-3xl font-black tracking-tighter text-gray-900">
                   {documentType === 'voucher' ? 'حجز مبدئي' : 'حجز مؤكد'}
                 </h1>
-                <p className="text-gray-500 font-bold">المرجع: #{booking.id.toUpperCase()}</p>
+                <p className="text-gray-500 font-bold">المرجع: #{bookingRef(booking)}</p>
             </div>
             <div className="text-left flex flex-col items-end">
                 {user?.logoUrl && (
