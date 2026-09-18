@@ -464,117 +464,117 @@ export default function AnalyticsView({ setView }) {
           </div>
 
           {isFilterOpen && (
-            <div className="absolute top-full right-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
-              <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">نظام التقويم:</span>
-                <div className="flex gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setTempFilter({
-                      ...tempFilter,
-                      calendarMode: 'gregorian',
-                      selectedHijriYear: gregorianToHijri(new Date()).year
-                    })}
-                    className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
-                      (tempFilter.calendarMode || 'gregorian') === 'gregorian'
-                        ? 'bg-ink text-white dark:bg-white dark:text-ink border-ink dark:border-white shadow-sm'
-                        : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
-                    }`}
-                  >
-                    ميلادي
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTempFilter({
-                      ...tempFilter,
-                      calendarMode: 'hijri',
-                      selectedHijriYear: tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year
-                    })}
-                    className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
-                      tempFilter.calendarMode === 'hijri'
-                        ? 'bg-accent text-white border-accent shadow-sm'
-                        : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
-                    }`}
-                  >
-                    هجري
-                  </button>
-                </div>
-
-                {tempFilter.calendarMode === 'hijri' && (
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-muted-soft">اختر السنة الهجرية للتقرير:</label>
-                    <select
-                      value={tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year}
-                      onChange={(e) => {
-                        const y = parseInt(e.target.value, 10);
-                        const range = hijriYearToGregorianRange(y);
-                        setTempFilter({
-                          ...tempFilter,
-                          selectedHijriYear: y,
-                          startDate: range.startDate,
-                          endDate: range.endDate
-                        });
-                      }}
-                      className="w-full h-9 px-3 rounded-md text-xs font-semibold bg-canvas text-ink border border-hairline dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark focus:outline-none focus:ring-1 focus:ring-accent"
+            <div className="absolute top-full right-0 mt-2 w-[320px] md:w-[680px] max-h-[85vh] overflow-y-auto md:max-h-none md:overflow-visible bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                <div className="min-w-0">
+                  <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">نظام التقويم:</span>
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setTempFilter({
+                        ...tempFilter,
+                        calendarMode: 'gregorian',
+                        selectedHijriYear: gregorianToHijri(new Date()).year
+                      })}
+                      className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
+                        (tempFilter.calendarMode || 'gregorian') === 'gregorian'
+                          ? 'bg-ink text-white dark:bg-white dark:text-ink border-ink dark:border-white shadow-sm'
+                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
+                      }`}
                     >
-                      {availableHijriYears.map(y => (
-                        <option key={y} value={y}>
-                          {y} هـ
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-[10px] text-muted-soft leading-normal">
-                      سيتم ضبط الفترة تلقائياً من 1 محرم إلى 30 ذو الحجة للعام {tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year} هـ.
-                    </p>
+                      ميلادي
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTempFilter({
+                        ...tempFilter,
+                        calendarMode: 'hijri',
+                        selectedHijriYear: tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year
+                      })}
+                      className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
+                        tempFilter.calendarMode === 'hijri'
+                          ? 'bg-accent text-white border-accent shadow-sm'
+                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
+                      }`}
+                    >
+                      هجري
+                    </button>
                   </div>
-                )}
-              </div>
 
-              <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الفترة الزمنية:</span>
-                <DatePickerCal
-                  value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
-                  onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
-                />
-              </div>
+                  {tempFilter.calendarMode === 'hijri' ? (
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-muted-soft">اختر السنة الهجرية للتقرير:</label>
+                      <select
+                        value={tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year}
+                        onChange={(e) => {
+                          const y = parseInt(e.target.value, 10);
+                          const range = hijriYearToGregorianRange(y);
+                          setTempFilter({
+                            ...tempFilter,
+                            selectedHijriYear: y,
+                            startDate: range.startDate,
+                            endDate: range.endDate
+                          });
+                        }}
+                        className="w-full h-9 px-3 rounded-md text-xs font-semibold bg-canvas text-ink border border-hairline dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark focus:outline-none focus:ring-1 focus:ring-accent"
+                      >
+                        {availableHijriYears.map(y => (
+                          <option key={y} value={y}>
+                            {y} هـ
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-muted-soft leading-normal">
+                        سيتم ضبط الفترة تلقائياً من 1 محرم إلى 30 ذو الحجة للعام {tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year} هـ.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الفترة الزمنية:</span>
+                      <DatePickerCal
+                        value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
+                        onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
+                      />
+                    </div>
+                  )}
+                </div>
 
-              <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الوحدات:</span>
-                <div className="max-h-48 overflow-y-auto space-y-1.5 p-1">
-                  {apartments.map(a => {
-                      const isChecked = tempFilter.apartmentIds?.includes(a.id);
-                      return (
-                          <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated p-2 rounded-md transition-colors">
-                              <input
-                                  type="checkbox"
-                                  checked={isChecked || false}
-                                  onChange={(e) => {
-                                      const currentIds = tempFilter.apartmentIds || [];
-                                      const newIds = e.target.checked
-                                          ? [...currentIds, a.id]
-                                          : currentIds.filter(id => id !== a.id);
-                                      setTempFilter({...tempFilter, apartmentIds: newIds});
-                                  }}
-                                  className="rounded border-hairline accent-black w-4 h-4"
-                              />
-                              <span>{a.name}</span>
-                          </label>
-                      );
-                  })}
+                <div className="min-w-0 flex flex-col">
+                  <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الوحدات:</span>
+                  <div className="max-h-48 md:max-h-72 overflow-y-auto space-y-1.5 p-1">
+                    {apartments.map(a => {
+                        const isChecked = tempFilter.apartmentIds?.includes(a.id);
+                        return (
+                            <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated p-2 rounded-md transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={isChecked || false}
+                                    onChange={(e) => {
+                                        const currentIds = tempFilter.apartmentIds || [];
+                                        const newIds = e.target.checked
+                                            ? [...currentIds, a.id]
+                                            : currentIds.filter(id => id !== a.id);
+                                        setTempFilter({...tempFilter, apartmentIds: newIds});
+                                    }}
+                                    className="rounded border-hairline accent-black w-4 h-4"
+                                />
+                                <span>{a.name}</span>
+                            </label>
+                        );
+                    })}
+                  </div>
+
+                  {hasFilterChanges() && (
+                    <button
+                      onClick={handleApplyFilter}
+                      className="btn-primary h-9 px-4 text-sm mt-4 w-full md:w-auto md:self-end shrink-0"
+                    >
+                      <Check size={16} />
+                      <span>تطبيق الفلاتر</span>
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {hasFilterChanges() && (
-                <div className="pt-3 border-t border-hairline-soft dark:border-hairline-dark flex justify-end">
-                  <button
-                    onClick={handleApplyFilter}
-                    className="btn-primary h-9 px-4 text-sm"
-                  >
-                    <Check size={16} />
-                    <span>تطبيق الفلاتر</span>
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
