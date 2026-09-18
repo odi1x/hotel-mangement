@@ -6,6 +6,7 @@ import DatePickerCal from '../ui/DatePickerCal';
 import { getAccent } from '../../lib/accent';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { gregorianToHijri, hijriYearToGregorianRange, hijriQuarterToGregorianRange, hijriMonthToGregorianRange, getAvailableHijriYears, formatHijriLabelFromDateStr } from '../../lib/hijriCalendar';
 
 export default function AnalyticsView({ setView }) {
   const accentHex = getAccent().hex;
@@ -21,6 +22,9 @@ export default function AnalyticsView({ setView }) {
   // request (via setAnalyticsFilter dates); the trend chart just displays
   // whatever came back — no separate chart-local filter anymore.
   const [periodFilter, setPeriodFilter] = useState('year');
+  const [calendarMode, setCalendarMode] = useState('gregorian'); // 'gregorian' | 'hijri'
+  const availableHijriYears = useMemo(() => getAvailableHijriYears(bookings), [bookings]);
+  const [selectedHijriYear, setSelectedHijriYear] = useState(() => availableHijriYears[0] || gregorianToHijri(new Date()).year);
 
   const hasFilterChanges = () => {
     const startDiffers = tempFilter.startDate !== analyticsFilter.startDate;
@@ -45,10 +49,27 @@ export default function AnalyticsView({ setView }) {
   // DatePickerCal expects this format — it parses via s.split('-').map(Number),
   // which returns NaN for the day segment if there's a "T00:00:00.000Z" tail.
   // The API server also accepts either format via new Date(), so this is safe.
-  const rangeForPeriod = (period) => {
+  const rangeForPeriod = (period, mode = calendarMode, hYear = selectedHijriYear) => {
     const now = new Date();
     const toDateStr = (d) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    if (mode === 'hijri') {
+      const hToday = gregorianToHijri(now);
+      const targetYear = hYear || hToday.year;
+      if (period === 'month') {
+        return hijriMonthToGregorianRange(targetYear, hToday.month);
+      }
+      if (period === 'quarter') {
+        const q = Math.ceil(hToday.month / 3);
+        return hijriQuarterToGregorianRange(targetYear, q);
+      }
+      if (period === 'year') {
+        return hijriYearToGregorianRange(targetYear);
+      }
+      return { startDate: null, endDate: null };
+    }
+
     if (period === 'month') {
       return {
         startDate: toDateStr(new Date(now.getFullYear(), now.getMonth(), 1)),
@@ -88,6 +109,7 @@ export default function AnalyticsView({ setView }) {
       for (const chip of ['month', 'quarter', 'year']) {
         const r = rangeForPeriod(chip);
         if (r.startDate === analyticsFilter.startDate && r.endDate === analyticsFilter.endDate) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setPeriodFilter(chip);
           return;
         }
@@ -104,9 +126,9 @@ export default function AnalyticsView({ setView }) {
   }, []);
 
   // Chip click handler — updates state + dates in one shot.
-  const handlePeriodChange = (period) => {
+  const handlePeriodChange = (period, mode = calendarMode, hYear = selectedHijriYear) => {
     setPeriodFilter(period);
-    const range = rangeForPeriod(period);
+    const range = rangeForPeriod(period, mode, hYear);
     setAnalyticsFilter(prev => ({ ...prev, ...range }));
   };
 
@@ -167,17 +189,24 @@ export default function AnalyticsView({ setView }) {
   }), [analytics.totalRevenue, analytics.totalExpenses, analytics.netProfit]);
 
   const displayTrendData = useMemo(() => {
-    if (trendData.length === 1) {
+    let data = trendData;
+    if (calendarMode === 'hijri') {
+      data = trendData.map(item => ({
+        ...item,
+        name: formatHijriLabelFromDateStr(item.name)
+      }));
+    }
+    if (data.length === 1) {
       // Pad with dummy data to force area fill
-      const item = trendData[0];
+      const item = data[0];
       return [
         { ...item, name: ' ' },
         item,
         { ...item, name: '  ' }
       ];
     }
-    return trendData;
-  }, [trendData]);
+    return data;
+  }, [trendData, calendarMode]);
 
 
   // Transform source counts for pie chart
@@ -401,11 +430,60 @@ export default function AnalyticsView({ setView }) {
             </button>
           )}
 
+          {/* Calendar mode toggle: Gregorian / Hijri */}
+          <div className="inline-flex items-center bg-surface-card dark:bg-surface-dark-elevated p-1 rounded-full border border-hairline dark:border-hairline-dark shrink-0">
+            <button
+              onClick={() => {
+                setCalendarMode('gregorian');
+                handlePeriodChange(periodFilter, 'gregorian', selectedHijriYear);
+              }}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                calendarMode === 'gregorian'
+                  ? 'bg-ink text-white dark:bg-white dark:text-ink shadow-sm'
+                  : 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white'
+              }`}
+            >
+              ميلادي
+            </button>
+            <button
+              onClick={() => {
+                setCalendarMode('hijri');
+                handlePeriodChange(periodFilter, 'hijri', selectedHijriYear);
+              }}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                calendarMode === 'hijri'
+                  ? 'bg-accent text-white shadow-sm'
+                  : 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white'
+              }`}
+            >
+              هجري
+            </button>
+          </div>
+
+          {/* Hijri Year Selector (Only populates with years that contain data) */}
+          {calendarMode === 'hijri' && (
+            <select
+              value={selectedHijriYear}
+              onChange={(e) => {
+                const y = parseInt(e.target.value, 10);
+                setSelectedHijriYear(y);
+                handlePeriodChange(periodFilter, 'hijri', y);
+              }}
+              className="h-9 px-3 rounded-full text-xs font-semibold bg-canvas text-ink border border-hairline dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark focus:outline-none focus:ring-1 focus:ring-accent shrink-0"
+            >
+              {availableHijriYears.map(y => (
+                <option key={y} value={y}>
+                  {y} هـ
+                </option>
+              ))}
+            </select>
+          )}
+
           {/* Period chips — inline with تصفية. Mirrors the Expenses tab
               pattern. Changing a chip updates analyticsFilter's date range,
               which triggers a refetch — every card on the page reflects
               the same period. */}
-          <div className="nav-pill-group shrink-0">
+          <div className="nav-pill-group shrink-0 overflow-x-auto max-w-full scrollbar-none md:overflow-visible">
             {[
               { id: 'month',   label: 'هذا الشهر' },
               { id: 'quarter', label: 'الربع الحالي' },
