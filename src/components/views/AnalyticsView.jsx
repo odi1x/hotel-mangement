@@ -6,7 +6,7 @@ import DatePickerCal from '../ui/DatePickerCal';
 import { getAccent } from '../../lib/accent';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { gregorianToHijri, hijriYearToGregorianRange, hijriQuarterToGregorianRange, hijriMonthToGregorianRange, getAvailableHijriYears, formatHijriLabelFromDateStr } from '../../lib/hijriCalendar';
+import { gregorianToHijri, hijriYearToGregorianRange, hijriQuarterToGregorianRange, hijriMonthToGregorianRange, getAvailableHijriYears } from '../../lib/hijriCalendar';
 
 export default function AnalyticsView({ setView }) {
   const accentHex = getAccent().hex;
@@ -29,16 +29,31 @@ export default function AnalyticsView({ setView }) {
   const hasFilterChanges = () => {
     const startDiffers = tempFilter.startDate !== analyticsFilter.startDate;
     const endDiffers = tempFilter.endDate !== analyticsFilter.endDate;
+    const calendarDiffers = (tempFilter.calendarMode || 'gregorian') !== calendarMode;
+    const hYearDiffers = (tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year) !== selectedHijriYear;
 
     const tempIds = tempFilter.apartmentIds || [];
     const activeIds = analyticsFilter.apartmentIds || [];
     const idsDiffer = tempIds.length !== activeIds.length || !tempIds.every(id => activeIds.includes(id));
 
-    return startDiffers || endDiffers || idsDiffer;
+    return startDiffers || endDiffers || idsDiffer || calendarDiffers || hYearDiffers;
   };
 
   const handleApplyFilter = () => {
-    setAnalyticsFilter({ ...tempFilter });
+    const mode = tempFilter.calendarMode || 'gregorian';
+    const hYear = tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year;
+
+    setCalendarMode(mode);
+    setSelectedHijriYear(hYear);
+
+    const nextFilter = { ...tempFilter };
+    if (mode === 'hijri') {
+      const range = hijriYearToGregorianRange(hYear);
+      nextFilter.startDate = range.startDate;
+      nextFilter.endDate = range.endDate;
+    }
+
+    setAnalyticsFilter(nextFilter);
     setIsFilterOpen(false);
   };
 
@@ -189,13 +204,7 @@ export default function AnalyticsView({ setView }) {
   }), [analytics.totalRevenue, analytics.totalExpenses, analytics.netProfit]);
 
   const displayTrendData = useMemo(() => {
-    let data = trendData;
-    if (calendarMode === 'hijri') {
-      data = trendData.map(item => ({
-        ...item,
-        name: formatHijriLabelFromDateStr(item.name)
-      }));
-    }
+    const data = trendData;
     if (data.length === 1) {
       // Pad with dummy data to force area fill
       const item = data[0];
@@ -206,7 +215,7 @@ export default function AnalyticsView({ setView }) {
       ];
     }
     return data;
-  }, [trendData, calendarMode]);
+  }, [trendData]);
 
 
   // Transform source counts for pie chart
@@ -385,16 +394,14 @@ export default function AnalyticsView({ setView }) {
         <div className="relative flex items-center gap-2 flex-wrap">
           <button
             onClick={() => {
-              // Snapshot the CURRENT analyticsFilter into tempFilter when
-              // opening. useState's initializer only runs once (at mount),
-              // so if analyticsFilter was empty at that moment (before the
-              // mount-sync effect populated it), tempFilter would be
-              // permanently stale — DatePicker would receive undefined
-              // dates and render "undefined NaN". Refreshing on each open
-              // fixes it and also picks up any changes made via the chips
-              // since the last open.
               const nextOpen = !isFilterOpen;
-              if (nextOpen) setTempFilter({ ...analyticsFilter });
+              if (nextOpen) {
+                setTempFilter({
+                  ...analyticsFilter,
+                  calendarMode,
+                  selectedHijriYear
+                });
+              }
               setIsFilterOpen(nextOpen);
             }}
             className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold transition-colors border ${
@@ -404,7 +411,7 @@ export default function AnalyticsView({ setView }) {
             }`}
           >
             <Filter size={13} />
-            <span>تصفية</span>
+            <span>{calendarMode === 'hijri' ? `تصفية (${selectedHijriYear} هـ)` : 'تصفية'}</span>
             {hasActiveFilters && <span className="w-1.5 h-1.5 bg-accent rounded-full mx-0.5"></span>}
             <ChevronDown size={13} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -422,7 +429,14 @@ export default function AnalyticsView({ setView }) {
 
           {hasActiveFilters && (
             <button
-              onClick={() => { const empty = { apartmentIds: [], startDate: null, endDate: null }; setAnalyticsFilter(empty); setTempFilter(empty); setIsFilterOpen(false); }}
+              onClick={() => {
+                const empty = { apartmentIds: [], startDate: null, endDate: null, calendarMode: 'gregorian', selectedHijriYear: gregorianToHijri(new Date()).year };
+                setCalendarMode('gregorian');
+                setSelectedHijriYear(empty.selectedHijriYear);
+                setAnalyticsFilter(empty);
+                setTempFilter(empty);
+                setIsFilterOpen(false);
+              }}
               className="icon-action opacity-100 h-8 w-8"
               title="إلغاء التصفية"
             >
@@ -430,66 +444,7 @@ export default function AnalyticsView({ setView }) {
             </button>
           )}
 
-          {/* Calendar mode toggle: Gregorian / Hijri */}
-          <div className="inline-flex items-center bg-surface-card dark:bg-surface-dark-elevated p-1 rounded-full border border-hairline dark:border-hairline-dark shrink-0">
-            <button
-              onClick={() => {
-                setCalendarMode('gregorian');
-                handlePeriodChange(periodFilter, 'gregorian', selectedHijriYear);
-              }}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                calendarMode === 'gregorian'
-                  ? 'bg-ink text-white dark:bg-white dark:text-ink shadow-sm'
-                  : 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white'
-              }`}
-            >
-              ميلادي
-            </button>
-            <button
-              onClick={() => {
-                setCalendarMode('hijri');
-                const currentHYear = gregorianToHijri(new Date()).year;
-                const targetP = selectedHijriYear < currentHYear && (periodFilter === 'month' || periodFilter === 'quarter') ? 'year' : periodFilter;
-                if (targetP !== periodFilter) setPeriodFilter(targetP);
-                handlePeriodChange(targetP, 'hijri', selectedHijriYear);
-              }}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                calendarMode === 'hijri'
-                  ? 'bg-accent text-white shadow-sm'
-                  : 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white'
-              }`}
-            >
-              هجري
-            </button>
-          </div>
-
-          {/* Hijri Year Selector (Only populates with years that contain data) */}
-          {calendarMode === 'hijri' && (
-            <select
-              value={selectedHijriYear}
-              onChange={(e) => {
-                const y = parseInt(e.target.value, 10);
-                setSelectedHijriYear(y);
-                const currentHYear = gregorianToHijri(new Date()).year;
-                const targetP = y < currentHYear && (periodFilter === 'month' || periodFilter === 'quarter') ? 'year' : periodFilter;
-                if (targetP !== periodFilter) setPeriodFilter(targetP);
-                handlePeriodChange(targetP, 'hijri', y);
-              }}
-              className="h-9 px-3 rounded-full text-xs font-semibold bg-canvas text-ink border border-hairline dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark focus:outline-none focus:ring-1 focus:ring-accent shrink-0"
-            >
-              {availableHijriYears.map(y => (
-                <option key={y} value={y}>
-                  {y} هـ
-                </option>
-              ))}
-            </select>
-          )}
-
-          {/* Period chips — inline with تصفية. Mirrors the Expenses tab
-              pattern. Changing a chip updates analyticsFilter's date range,
-              which triggers a refetch — every card on the page reflects
-              the same period. */}
-          <div className="nav-pill-group shrink-0 overflow-x-auto max-w-full scrollbar-none md:overflow-visible">
+<div className="nav-pill-group shrink-0 overflow-x-auto max-w-full scrollbar-none md:overflow-visible">
             {[
               { id: 'month',   label: 'هذا الشهر', hideForPast: true },
               { id: 'quarter', label: 'الربع الحالي', hideForPast: true },
@@ -510,6 +465,71 @@ export default function AnalyticsView({ setView }) {
 
           {isFilterOpen && (
             <div className="absolute top-full right-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
+              <div className="mb-4">
+                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">نظام التقويم:</span>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setTempFilter({
+                      ...tempFilter,
+                      calendarMode: 'gregorian',
+                      selectedHijriYear: gregorianToHijri(new Date()).year
+                    })}
+                    className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
+                      (tempFilter.calendarMode || 'gregorian') === 'gregorian'
+                        ? 'bg-ink text-white dark:bg-white dark:text-ink border-ink dark:border-white shadow-sm'
+                        : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
+                    }`}
+                  >
+                    ميلادي
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTempFilter({
+                      ...tempFilter,
+                      calendarMode: 'hijri',
+                      selectedHijriYear: tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year
+                    })}
+                    className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
+                      tempFilter.calendarMode === 'hijri'
+                        ? 'bg-accent text-white border-accent shadow-sm'
+                        : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
+                    }`}
+                  >
+                    هجري
+                  </button>
+                </div>
+
+                {tempFilter.calendarMode === 'hijri' && (
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-muted-soft">اختر السنة الهجرية للتقرير:</label>
+                    <select
+                      value={tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year}
+                      onChange={(e) => {
+                        const y = parseInt(e.target.value, 10);
+                        const range = hijriYearToGregorianRange(y);
+                        setTempFilter({
+                          ...tempFilter,
+                          selectedHijriYear: y,
+                          startDate: range.startDate,
+                          endDate: range.endDate
+                        });
+                      }}
+                      className="w-full h-9 px-3 rounded-md text-xs font-semibold bg-canvas text-ink border border-hairline dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark focus:outline-none focus:ring-1 focus:ring-accent"
+                    >
+                      {availableHijriYears.map(y => (
+                        <option key={y} value={y}>
+                          {y} هـ
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-muted-soft leading-normal">
+                      سيتم ضبط الفترة تلقائياً من 1 محرم إلى 30 ذو الحجة للعام {tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year} هـ.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="mb-4">
                 <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الفترة الزمنية:</span>
                 <DatePickerCal
@@ -681,11 +701,17 @@ export default function AnalyticsView({ setView }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Trend chart — col-span-2 on desktop */}
         <div className="card-surface p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[320px] md:min-h-[440px]">
-          <div className="mb-4 shrink-0">
+          <div className="mb-4 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
             <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">
               <TrendingUp size={18} className="ml-2 text-muted" />
               اتجاه الإيرادات والمصروفات
             </h4>
+            {calendarMode === 'hijri' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted bg-surface-soft dark:bg-surface-dark-elevated px-2 py-1 rounded">
+                <Globe size={11} />
+                <span>الأشهر الميلادية ضمن العام الهجري المحدّد {selectedHijriYear} هـ</span>
+              </span>
+            )}
           </div>
 
           <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-hairline-dark pb-4">
