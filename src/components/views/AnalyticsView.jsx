@@ -464,7 +464,7 @@ export default function AnalyticsView({ setView }) {
           </div>
 
           {isFilterOpen && (
-            <div className="absolute top-full right-0 mt-2 w-[320px] md:w-[680px] max-h-[calc(100dvh-140px)] md:max-h-none flex flex-col bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 overflow-hidden">
+            <div className="absolute top-full right-0 mt-2 w-[320px] md:w-[680px] max-h-[calc(100dvh-160px)] md:max-h-none flex flex-col bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 overflow-hidden max-md:fixed max-md:inset-x-4 max-md:bottom-28 max-md:top-auto max-md:mt-0 max-md:w-auto">
               <div className="flex-1 min-h-0 overflow-y-auto p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                 <div className="min-w-0">
