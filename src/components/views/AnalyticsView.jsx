@@ -464,7 +464,8 @@ export default function AnalyticsView({ setView }) {
           </div>
 
           {isFilterOpen && (
-            <div className="absolute top-full right-0 mt-2 w-[320px] md:w-[680px] max-h-[85vh] overflow-y-auto md:max-h-none md:overflow-visible bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
+            <div className="absolute top-full right-0 mt-2 w-[320px] md:w-[680px] max-h-[85vh] flex flex-col bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                 <div className="min-w-0">
                   <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">نظام التقويم:</span>
@@ -541,7 +542,7 @@ export default function AnalyticsView({ setView }) {
 
                 <div className="min-w-0 flex flex-col">
                   <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الوحدات:</span>
-                  <div className="max-h-48 md:max-h-72 overflow-y-auto space-y-1.5 p-1">
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 p-1">
                     {apartments.map(a => {
                         const isChecked = tempFilter.apartmentIds?.includes(a.id);
                         return (
@@ -563,18 +564,21 @@ export default function AnalyticsView({ setView }) {
                         );
                     })}
                   </div>
-
-                  {hasFilterChanges() && (
-                    <button
-                      onClick={handleApplyFilter}
-                      className="btn-primary h-9 px-4 text-sm mt-4 w-full md:w-auto md:self-end shrink-0"
-                    >
-                      <Check size={16} />
-                      <span>تطبيق الفلاتر</span>
-                    </button>
-                  )}
                 </div>
               </div>
+              </div>
+
+              {hasFilterChanges() && (
+                <div className="shrink-0 border-t border-hairline-soft dark:border-hairline-dark px-4 py-3 bg-canvas dark:bg-surface-dark flex justify-end">
+                  <button
+                    onClick={handleApplyFilter}
+                    className="btn-primary h-9 px-5 text-sm w-full md:w-auto"
+                  >
+                    <Check size={16} />
+                    <span>تطبيق الفلاتر</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
