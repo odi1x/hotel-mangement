@@ -448,7 +448,10 @@ export default function AnalyticsView({ setView }) {
             <button
               onClick={() => {
                 setCalendarMode('hijri');
-                handlePeriodChange(periodFilter, 'hijri', selectedHijriYear);
+                const currentHYear = gregorianToHijri(new Date()).year;
+                const targetP = selectedHijriYear < currentHYear && (periodFilter === 'month' || periodFilter === 'quarter') ? 'year' : periodFilter;
+                if (targetP !== periodFilter) setPeriodFilter(targetP);
+                handlePeriodChange(targetP, 'hijri', selectedHijriYear);
               }}
               className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
                 calendarMode === 'hijri'
@@ -467,7 +470,10 @@ export default function AnalyticsView({ setView }) {
               onChange={(e) => {
                 const y = parseInt(e.target.value, 10);
                 setSelectedHijriYear(y);
-                handlePeriodChange(periodFilter, 'hijri', y);
+                const currentHYear = gregorianToHijri(new Date()).year;
+                const targetP = y < currentHYear && (periodFilter === 'month' || periodFilter === 'quarter') ? 'year' : periodFilter;
+                if (targetP !== periodFilter) setPeriodFilter(targetP);
+                handlePeriodChange(targetP, 'hijri', y);
               }}
               className="h-9 px-3 rounded-full text-xs font-semibold bg-canvas text-ink border border-hairline dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark focus:outline-none focus:ring-1 focus:ring-accent shrink-0"
             >
@@ -485,11 +491,13 @@ export default function AnalyticsView({ setView }) {
               the same period. */}
           <div className="nav-pill-group shrink-0 overflow-x-auto max-w-full scrollbar-none md:overflow-visible">
             {[
-              { id: 'month',   label: 'هذا الشهر' },
-              { id: 'quarter', label: 'الربع الحالي' },
-              { id: 'year',    label: 'هذه السنة' },
+              { id: 'month',   label: 'هذا الشهر', hideForPast: true },
+              { id: 'quarter', label: 'الربع الحالي', hideForPast: true },
+              { id: 'year',    label: calendarMode === 'hijri' && selectedHijriYear < gregorianToHijri(new Date()).year ? `سنة ${selectedHijriYear}` : (calendarMode === 'hijri' ? 'السنة الحالية' : 'هذه السنة') },
               { id: 'all',     label: 'الكل' },
-            ].map(o => (
+            ]
+            .filter(o => !(calendarMode === 'hijri' && selectedHijriYear < gregorianToHijri(new Date()).year && o.hideForPast))
+            .map(o => (
               <button
                 key={o.id}
                 onClick={() => handlePeriodChange(o.id)}
