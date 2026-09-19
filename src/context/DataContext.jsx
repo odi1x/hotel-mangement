@@ -365,6 +365,9 @@ export const DataProvider = ({ children }) => {
         params.startDate = analyticsFilter.startDate;
         params.endDate = analyticsFilter.endDate;
       }
+      if (analyticsFilter.calendarMode === 'hijri') {
+        params.trendBins = 'hijri';
+      }
       const res = await axios.get(`${API_BASE_URL}/analytics`, { params });
       setAnalytics(res.data);
     } catch (err) { console.error(err); }

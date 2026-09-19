@@ -14,6 +14,7 @@ function cacheKeyFor(userId, req) {
     e: q.endDate || null,
     act: q.action || null,
     t: q.type || null,
+    tb: q.trendBins || null,
   });
 }
 
@@ -70,6 +71,63 @@ function expenseContributionInPeriod(e, periodStart, periodEnd) {
   return amount * occurrencesInPeriod(e, periodStart, periodEnd);
 }
 
+// ---- Umm al-Qura Hijri month binning (read-only, in-memory) ----
+// Matches the client lib (src/lib/hijriCalendar.js): same locale + UTC so
+// the 12 monthly windows align exactly with the Gregorian-equivalent range
+// the client derives for a selected Hijri year (1 Muharram → 29/30 Dhu
+// al-Hijjah). No DB fields are touched — every conversion happens here.
+const HIJRI_MONTH_NAMES = [
+  'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني', 'جمادى الأولى', 'جمادى الآخرة',
+  'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
+];
+
+const hijriFmt = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
+  year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC'
+});
+
+function hijriParts(d) {
+  const parts = hijriFmt.formatToParts(d);
+  let hYear = 0, hMonth = 0, hDay = 0;
+  for (const p of parts) {
+    if (p.type === 'year') hYear = parseInt(p.value, 10);
+    if (p.type === 'month') hMonth = parseInt(p.value, 10);
+    if (p.type === 'day') hDay = parseInt(p.value, 10);
+  }
+  return { year: hYear, month: hMonth, day: hDay };
+}
+
+// Gregorian day-window of each Hijri month present inside [rangeStart, rangeEnd].
+// Walks day-by-day (UTC) recording the first day of every month it encounters;
+// a full Hijri year yields exactly indices 1..12 in order.
+function hijriMonthWindows(rangeStart, rangeEnd) {
+  const windows = [];
+  const cursor = new Date(rangeStart.getTime());
+  const endMs = rangeEnd.getTime();
+  let currentMonth = null;
+
+  for (let i = 0; i < 380; i++) {
+    const h = hijriParts(cursor);
+    if (h.month >= 1 && h.month <= 12) {
+      if (currentMonth !== h.month) {
+        if (currentMonth !== null) {
+          const prev = windows.find(w => w.index === currentMonth);
+          if (prev) prev.end = new Date(cursor.getTime() - 86400000);
+        }
+        currentMonth = h.month;
+        windows.push({ index: h.month, start: new Date(cursor.getTime()), end: null });
+      }
+    }
+    if (cursor.getTime() >= endMs) break;
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  if (currentMonth !== null) {
+    const last = windows.find(w => w.index === currentMonth);
+    if (last && !last.end) last.end = new Date(rangeEnd.getTime());
+  }
+  return windows;
+}
+
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -83,6 +141,7 @@ export default async function handler(req, res) {
   }
 
   const { apartmentIds, startDate, endDate, action, type } = req.query;
+  const hijriTrend = req.query.trendBins === 'hijri';
   const targetUserId = user.adminId || user.userId;
 
   const _cacheKey = cacheKeyFor(targetUserId, req);
@@ -316,6 +375,12 @@ export default async function handler(req, res) {
     let totalExpenses = 0;
     const sourceCounts = {};
     const dailyTrendMap = {};
+    if (hijriTrend) {
+      // Pre-fill all 12 Hijri months with 0 so the chart is continuous.
+      for (let i = 1; i <= 12; i++) {
+        dailyTrendMap[`h${i}`] = { name: HIJRI_MONTH_NAMES[i - 1], hijriIndex: i, revenue: 0, expenses: 0 };
+      }
+    }
     const aptStats = {};
 
     bookings.forEach(booking => {
@@ -338,11 +403,13 @@ export default async function handler(req, res) {
         aptStats[aptId].nights += nights;
       }
 
-      const dateStr = new Date(booking.startDate).toLocaleDateString('en-CA', { month: 'short', year: 'numeric' });
-      if (!dailyTrendMap[dateStr]) {
-        dailyTrendMap[dateStr] = { name: dateStr, revenue: 0, expenses: 0 };
+      const dateKey = hijriTrend
+        ? `h${hijriParts(s).month}`
+        : new Date(booking.startDate).toLocaleDateString('en-CA', { month: 'short', year: 'numeric' });
+      if (!dailyTrendMap[dateKey]) {
+        dailyTrendMap[dateKey] = { name: dateKey, revenue: 0, expenses: 0 };
       }
-      dailyTrendMap[dateStr].revenue += revenue;
+      dailyTrendMap[dateKey].revenue += revenue;
 
       let bookingExpenses = 0;
       const apt = booking.apartment;
@@ -359,7 +426,7 @@ export default async function handler(req, res) {
       }
 
       totalExpenses += bookingExpenses;
-      dailyTrendMap[dateStr].expenses += bookingExpenses;
+      dailyTrendMap[dateKey].expenses += bookingExpenses;
 
       sourceCounts[booking.source] = (sourceCounts[booking.source] || 0) + 1;
     });
@@ -385,6 +452,9 @@ export default async function handler(req, res) {
     const filteredAptSet = apartmentIds ? new Set(apartmentIds.split(',')) : null;
     const rangeStart = startDate ? new Date(startDate) : null;
     const rangeEnd = endDate ? new Date(endDate) : null;
+    const hijriWindows = hijriTrend && rangeStart && rangeEnd
+      ? hijriMonthWindows(rangeStart, rangeEnd)
+      : null;
 
     let expenseTableTotal = 0;
 
@@ -407,18 +477,27 @@ export default async function handler(req, res) {
       const totalContribution = expenseContributionInPeriod(e, rangeStart || new Date(0), rangeEnd || new Date()) * scopeRatio;
       expenseTableTotal += totalContribution;
 
-      const trendKeys = Object.keys(dailyTrendMap);
-      for (const key of trendKeys) {
-        const parts = key.split(' ');
-        if (parts.length !== 2) continue;
-        const m = MONTH_ABBR[parts[0]];
-        const y = parseInt(parts[1], 10);
-        if (m === undefined || Number.isNaN(y)) continue;
-        const monthStart = new Date(y, m, 1);
-        const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
-        const monthContribution = expenseContributionInPeriod(e, monthStart, monthEnd) * scopeRatio;
-        if (monthContribution > 0) {
-          dailyTrendMap[key].expenses += monthContribution;
+      if (hijriWindows) {
+        for (const w of hijriWindows) {
+          const monthContribution = expenseContributionInPeriod(e, w.start, w.end) * scopeRatio;
+          if (monthContribution > 0 && dailyTrendMap[`h${w.index}`]) {
+            dailyTrendMap[`h${w.index}`].expenses += monthContribution;
+          }
+        }
+      } else {
+        const trendKeys = Object.keys(dailyTrendMap);
+        for (const key of trendKeys) {
+          const parts = key.split(' ');
+          if (parts.length !== 2) continue;
+          const m = MONTH_ABBR[parts[0]];
+          const y = parseInt(parts[1], 10);
+          if (m === undefined || Number.isNaN(y)) continue;
+          const monthStart = new Date(y, m, 1);
+          const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
+          const monthContribution = expenseContributionInPeriod(e, monthStart, monthEnd) * scopeRatio;
+          if (monthContribution > 0) {
+            dailyTrendMap[key].expenses += monthContribution;
+          }
         }
       }
 
@@ -439,7 +518,9 @@ export default async function handler(req, res) {
     }
     totalExpenses += expenseTableTotal;
 
-    const dailyTrend = Object.values(dailyTrendMap).sort((a, b) => new Date(a.name) - new Date(b.name));
+    const dailyTrend = hijriTrend
+      ? Object.values(dailyTrendMap).sort((a, b) => a.hijriIndex - b.hijriIndex)
+      : Object.values(dailyTrendMap).sort((a, b) => new Date(a.name) - new Date(b.name));
 
     const netProfit = totalRevenue - totalExpenses;
     const occupancyRate = totalAvailableNights > 0 ? (totalNights / totalAvailableNights) * 100 : 0;

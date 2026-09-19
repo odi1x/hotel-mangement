@@ -713,7 +713,7 @@ export default function AnalyticsView({ setView }) {
             {calendarMode === 'hijri' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted bg-surface-soft dark:bg-surface-dark-elevated px-2 py-1 rounded">
                 <Globe size={11} />
-                <span>الأشهر الميلادية ضمن العام الهجري المحدّد {selectedHijriYear} هـ</span>
+                <span>التوزيع حسب الأشهر الهجرية — {selectedHijriYear} هـ</span>
               </span>
             )}
           </div>
