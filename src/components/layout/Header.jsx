@@ -45,7 +45,7 @@ export default function Header({ openStaffSettings, onNavigate, title }) {
   };
 
   return (
-    <header className="bg-page dark:bg-surface-dark py-2 px-4 md:px-8 flex justify-between md:justify-end items-center gap-3 relative z-20">
+    <header className="sticky top-0 z-30 bg-page dark:bg-surface-dark py-2 px-4 md:px-8 flex justify-between md:justify-end items-center gap-3">
       {/* Mobile title on the leading (RTL right) edge — this is what puts the
           page heading right next to the top corner, instead of buried 24px+
           below in the main content area. Truncates with ellipsis for long

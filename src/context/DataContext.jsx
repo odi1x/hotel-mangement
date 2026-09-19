@@ -40,7 +40,7 @@ export const DataProvider = ({ children }) => {
   const [settlements, setSettlements] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
 
   const API_BASE_URL = '/api';
@@ -375,17 +375,19 @@ export const DataProvider = ({ children }) => {
   useEffect(() => {
     if (!token) return;
 
-    // Core data everyone needs
-    fetchApartments();
-    fetchBookings(); // full history for Balances/Excel export
-    fetchLicenses();
-
-    // Permission-gated data
-    if (shouldFetchMaintenance) fetchMaintenance();
-    if (shouldFetchPricing) fetchPricingRules();
-    if (shouldFetchExpenses) fetchExpenses();
-    if (shouldFetchCleaning) fetchCleaningTasks();
-    if (shouldFetchPartners) fetchPartners();
+    const jobs = [
+      // Core data everyone needs
+      fetchApartments(),
+      fetchBookings(), // full history for Balances/Excel export
+      fetchLicenses(),
+      // Permission-gated data
+      ...(shouldFetchMaintenance ? [fetchMaintenance()] : []),
+      ...(shouldFetchPricing ? [fetchPricingRules()] : []),
+      ...(shouldFetchExpenses ? [fetchExpenses()] : []),
+      ...(shouldFetchCleaning ? [fetchCleaningTasks()] : []),
+      ...(shouldFetchPartners ? [fetchPartners()] : []),
+    ];
+    Promise.all(jobs).finally(() => setLoading(false));
   }, [token, shouldFetchMaintenance, shouldFetchPricing, shouldFetchExpenses, shouldFetchCleaning, shouldFetchPartners]);
 
   // Analytics fetch — gated and dependent on filter

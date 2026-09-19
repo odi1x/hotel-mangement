@@ -119,7 +119,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex,
 };
 
 export default function AvailabilityView({ openBookingForm }) {
-  const { apartments, bookings, deleteBooking } = useData();
+  const { apartments, bookings, deleteBooking, loading } = useData();
   const { user } = useAuth();
   const canSeePrices = user?.role === 'admin' || user?.permissions?.canViewPrices !== false;
   const { darkMode } = useTheme();
@@ -289,6 +289,11 @@ export default function AvailabilityView({ openBookingForm }) {
     });
   };
 
+  const isMobileView = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+  const skeletonUnitCol = isMobileView ? 100 : 150;
+  const skeletonDays = [0, 1, 2, 3, 4, 5, 6];
+  const skeletonUnitRows = [0, 1, 2, 3, 4, 5];
+
   return (
     <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
       <div className="p-3 md:p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center gap-2 bg-canvas dark:bg-surface-dark">
@@ -401,7 +406,34 @@ export default function AvailabilityView({ openBookingForm }) {
         </div>
       </div>
 
-      {(() => {
+      {loading ? (
+        <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none pt-2 md:pt-0 pb-24 md:pb-0">
+          <div className="animate-pulse">
+            <div style={{ display: 'grid', gridTemplateColumns: `${skeletonUnitCol}px repeat(7, minmax(40px, 1fr))`, minWidth: 'min-content' }}>
+              <div className="h-[46px] border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center justify-center">
+                <div className="h-3 w-12 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+              </div>
+              {skeletonDays.map(i => (
+                <div key={`sh${i}`} className="h-[46px] border-b border-l border-hairline-soft dark:border-hairline-dark flex flex-col items-center justify-center gap-1">
+                  <div className="h-6 w-6 rounded-full bg-surface-strong dark:bg-hairline-dark"></div>
+                  <div className="h-2 w-5 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                </div>
+              ))}
+              {skeletonUnitRows.map(r => (
+                <Fragment key={`sr${r}`}>
+                  <div className="h-[46px] border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center gap-2 px-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-surface-strong dark:bg-hairline-dark shrink-0"></div>
+                    <div className="h-3.5 w-16 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                  </div>
+                  {skeletonDays.map(c => (
+                    <div key={`s${r}-${c}`} className="h-[46px] border-b border-l border-hairline-soft dark:border-hairline-dark"></div>
+                  ))}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (() => {
         const wd = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
         const N = range.length;
         const canBook = user?.role === 'admin' || user?.permissions?.canBook;
