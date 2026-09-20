@@ -59,6 +59,16 @@ function occurrencesInPeriod(rule, periodStart, periodEnd) {
   return count;
 }
 
+// Bookings are stored at NOON UTC (see api/bookings.js), so a date-only range
+// end like '2026-10-11' must compare against the FULL final day (23:59:59.999),
+// not midnight — otherwise check-ins on the last day of any period get dropped
+// and revenue/nights/occupancy are undercounted.
+function inclusiveEndOfDay(str) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(str)
+    ? new Date(`${str}T23:59:59.999Z`)
+    : new Date(str);
+}
+
 function expenseContributionInPeriod(e, periodStart, periodEnd) {
   const amount = Number(e.amount || 0);
   if (amount <= 0) return 0;
@@ -158,7 +168,7 @@ export default async function handler(req, res) {
       }
       if (startDate && endDate) {
         filter.AND = [
-          { startDate: { lte: new Date(endDate) } },
+          { startDate: { lte: inclusiveEndOfDay(endDate) } },
           { endDate: { gte: new Date(startDate) } }
         ];
       }
@@ -167,7 +177,7 @@ export default async function handler(req, res) {
       if (startDate && endDate) {
         const s = new Date(startDate);
         const e = new Date(endDate);
-        periodDays = Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)));
+        periodDays = Math.max(1, Math.floor(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1);
       }
 
       if (type === 'revenue' || type === 'occupancy' || type === 'nights') {
@@ -330,7 +340,7 @@ export default async function handler(req, res) {
 
     if (startDate && endDate) {
       filter.AND = [
-        { startDate: { lte: new Date(endDate) } },
+        { startDate: { lte: inclusiveEndOfDay(endDate) } },
         { endDate: { gte: new Date(startDate) } }
       ];
     }
@@ -360,11 +370,11 @@ export default async function handler(req, res) {
       select: { id: true }
     });
 
+    const rangeStart = startDate ? new Date(startDate) : null;
+    const rangeEnd = endDate ? new Date(endDate) : null;
     let periodDays = 30;
-    if (startDate && endDate) {
-      const s = new Date(startDate);
-      const e = new Date(endDate);
-      periodDays = Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)));
+    if (rangeStart && rangeEnd) {
+      periodDays = Math.max(1, Math.floor(Math.abs(rangeStart - rangeEnd) / (1000 * 60 * 60 * 24)) + 1);
     }
 
     const filteredAptCount = apartmentIds ? apartmentIds.split(',').length : allApartments.length;
@@ -375,8 +385,29 @@ export default async function handler(req, res) {
     let totalExpenses = 0;
     const sourceCounts = {};
     const dailyTrendMap = {};
-    if (hijriTrend) {
-      // Pre-fill all 12 Hijri months with 0 so the chart is continuous.
+
+    // Hijri month windows present inside the queried range. Used both to scope
+    // the trend pre-fill (so "This Month" / "Current Quarter" don't render a
+    // full 12-month Muharram→Dhul-Hijjah axis) and to prorate table expenses
+    // per hijri month below.
+    const hijriWindows = hijriTrend && rangeStart && rangeEnd
+      ? hijriMonthWindows(rangeStart, rangeEnd)
+      : null;
+
+    if (hijriWindows) {
+      // Only the months spanned by the requested range: 1 for a month chip,
+      // 3 for a quarter chip, 12 for a year chip — matching how the gregorian
+      // mode buckets months inside the selected period.
+      for (const w of hijriWindows) {
+        dailyTrendMap[`h${w.index}`] = {
+          name: HIJRI_MONTH_NAMES[w.index - 1],
+          hijriIndex: w.index,
+          revenue: 0,
+          expenses: 0
+        };
+      }
+    } else if (hijriTrend) {
+      // No time range ('all' chip) — keep the continuous 12-month axis.
       for (let i = 1; i <= 12; i++) {
         dailyTrendMap[`h${i}`] = { name: HIJRI_MONTH_NAMES[i - 1], hijriIndex: i, revenue: 0, expenses: 0 };
       }
@@ -450,11 +481,6 @@ export default async function handler(req, res) {
     const totalAptCount = allApartments.length > 0 ? allApartments.length : 1;
     const globalRatio = filteredAptCount / totalAptCount;
     const filteredAptSet = apartmentIds ? new Set(apartmentIds.split(',')) : null;
-    const rangeStart = startDate ? new Date(startDate) : null;
-    const rangeEnd = endDate ? new Date(endDate) : null;
-    const hijriWindows = hijriTrend && rangeStart && rangeEnd
-      ? hijriMonthWindows(rangeStart, rangeEnd)
-      : null;
 
     let expenseTableTotal = 0;
 
