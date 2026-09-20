@@ -69,6 +69,52 @@ function inclusiveEndOfDay(str) {
     : new Date(str);
 }
 
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+const gregKeyOf = (d) => d.toLocaleDateString('en-CA', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+function dayIndex(d) {
+  return Math.floor(d.getTime() / DAY_MS);
+}
+
+// Number of slept nights of a booking staying [startDate, endDate) that fall
+// inside [winStart, winEnd] (both window bounds inclusive as whole days).
+// Bookings are stored at NOON UTC (see api/bookings.js) and window bounds are
+// UTC midnight / 23:59:59.999 of their last day, so whole-day indices are
+// exact. A booking occupies calendar days [dayIndex(start) .. dayIndex(end)-1].
+// This is what stops "This Month" from crediting a stay that merely touches
+// the window — e.g. Aug 25 → Sep 3 viewed in September now counts just the
+// nights that physically belong to September.
+function nightsInWindow(startDate, endDate, winStart, winEnd) {
+  const loStart = winStart ? dayIndex(winStart) : Number.NEGATIVE_INFINITY;
+  const hiEnd = winEnd ? dayIndex(winEnd) : Number.POSITIVE_INFINITY;
+  const lo = Math.max(dayIndex(startDate), loStart);
+  const hi = Math.min(dayIndex(endDate) - 1, hiEnd);
+  return Math.max(0, hi - lo + 1);
+}
+
+// Caled-month windows covered by a queried gregorian range, keyed by the same
+// 'Sep 2026' label the trend chart already uses. Used to scope the gregorian
+// trend axis to the period (mirroring the hijri pre-fill) and to distribute
+// each booking's revenue across the months it actually stays in.
+function gregorianMonthWindows(rangeStart, rangeEnd) {
+  const windows = [];
+  const cursor = new Date(Date.UTC(rangeStart.getUTCFullYear(), rangeStart.getUTCMonth(), 1));
+  const endDay = dayIndex(rangeEnd);
+  for (let i = 0; i < 1200; i++) {
+    if (dayIndex(cursor) > endDay) break;
+    const next = new Date(cursor.getTime());
+    next.setUTCMonth(next.getUTCMonth() + 1);
+    windows.push({
+      key: gregKeyOf(cursor),
+      start: new Date(cursor.getTime()),
+      end: new Date(next.getTime() - 1),
+    });
+    cursor.setTime(next.getTime());
+  }
+  return windows;
+}
+
 function expenseContributionInPeriod(e, periodStart, periodEnd) {
   const amount = Number(e.amount || 0);
   if (amount <= 0) return 0;
@@ -180,6 +226,9 @@ export default async function handler(req, res) {
         periodDays = Math.max(1, Math.floor(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1);
       }
 
+      const rangeStart = startDate ? new Date(startDate) : null;
+      const rangeEnd = endDate ? new Date(endDate) : null;
+
       if (type === 'revenue' || type === 'occupancy' || type === 'nights') {
         const bookings = await prisma.booking.findMany({
           where: filter,
@@ -196,8 +245,12 @@ export default async function handler(req, res) {
           if (!b.apartment) return;
           const s = new Date(b.startDate);
           const e = new Date(b.endDate);
-          const nights = Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)));
-          const rev = b.totalPrice !== null ? Number(b.totalPrice) : (Number(b.pricePerNight) * nights);
+          const fullNights = Math.max(1, Math.ceil(Math.abs(e - s) / DAY_MS));
+          const inWindow = nightsInWindow(s, e, rangeStart, rangeEnd);
+          if (inWindow <= 0) return;
+          const share = inWindow / fullNights;
+          const nights = inWindow;
+          const rev = (b.totalPrice !== null ? Number(b.totalPrice) : (Number(b.pricePerNight) * fullNights)) * share;
 
           if (!aptMap[b.apartment.id]) {
             aptMap[b.apartment.id] = { id: b.apartment.id, name: b.apartment.name, revenue: 0, count: 0, nights: 0, availableNights: periodDays };
@@ -253,22 +306,23 @@ export default async function handler(req, res) {
         bookings.forEach(b => {
           const s = new Date(b.startDate);
           const e = new Date(b.endDate);
-          const n = Math.max(1, Math.ceil(Math.abs(e - s) / (1000 * 60 * 60 * 24)));
-          const r = b.totalPrice !== null ? Number(b.totalPrice) : (Number(b.pricePerNight) * n);
+          const fullNights = Math.max(1, Math.ceil(Math.abs(e - s) / DAY_MS));
+          const inWindow = nightsInWindow(s, e, rangeStart, rangeEnd);
+          if (inWindow <= 0) return;
+          const share = inWindow / fullNights;
+          const r = (b.totalPrice !== null ? Number(b.totalPrice) : (Number(b.pricePerNight) * fullNights)) * share;
           rev += r;
 
           const apt = b.apartment;
           if (apt) {
-            if (apt.cleaningFeePerStay) cleaning += Number(apt.cleaningFeePerStay);
+            if (apt.cleaningFeePerStay) cleaning += Number(apt.cleaningFeePerStay) * share;
             if (apt.platformFee) {
               if (apt.platformFeeType === 'percentage') platform += (r * (Number(apt.platformFee) / 100));
-              else platform += Number(apt.platformFee);
+              else platform += Number(apt.platformFee) * share;
             }
           }
         });
 
-        const rangeStart = startDate ? new Date(startDate) : null;
-        const rangeEnd = endDate ? new Date(endDate) : null;
         const filteredAptSet = apartmentIds ? new Set(apartmentIds.split(',')) : null;
 
         const expenseSelect = {
@@ -412,17 +466,39 @@ export default async function handler(req, res) {
         dailyTrendMap[`h${i}`] = { name: HIJRI_MONTH_NAMES[i - 1], hijriIndex: i, revenue: 0, expenses: 0 };
       }
     }
+
+    // Gregorian month windows inside the queried range — pre-fill the same
+    // way so the trend axis only shows months the period actually touches.
+    const gregorianWindows = (!hijriTrend && rangeStart && rangeEnd)
+      ? gregorianMonthWindows(rangeStart, rangeEnd)
+      : null;
+
+    if (gregorianWindows) {
+      for (const w of gregorianWindows) {
+        dailyTrendMap[w.key] = { name: w.key, revenue: 0, expenses: 0 };
+      }
+    }
     const aptStats = {};
+
+    let contributingCount = 0;
 
     bookings.forEach(booking => {
       const s = new Date(booking.startDate);
       const e = new Date(booking.endDate);
-      const diffTime = Math.abs(e - s);
-      const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+      const fullNights = Math.max(1, Math.ceil(Math.abs(e - s) / DAY_MS));
+      // Only the nights that physically fall inside the queried period count
+      // (bookings are stored at noon UTC). A stay that merely touches the
+      // window — e.g. Aug 25 → Sep 3 when viewing September — now contributes
+      // just its in-period share of nights and revenue instead of the whole
+      // stay, so "This Month" no longer reports more than is actually in it.
+      const inWindow = nightsInWindow(s, e, rangeStart, rangeEnd);
+      if (inWindow <= 0) return;
+      const share = inWindow / fullNights;
+      const nights = inWindow;
+      const fullRevenue = booking.totalPrice !== null ? Number(booking.totalPrice) : (Number(booking.pricePerNight) * fullNights);
+      const revenue = fullRevenue * share;
 
       totalNights += nights;
-
-      const revenue = booking.totalPrice !== null ? Number(booking.totalPrice) : (Number(booking.pricePerNight) * nights);
       totalRevenue += revenue;
 
       if (booking.apartment) {
@@ -434,32 +510,50 @@ export default async function handler(req, res) {
         aptStats[aptId].nights += nights;
       }
 
-      const dateKey = hijriTrend
-        ? `h${hijriParts(s).month}`
-        : new Date(booking.startDate).toLocaleDateString('en-CA', { month: 'short', year: 'numeric' });
-      if (!dailyTrendMap[dateKey]) {
-        dailyTrendMap[dateKey] = { name: dateKey, revenue: 0, expenses: 0 };
-      }
-      dailyTrendMap[dateKey].revenue += revenue;
-
-      let bookingExpenses = 0;
+      let fullExpenses = 0;
       const apt = booking.apartment;
       if (apt) {
-        if (apt.cleaningFeePerStay) bookingExpenses += Number(apt.cleaningFeePerStay);
+        if (apt.cleaningFeePerStay) fullExpenses += Number(apt.cleaningFeePerStay);
 
         if (apt.platformFee) {
           if (apt.platformFeeType === 'percentage') {
-            bookingExpenses += (revenue * (Number(apt.platformFee) / 100));
+            fullExpenses += (fullRevenue * (Number(apt.platformFee) / 100));
           } else {
-            bookingExpenses += Number(apt.platformFee);
+            fullExpenses += Number(apt.platformFee);
           }
         }
       }
-
+      const bookingExpenses = fullExpenses * share;
       totalExpenses += bookingExpenses;
-      dailyTrendMap[dateKey].expenses += bookingExpenses;
+
+      // Attribute revenue/expenses to every month window the stay overlaps,
+      // so the trend bars sum to the same prorated totals as the KPI cards.
+      const windows = hijriWindows || gregorianWindows;
+      if (windows) {
+        for (const w of windows) {
+          const inW = nightsInWindow(s, e, w.start, w.end);
+          if (inW <= 0) continue;
+          const shareW = inW / fullNights;
+          const key = hijriTrend ? `h${w.index}` : w.key;
+          if (!dailyTrendMap[key]) {
+            dailyTrendMap[key] = { name: hijriTrend ? HIJRI_MONTH_NAMES[w.index - 1] : w.key, revenue: 0, expenses: 0 };
+          }
+          dailyTrendMap[key].revenue += fullRevenue * shareW;
+          dailyTrendMap[key].expenses += fullExpenses * shareW;
+        }
+      } else {
+        const dateKey = hijriTrend
+          ? `h${hijriParts(s).month}`
+          : gregKeyOf(s);
+        if (!dailyTrendMap[dateKey]) {
+          dailyTrendMap[dateKey] = { name: dateKey, revenue: 0, expenses: 0 };
+        }
+        dailyTrendMap[dateKey].revenue += revenue;
+        dailyTrendMap[dateKey].expenses += bookingExpenses;
+      }
 
       sourceCounts[booking.source] = (sourceCounts[booking.source] || 0) + 1;
+      contributingCount++;
     });
 
     const expenseSelect = {
@@ -508,6 +602,13 @@ export default async function handler(req, res) {
           const monthContribution = expenseContributionInPeriod(e, w.start, w.end) * scopeRatio;
           if (monthContribution > 0 && dailyTrendMap[`h${w.index}`]) {
             dailyTrendMap[`h${w.index}`].expenses += monthContribution;
+          }
+        }
+      } else if (gregorianWindows) {
+        for (const w of gregorianWindows) {
+          const monthContribution = expenseContributionInPeriod(e, w.start, w.end) * scopeRatio;
+          if (monthContribution > 0) {
+            dailyTrendMap[w.key].expenses += monthContribution;
           }
         }
       } else {
@@ -616,7 +717,7 @@ export default async function handler(req, res) {
       totalNights,
       occupancyRate,
       sourceCounts,
-      count: bookings.length,
+      count: contributingCount,
       dailyTrend,
       topUnits,
       perUnitPnL,
