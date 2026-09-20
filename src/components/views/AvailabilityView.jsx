@@ -302,7 +302,7 @@ export default function AvailabilityView({ openBookingForm }) {
             <Calendar size={14} className="text-ink dark:text-white shrink-0 md:hidden" />
             <Calendar size={20} className="text-ink dark:text-white shrink-0 hidden md:block" />
             <span className="md:hidden">{rangeLabelShort}</span>
-            <span className="hidden md:inline">{rangeLabel}</span>
+            <span className="hidden md:inline me-4">{rangeLabel}</span>
           </h3>
           <div className="hidden md:flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-0.5 md:p-1 shrink-0">
             <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={14} className="md:hidden" /><ChevronRight size={18} className="hidden md:block" /></button>
