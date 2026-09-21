@@ -894,13 +894,14 @@ export default function ResidentsView({ openBookingForm }) {
               <a
                 href={buildWhatsAppUrl(phoneActionBooking.phone, (() => {
                   const apt = apartments.find(a => a.id === phoneActionBooking.apartmentId);
+                  const locDetail = (user?.locationDetails || []).find(d => d.name === apt?.location);
                   return fillTemplate(user?.whatsappMessage, {
                     name: phoneActionBooking.residentName || "",
                     businessName: user?.businessName || "",
                     apartment: apt?.name || "",
                     ref: bookingRef(phoneActionBooking),
-                    locationLink: user?.locationLink || "",
-                    buildingPhoto: user?.buildingPhotoUrl || ""
+                    locationLink: locDetail?.link || "",
+                    buildingPhoto: locDetail?.photoUrl || ""
                   });
                 })())}
                 target="_blank"

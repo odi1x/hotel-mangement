@@ -33,8 +33,7 @@ export default function SettingsView() {
     bookingSources: 'زيارة مباشرة,Booking.com,Airbnb',
     economicCategories: 'اقتصادية,فاخرة',
     locations: '',
-    locationLink: '',
-    buildingPhotoUrl: '',
+    locationDetails: [],
     whatsappMessage: '',
     whatsappMessagePreliminary: '',
     whatsappMessageConfirmed: '',
@@ -63,7 +62,7 @@ export default function SettingsView() {
 
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-  const [buildingPhotoUploading, setBuildingPhotoUploading] = useState(false);
+  const [uploadingLocation, setUploadingLocation] = useState(null);
 
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdSuccessMsg, setPwdSuccessMsg] = useState('');
@@ -84,8 +83,7 @@ export default function SettingsView() {
         bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb',
         economicCategories: user.economicCategories || 'اقتصادية,فاخرة',
         locations: user.locations || '',
-        locationLink: user.locationLink || '',
-        buildingPhotoUrl: user.buildingPhotoUrl || '',
+        locationDetails: Array.isArray(user.locationDetails) ? user.locationDetails : [],
         whatsappMessage: user.whatsappMessage || '',
         whatsappMessagePreliminary: user.whatsappMessagePreliminary || '',
         whatsappMessageConfirmed: user.whatsappMessageConfirmed || '',
@@ -141,52 +139,6 @@ export default function SettingsView() {
     }
   };
 
-  // Building photo uploads directly to ImageKit so the stored value is a real
-  // URL — it's shared as a link in the WhatsApp message, where a data URL
-  // would blow up the message length. Mirrors ApartmentsView's upload flow.
-  const handleBuildingPhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return toast.error('الرجاء اختيار صورة صالحة');
-
-    setBuildingPhotoUploading(true);
-    try {
-      const authRes = await axios.get('/api/auth?action=imagekit-auth');
-      const { token, expire, signature } = authRes.data;
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('fileName', file.name);
-      fd.append('publicKey', import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY || 'public_dummy');
-      fd.append('signature', signature);
-      fd.append('expire', expire);
-      fd.append('token', token);
-      fd.append('folder', '/building');
-      const uploadRes = await axios.post('https://upload.imagekit.io/api/v1/files/upload', fd);
-      const fileId = uploadRes.data.fileId;
-      // fileId rides along in the URL so "remove" can purge it from ImageKit.
-      setFormData({ ...formData, buildingPhotoUrl: `${uploadRes.data.url}?fileId=${fileId}` });
-      toast.success('تم رفع صورة المبنى');
-    } catch (error) {
-      console.error(error);
-      toast.error('حدث خطأ أثناء رفع الصورة');
-    } finally {
-      setBuildingPhotoUploading(false);
-      if (e.target) e.target.value = '';
-    }
-  };
-
-  const handleRemoveBuildingPhoto = async () => {
-    const url = formData.buildingPhotoUrl;
-    if (!url) return;
-    try {
-      const fileId = new URL(url).searchParams.get('fileId');
-      if (fileId) await axios.delete('/api/auth?action=imagekit-delete', { data: { fileId } });
-    } catch (err) {
-      console.error('Failed to delete building photo from ImageKit', err);
-    }
-    setFormData({ ...formData, buildingPhotoUrl: '' });
-  };
-
   const handleAddApartmentType = () => {
     if (newApartmentType.trim() && !apartmentTypesList.includes(newApartmentType.trim())) {
       const updatedList = [...apartmentTypesList, newApartmentType.trim()];
@@ -236,7 +188,11 @@ export default function SettingsView() {
     if (newLocation.trim() && !locationsList.includes(newLocation.trim())) {
       const updatedList = [...locationsList, newLocation.trim()];
       setLocationsList(updatedList);
-      setFormData({ ...formData, locations: updatedList.join(',') });
+      setFormData({
+        ...formData,
+        locations: updatedList.join(','),
+        locationDetails: [...(formData.locationDetails || []), { name: newLocation.trim(), link: '', photoUrl: '' }]
+      });
       setNewLocation('');
     }
   };
@@ -244,7 +200,72 @@ export default function SettingsView() {
   const handleRemoveLocation = (locationToRemove) => {
     const updatedList = locationsList.filter(location => location !== locationToRemove);
     setLocationsList(updatedList);
-    setFormData({ ...formData, locations: updatedList.join(',') });
+    setFormData({
+      ...formData,
+      locations: updatedList.join(','),
+      locationDetails: (formData.locationDetails || []).filter(d => d.name !== locationToRemove)
+    });
+  };
+
+  const handleLocationLinkChange = (name, link) => {
+    setFormData({
+      ...formData,
+      locationDetails: (formData.locationDetails || []).map(d => d.name === name ? { ...d, link } : d)
+    });
+  };
+
+  const setLocationPhoto = (name, photoUrl) => {
+    setFormData({
+      ...formData,
+      locationDetails: (formData.locationDetails || []).map(d => d.name === name ? { ...d, photoUrl } : d)
+    });
+  };
+
+  // Each location's photo uploads directly to ImageKit so the stored value is
+  // a real URL — it's shared as a link in the WhatsApp message, where a data
+  // URL would blow up the message length. Mirrors ApartmentsView's upload flow.
+  const handleLocationPhotoUpload = async (name, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return toast.error('الرجاء اختيار صورة صالحة');
+
+    setUploadingLocation(name);
+    try {
+      const authRes = await axios.get('/api/auth?action=imagekit-auth');
+      const { token, expire, signature } = authRes.data;
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('fileName', file.name);
+      fd.append('publicKey', import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY || 'public_dummy');
+      fd.append('signature', signature);
+      fd.append('expire', expire);
+      fd.append('token', token);
+      fd.append('folder', '/locations');
+      const uploadRes = await axios.post('https://upload.imagekit.io/api/v1/files/upload', fd);
+      const fileId = uploadRes.data.fileId;
+      // fileId rides along in the URL so "remove" can purge it from ImageKit.
+      setLocationPhoto(name, `${uploadRes.data.url}?fileId=${fileId}`);
+      toast.success('تم رفع صورة الموقع');
+    } catch (error) {
+      console.error(error);
+      toast.error('حدث خطأ أثناء رفع الصورة');
+    } finally {
+      setUploadingLocation(null);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleRemoveLocationPhoto = async (name) => {
+    const detail = (formData.locationDetails || []).find(d => d.name === name);
+    const url = detail?.photoUrl;
+    if (!url) return;
+    try {
+      const fileId = new URL(url).searchParams.get('fileId');
+      if (fileId) await axios.delete('/api/auth?action=imagekit-delete', { data: { fileId } });
+    } catch (err) {
+      console.error('Failed to delete location photo from ImageKit', err);
+    }
+    setLocationPhoto(name, '');
   };
 
   const handleSubmit = async (e) => {
@@ -687,7 +708,8 @@ export default function SettingsView() {
                 </div>
 
                 <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
-                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">المواقع</label>
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1">المواقع</label>
+                  <p className="text-xs text-muted dark:text-body-dark mb-3">لكل موقع رابط وصورة خاصة به — تُستخدم تلقائياً في رسائل واتساب عبر <span className="font-mono normal-case">{'{LocationLink}'}</span> و <span className="font-mono normal-case">{'{BuildingPhoto}'}</span> حسب موقع شقة النزيل</p>
                   <div className="flex gap-2 mb-4">
                     <input
                       type="text"
@@ -705,73 +727,76 @@ export default function SettingsView() {
                       <Plus size={20} />
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {locationsList.map((location, index) => (
-                      <div key={index} className="badge-pill">
-                        <span className="text-sm font-semibold">{location}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLocation(location)}
-                          className="text-muted-soft hover:text-ink dark:hover:text-white transition-colors mr-1"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                    {locationsList.length === 0 && <span className="text-sm text-muted">لا توجد مواقع مضافة</span>}
-                  </div>
-                </div>
 
-                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
-                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">رابط الموقع</label>
-                  <p className="text-xs text-muted dark:text-body-dark mb-3">يُستخدم في رسائل واتساب عبر الرمز <span className="font-mono normal-case">{'{LocationLink}'}</span> (مثال: رابط خرائط جوجل)</p>
-                  <input
-                    name="locationLink"
-                    type="url"
-                    value={formData.locationLink}
-                    onChange={handleChange}
-                    className="input-field"
-                    dir="ltr"
-                    placeholder="https://maps.google.com/?q=..."
-                  />
-                </div>
+                  {locationsList.length === 0 ? (
+                    <span className="text-sm text-muted">لا توجد مواقع مضافة</span>
+                  ) : (
+                    <div className="space-y-3">
+                      {locationsList.map(location => {
+                        const detail = (formData.locationDetails || []).find(d => d.name === location) || { name: location, link: '', photoUrl: '' };
+                        const uploading = uploadingLocation === location;
+                        return (
+                          <div key={location} className="rounded-lg border border-hairline dark:border-hairline-dark-soft bg-surface-soft dark:bg-surface-dark-elevated/40 p-3 md:p-4">
+                            <div className="flex items-center justify-between gap-2 mb-3">
+                              <span className="font-semibold text-sm text-ink dark:text-white">{location}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveLocation(location)}
+                                className="icon-action h-7 w-7 text-accent-strong"
+                                title="حذف الموقع"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
 
-                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
-                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">صورة المبنى من الخارج</label>
-                  <p className="text-xs text-muted dark:text-body-dark mb-3">تظهر كرابط في رسالة واتساب عبر الرمز <span className="font-mono normal-case">{'{BuildingPhoto}'}</span> — يضغطها الضيف ليرى شكل المبنى</p>
-                  <div className="flex items-start gap-3">
-                    <label className={`border border-dashed border-hairline dark:border-hairline-dark-soft rounded-md p-4 flex flex-col items-center justify-center bg-surface-soft dark:bg-surface-dark-elevated hover:bg-surface-card dark:hover:bg-hairline-dark transition cursor-pointer ${buildingPhotoUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                      {buildingPhotoUploading ? (
-                        <Loader2 size={24} className="text-muted mb-2 animate-spin" />
-                      ) : (
-                        <ImageIcon size={24} className="text-muted mb-2" />
-                      )}
-                      <span className="text-xs font-medium text-muted dark:text-body-dark">{buildingPhotoUploading ? 'جارِ الرفع...' : 'اضغط لرفع الصورة'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleBuildingPhotoUpload(e)}
-                        className="hidden"
-                      />
-                    </label>
-                    {formData.buildingPhotoUrl && (
-                      <div className="relative">
-                        <img
-                          src={formData.buildingPhotoUrl.split('?')[0]}
-                          alt="Building preview"
-                          className="w-32 h-24 object-cover rounded-md border border-hairline dark:border-hairline-dark-soft"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleRemoveBuildingPhoto}
-                          className="absolute -top-2 -left-2 icon-action h-7 w-7 text-accent-strong bg-canvas dark:bg-surface-dark-elevated shadow-micro"
-                          title="إزالة الصورة"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                            <label className="block text-2xs font-semibold text-muted dark:text-body-dark mb-1.5">رابط الموقع <span className="font-mono normal-case">{'{LocationLink}'}</span></label>
+                            <input
+                              type="url"
+                              dir="ltr"
+                              value={detail.link}
+                              onChange={(e) => handleLocationLinkChange(location, e.target.value)}
+                              className="input-field h-9 text-xs w-full mb-3"
+                              placeholder="https://maps.google.com/?q=..."
+                            />
+
+                            <div className="flex items-center gap-3">
+                              <label className={`shrink-0 border border-dashed border-hairline dark:border-hairline-dark-soft rounded-md p-2.5 flex flex-col items-center justify-center bg-canvas dark:bg-surface-dark hover:bg-surface-card dark:hover:bg-hairline-dark transition cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                                {uploading ? (
+                                  <Loader2 size={18} className="text-muted animate-spin" />
+                                ) : (
+                                  <ImageIcon size={18} className="text-muted" />
+                                )}
+                                <span className="text-2xs font-medium text-muted dark:text-body-dark mt-1">{uploading ? 'جارِ الرفع...' : detail.photoUrl ? 'تغيير الصورة' : 'صورة المبنى'}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleLocationPhotoUpload(location, e)}
+                                  className="hidden"
+                                />
+                              </label>
+                              {detail.photoUrl && (
+                                <div className="relative">
+                                  <img
+                                    src={detail.photoUrl.split('?')[0]}
+                                    alt={location}
+                                    className="w-24 h-20 object-cover rounded-md border border-hairline dark:border-hairline-dark-soft"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveLocationPhoto(location)}
+                                    className="absolute -top-2 -left-2 icon-action h-7 w-7 text-accent-strong bg-canvas dark:bg-surface-dark-elevated shadow-micro"
+                                    title="إزالة الصورة"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">

@@ -37,8 +37,7 @@ model User {
   bookingSources   String?
   economicCategories String?
   locations         String?
-  locationLink      String?
-  buildingPhotoUrl  String?
+  locationDetails   Json?      /// [{ name, link, photoUrl }] — each location's own map link + building photo
   whatsappMessage   String?
   whatsappMessagePreliminary String?
   whatsappMessageConfirmed   String?
