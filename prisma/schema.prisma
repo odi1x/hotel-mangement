@@ -37,6 +37,8 @@ model User {
   bookingSources   String?
   economicCategories String?
   locations         String?
+  locationLink      String?
+  buildingPhotoUrl  String?
   whatsappMessage   String?
   whatsappMessagePreliminary String?
   whatsappMessageConfirmed   String?
@@ -62,6 +64,7 @@ model User {
   cleaningTasksOwned    CleaningTask[] @relation("CleaningTaskOwner")
   cleaningTasksStarted  CleaningTask[] @relation("CleaningTaskStarter")
   cleaningTasksCompleted CleaningTask[] @relation("CleaningTaskCompleter")
+  cleaningTemplates      CleaningTemplate[]
   partners              Partner[]
   settlements           Settlement[]
   settlementPayments    SettlementPayment[]
@@ -316,6 +319,7 @@ model CleaningTask {
   bookingId    String?                    /// null for manual/ad-hoc tasks
   status       String    @default("pending")  /// 'pending' | 'in_progress' | 'done'
   checklist    Json      @default("[]")   /// [{ area, note, checked }]
+  templateId   String?                    /// which cleaning template seeded this task (null = custom/manual)
   notes        String?                    /// free-form task-level notes from admin
   cleanerNotes String?                    /// cleaner's own notes when finishing
   dueBy        DateTime?                  /// usually next check-in date after checkout
@@ -330,12 +334,35 @@ model CleaningTask {
   user      User      @relation("CleaningTaskOwner",     fields: [userId],      references: [id], onDelete: Cascade)
   starter   User?     @relation("CleaningTaskStarter",   fields: [startedBy],   references: [id], onDelete: SetNull)
   completer User?     @relation("CleaningTaskCompleter", fields: [completedBy], references: [id], onDelete: SetNull)
+  template  CleaningTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   apartment Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   booking   Booking?  @relation(fields: [bookingId],   references: [id], onDelete: SetNull)
 
   @@index([userId, status])
   @@index([apartmentId])
   @@index([bookingId])
+  @@index([templateId])
+}
+
+/// Reusable admin-defined cleaning routines. The default template is copied
+/// into every task created automatically after a check-out — staff see the
+/// standard routine exactly as before, while manually-created tasks stay
+/// distinguishable as "custom". Setting a new default unsets the previous one.
+model CleaningTemplate {
+  id        String   @id @default(uuid())
+  userId    String                     /// owner (multi-tenant)
+  name      String
+  checklist Json     @default("[]")    /// same shape as CleaningTask.checklist [{ area, note, checked }]
+  notes     String?                    /// free-form instructions for the cleaner
+  isDefault Boolean  @default(false)   /// at most one default per owner
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks CleaningTask[]
+
+  @@index([userId])
+  @@index([userId, isDefault])
 }
 
 /// Revenue Sharing Partner — a person/entity who receives a share of revenue/profit.

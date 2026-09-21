@@ -1,27 +1,14 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Plus, Search, Sparkles, ShowerHead, ChefHat, Bed, Sofa, DoorOpen, Package,
-  MoreHorizontal, Check, X, Trash2, AlertTriangle, Building2, ArrowLeft, Clock, Calendar,
+  Plus, Search, Sparkles,
+  Check, X, Trash2, AlertTriangle, Building2, ArrowLeft, Clock, Calendar,
+  Wand2, CheckCircle2,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
-
-// Fixed vocabulary — must match CLEANING_AREAS in api/admin-resources.js.
-// The "general" area is a marker with no note (design decision).
-const AREAS = [
-  { value: 'bathroom',    label: 'الحمام',            Icon: ShowerHead },
-  { value: 'kitchen',     label: 'المطبخ',            Icon: ChefHat },
-  { value: 'bedroom',     label: 'غرفة النوم',        Icon: Bed },
-  { value: 'living_room', label: 'الصالة',            Icon: Sofa },
-  { value: 'entrance',    label: 'المدخل',            Icon: DoorOpen },
-  { value: 'supplies',    label: 'تجديد المستلزمات',  Icon: Package },
-  { value: 'general',     label: 'تنظيف عام',         Icon: Sparkles, noNote: true },
-  { value: 'other',       label: 'أخرى',              Icon: MoreHorizontal },
-];
-
-const areaMeta = (value) => AREAS.find(a => a.value === value) || AREAS[AREAS.length - 1];
+import { AREAS, areaMeta } from '../../lib/cleaningAreas';
 
 // Human-friendly relative-date label. Used for the urgency chip.
 function urgencyBadge(task) {
@@ -41,11 +28,15 @@ function formatDate(d) {
 }
 
 export default function CleaningView({ addTrigger = 0 }) {
-  const { cleaningTasks, apartments, createCleaningTask, updateCleaningTask, deleteCleaningTask } = useData();
+  const { cleaningTasks, apartments, cleaningTemplates, createCleaningTask, updateCleaningTask, deleteCleaningTask } = useData();
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
   const canClean = isAdmin || !!user?.permissions?.canClean;
+
+  // The default template (if any) — offered in the manual task modal so an
+  // ad-hoc task can still follow the standard routine.
+  const defaultTemplate = (cleaningTemplates || []).find(t => t.isDefault) || null;
 
   const [statusFilter, setStatusFilter] = useState('pending'); // 'pending' | 'done' | 'all'
   const [openTask, setOpenTask] = useState(null);              // task object being viewed
@@ -214,6 +205,7 @@ export default function CleaningView({ addTrigger = 0 }) {
       {showAddModal && isAdmin && createPortal(
         <AddTaskModal
           apartments={apartments}
+          defaultTemplate={defaultTemplate}
           onClose={() => setShowAddModal(false)}
           onSubmit={async (data) => { await createCleaningTask(data); setShowAddModal(false); }}
         />,
@@ -273,6 +265,14 @@ function TaskRow({ task, onOpen }) {
             )}
           </div>
           <div className="flex items-center gap-3 mt-1 text-2xs text-muted-soft">
+            {/* Default-template tasks look exactly like before. Tasks with no
+                template origin are the exception — a subtle dashed "مخصص" tag
+                flags them so staff know this is NOT the standard routine. */}
+            {!task.templateId && (
+              <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-full border border-dashed border-muted-soft/60 text-muted-soft">
+                <Wand2 size={10} /> مخصص
+              </span>
+            )}
             <span className="inline-flex items-center gap-1">
               <Calendar size={11} />
               {formatDate(task.scheduledFor)}
@@ -410,6 +410,15 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
               <h3 className="font-semibold text-ink dark:text-white truncate">{task.apartment?.name || 'وحدة'}</h3>
             </div>
             <div className="flex items-center gap-3 text-2xs text-muted-soft">
+              {task.templateId ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-accent-strong">
+                  <CheckCircle2 size={11} /> من القالب الافتراضي
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 font-semibold text-muted-soft">
+                  <Wand2 size={11} /> مهمة مخصصة
+                </span>
+              )}
               <span className="inline-flex items-center gap-1">
                 <Calendar size={11} /> جدولة: {formatDate(task.scheduledFor)}
               </span>
@@ -620,16 +629,24 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
 
 /* ---------------- Add manual task modal ---------------- */
 
-function AddTaskModal({ apartments, onClose, onSubmit }) {
+function AddTaskModal({ apartments, defaultTemplate, onClose, onSubmit }) {
   const [apartmentId, setApartmentId] = useState('');
   const [notes, setNotes] = useState('');
+  const [useDefault, setUseDefault] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
     if (!apartmentId || submitting) return;
     setSubmitting(true);
-    try { await onSubmit({ apartmentId, notes }); }
-    finally { setSubmitting(false); }
+    try {
+      // When the admin opts into the default routine, the template's
+      // checklist and instructions seed the task on the server.
+      await onSubmit({
+        apartmentId,
+        notes,
+        ...(useDefault && defaultTemplate ? { templateId: defaultTemplate.id } : {}),
+      });
+    } finally { setSubmitting(false); }
   };
 
   return (
@@ -671,6 +688,27 @@ function AddTaskModal({ apartments, onClose, onSubmit }) {
               placeholder="سبب المهمة، تعليمات عامة..."
             />
           </div>
+          {defaultTemplate && (
+            <label
+              className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-semibold cursor-pointer select-none transition-colors ${
+                useDefault
+                  ? 'border-accent bg-accent/5 text-accent-strong'
+                  : 'border-hairline dark:border-hairline-dark-soft text-muted dark:text-body-dark hover:text-ink dark:hover:text-white'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={useDefault}
+                onChange={(e) => setUseDefault(e.target.checked)}
+                className="hidden"
+              />
+              <CheckCircle2 size={15} />
+              <span>طبق القالب الافتراضي</span>
+              <span className="inline-flex items-center gap-1 font-semibold text-2xs px-1.5 py-0.5 rounded-full bg-accent/10 text-accent-strong ml-auto">
+                {defaultTemplate.name}
+              </span>
+            </label>
+          )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button onClick={onClose} className="btn-ghost h-9 px-4 text-xs">إلغاء</button>

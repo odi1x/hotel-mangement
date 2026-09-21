@@ -36,6 +36,7 @@ export const DataProvider = ({ children }) => {
   const [pricingRules, setPricingRules] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [cleaningTasks, setCleaningTasks] = useState([]);
+  const [cleaningTemplates, setCleaningTemplates] = useState([]);
   const [partners, setPartners] = useState([]);
   const [settlements, setSettlements] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
@@ -52,6 +53,7 @@ export const DataProvider = ({ children }) => {
   const shouldFetchPricing = isAdmin || perms.canViewPricing;
   const shouldFetchMaintenance = isAdmin || perms.canViewMaintenance;
   const shouldFetchCleaning = isAdmin || perms.canClean;
+  const shouldFetchCleaningTemplates = isAdmin; // template config is admin-only
   const shouldFetchExpenses = isAdmin || perms.canViewAnalytics; // expenses share analytics permission
   const shouldFetchBalances = isAdmin || perms.canViewBalances;
   const shouldFetchPartners = isAdmin && user?.partnersRevenueSharingEnabled;
@@ -146,6 +148,15 @@ export const DataProvider = ({ children }) => {
     );
   };
 
+  const fetchCleaningTemplates = async () => {
+    if (!shouldFetchCleaningTemplates) return;
+    await fetchWithTTL(
+      `${API_BASE_URL}/admin-resources?resource=cleaning-templates`,
+      setCleaningTemplates,
+      'cleaning-templates'
+    );
+  };
+
   const fetchPartners = async () => {
     if (!shouldFetchPartners) return;
     await fetchWithTTL(
@@ -214,6 +225,29 @@ export const DataProvider = ({ children }) => {
     try {
       await axios.delete(`${API_BASE_URL}/admin-resources?resource=cleaning&id=${id}`);
       setCleaningTasks(prev => prev.filter(t => t.id !== id));
+    } catch (err) { console.error(err); throw err; }
+  };
+
+  const createCleaningTemplate = async (data) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=cleaning-templates`, data);
+      setCleaningTemplates(prev => [res.data, ...prev]);
+      return res.data;
+    } catch (err) { console.error(err); throw err; }
+  };
+
+  const updateCleaningTemplate = async (id, patch) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=cleaning-templates&id=${id}`, patch);
+      setCleaningTemplates(prev => prev.map(t => t.id === id ? { ...t, ...res.data } : t));
+      return res.data;
+    } catch (err) { console.error(err); throw err; }
+  };
+
+  const deleteCleaningTemplate = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=cleaning-templates&id=${id}`);
+      setCleaningTemplates(prev => prev.filter(t => t.id !== id));
     } catch (err) { console.error(err); throw err; }
   };
 
@@ -388,10 +422,11 @@ export const DataProvider = ({ children }) => {
       ...(shouldFetchPricing ? [fetchPricingRules()] : []),
       ...(shouldFetchExpenses ? [fetchExpenses()] : []),
       ...(shouldFetchCleaning ? [fetchCleaningTasks()] : []),
+      ...(shouldFetchCleaningTemplates ? [fetchCleaningTemplates()] : []),
       ...(shouldFetchPartners ? [fetchPartners()] : []),
     ];
     Promise.all(jobs).finally(() => setLoading(false));
-  }, [token, shouldFetchMaintenance, shouldFetchPricing, shouldFetchExpenses, shouldFetchCleaning, shouldFetchPartners]);
+  }, [token, shouldFetchMaintenance, shouldFetchPricing, shouldFetchExpenses, shouldFetchCleaning, shouldFetchCleaningTemplates, shouldFetchPartners]);
 
   // Analytics fetch — gated and dependent on filter
   useEffect(() => {
@@ -633,6 +668,12 @@ export const DataProvider = ({ children }) => {
       createCleaningTask,
       updateCleaningTask,
       deleteCleaningTask,
+
+      cleaningTemplates,
+      fetchCleaningTemplates,
+      createCleaningTemplate,
+      updateCleaningTemplate,
+      deleteCleaningTemplate,
 
       partners,
       settlements,

@@ -33,9 +33,10 @@ export default async function handler(req, res) {
   if (resource === 'pricing-rules')  return pricingRulesHandler(req, res, user);
   if (resource === 'expenses')       return expensesHandler(req, res, user);
   if (resource === 'cleaning')       return cleaningHandler(req, res, user);
+  if (resource === 'cleaning-templates') return cleaningTemplatesHandler(req, res, user);
   if (resource === 'partners')       return partnersHandler(req, res, user);
 
-  return res.status(400).json({ message: 'Unknown resource. Use ?resource=maintenance | pricing-rules | expenses | cleaning | partners' });
+  return res.status(400).json({ message: 'Unknown resource. Use ?resource=maintenance | pricing-rules | expenses | cleaning | cleaning-templates | partners' });
 }
 
 /* ------------------------------------------------------------------------- */
@@ -608,6 +609,7 @@ async function cleaningHandler(req, res, user) {
           starter: { select: { id: true, name: true, username: true } },
           completer: { select: { id: true, name: true, username: true } },
           booking: { select: { id: true, endDate: true, residentName: true } },
+          template: { select: { id: true, name: true } },
         },
         orderBy: [{ status: 'asc' }, { dueBy: 'asc' }, { scheduledFor: 'desc' }],
       });
@@ -620,8 +622,9 @@ async function cleaningHandler(req, res, user) {
 
     if (req.method === 'POST') {
       // Manual task creation (admin ad-hoc). Fields expected: apartmentId,
-      // optional checklist array, optional notes, optional dueBy.
-      const { apartmentId, checklist, notes, dueBy } = req.body || {};
+      // optional checklist array, optional notes, optional dueBy, and an
+      // optional templateId to seed the task from a saved routine.
+      const { apartmentId, checklist, notes, dueBy, templateId } = req.body || {};
       if (!apartmentId) return res.status(400).json({ message: 'apartmentId required' });
 
       // Verify apartment ownership.
@@ -630,18 +633,37 @@ async function cleaningHandler(req, res, user) {
       });
       if (!apt) return res.status(404).json({ message: 'Apartment not found' });
 
+      // Seed from the chosen template when provided (and owned). Explicit
+      // checklist/notes in the request override the template's values.
+      let seed = {};
+      if (templateId) {
+        const tpl = await prisma.cleaningTemplate.findFirst({
+          where: { id: templateId, userId: targetUserId },
+        });
+        if (!tpl) return res.status(404).json({ message: 'Template not found' });
+        seed = {
+          templateId: tpl.id,
+          checklist: (tpl.checklist || []).map(c => ({ ...c, checked: false })),
+          notes: tpl.notes || null,
+        };
+        if (checklist !== undefined) seed.checklist = sanitizeChecklist(checklist);
+        if (notes !== undefined) seed.notes = notes ? String(notes).slice(0, 1000) : null;
+      }
+
       const task = await prisma.cleaningTask.create({
         data: {
           userId: targetUserId,
           apartmentId,
           status: 'pending',
-          checklist: sanitizeChecklist(checklist),
-          notes: notes || null,
+          checklist: templateId ? seed.checklist : sanitizeChecklist(checklist),
+          notes: templateId ? (seed.notes ?? null) : (notes ? String(notes).slice(0, 1000) : null),
+          templateId: templateId ? seed.templateId : null,
           dueBy: dueBy ? new Date(dueBy) : null,
           scheduledFor: new Date(),
         },
         include: {
           apartment: { select: { id: true, name: true, type: true } },
+          template: { select: { id: true, name: true } },
         },
       });
 
@@ -766,6 +788,133 @@ function sanitizeChecklist(raw) {
 }
 
 /**
+ * Load the owner's default cleaning template (if any) and derive the seed
+ * fields for a new auto-created task: a checklist snapshot (all unchecked,
+ * so the cleaner ticks through it), the template's instructions, and the
+ * template id so tasks can be visually distinguished from custom ones.
+ * Returns {} when no default template exists (task stays empty like before).
+ */
+async function defaultTemplateSeed(userId) {
+  const tpl = await prisma.cleaningTemplate.findFirst({
+    where: { userId, isDefault: true },
+    select: { id: true, checklist: true, notes: true },
+  });
+  if (!tpl) return {};
+  return {
+    templateId: tpl.id,
+    checklist: (tpl.checklist || []).map(c => ({ ...c, checked: false })),
+    notes: tpl.notes || null,
+  };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Cleaning templates                                                        */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Cleaning templates handler — admin-defined cleaning routines, with exactly
+ * one active default per owner. The default template is copied into every
+ * task created automatically after a check-out (and on backfill), so staff
+ * see the standard routine exactly as before; tasks without a template
+ * origin are treated as custom.
+ *
+ * GET    ?resource=cleaning-templates         → list templates (default first)
+ * POST   ?resource=cleaning-templates         → create template (admin only)
+ * PUT    ?resource=cleaning-templates&id=<id> → update template (admin only)
+ * DELETE ?resource=cleaning-templates&id=<id> → delete template (admin only)
+ *
+ * Setting isDefault=true on any template clears the flag from all others.
+ */
+async function cleaningTemplatesHandler(req, res, user) {
+  const targetUserId = user.adminId || user.userId;
+
+  try {
+    if (req.method === 'GET') {
+      const templates = await prisma.cleaningTemplate.findMany({
+        where: { userId: targetUserId },
+        orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+      });
+      return res.status(200).json(templates);
+    }
+
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin only' });
+    }
+
+    if (req.method === 'POST') {
+      const { name, checklist, notes, isDefault } = req.body || {};
+      if (!name || !String(name).trim()) {
+        return res.status(400).json({ message: 'Template name required' });
+      }
+
+      if (isDefault) {
+        await prisma.cleaningTemplate.updateMany({
+          where: { userId: targetUserId, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+
+      const template = await prisma.cleaningTemplate.create({
+        data: {
+          userId: targetUserId,
+          name: String(name).trim().slice(0, 120),
+          checklist: sanitizeChecklist(checklist),
+          notes: notes ? String(notes).slice(0, 1000) : null,
+          isDefault: !!isDefault,
+        },
+      });
+      return res.status(201).json(template);
+    }
+
+    if (req.method === 'PUT') {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ message: 'Template id required' });
+
+      const existing = await prisma.cleaningTemplate.findFirst({
+        where: { id, userId: targetUserId },
+      });
+      if (!existing) return res.status(404).json({ message: 'Template not found' });
+
+      const { name, checklist, notes, isDefault } = req.body || {};
+      const data = {};
+      if (name !== undefined) data.name = String(name).trim() ? String(name).trim().slice(0, 120) : existing.name;
+      if (checklist !== undefined) data.checklist = sanitizeChecklist(checklist);
+      if (notes !== undefined) data.notes = notes ? String(notes).slice(0, 1000) : null;
+      if (isDefault !== undefined) {
+        data.isDefault = !!isDefault;
+        if (isDefault) {
+          await prisma.cleaningTemplate.updateMany({
+            where: { userId: targetUserId, id: { not: id }, isDefault: true },
+            data: { isDefault: false },
+          });
+        }
+      }
+
+      const updated = await prisma.cleaningTemplate.update({ where: { id }, data });
+      return res.status(200).json(updated);
+    }
+
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ message: 'Template id required' });
+
+      const existing = await prisma.cleaningTemplate.findFirst({
+        where: { id, userId: targetUserId },
+      });
+      if (!existing) return res.status(404).json({ message: 'Template not found' });
+
+      await prisma.cleaningTemplate.delete({ where: { id } });
+      return res.status(204).end();
+    }
+
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  } catch (err) {
+    console.error('cleaningTemplatesHandler error:', err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
+
+/**
  * Create cleaning tasks for apartments currently flagged needsCleaning=true
  * that don't have an active task yet. Runs on every GET but is a no-op
  * when everything's in sync (single COUNT-check, then early return).
@@ -797,12 +946,18 @@ async function backfillCleaningTasks(userId) {
   const needBackfill = dirtyApts.filter(a => !withTaskSet.has(a.id));
   if (needBackfill.length === 0) return;
 
+  // When a default template exists, backfilled tasks get its routine too —
+  // keeps every auto-created task consistent with the default.
+  const seed = await defaultTemplateSeed(userId);
+
   await prisma.cleaningTask.createMany({
     data: needBackfill.map(apt => ({
       userId,
       apartmentId: apt.id,
       status: 'pending',
-      checklist: [],
+      checklist: seed.checklist || [],
+      notes: seed.notes ?? null,
+      templateId: seed.templateId ?? null,
       scheduledFor: new Date(),
     })),
   });
@@ -831,13 +986,19 @@ export async function createCleaningTaskForBooking(booking, userId) {
     select: { startDate: true },
   });
 
+  // The default template becomes the task's checklist — staff see the
+  // standard routine without any extra admin work.
+  const seed = await defaultTemplateSeed(userId);
+
   return prisma.cleaningTask.create({
     data: {
       userId,
       apartmentId: booking.apartmentId,
       bookingId: booking.id,
       status: 'pending',
-      checklist: [],
+      checklist: seed.checklist || [],
+      notes: seed.notes ?? null,
+      templateId: seed.templateId ?? null,
       scheduledFor: booking.endDate,
       dueBy: nextBooking?.startDate || null,
     },

@@ -1,16 +1,18 @@
 import { sanitizePhone } from './phoneUtils';
 
-// Interpolate {name} / {businessName} / {apartment} / {ref} placeholders in
-// a message template. Unknown placeholders are left untouched so the admin
-// can see exactly which token they mistyped.
+// Interpolate {name} / {businessName} / {apartment} / {ref} / {LocationLink} / {BuildingPhoto}
+// placeholders in a message template. Unknown placeholders are left untouched
+// so the admin can see exactly which token they mistyped.
 export function fillTemplate(template, vars = {}) {
   const map = {
     name: vars.name || '',
     businessName: vars.businessName || '',
     apartment: vars.apartment || '',
-    ref: vars.ref || ''
+    ref: vars.ref || '',
+    LocationLink: vars.locationLink || '',
+    BuildingPhoto: vars.buildingPhoto || ''
   };
-  return (template || '').replace(/\{(name|businessName|apartment|ref)\}/g, (match, key) => map[key]);
+  return (template || '').replace(/\{(name|businessName|apartment|ref|LocationLink|BuildingPhoto)\}/g, (match, key) => map[key]);
 }
 
 // wa.me deep link — digits only, message URL-encoded.

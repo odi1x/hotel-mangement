@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud, Check } from 'lucide-react';
+import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud, Check, Loader2, Image as ImageIcon } from 'lucide-react';
 import { ACCENTS, applyAccent, getAccentId } from '../../lib/accent';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
+import CleaningTemplates from './settings/CleaningTemplates';
 
 export default function SettingsView() {
   const { user, updateProfile, changePassword } = useAuth();
@@ -32,6 +33,8 @@ export default function SettingsView() {
     bookingSources: 'زيارة مباشرة,Booking.com,Airbnb',
     economicCategories: 'اقتصادية,فاخرة',
     locations: '',
+    locationLink: '',
+    buildingPhotoUrl: '',
     whatsappMessage: '',
     whatsappMessagePreliminary: '',
     whatsappMessageConfirmed: '',
@@ -60,6 +63,7 @@ export default function SettingsView() {
 
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [buildingPhotoUploading, setBuildingPhotoUploading] = useState(false);
 
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdSuccessMsg, setPwdSuccessMsg] = useState('');
@@ -80,6 +84,8 @@ export default function SettingsView() {
         bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb',
         economicCategories: user.economicCategories || 'اقتصادية,فاخرة',
         locations: user.locations || '',
+        locationLink: user.locationLink || '',
+        buildingPhotoUrl: user.buildingPhotoUrl || '',
         whatsappMessage: user.whatsappMessage || '',
         whatsappMessagePreliminary: user.whatsappMessagePreliminary || '',
         whatsappMessageConfirmed: user.whatsappMessageConfirmed || '',
@@ -133,6 +139,52 @@ export default function SettingsView() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Building photo uploads directly to ImageKit so the stored value is a real
+  // URL — it's shared as a link in the WhatsApp message, where a data URL
+  // would blow up the message length. Mirrors ApartmentsView's upload flow.
+  const handleBuildingPhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return toast.error('الرجاء اختيار صورة صالحة');
+
+    setBuildingPhotoUploading(true);
+    try {
+      const authRes = await axios.get('/api/auth?action=imagekit-auth');
+      const { token, expire, signature } = authRes.data;
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('fileName', file.name);
+      fd.append('publicKey', import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY || 'public_dummy');
+      fd.append('signature', signature);
+      fd.append('expire', expire);
+      fd.append('token', token);
+      fd.append('folder', '/building');
+      const uploadRes = await axios.post('https://upload.imagekit.io/api/v1/files/upload', fd);
+      const fileId = uploadRes.data.fileId;
+      // fileId rides along in the URL so "remove" can purge it from ImageKit.
+      setFormData({ ...formData, buildingPhotoUrl: `${uploadRes.data.url}?fileId=${fileId}` });
+      toast.success('تم رفع صورة المبنى');
+    } catch (error) {
+      console.error(error);
+      toast.error('حدث خطأ أثناء رفع الصورة');
+    } finally {
+      setBuildingPhotoUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleRemoveBuildingPhoto = async () => {
+    const url = formData.buildingPhotoUrl;
+    if (!url) return;
+    try {
+      const fileId = new URL(url).searchParams.get('fileId');
+      if (fileId) await axios.delete('/api/auth?action=imagekit-delete', { data: { fileId } });
+    } catch (err) {
+      console.error('Failed to delete building photo from ImageKit', err);
+    }
+    setFormData({ ...formData, buildingPhotoUrl: '' });
   };
 
   const handleAddApartmentType = () => {
@@ -239,6 +291,9 @@ export default function SettingsView() {
     { id: 'identity', label: 'الهوية والمعلومات', shortLabel: 'الهوية' },
     { id: 'legal',    label: 'التراخيص والعقود',   shortLabel: 'التراخيص' },
     { id: 'system',   label: 'خيارات النظام',      shortLabel: 'النظام' },
+    ...(user?.role === 'admin'
+      ? [{ id: 'cleaning', label: 'قوالب التنظيف', shortLabel: 'التنظيف' }]
+      : []),
   ];
 
   return (
@@ -449,7 +504,9 @@ export default function SettingsView() {
                         الرموز: <span className="font-mono normal-case">{'{name}'}</span> لاسم النزيل,
                         <span className="font-mono normal-case"> {'{businessName}'}</span> لاسم المنشأة,
                         <span className="font-mono normal-case"> {'{apartment}'}</span> لاسم الشقة,
-                        <span className="font-mono normal-case"> {'{ref}'}</span> لرقم المرجع
+                        <span className="font-mono normal-case"> {'{ref}'}</span> لرقم المرجع,
+                        <span className="font-mono normal-case"> {'{LocationLink}'}</span> لرابط الموقع,
+                        <span className="font-mono normal-case"> {'{BuildingPhoto}'}</span> لصورة المبنى
                       </label>
                       <textarea
                         name="whatsappMessage"
@@ -468,6 +525,13 @@ export default function SettingsView() {
           {/* Finance tab removed — expenses moved to their own top-level tab.
               Old sub-tab id was 'finance'; if a stored preference points there,
               the tabs list won't render it and the user lands on the identity tab. */}
+
+          {/* Cleaning Templates Tab — admin only */}
+          {facilityTab === 'cleaning' && user?.role === 'admin' && (
+            <div className="space-y-8 anim-tab">
+              <CleaningTemplates />
+            </div>
+          )}
 
           {/* System Tab */}
           {facilityTab === 'system' && (
@@ -655,6 +719,58 @@ export default function SettingsView() {
                       </div>
                     ))}
                     {locationsList.length === 0 && <span className="text-sm text-muted">لا توجد مواقع مضافة</span>}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">رابط الموقع</label>
+                  <p className="text-xs text-muted dark:text-body-dark mb-3">يُستخدم في رسائل واتساب عبر الرمز <span className="font-mono normal-case">{'{LocationLink}'}</span> (مثال: رابط خرائط جوجل)</p>
+                  <input
+                    name="locationLink"
+                    type="url"
+                    value={formData.locationLink}
+                    onChange={handleChange}
+                    className="input-field"
+                    dir="ltr"
+                    placeholder="https://maps.google.com/?q=..."
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">صورة المبنى من الخارج</label>
+                  <p className="text-xs text-muted dark:text-body-dark mb-3">تظهر كرابط في رسالة واتساب عبر الرمز <span className="font-mono normal-case">{'{BuildingPhoto}'}</span> — يضغطها الضيف ليرى شكل المبنى</p>
+                  <div className="flex items-start gap-3">
+                    <label className={`border border-dashed border-hairline dark:border-hairline-dark-soft rounded-md p-4 flex flex-col items-center justify-center bg-surface-soft dark:bg-surface-dark-elevated hover:bg-surface-card dark:hover:bg-hairline-dark transition cursor-pointer ${buildingPhotoUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                      {buildingPhotoUploading ? (
+                        <Loader2 size={24} className="text-muted mb-2 animate-spin" />
+                      ) : (
+                        <ImageIcon size={24} className="text-muted mb-2" />
+                      )}
+                      <span className="text-xs font-medium text-muted dark:text-body-dark">{buildingPhotoUploading ? 'جارِ الرفع...' : 'اضغط لرفع الصورة'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleBuildingPhotoUpload(e)}
+                        className="hidden"
+                      />
+                    </label>
+                    {formData.buildingPhotoUrl && (
+                      <div className="relative">
+                        <img
+                          src={formData.buildingPhotoUrl.split('?')[0]}
+                          alt="Building preview"
+                          className="w-32 h-24 object-cover rounded-md border border-hairline dark:border-hairline-dark-soft"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveBuildingPhoto}
+                          className="absolute -top-2 -left-2 icon-action h-7 w-7 text-accent-strong bg-canvas dark:bg-surface-dark-elevated shadow-micro"
+                          title="إزالة الصورة"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

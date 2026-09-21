@@ -898,7 +898,9 @@ export default function ResidentsView({ openBookingForm }) {
                     name: phoneActionBooking.residentName || "",
                     businessName: user?.businessName || "",
                     apartment: apt?.name || "",
-                    ref: bookingRef(phoneActionBooking)
+                    ref: bookingRef(phoneActionBooking),
+                    locationLink: user?.locationLink || "",
+                    buildingPhoto: user?.buildingPhotoUrl || ""
                   });
                 })())}
                 target="_blank"
