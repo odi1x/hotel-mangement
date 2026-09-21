@@ -3,6 +3,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { computeBookingTotals } from '../../lib/paymentUtils';
+import logoWide from '../../assets/brand/logo.png';
+import logoMark from '../../assets/brand/logo-mark.png';
 
 
 const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isCollapsed }) => (
@@ -76,14 +78,13 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         className={`flex items-center space-x-reverse space-x-2.5 mb-6 pb-6 border-b border-hairline-soft dark:border-hairline-dark-soft ${isCollapsed ? 'justify-center mt-10 px-0' : 'px-1'} cursor-pointer`}
         onClick={() => setView('availability')}
       >
-        <div className="bg-ink p-2 rounded-md dark:bg-white shrink-0">
-          <Home className="text-white dark:text-ink" size={22} />
+        <div className="shrink-0">
+          {isCollapsed ? (
+            <img src={logoMark} alt="رنت فلو" className="h-9 w-9 object-contain" />
+          ) : (
+            <img src={logoWide} alt="رنت فلو" className="h-8 object-contain" />
+          )}
         </div>
-        {!isCollapsed && (
-          <span className="text-xl font-bold tracking-tightest text-ink dark:text-white mr-2 leading-none">
-            رنت فلو
-          </span>
-        )}
       </div>
 
       <nav className="space-y-1 flex-1">

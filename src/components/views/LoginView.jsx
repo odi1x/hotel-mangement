@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Home } from 'lucide-react';
 import ImageUpload from '../ui/ImageUpload';
 import toast from 'react-hot-toast';
+import logoWide from '../../assets/brand/logo.png';
 
 export default function LoginView() {
   const { login, register } = useAuth();
@@ -36,9 +36,7 @@ export default function LoginView() {
     <div className="min-h-screen flex items-center justify-center bg-canvas dark:bg-surface-dark p-4" dir="rtl">
       <div className="bg-canvas dark:bg-surface-dark-elevated p-6 md:p-8 rounded-xl shadow-soft w-full max-w-md border border-hairline dark:border-hairline-dark-soft">
         <div className="flex flex-col items-center mb-6 md:mb-8">
-          <div className="bg-accent p-3 rounded-md mb-4 shadow-soft">
-            <Home className="text-white" size={32} />
-          </div>
+          <img src={logoWide} alt="رنت فلو" className="h-20 object-contain mb-4" />
           <h1 className="text-2xl font-semibold tracking-tight text-ink dark:text-white">رنت فلو</h1>
           <p className="text-muted dark:text-body-dark text-sm mt-2">نظام إدارة الضيافة</p>
         </div>
