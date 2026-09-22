@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import {
   Plus, X, Pencil, Trash2, CheckCircle2, ListChecks, Sparkles,
 } from 'lucide-react';
-import { useData } from '../../../context/DataContext';
-import EmptyState from '../../ui/EmptyState';
-import { AREAS, areaMeta } from '../../../lib/cleaningAreas';
+import { useData } from '../../context/DataContext';
+import EmptyState from '../ui/EmptyState';
+import { AREAS, areaMeta } from '../../lib/cleaningAreas';
 
 /*
  * Admin-configured cleaning routines with one active default.
@@ -18,8 +18,12 @@ import { AREAS, areaMeta } from '../../../lib/cleaningAreas';
  *
  * Exactly one default per account: marking a template as default clears the
  * flag from the previous one on the server.
+ *
+ * Renders inside the Cleaning tab: a persistent left panel on desktop, and a
+ * bottom sheet on mobile (compact hides the page-style headline since the
+ * sheet provides its own header with a close button).
  */
-export default function CleaningTemplates() {
+export default function CleaningTemplates({ compact = false }) {
   const {
     cleaningTemplates,
     createCleaningTemplate,
@@ -45,29 +49,43 @@ export default function CleaningTemplates() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <p className="eyebrow mb-1">إعدادات التنظيف</p>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-ink dark:text-white">قوالب التنظيف</h3>
-            {hasDefault && (
-              <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent-strong">
-                <CheckCircle2 size={11} />
-                افتراضي
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-muted dark:text-body-dark mt-1">
+      {compact ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted dark:text-body-dark leading-relaxed min-w-0">
             القالب الافتراضي يُطبَّق تلقائياً على كل مهمة تنظيف بعد مغادرة الضيف.
           </p>
+          <button
+            onClick={() => setEditor({})}
+            className="btn-primary h-9 px-4 text-xs shrink-0"
+          >
+            <Plus size={13} /> قالب جديد
+          </button>
         </div>
-        <button
-          onClick={() => setEditor({})}
-          className="btn-primary h-9 px-4 text-xs"
-        >
-          <Plus size={13} /> قالب جديد
-        </button>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="eyebrow mb-1">إعدادات التنظيف</p>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-ink dark:text-white">قوالب التنظيف</h3>
+              {hasDefault && (
+                <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-accent-strong">
+                  <CheckCircle2 size={11} />
+                  افتراضي
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted dark:text-body-dark mt-1">
+              القالب الافتراضي يُطبَّق تلقائياً على كل مهمة تنظيف بعد مغادرة الضيف.
+            </p>
+          </div>
+          <button
+            onClick={() => setEditor({})}
+            className="btn-primary h-9 px-4 text-xs"
+          >
+            <Plus size={13} /> قالب جديد
+          </button>
+        </div>
+      )}
 
       {/* No-default hint: without a default, auto tasks arrive empty */}
       {!hasDefault && (cleaningTemplates || []).length > 0 && (

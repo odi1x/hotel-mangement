@@ -8,7 +8,6 @@ import { ACCENTS, applyAccent, getAccentId } from '../../lib/accent';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
-import CleaningTemplates from './settings/CleaningTemplates';
 
 export default function SettingsView() {
   const { user, updateProfile, changePassword } = useAuth();
@@ -312,9 +311,6 @@ export default function SettingsView() {
     { id: 'identity', label: 'الهوية والمعلومات', shortLabel: 'الهوية' },
     { id: 'legal',    label: 'التراخيص والعقود',   shortLabel: 'التراخيص' },
     { id: 'system',   label: 'خيارات النظام',      shortLabel: 'النظام' },
-    ...(user?.role === 'admin'
-      ? [{ id: 'cleaning', label: 'قوالب التنظيف', shortLabel: 'التنظيف' }]
-      : []),
   ];
 
   return (
@@ -546,13 +542,6 @@ export default function SettingsView() {
           {/* Finance tab removed — expenses moved to their own top-level tab.
               Old sub-tab id was 'finance'; if a stored preference points there,
               the tabs list won't render it and the user lands on the identity tab. */}
-
-          {/* Cleaning Templates Tab — admin only */}
-          {facilityTab === 'cleaning' && user?.role === 'admin' && (
-            <div className="space-y-8 anim-tab">
-              <CleaningTemplates />
-            </div>
-          )}
 
           {/* System Tab */}
           {facilityTab === 'system' && (
