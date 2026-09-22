@@ -1,10 +1,9 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, PanelRightOpen, BellRing, Wallet, Wrench, TagsIcon, ArrowDownCircle, Sparkles, Handshake } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightClose, BellRing, Wallet, Wrench, TagsIcon, ArrowDownCircle, Sparkles, Handshake } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { computeBookingTotals } from '../../lib/paymentUtils';
 import logoWide from '../../assets/brand/logo.png';
-import logoMark from '../../assets/brand/logo-mark.png';
 
 
 const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isCollapsed }) => (
@@ -64,30 +63,32 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
   };
 
   return (
-    <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-canvas dark:bg-surface-dark border-l border-hairline dark:border-hairline-dark p-6 flex-col h-full shrink-0 relative`}>
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className={`absolute top-6 text-muted hover:text-ink dark:text-body-dark dark:hover:text-white z-10 transition-colors ${isCollapsed ? 'right-6' : 'left-6'}`}
-      >
-        {isCollapsed ? <PanelRightOpen size={20} /> : <PanelRightClose size={20} />}
-      </button>
-
-      {/* Brand corner — bolder wordmark + chapter divider separating brand
-          identity from the nav items below. */}
-      <div
-        className={`flex items-center space-x-reverse space-x-2.5 mb-6 pb-6 border-b border-hairline-soft dark:border-hairline-dark-soft ${isCollapsed ? 'justify-center mt-10 px-0' : 'px-1'} cursor-pointer`}
-        onClick={() => setView('availability')}
-      >
-        <div className="shrink-0">
-          {isCollapsed ? (
-            <img src={logoMark} alt="رنت فلو" className="h-9 w-9 object-contain" />
-          ) : (
+    <aside className={`hidden md:flex justify-start flex-col ${isCollapsed ? 'w-20 py-4 px-2' : 'w-64 p-6'} gap-3 transition-all duration-300 bg-canvas dark:bg-surface-dark border-l border-hairline dark:border-hairline-dark h-full shrink-0 relative`}>
+      {/* Brand + collapse toggle — expanded only. Fixed-height slot (h-16) keeps
+          the nav below starting from the same place every time. When collapsed
+          the logo and expand button move out of the bar and into the Header's
+          leading corner instead. */}
+      {!isCollapsed && (
+        <div className="h-16 flex items-center gap-2 shrink-0">
+          <div
+            className="flex items-center space-x-reverse space-x-2.5 flex-1 min-w-0 cursor-pointer"
+            onClick={() => setView('availability')}
+            title="رنت فلو"
+          >
             <img src={logoWide} alt="رنت فلو" className="h-8 object-contain" />
-          )}
+          </div>
+          <button
+            onClick={() => setIsCollapsed(true)}
+            className="text-muted hover:text-ink dark:text-body-dark dark:hover:text-white transition-colors p-1"
+            aria-label="طي القائمة الجانبية"
+            title="طي القائمة الجانبية"
+          >
+            <PanelRightClose size={20} />
+          </button>
         </div>
-      </div>
+      )}
 
-      <nav className="space-y-1 flex-1">
+      <nav className={`flex flex-col flex-1 ${isCollapsed ? 'justify-start gap-3' : 'space-y-1'}`}>
         <SidebarItem icon={Calendar} label="التوفر" id="availability" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
