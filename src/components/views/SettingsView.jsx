@@ -207,16 +207,24 @@ export default function SettingsView() {
   };
 
   const handleLocationLinkChange = (name, link) => {
-    setFormData({
-      ...formData,
-      locationDetails: (formData.locationDetails || []).map(d => d.name === name ? { ...d, link } : d)
+    setFormData(prev => {
+      const details = Array.isArray(prev.locationDetails) ? prev.locationDetails : [];
+      const i = details.findIndex(d => d.name?.trim() === name.trim());
+      const next = i >= 0
+        ? details.map((d, idx) => idx === i ? { ...d, link } : d)
+        : [...details, { name: name.trim(), link, photoUrl: '' }];
+      return { ...prev, locationDetails: next };
     });
   };
 
   const setLocationPhoto = (name, photoUrl) => {
-    setFormData({
-      ...formData,
-      locationDetails: (formData.locationDetails || []).map(d => d.name === name ? { ...d, photoUrl } : d)
+    setFormData(prev => {
+      const details = Array.isArray(prev.locationDetails) ? prev.locationDetails : [];
+      const i = details.findIndex(d => d.name?.trim() === name.trim());
+      const next = i >= 0
+        ? details.map((d, idx) => idx === i ? { ...d, photoUrl } : d)
+        : [...details, { name: name.trim(), link: '', photoUrl }];
+      return { ...prev, locationDetails: next };
     });
   };
 
@@ -255,16 +263,28 @@ export default function SettingsView() {
   };
 
   const handleRemoveLocationPhoto = async (name) => {
-    const detail = (formData.locationDetails || []).find(d => d.name === name);
+    const detail = (formData.locationDetails || []).find(d => d.name?.trim() === name.trim());
     const url = detail?.photoUrl;
     if (!url) return;
+    let fileId = null;
     try {
-      const fileId = new URL(url).searchParams.get('fileId');
-      if (fileId) await axios.delete('/api/auth?action=imagekit-delete', { data: { fileId } });
+      fileId = new URL(url).searchParams.get('fileId');
     } catch (err) {
-      console.error('Failed to delete location photo from ImageKit', err);
+      console.error('Invalid location photo URL', err);
+    }
+    // Only clear the stored URL once ImageKit has actually purged the file,
+    // so the local value can never point to a file we think we deleted.
+    if (fileId) {
+      try {
+        await axios.delete('/api/auth?action=imagekit-delete', { data: { fileId } });
+      } catch (err) {
+        console.error('Failed to delete location photo from ImageKit', err);
+        toast.error('تعذر حذف الصورة نهائياً — حاول مجدداً');
+        return;
+      }
     }
     setLocationPhoto(name, '');
+    toast.success('تم حذف صورة الموقع');
   };
 
   const handleSubmit = async (e) => {
@@ -722,7 +742,7 @@ export default function SettingsView() {
                   ) : (
                     <div className="space-y-3">
                       {locationsList.map(location => {
-                        const detail = (formData.locationDetails || []).find(d => d.name === location) || { name: location, link: '', photoUrl: '' };
+                        const detail = (formData.locationDetails || []).find(d => d.name?.trim() === location.trim()) || { name: location, link: '', photoUrl: '' };
                         const uploading = uploadingLocation === location;
                         return (
                           <div key={location} className="rounded-lg border border-hairline dark:border-hairline-dark-soft bg-surface-soft dark:bg-surface-dark-elevated/40 p-3 md:p-4">
@@ -764,19 +784,21 @@ export default function SettingsView() {
                                 />
                               </label>
                               {detail.photoUrl && (
-                                <div className="relative">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <img
                                     src={detail.photoUrl.split('?')[0]}
                                     alt={location}
-                                    className="w-24 h-20 object-cover rounded-md border border-hairline dark:border-hairline-dark-soft"
+                                    className="w-24 h-20 object-cover rounded-md border border-hairline dark:border-hairline-dark-soft shrink-0"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveLocationPhoto(location)}
-                                    className="absolute -top-2 -left-2 icon-action h-7 w-7 text-accent-strong bg-canvas dark:bg-surface-dark-elevated shadow-micro"
-                                    title="إزالة الصورة"
+                                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark text-accent-strong text-2xs font-semibold hover:bg-accent/5 transition-colors shrink-0"
+                                    title="حذف الصورة نهائياً من التطبيق وImageKit"
+                                    aria-label={`حذف صورة ${location}`}
                                   >
-                                    <Trash2 size={12} />
+                                    <Trash2 size={13} />
+                                    حذف الصورة
                                   </button>
                                 </div>
                               )}
