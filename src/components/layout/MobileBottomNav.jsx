@@ -128,7 +128,7 @@ export default function MobileBottomNav({
         tabIndex={showFAB ? 0 : -1}
         className={`shrink-0 h-14 rounded-full bg-accent text-white shadow-lift flex items-center justify-center overflow-hidden transition-[width,margin,opacity,transform] duration-[350ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-accent-strong active:scale-95 ${
           showFAB
-            ? 'w-14 mr-3 opacity-100 scale-100'
+            ? 'w-14 mr-4 opacity-100 scale-100'
             : 'w-0 mr-0 opacity-0 scale-75 pointer-events-none'
         }`}
       >

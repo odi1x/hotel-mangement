@@ -6,37 +6,48 @@ import { computeBookingTotals } from '../../lib/paymentUtils';
 import logoWide from '../../assets/brand/logo.png';
 
 
-const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isCollapsed }) => (
-  <button
-    onClick={() => setView(id)}
-    className={`relative flex items-center w-full h-11 rounded-md transition-colors ${
-      isCollapsed ? 'justify-center px-1.5' : 'justify-start pr-3 pl-2'
-    } ${
-      view === id
-        ? 'bg-surface-card text-ink font-semibold dark:bg-surface-dark-elevated dark:text-white'
-        : 'text-muted hover:bg-surface-soft hover:text-ink dark:text-body-dark dark:hover:bg-surface-dark-elevated dark:hover:text-white'
-    }`}
-    title={isCollapsed ? label : ''}
-  >
-    {view === id && !isCollapsed && (
-      <span className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-accent"></span>
-    )}
-    <span className={`relative w-11 h-11 flex items-center justify-center shrink-0 rounded-lg transition-colors ${isCollapsed ? '' : 'me-2.5'} ${view === id ? 'bg-accent-soft text-accent-strong' : ''}`}>
-      <Icon size={20} strokeWidth={view === id ? 2.25 : 2} />
-      {isCollapsed && badgeCount > 0 && (
-        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-canvas dark:border-surface-dark"></span>
+const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isCollapsed }) => {
+  const isActive = view === id;
+  return (
+    <button
+      onClick={() => setView(id)}
+      className={`relative flex items-center w-full py-2 transition-colors ${
+        isCollapsed ? 'justify-center' : 'px-3 gap-3 rounded-xl'
+      } ${
+        isCollapsed
+          ? 'text-muted hover:text-ink dark:text-body-dark dark:hover:text-white'
+          : isActive
+            ? 'bg-surface-card text-ink font-semibold dark:bg-surface-dark-elevated dark:text-white'
+            : 'text-muted hover:bg-surface-soft hover:text-ink dark:text-body-dark dark:hover:bg-surface-dark-elevated dark:hover:text-white'
+      }`}
+      title={isCollapsed ? label : ''}
+    >
+      {isActive && !isCollapsed && (
+        <span className="absolute right-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-accent"></span>
       )}
-    </span>
-    <span className={`text-sm transition-all duration-300 whitespace-nowrap overflow-hidden ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'}`}>
-      {label}
-    </span>
-    {!isCollapsed && badgeCount > 0 && (
-      <span className="mr-auto bg-accent text-white text-2xs font-semibold px-2 py-0.5 rounded-full">
-        {badgeCount}
+      <span className={`relative w-10 h-10 flex items-center justify-center shrink-0 rounded-lg transition-colors ${
+        isCollapsed
+          ? `mx-auto ${isActive
+              ? 'bg-surface-card dark:bg-surface-dark-elevated'
+              : 'hover:bg-surface-soft dark:hover:bg-surface-dark-elevated'}`
+          : ''
+      }`}>
+        <Icon size={20} strokeWidth={isActive ? 2.25 : 2} />
+        {isCollapsed && badgeCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-canvas dark:border-surface-dark"></span>
+        )}
       </span>
-    )}
-  </button>
-);
+      <span className={`text-sm transition-all duration-300 whitespace-nowrap overflow-hidden ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100 w-auto'}`}>
+        {label}
+      </span>
+      {!isCollapsed && badgeCount > 0 && (
+        <span className="mr-auto bg-accent text-white text-2xs font-semibold px-2 py-0.5 rounded-full">
+          {badgeCount}
+        </span>
+      )}
+    </button>
+  );
+};
 
 export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) {
   const { darkMode, toggleDarkMode } = useTheme();
@@ -63,14 +74,12 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
   };
 
   return (
-    <aside className={`hidden md:flex justify-start flex-col ${isCollapsed ? 'w-20' : 'w-64'} py-4 px-0 gap-3 transition-all duration-300 bg-canvas dark:bg-surface-dark border-l border-hairline dark:border-hairline-dark h-full shrink-0 relative`}>
+    <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} px-2 py-4 flex flex-col h-full shrink-0 relative transition-all duration-300 bg-canvas dark:bg-surface-dark border-l border-neutral-200/50 dark:border-neutral-800/50`}>
       {/* Fixed-height header slot — mounted in BOTH states so the nav below
           always starts from the same vertical offset. Only the logo image is
-          hidden when collapsed; the collapse toggle stays in this slot. */}
+          hidden when collapsed; the collapse toggle stays centered in this slot. */}
       <div className="h-16 flex items-center justify-between px-4 shrink-0">
-        {isCollapsed ? (
-          <span className="flex-1" aria-hidden="true" />
-        ) : (
+        {!isCollapsed && (
           <div
             className="flex items-center space-x-reverse space-x-2.5 flex-1 min-w-0 cursor-pointer"
             onClick={() => setView('availability')}
@@ -81,7 +90,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-9 h-9 flex items-center justify-center rounded-md text-muted hover:text-ink hover:bg-surface-soft dark:text-body-dark dark:hover:text-white dark:hover:bg-surface-dark-elevated transition-colors"
+          className={`${isCollapsed ? 'w-8 h-8 mx-auto' : 'w-9 h-9'} flex items-center justify-center rounded-md text-muted hover:text-ink hover:bg-surface-soft dark:text-body-dark dark:hover:text-white dark:hover:bg-surface-dark-elevated transition-colors`}
           aria-label={isCollapsed ? 'فتح القائمة الجانبية' : 'طي القائمة الجانبية'}
           title={isCollapsed ? 'فتح القائمة الجانبية' : 'طي القائمة الجانبية'}
         >
@@ -89,7 +98,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         </button>
       </div>
 
-      <nav className="flex flex-col gap-2 w-full flex-1 justify-start">
+      <nav className="flex flex-col gap-1 w-full flex-1 justify-start">
         <SidebarItem icon={Calendar} label="التوفر" id="availability" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
@@ -121,7 +130,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         )}
       </nav>
 
-      <div className="mt-auto space-y-4 border-t border-hairline dark:border-hairline-dark pt-3">
+      <div className="mt-auto w-full border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3 space-y-4">
         <button
           onClick={toggleDarkMode}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-3' : 'justify-between px-4 py-2'} rounded-md border border-hairline dark:border-hairline-dark-soft hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors text-body dark:text-body-dark`}
