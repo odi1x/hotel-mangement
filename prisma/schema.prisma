@@ -84,6 +84,7 @@ model Apartment {
   id            String    @id @default(uuid())
   userId        String
   name          String
+  owner         String?
   type          String
   economicCategory String?
   location      String?

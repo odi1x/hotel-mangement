@@ -12,6 +12,7 @@ import { completeActiveTasksForApartment } from './admin-resources.js';
  *
  * Post-Phase-2b schema. Only these fields exist on Apartment:
  *   - basePrice
+ *   - owner
  *   - cleaningFeePerStay
  *   - platformFeeType, platformFee
  *   - name, type, description, images, coverPhoto, licenseId
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
 
     else if (req.method === 'POST') {
       const {
-        name, type, description, basePrice,
+        name, owner, type, description, basePrice,
         cleaningFeePerStay,
         platformFeeType, platformFee,
         licenseId, images, coverPhoto, economicCategory, location, isActive
@@ -51,6 +52,7 @@ export default async function handler(req, res) {
         data: {
           userId: targetUserId,
           name,
+          owner: owner || null,
           type,
           economicCategory: economicCategory || null,
           location: location || null,
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
 
     else if (req.method === 'PUT') {
       const {
-        id, name, type, description, basePrice, needsCleaning,
+        id, name, owner, type, description, basePrice, needsCleaning,
         cleaningFeePerStay,
         platformFeeType, platformFee,
         licenseId, images, coverPhoto, economicCategory, location, isActive
@@ -84,6 +86,7 @@ export default async function handler(req, res) {
 
       const updateData = {
         name,
+        owner: owner !== undefined ? owner : existing.owner,
         type,
         economicCategory: economicCategory !== undefined ? economicCategory : existing.economicCategory,
         location: location !== undefined ? location : existing.location,

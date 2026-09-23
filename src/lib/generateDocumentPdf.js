@@ -273,7 +273,7 @@ export default async function generateDocumentPdf({ booking, apartment, user, do
           ...(booking.address ? [{ text: processRTL(booking.address), fontSize: 8, color: GREY_600, margin: [0, 2, 0, 0] }] : [])
         ]),
         rtlColumn('المؤجر / المدير', [
-          { text: processRTL(user?.businessName || 'مجموعة رنت فلو العقارية'), fontSize: 12, bold: true, color: GREY_900 }
+          { text: processRTL(apartment?.owner || user?.businessName || 'مجموعة رنت فلو العقارية'), fontSize: 12, bold: true, color: GREY_900 }
         ])
       ],
       columnGap: 20,

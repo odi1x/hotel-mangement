@@ -109,7 +109,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                 <div className="grid grid-cols-2 gap-8">
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المؤجر / المدير</p>
-                        <p className="font-bold text-gray-900">{user?.businessName || 'مجموعة رنت فلو العقارية'}</p>
+                        <p className="font-bold text-gray-900">{apartment?.owner || user?.businessName || 'مجموعة رنت فلو العقارية'}</p>
                     </div>
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المستأجر / النزيل</p>

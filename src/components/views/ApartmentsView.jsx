@@ -174,7 +174,7 @@ export default function ApartmentsView({ setView }) {
       setEditingId(apt.id);
     } else {
       setFormData({
-          name: '', type: defaultType, description: '', basePrice: '',
+          name: '', owner: '', type: defaultType, description: '', basePrice: '',
           cleaningFeePerStay: '',
           platformFeeType: 'percentage', platformFee: '',
           licenseId: '', economicCategory: '', location: ''
@@ -820,6 +820,11 @@ export default function ApartmentsView({ setView }) {
                 <div>
                   <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">اسم / رقم الوحدة</label>
                   <input required type="text" placeholder="مثال: شقة 101" className="input-field" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">المالك / المؤجر (اختياري)</label>
+                  <input type="text" placeholder="اسم مالك العقار..." className="input-field" value={formData.owner || ''} onChange={(e) => setFormData({ ...formData, owner: e.target.value })} />
+                  <p className="text-2xs text-muted-soft mt-1">يظهر في سندات النزيل «المؤجر / المدير». إن تُرك فارغاً تُستخدم اسم المنشأة.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
