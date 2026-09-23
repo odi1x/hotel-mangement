@@ -82,7 +82,7 @@ export default function MobileBottomNav({
   const showFAB = fabConfig.show;
 
   return (
-    <div className="md:hidden fixed bottom-4 inset-x-4 z-40 flex items-center anim-nav mobile-nav-shield">
+    <div className="md:hidden fixed bottom-4 left-4 right-6 z-40 flex items-center anim-nav mobile-nav-shield">
       <div className="flex-1 flex items-center gap-1 bg-canvas/85 dark:bg-surface-dark/85 backdrop-blur-lg border border-hairline/60 dark:border-hairline-dark/60 rounded-full h-14 shadow-lift px-1">
         <TabItem
           icon={CalendarDays}

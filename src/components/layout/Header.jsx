@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
-import { User as UserIcon, Settings, LogOut, PanelRightOpen } from 'lucide-react';
+import { User as UserIcon, Settings, LogOut } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
-import logoMark from '../../assets/brand/logo-mark.png';
 
-export default function Header({ openStaffSettings, onNavigate, title, isCollapsed = false, onToggleSidebar }) {
+export default function Header({ openStaffSettings, onNavigate, title }) {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   // buttonRef anchors the panel to the profile button. dropdownRef is the
@@ -46,22 +45,7 @@ export default function Header({ openStaffSettings, onNavigate, title, isCollaps
   };
 
   return (
-    <header className={`sticky top-0 z-30 bg-page dark:bg-surface-dark py-2 px-4 md:px-8 flex justify-between md:justify-end items-center gap-3 ${isCollapsed ? 'md:justify-between' : ''}`}>
-      {/* Collapsed sidebar: brand + expand live in the header's leading corner
-          (top-right in RTL) so the sidebar chrome survives being tucked away.
-          Hidden on mobile where there's no sidebar at all. */}
-      {isCollapsed && (
-        <button
-          onClick={onToggleSidebar}
-          className="hidden md:flex items-center gap-2 text-muted hover:text-ink dark:text-body-dark dark:hover:text-white transition-colors"
-          aria-label="فتح القائمة الجانبية"
-          title="فتح القائمة الجانبية"
-        >
-          <img src={logoMark} alt="رنت فلو" className="h-8 w-8 object-contain" />
-          <PanelRightOpen size={20} />
-        </button>
-      )}
-
+    <header className="sticky top-0 z-30 bg-page dark:bg-surface-dark py-2 px-4 md:px-8 flex justify-between md:justify-end items-center gap-3">
       {/* Mobile title on the leading (RTL right) edge — this is what puts the
           page heading right next to the top corner, instead of buried 24px+
           below in the main content area. Truncates with ellipsis for long

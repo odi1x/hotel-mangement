@@ -153,7 +153,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
       <Sidebar view={view} setView={setView} isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} onNavigate={setView} title={getViewTitle()} isCollapsed={isSidebarCollapsed} onToggleSidebar={() => setIsSidebarCollapsed(c => !c)} />
+        <Header openStaffSettings={() => setIsProfileSettingsOpen(true)} onNavigate={setView} title={getViewTitle()} />
 
         {/* Main padding: comfortable on desktop (p-6), tighter on mobile (p-4).
             No extra bottom padding — each view's own scrollable content area
