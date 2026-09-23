@@ -11,7 +11,7 @@ const SidebarItem = ({ icon: Icon, label, id, badgeCount, view, setView, isColla
   return (
     <button
       onClick={() => setView(id)}
-      className={`relative flex items-center w-full py-2 transition-colors ${
+      className={`relative flex items-center w-full py-1 transition-colors ${
         isCollapsed ? 'justify-center' : 'px-3 gap-3 rounded-xl'
       } ${
         isCollapsed
@@ -98,7 +98,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         </button>
       </div>
 
-      <nav className="flex flex-col gap-1 w-full flex-1 justify-start">
+      <nav className="flex flex-col gap-1 w-full flex-1 justify-start min-h-0 overflow-y-auto scrollbar-none">
         <SidebarItem icon={Calendar} label="التوفر" id="availability" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
@@ -133,7 +133,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
       <div className="mt-auto w-full border-t border-neutral-200/40 dark:border-neutral-800/40 pt-3 space-y-4">
         <button
           onClick={toggleDarkMode}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-3' : 'justify-between px-4 py-2'} rounded-md border border-hairline dark:border-hairline-dark-soft hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors text-body dark:text-body-dark`}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'justify-between px-4 py-2'} rounded-md border border-hairline dark:border-hairline-dark-soft hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors text-body dark:text-body-dark`}
           title={darkMode ? 'الوضع المضيء' : 'الوضع الليلي'}
         >
           {!isCollapsed && <span className="text-sm font-medium">{darkMode ? 'الوضع المضيء' : 'الوضع الليلي'}</span>}
@@ -158,7 +158,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
 
         <button
           onClick={logout}
-          className={`w-full flex items-center justify-center space-x-reverse ${isCollapsed ? 'px-0 py-3 space-x-0' : 'space-x-2 px-4 py-2'} rounded-md text-muted hover:text-ink hover:bg-surface-soft dark:text-body-dark dark:hover:text-white dark:hover:bg-surface-dark-elevated transition-colors`}
+          className={`w-full flex items-center justify-center space-x-reverse ${isCollapsed ? 'px-0 py-2 space-x-0' : 'space-x-2 px-4 py-2'} rounded-md text-muted hover:text-ink hover:bg-surface-soft dark:text-body-dark dark:hover:text-white dark:hover:bg-surface-dark-elevated transition-colors`}
           title={isCollapsed ? "تسجيل الخروج" : ""}
         >
           <LogOut size={16} />

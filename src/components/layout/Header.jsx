@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { User as UserIcon, Settings, LogOut } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
+import logoMark from '../../assets/brand/logo-mark.png';
 
-export default function Header({ openStaffSettings, onNavigate, title }) {
+export default function Header({ openStaffSettings, onNavigate, title, isCollapsed = false }) {
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   // buttonRef anchors the panel to the profile button. dropdownRef is the
@@ -45,7 +46,21 @@ export default function Header({ openStaffSettings, onNavigate, title }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-page dark:bg-surface-dark py-2 px-4 md:px-8 flex justify-between md:justify-end items-center gap-3">
+    <header className={`sticky top-0 z-30 bg-page dark:bg-surface-dark py-2 px-4 md:px-8 flex justify-between md:justify-end items-center gap-3 ${isCollapsed ? 'md:justify-between' : ''}`}>
+      {/* Collapsed sidebar: the brand logo lives in the navbar's leading
+          corner (top-right in RTL). The collapse toggle itself stays inside
+          the sidebar's fixed header slot. Hidden on mobile where there's no
+          sidebar at all. */}
+      {isCollapsed && (
+        <button
+          onClick={() => onNavigate('availability')}
+          className="hidden md:flex items-center text-muted hover:text-ink dark:text-body-dark dark:hover:text-white transition-colors"
+          title="رنت فلو"
+        >
+          <img src={logoMark} alt="رنت فلو" className="h-8 w-8 object-contain" />
+        </button>
+      )}
+
       {/* Mobile title on the leading (RTL right) edge — this is what puts the
           page heading right next to the top corner, instead of buried 24px+
           below in the main content area. Truncates with ellipsis for long
