@@ -53,7 +53,7 @@ export const DataProvider = ({ children }) => {
   const shouldFetchPricing = isAdmin || perms.canViewPricing;
   const shouldFetchMaintenance = isAdmin || perms.canViewMaintenance;
   const shouldFetchCleaning = isAdmin || perms.canClean;
-  const shouldFetchCleaningTemplates = isAdmin; // template config is admin-only
+  const shouldFetchCleaningTemplates = isAdmin || perms.canManageCleaningTemplates; // template config as a granted staff permission
   const shouldFetchExpenses = isAdmin || perms.canViewAnalytics; // expenses share analytics permission
   const shouldFetchBalances = isAdmin || perms.canViewBalances;
   const shouldFetchPartners = isAdmin && user?.partnersRevenueSharingEnabled;
