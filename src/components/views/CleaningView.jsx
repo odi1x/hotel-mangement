@@ -55,7 +55,7 @@ export default function CleaningView({ addTrigger = 0 }) {
   useEffect(() => {
     if (addTrigger !== lastAddTrigger.current) {
       lastAddTrigger.current = addTrigger;
-      if (isAdmin) setShowAddModal(true);
+      if (canClean) setShowAddModal(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addTrigger]);
@@ -217,7 +217,7 @@ export default function CleaningView({ addTrigger = 0 }) {
       )}
 
       {/* Add task modal */}
-      {showAddModal && isAdmin && createPortal(
+      {showAddModal && canClean && createPortal(
         <AddTaskModal
           apartments={apartments}
           defaultTemplate={defaultTemplate}

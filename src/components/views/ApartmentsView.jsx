@@ -111,6 +111,11 @@ export default function ApartmentsView({ setView }) {
     if (!file) return;
     if (!file.type.startsWith('image/')) return toast.error('الرجاء اختيار صورة صالحة');
 
+    const currentCount = (formData.images || []).length;
+    if (currentCount >= 10) {
+      toast.error('يمكن رفع ١٠ صور كحد أقصى للوحدة');
+      return;
+    }
     setIsUploading(true);
     try {
       const authRes = await axios.get('/api/auth?action=imagekit-auth');
@@ -873,13 +878,17 @@ export default function ApartmentsView({ setView }) {
               <section className="space-y-4">
                 <h3 className="text-xs font-semibold text-muted dark:text-body-dark uppercase tracking-widest border-b border-hairline-soft dark:border-hairline-dark pb-2">صور الوحدة</h3>
                 <div className="border border-dashed border-hairline dark:border-hairline-dark-soft rounded-lg p-6 text-center hover:bg-surface-soft dark:hover:bg-surface-dark-elevated hover:border-accent transition-colors relative">
-                  <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={isUploading} />
+                  <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" onChange={handleFileUpload} disabled={isUploading || (formData.images || []).length >= 10} />
                   <div className="flex flex-col items-center justify-center gap-2">
                     <div className={`w-11 h-11 rounded-full bg-surface-card dark:bg-surface-dark-elevated flex items-center justify-center ${isUploading ? 'animate-pulse' : ''}`}>
                       <ImageIcon size={22} className="text-muted" />
                     </div>
-                    <p className="font-semibold text-body dark:text-body-dark text-sm">{isUploading ? 'جاري الرفع...' : 'اسحب الصور هنا أو اضغط للتصفح'}</p>
-                    <p className="text-xs text-muted-soft">أول صورة تصبح الغلاف تلقائياً — يمكنك تغييرها بالمرور على أي صورة.</p>
+                    <p className="font-semibold text-body dark:text-body-dark text-sm">
+                      {isUploading ? 'جاري الرفع...' : (formData.images || []).length >= 10 ? 'وصلت للحد الأقصى للصور' : 'اسحب الصور هنا أو اضغط للتصفح'}
+                    </p>
+                    <p className="text-xs text-muted-soft">
+                      {(formData.images || []).length}/١٠ — أول صورة تصبح الغلاف تلقائياً — يمكنك تغييرها بالمرور على أي صورة.
+                    </p>
                   </div>
                 </div>
                 {formData.images && formData.images.length > 0 && (

@@ -31,6 +31,7 @@ export default function MobileBottomNav({
 
   const canSeeBalances    = user?.role === 'admin' || user?.permissions?.canViewBalances;
   const canSeeMaintenance = user?.role === 'admin' || user?.permissions?.canViewMaintenance;
+  const canSeeCleaning    = user?.role === 'admin' || user?.permissions?.canClean;
   const canEditExpenses   = user?.role === 'admin' || user?.permissions?.canEdit;
   const canSeePricing     = user?.role === 'admin' || user?.permissions?.canViewPricing;
   const isAdmin            = user?.role === 'admin';
@@ -61,7 +62,7 @@ export default function MobileBottomNav({
     if (['availability', 'requests', 'residents', 'apartments'].includes(view)) {
       return { show: true, onClick: onNewBooking, label: 'حجز جديد' };
     }
-    if (view === 'cleaning' && isAdmin) {
+    if (view === 'cleaning' && canSeeCleaning) {
       return { show: true, onClick: onNewCleaningTask, label: 'مهمة جديدة' };
     }
     if (view === 'expenses' && canEditExpenses) {

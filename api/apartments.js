@@ -62,7 +62,7 @@ export default async function handler(req, res) {
           platformFeeType,
           platformFee: platformFee ? parseFloat(platformFee) : null,
           licenseId: licenseId || null,
-          images: images || [],
+          images: Array.isArray(images) ? images.slice(0, 10) : [],
           coverPhoto: coverPhoto || null,
           isActive: isActive !== undefined ? isActive : true,
         },
@@ -84,6 +84,9 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
+      const cappedImages = (Array.isArray(images) ? images : existing.images).slice(0, 10);
+      const requestedCover = coverPhoto !== undefined ? coverPhoto : existing.coverPhoto;
+
       const updateData = {
         name,
         owner: owner !== undefined ? owner : existing.owner,
@@ -96,8 +99,8 @@ export default async function handler(req, res) {
         platformFeeType,
         platformFee: platformFee ? parseFloat(platformFee) : null,
         licenseId: licenseId || null,
-        images: images !== undefined ? images : existing.images,
-        coverPhoto: coverPhoto !== undefined ? coverPhoto : existing.coverPhoto,
+        images: cappedImages,
+        coverPhoto: cappedImages.includes(requestedCover) ? requestedCover : (cappedImages[0] || null),
       };
 
       if (needsCleaning !== undefined) {

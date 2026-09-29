@@ -173,7 +173,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
               <p className="text-xs md:text-sm text-muted dark:text-body-dark line-clamp-2">{getViewSubtitle()}</p>
             )}
           </div>
-          {(user?.role === 'admin' || user?.permissions?.canBook) && (
+          {(user?.role === 'admin' || user?.permissions?.canBook || user?.permissions?.canClean || user?.permissions?.canEdit || user?.permissions?.canViewMaintenance || user?.permissions?.canViewPricing) && (
             <div className="hidden md:flex items-center space-x-reverse space-x-3 shrink-0">
 
               {view === 'apartments' && (
@@ -197,7 +197,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
                   <span>حجز جديد</span>
                 </button>
               )}
-              {view === 'cleaning' && (user?.role === 'admin') && (
+              {view === 'cleaning' && (user?.role === 'admin' || user?.permissions?.canClean) && (
                 <button
                   onClick={() => setCleaningAddTrigger(c => c + 1)}
                   className="btn-accent"
