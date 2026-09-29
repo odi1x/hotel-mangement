@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       }
 
       if (req.method === 'PUT') {
-        const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean } = req.body;
+        const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean, canManageCleaningTemplates } = req.body;
 
         const updateData = {
           name,
@@ -44,6 +44,7 @@ export default async function handler(req, res) {
           canViewPricing,
           canViewPrices,
           canClean: canClean === true,
+          canManageCleaningTemplates: canManageCleaningTemplates === true,
         };
 
         if (username && username !== staffMember.username) {
@@ -93,6 +94,7 @@ export default async function handler(req, res) {
           canViewPricing: true,
           canViewPrices: true,
           canClean: true,
+          canManageCleaningTemplates: true,
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -100,7 +102,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'POST') {
-      const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean } = req.body;
+      const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean, canManageCleaningTemplates } = req.body;
 
       if (!username || !password || !name) {
         return res.status(400).json({ message: 'Username, password, and name are required' });
@@ -134,6 +136,7 @@ export default async function handler(req, res) {
           canViewPricing,
           canViewPrices,
           canClean: canClean === true,
+          canManageCleaningTemplates: canManageCleaningTemplates === true,
         }
       });
 

@@ -24,7 +24,8 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     canViewMaintenance: staff ? staff.canViewMaintenance : true,   // operational — staff report issues from the field
     canViewPricing:     staff ? staff.canViewPricing     : false,  // sensitive — reveals pricing strategy
     canViewPrices:      staff ? staff.canViewPrices      : true,   // if turned off: receptionist mode (no prices in bookings/residents)
-    canClean:           staff ? staff.canClean           : false
+    canClean:           staff ? staff.canClean           : false,
+    canManageCleaningTemplates: staff ? staff.canManageCleaningTemplates : false
   });
 
   const handleChange = (e) => {
@@ -76,6 +77,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     { name: 'canViewAnalytics',   title: 'عرض الإحصائيات',        desc: 'الوصول إلى تقارير الأداء المالي والتحليلات' },
     { name: 'canViewSettings',    title: 'إدارة الإعدادات',       desc: 'الوصول لإعدادات النظام العامة (باستثناء الموظفين)' },
     { name: 'canClean',           title: 'قسم التنظيف',           desc: 'الوصول إلى تبويب التنظيف وإنهاء مهام تنظيف الوحدات' },
+    { name: 'canManageCleaningTemplates', title: 'إدارة قوالب التنظيف', desc: 'إنشاء وتعديل قوالب التنظيف وتعيين القالب الافتراضي الذي يُطبَّق تلقائياً بعد كل مغادرة' },
   ];
 
   return createPortal(
