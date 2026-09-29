@@ -138,7 +138,7 @@ export default function CleaningView({ addTrigger = 0 }) {
               {pendingCount === 0 ? 'كل الوحدات نظيفة، عمل ممتاز.' : 'تظهر أولاً حسب الأقرب موعد استقبال ضيف قادم.'}
             </p>
           </div>
-          {isAdmin && (
+          {(isAdmin || user?.permissions?.canManageCleaningTemplates) && (
             <button
               onClick={() => setTemplatesSheet(true)}
               className="lg:hidden h-11 w-11 shrink-0 rounded-lg border border-hairline dark:border-hairline-dark bg-canvas dark:bg-surface-dark-elevated text-muted dark:text-body-dark hover:text-ink dark:hover:text-white flex items-center justify-center active:scale-95 transition-colors"
@@ -249,9 +249,9 @@ export default function CleaningView({ addTrigger = 0 }) {
       )}
       </section>
 
-      {/* Templates panel — desktop admin only. Renders as the left column
+      {/* Templates panel — desktop admin/managers only. Renders as the left column
           of the split page (in RTL the flex-end side). */}
-      {isAdmin && (
+      {(isAdmin || user?.permissions?.canManageCleaningTemplates) && (
         <aside
           className="hidden lg:flex flex-col w-72 xl:w-80 shrink-0 min-h-0 rounded-lg border border-hairline dark:border-hairline-dark bg-canvas dark:bg-surface-dark overflow-hidden"
           aria-label="قوالب التنظيف"
@@ -262,10 +262,10 @@ export default function CleaningView({ addTrigger = 0 }) {
         </aside>
       )}
 
-      {/* Templates sheet — mobile admin: the gear button in the counter hero
+      {/* Templates sheet — mobile admin/managers: the gear button in the counter hero
           opens templates as a bottom sheet (same app modal language as the
           task editor: grab handle + rounded top + slide-up). */}
-      {isAdmin && templatesSheet && createPortal(
+      {(isAdmin || user?.permissions?.canManageCleaningTemplates) && templatesSheet && createPortal(
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm lg:hidden" data-modal-active>
           <div className="absolute inset-0" onClick={() => setTemplatesSheet(false)}></div>
           <div className="relative bg-canvas dark:bg-surface-dark-elevated rounded-t-2xl border border-hairline dark:border-hairline-dark-soft shadow-soft w-full max-h-[92vh] flex flex-col overflow-hidden anim-sheet">

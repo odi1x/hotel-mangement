@@ -837,8 +837,8 @@ async function cleaningTemplatesHandler(req, res, user) {
       return res.status(200).json(templates);
     }
 
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin only' });
+    if (user.role !== 'admin' && user.canManageCleaningTemplates !== true) {
+      return res.status(403).json({ message: 'Admin or cleaning-templates permission required' });
     }
 
     if (req.method === 'POST') {

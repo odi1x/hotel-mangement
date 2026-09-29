@@ -16,6 +16,8 @@ function PermissionBadges({ s }) {
     s.canViewBalances    && { label: 'مستحقات' },
     s.canViewMaintenance && { label: 'صيانة' },
     s.canViewPricing     && { label: 'أسعار موسمية' },
+    s.canClean           && { label: 'تنظيف' },
+    s.canManageCleaningTemplates && { label: 'قوالب التنظيف' },
     s.canViewAnalytics   && { label: 'إحصائيات' },
     s.canViewSettings    && { label: 'إعدادات' },
   ].filter(Boolean);

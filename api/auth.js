@@ -33,7 +33,7 @@ export default async function handler(req, res) {
       if (!isPasswordValid) return res.status(401).json({ message: 'Invalid credentials' });
 
       const token = jwt.sign({
-        userId: user.id, username: user.username, role: user.role, adminId: user.adminId, canClean: user.canClean, name: user.name
+        userId: user.id, username: user.username, role: user.role, adminId: user.adminId, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, name: user.name
       }, JWT_SECRET, { expiresIn: '7d' });
 
       return res.status(200).json({
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
           partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
+            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
           }
         }
       });
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
       });
 
       const token = jwt.sign({
-        userId: user.id, username: user.username, role: user.role, adminId: user.adminId, canClean: user.canClean, name: user.name
+        userId: user.id, username: user.username, role: user.role, adminId: user.adminId, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, name: user.name
       }, JWT_SECRET, { expiresIn: '7d' });
 
       return res.status(201).json({
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
           partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
+            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
           }
         }
       });
@@ -127,7 +127,7 @@ export default async function handler(req, res) {
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
+          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
         }
       });
     }
@@ -165,7 +165,7 @@ export default async function handler(req, res) {
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
+          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
         }
       });
     }

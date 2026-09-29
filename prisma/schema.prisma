@@ -26,6 +26,7 @@ model User {
   canViewPricing      Boolean     @default(true)
   canViewPrices       Boolean     @default(true)
   canClean            Boolean     @default(false)
+  canManageCleaningTemplates Boolean @default(false)
   businessName     String?
   tourismLicense   String?
   logoUrl          String?
