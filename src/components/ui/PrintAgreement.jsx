@@ -1,12 +1,19 @@
-import { Printer } from 'lucide-react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Printer, Download, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { sanitizePhone } from '../../lib/phoneUtils';
+import { buildDocumentFilename } from '../../lib/documentShare';
+import generateDocumentPdf from '../../lib/generateDocumentPdf';
+import { bookingRef } from '../../lib/bookingRef';
+import toast from 'react-hot-toast';
 
 export default function PrintAgreement({ booking, documentType = 'confirmation', onClose }) {
   const { apartments } = useData();
   const { user } = useAuth();
+  const [downloading, setDownloading] = useState(false);
   const apartment = apartments.find(a => a.id === booking.apartmentId);
   const licenseNumber = apartment?.licenseNumber || user?.tourismLicense;
 
@@ -37,7 +44,6 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
   const { totalReceived, balanceDue } = computeBookingTotals(booking);
 
   const handlePrint = () => {
-
     const aptName = apartment?.name ? apartment.name.replace(/\s+/g, '_') : 'شقة';
     const resName = booking.residentName ? booking.residentName.replace(/\s+/g, '_') : 'نزيل';
     const startDateStr = booking.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '';
@@ -50,16 +56,41 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
     }, 100); // slight delay to let the browser register the title change before print dialog
   };
 
+  const handleDownloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const blob = await generateDocumentPdf({
+        booking,
+        apartment,
+        user,
+        documentType
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = buildDocumentFilename(booking, apartment);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('تم تحميل المستند');
+    } catch {
+      toast.error('تعذر إنشاء المستند');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
-  return (
+
+  return createPortal(
     <div className="print-root fixed inset-0 bg-white z-[100] flex flex-col items-center p-10 overflow-y-auto" dir="rtl">
       <div className="max-w-3xl w-full bg-white border shadow-sm p-12 print:shadow-none print:border-none" id="agreement-paper">
         <div className="flex justify-between items-start border-b-2 border-gray-900 pb-6 mb-8">
             <div>
                 <h1 className="text-3xl font-black tracking-tighter text-gray-900">
-                  {documentType === 'voucher' ? 'سند قبض / تقرير مالي' : 'عقد إيجار وحدات سكنية'}
+                  {documentType === 'voucher' ? 'حجز مبدئي' : 'حجز مؤكد'}
                 </h1>
-                <p className="text-gray-500 font-bold">المرجع: #{booking.id.toUpperCase()}</p>
+                <p className="text-gray-500 font-bold">المرجع: #{bookingRef(booking)}</p>
             </div>
             <div className="text-left flex flex-col items-end">
                 {user?.logoUrl && (
@@ -78,7 +109,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                 <div className="grid grid-cols-2 gap-8">
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المؤجر / المدير</p>
-                        <p className="font-bold text-gray-900">{user?.businessName || 'مجموعة رنت فلو العقارية'}</p>
+                        <p className="font-bold text-gray-900">{apartment?.owner || user?.businessName || 'مجموعة رنت فلو العقارية'}</p>
                     </div>
                     <div>
                         <p className="text-xs font-bold text-gray-400 uppercase mb-1">المستأجر / النزيل</p>
@@ -146,7 +177,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
                       </div>
                       <div>
                           <p className="text-xs font-bold text-gray-400 uppercase mb-1">المبلغ المتبقي</p>
-                          <p className="text-lg font-black text-red-600">
+                          <p className="text-lg font-black text-accent">
                             {formatSAR(balanceDue)} ر.س
                           </p>
                       </div>
@@ -188,8 +219,16 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
 
       <div className="mt-8 flex space-x-reverse space-x-4 print:hidden">
         <button
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+            className="bg-accent hover:bg-accent-strong text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+            {downloading ? <Loader2 size={20} className="animate-spin"/> : <Download size={20}/>}
+            <span className="mr-2">{downloading ? 'جارٍ التحضير...' : 'تحميل PDF'}</span>
+        </button>
+        <button
             onClick={handlePrint}
-            className="bg-accent hover:bg-accent-strong text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95"
+            className="bg-primary hover:bg-primary-active text-white px-8 py-3 rounded-md font-semibold flex items-center space-x-reverse space-x-2 transition-colors active:scale-95"
         >
             <Printer size={20}/>
             <span className="mr-2">طباعة المستند</span>
@@ -201,6 +240,7 @@ export default function PrintAgreement({ booking, documentType = 'confirmation',
             إغلاق المعاينة
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

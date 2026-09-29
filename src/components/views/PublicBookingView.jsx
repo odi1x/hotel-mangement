@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import DatePickerCal from '../ui/DatePickerCal';
@@ -9,6 +9,10 @@ import { ChevronRight, Calendar, User, Phone, CheckCircle, Image as ImageIcon, M
 
 export default function PublicBookingView() {
   const { adminId } = useParams();
+  const [searchParams] = useSearchParams();
+  // The shared link may carry a category (e.g. ?category=VIP) so guests only
+  // see units of that economic category when they pick their dates.
+  const category = searchParams.get('category') || '';
 
   const formatDateForRender = (dateVal) => {
     if (!dateVal) return '';
@@ -38,7 +42,13 @@ export default function PublicBookingView() {
   useEffect(() => {
     const fetchPublicData = async () => {
       try {
-        const res = await axios.get(`/api/public?action=apartments&adminId=${adminId}`);
+        const res = await axios.get('/api/public', {
+          params: {
+            action: 'apartments',
+            adminId,
+            ...(category ? { category } : {})
+          }
+        });
         setAdmin(res.data.admin);
         setApartments(res.data.apartments);
         setBookings(res.data.bookings);
@@ -49,7 +59,7 @@ export default function PublicBookingView() {
       }
     };
     fetchPublicData();
-  }, [adminId]);
+  }, [adminId, category]);
 
   const handleDateChange = (newValue) => {
     setDateRange(newValue);
@@ -148,7 +158,7 @@ export default function PublicBookingView() {
               <Calendar size={32} />
             </div>
             <h2 className="text-2xl font-semibold tracking-tight text-ink mb-2">أهلاً بك!</h2>
-            <p className="text-muted mb-10 text-center">يرجى تحديد فترة الإقامة المتوقعة لعرض الوحدات المتاحة لك.</p>
+            <p className="text-muted mb-10 text-center">يرجى تحديد فترة الإقامة المتوقعة لعرض الوحدات المتاحة لك{category ? ` في فئة «${category}»` : ''}.</p>
 
             <div className="w-full bg-canvas p-6 rounded-xl shadow-soft border border-hairline mb-6">
               <label className="block text-sm font-semibold text-body mb-3">تاريخ الوصول والمغادرة</label>
@@ -175,7 +185,12 @@ export default function PublicBookingView() {
                 <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-ink mb-1">الوحدات المتاحة</h2>
                 <p className="text-muted text-sm">من {formatDateForRender(dateRange.startDate)} إلى {formatDateForRender(dateRange.endDate)}</p>
               </div>
-              <span className="badge-pill font-semibold shrink-0 self-start md:self-auto">{availableApartments.length} وحدات</span>
+              <div className="flex flex-wrap items-center gap-2 shrink-0 self-start md:self-auto">
+                {category && (
+                  <span className="badge-pill badge-outline font-semibold">الفئة: {category}</span>
+                )}
+                <span className="badge-pill font-semibold">{availableApartments.length} وحدات</span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -203,8 +218,11 @@ export default function PublicBookingView() {
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-semibold text-xl tracking-tight text-ink">{apt.name}</h3>
                     </div>
-                    <div className="flex items-center gap-2 mb-4 text-sm text-body">
+                    <div className="flex flex-wrap items-center gap-2 mb-4 text-sm text-body">
                       <span className="badge-pill">{apt.type}</span>
+                      {apt.economicCategory && (
+                        <span className="badge-pill badge-outline">{apt.economicCategory}</span>
+                      )}
                     </div>
                     <p className="text-muted text-sm line-clamp-2 mb-6 flex-1">{apt.description || 'لا يوجد وصف متاح.'}</p>
 
@@ -225,7 +243,7 @@ export default function PublicBookingView() {
               <div className="text-center py-20 bg-canvas rounded-xl border border-dashed border-hairline mt-6">
                 <MapPin className="mx-auto text-muted-soft mb-4" size={48} />
                 <h3 className="text-lg font-semibold text-ink mb-2">عذراً، لا توجد وحدات متاحة</h3>
-                <p className="text-muted max-w-md mx-auto">لم نتمكن من العثور على شقق متاحة في التواريخ المحددة. جرب تغيير فترة الإقامة.</p>
+                <p className="text-muted max-w-md mx-auto">لم نتمكن من العثور على وحدات متاحة{category ? ` في فئة «${category}»` : ''} في التواريخ المحددة. جرب تغيير فترة الإقامة.</p>
               </div>
             )}
           </div>

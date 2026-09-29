@@ -1,0 +1,500 @@
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { Search, Trash2, Edit, Calculator, Users, FileText, MoreVertical, AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { useData } from '../../context/DataContext';
+import PartnerFormModal from '../ui/PartnerFormModal';
+import SettlePartnerModal from '../ui/SettlePartnerModal';
+import SettlementStatusBadge from '../ui/SettlementStatusBadge';
+import EmptyState from '../ui/EmptyState';
+
+function formatCurrency(amount) {
+  return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(amount);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function getCompLabel(compType, percentage, fixedAmount) {
+  const pct = percentage != null ? Number(percentage) : 0;
+  const fixed = fixedAmount != null ? Number(fixedAmount) : 0;
+  switch (compType) {
+    case 'percentage_gross': return `${pct}% من إجمالي الإيرادات`;
+    case 'percentage_net': return `${pct}% من صافي الربح`;
+    case 'fixed': return `مبلغ ثابت ${fixed.toLocaleString()} ر.س`;
+    case 'fixed_percentage': return `مبلغ ثابت ${fixed.toLocaleString()} ر.س + ${pct}% من الإجمالي`;
+    default: return '—';
+  }
+}
+
+function getStatusConfig(status) {
+  switch (status) {
+    case 'active': return { label: 'نشط', className: 'bg-ink text-white dark:bg-white dark:text-ink' };
+    case 'inactive': return { label: 'غير نشط', className: 'bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated dark:text-body-dark' };
+    case 'paused': return { label: 'موقوف', className: 'bg-transparent text-muted border border-dashed border-muted-soft' };
+    default: return { label: status, className: 'bg-surface-card text-ink dark:bg-surface-dark-elevated dark:text-white' };
+  }
+}
+
+export default function PartnersView({ addTrigger, onSelectPartner }) {
+  const { partners, fetchPartners, deletePartner, apartments } = useData();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingPartner, setEditingPartner] = useState(null);
+  const [settlingPartner, setSettlingPartner] = useState(null);
+  const [menuOpenFor, setMenuOpenFor] = useState(null);
+  const [menuPos, setMenuPos] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const menuRef = useRef(null);
+  const addTriggerRef = useRef(addTrigger);
+
+  // Watch addTrigger to open modal
+  useEffect(() => {
+    if (addTrigger !== addTriggerRef.current) {
+      addTriggerRef.current = addTrigger;
+      setShowAdd(true);
+      setEditingPartner(null);
+    }
+  }, [addTrigger]);
+
+  // Fetch on mount
+  const fetchPartnersRef = useRef(fetchPartners);
+  useEffect(() => {
+    fetchPartnersRef.current = fetchPartners;
+  }, [fetchPartners]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        await fetchPartnersRef.current();
+      } catch {
+        // toast handled in context
+      }
+      if (!cancelled) {
+        // Small min-delay so the skeleton isn't an unreadable flash
+        setTimeout(() => { if (!cancelled) setLoading(false); }, 250);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Stats
+  const activeCount = partners.filter(p => p.status === 'active').length;
+  const totalPaid = partners.reduce((sum, p) => {
+    const paid = (p.settlements || []).filter(s => s.status === 'paid').reduce((s, st) => s + Number(st.amount || 0), 0);
+    return sum + paid;
+  }, 0);
+  const latestSettlement = partners
+    .flatMap(p => (p.settlements || []).map(s => ({ ...s, partnerName: p.name })))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+  const filteredPartners = partners.filter(p => {
+    const matchesSearch = !search || p.name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.phone?.includes(search) || p.email?.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const confirmDelete = async () => {
+    try {
+      await deletePartner(deleteConfirmId);
+    } catch {
+      // toast handled in context
+    }
+    setDeleteConfirmId(null);
+    setMenuOpenFor(null);
+  };
+
+  // Close the row menu when clicking anywhere outside the open menu
+  useEffect(() => {
+    if (!menuOpenFor) return;
+    function onClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenFor(null);
+      }
+    }
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('touchstart', onClick, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('touchstart', onClick);
+    };
+  }, [menuOpenFor]);
+
+  // Keep the ⋯ menu inside the viewport. It's anchored with its RIGHT edge at
+  // the button (extends left), so in these RTL rows — where the action column
+  // sits at the viewport's left/bottom edges — the menu bleeds off-screen.
+  // Measure the rendered menu in a layout effect and nudge it back in before
+  // paint; no visible flash, no stored state to reconcile.
+  useLayoutEffect(() => {
+    if (!menuOpenFor || !menuRef.current) return;
+    const m = menuRef.current;
+    const rect = m.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const M = 8;
+    if (rect.left < M) {
+      m.style.right = 'auto';
+      m.style.left = '8px';
+    } else if (rect.right > vw - M) {
+      m.style.right = 'auto';
+      m.style.left = `${vw - rect.width - M}px`;
+    }
+    if (rect.top < M) m.style.top = '8px';
+    else if (rect.bottom > vh - M) m.style.top = `${vh - rect.height - M}px`;
+  }, [menuOpenFor, menuPos]);
+
+  return (
+    <>
+      {/* PartnerFormModal */}
+      <PartnerFormModal
+        isOpen={showAdd}
+        onClose={() => { setShowAdd(false); setEditingPartner(null); }}
+        initialData={editingPartner}
+        apartments={apartments}
+        addTrigger={addTrigger}
+      />
+
+      {/* SettlePartnerModal */}
+      <SettlePartnerModal
+        isOpen={!!settlingPartner}
+        onClose={() => setSettlingPartner(null)}
+        partner={settlingPartner}
+        apartments={apartments}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && createPortal(
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
+          <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)} />
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full md:max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-5">
+                <AlertTriangle className="h-8 w-8 text-ink dark:text-white" />
+              </div>
+              <h3 className="text-xl font-semibold tracking-tight text-ink dark:text-white mb-2">
+                تأكيد الحذف
+              </h3>
+              <p className="text-sm text-muted dark:text-body-dark font-medium">
+                هل أنت متأكد من حذف هذا الشريك؟ سيتم حذف جميع تسوياته أيضاً. لا يمكن التراجع عن هذا الإجراء.
+              </p>
+            </div>
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex space-x-reverse space-x-3">
+              <button onClick={confirmDelete} className="btn-primary flex-1">
+                تأكيد الحذف
+              </button>
+              <button onClick={() => setDeleteConfirmId(null)} className="btn-secondary flex-1">
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* ---- Skeleton loading state ---- */}
+        {loading ? (
+          <div className="animate-pulse flex-1 flex flex-col min-h-0">
+            {/* Desktop stats skeleton */}
+            <div className="hidden md:grid md:grid-cols-4 gap-4 mb-6">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg h-24 flex flex-col justify-center">
+                  <div className="h-3 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-3"></div>
+                  <div className="h-7 w-16 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile stats skeleton */}
+            <div className="md:hidden bg-surface-card dark:bg-surface-dark-elevated p-3 rounded-lg mb-4">
+              <div className="grid grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="flex flex-col items-center gap-1.5">
+                    <div className="h-3 w-10 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                    <div className="h-5 w-8 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* List container skeleton */}
+            <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
+              <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark">
+                <div className="h-10 w-full max-w-md bg-surface-strong dark:bg-hairline-dark rounded-md"></div>
+              </div>
+              <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-hairline-soft dark:divide-hairline-dark">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="px-6 py-4 flex items-center gap-4">
+                    <div className="h-9 w-2 rounded-full bg-surface-strong dark:bg-hairline-dark"></div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="h-4 w-40 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                      <div className="h-3 w-64 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                    </div>
+                    <div className="h-6 w-6 bg-surface-strong dark:bg-hairline-dark rounded-md"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+        <>
+          {/* Desktop Stats Cards */}
+          <div className="hidden md:grid md:grid-cols-4 gap-4 mb-6">
+          <div className="card-surface p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
+                <Users size={13} className="text-muted dark:text-body-dark" />
+              </div>
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
+                إجمالي الشركاء
+              </p>
+            </div>
+            <p className="text-2xl font-bold tracking-tight text-ink dark:text-white leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {partners.length}
+            </p>
+          </div>
+          <div className="card-surface p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
+                <Users size={13} className="text-muted dark:text-body-dark" />
+              </div>
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
+                الشركاء النشطون
+              </p>
+            </div>
+            <p className="text-2xl font-bold tracking-tight text-ink dark:text-white leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {activeCount}
+            </p>
+          </div>
+          <div className="card-surface p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
+                <Calculator size={13} className="text-muted dark:text-body-dark" />
+              </div>
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
+                إجمالي المدفوع
+              </p>
+            </div>
+            <p className="text-2xl font-bold tracking-tight text-ink dark:text-white leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {formatCurrency(totalPaid)}
+            </p>
+          </div>
+          <div className="card-surface p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="p-1.5 rounded-md bg-surface-soft dark:bg-surface-dark-elevated">
+                <FileText size={13} className="text-muted dark:text-body-dark" />
+              </div>
+              <p className="text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark">
+                آخر تسوية
+              </p>
+            </div>
+            <p className="text-xl font-bold tracking-tight text-ink dark:text-white leading-none">
+              {latestSettlement ? formatDate(latestSettlement.periodEnd) : '—'}
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile Stats Strip */}
+        <div className="md:hidden card-surface p-3 mb-4">
+          <div className="grid grid-cols-4 gap-1 divide-x divide-x-reverse divide-hairline-soft dark:divide-hairline-dark-soft">
+            <div className="px-2 py-1 flex flex-col items-center">
+              <div className="flex items-center gap-1 text-muted dark:text-body-dark mb-0.5">
+                <Users size={11} strokeWidth={2} />
+                <span className="text-[10px] font-semibold">الشركاء</span>
+              </div>
+              <p className="text-xl font-bold tracking-tight leading-none text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {partners.length}
+              </p>
+            </div>
+            <div className="px-2 py-1 flex flex-col items-center">
+              <div className="flex items-center gap-1 text-muted dark:text-body-dark mb-0.5">
+                <Users size={11} strokeWidth={2} />
+                <span className="text-[10px] font-semibold">نشط</span>
+              </div>
+              <p className="text-xl font-bold tracking-tight leading-none text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {activeCount}
+              </p>
+            </div>
+            <div className="px-2 py-1 flex flex-col items-center">
+              <div className="flex items-center gap-1 text-muted dark:text-body-dark mb-0.5">
+                <Calculator size={11} strokeWidth={2} />
+                <span className="text-[10px] font-semibold">مدفوع</span>
+              </div>
+              <p className="text-lg font-bold tracking-tight leading-none text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {formatCurrency(totalPaid).replace('ر.س', '').trim()}
+              </p>
+            </div>
+            <div className="px-2 py-1 flex flex-col items-center">
+              <div className="flex items-center gap-1 text-muted dark:text-body-dark mb-0.5">
+                <FileText size={11} strokeWidth={2} />
+                <span className="text-[10px] font-semibold">أحدث</span>
+              </div>
+              <p className="text-base font-bold tracking-tight leading-none text-ink dark:text-white">
+                {latestSettlement ? formatDate(latestSettlement.periodEnd).split(' ')[0] : '—'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* List Container */}
+        <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
+          {/* Toolbar */}
+          <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 min-w-0 flex-wrap">
+              <div className="relative w-full md:w-auto md:flex-1 md:max-w-xl min-w-[280px]">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted size-5" />
+                <input
+                  type="text"
+                  className="input-field w-full pr-10"
+                  placeholder="ابحث بالاسم، الهاتف، أو البريد..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="nav-pill-group flex-none w-fit max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
+                {['all', 'active', 'inactive', 'paused'].map((status) => (
+                  <button
+                    key={status}
+                    role="tab"
+                    aria-selected={statusFilter === status}
+                    onClick={() => setStatusFilter(status)}
+                    className={`nav-pill text-2xs md:text-xs flex-1 md:flex-none text-center ${
+                      statusFilter === status ? 'nav-pill-active' : ''
+                    }`}>
+                    {status === 'all' && 'الكل'}
+                    {status === 'active' && 'نشط'}
+                    {status === 'inactive' && 'غير نشط'}
+                    {status === 'paused' && 'موقوف'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* List */}
+          <div className="flex-1 overflow-y-auto min-h-0 pt-2 md:pt-0 pb-24 md:pb-0">
+            {filteredPartners.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title={search ? 'لا توجد نتائج مطابقة' : 'لا شركاء بعد'}
+                subtitle={search
+                  ? 'جرّب تغيير البحث أو الفلترة'
+                  : 'ابدأ بإضافة أول شريك لتقاسم الإيرادات'}
+                variant="dashed"
+              />
+            ) : (
+              <ul className="divide-y divide-hairline-soft dark:divide-hairline-dark">
+                {filteredPartners.map((partner) => {
+                  const statusConfig = getStatusConfig(partner.status);
+                  const latestSettlement = (partner.settlements || [])[0];
+                  return (
+                    <li
+                      key={partner.id}
+                      className="px-6 py-4 hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors group cursor-pointer"
+                      onClick={() => onSelectPartner ? onSelectPartner(partner.id) : null}
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Color indicator based on comp type */}
+                        <div className="h-9 w-2 rounded-full shrink-0 bg-accent" />
+
+                        {/* Main content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold leading-tight text-ink dark:text-white truncate">{partner.name}</p>
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-0.5 ${statusConfig.className}`}>
+                              {statusConfig.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted dark:text-body-dark flex-wrap mt-1">
+                            {partner.phone && (
+                              <span className="flex items-center gap-1">
+                                <span>📞</span> {partner.phone}
+                              </span>
+                            )}
+                            {partner.email && (
+                              <span className="flex items-center gap-1">
+                                <span>✉️</span> {partner.email}
+                              </span>
+                            )}
+                            <span className="text-muted-soft">·</span>
+                            <span>
+                              {partner.apartmentIds.length === 0 ? 'كل الوحدات' : `${partner.apartmentIds.length} وحدة`}
+                            </span>
+                            <span className="text-muted-soft">·</span>
+                            <span className="badge-pill badge-ghost text-[11px] px-2 py-0.5">
+                              {getCompLabel(partner.compType, partner.percentage, partner.fixedAmount)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Latest settlement badge */}
+                        {latestSettlement && (
+                          <SettlementStatusBadge status={latestSettlement.status} />
+                        )}
+
+                        {/* Overflow (⋯) action menu */}
+                        <div className="relative shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const r = e.currentTarget.getBoundingClientRect();
+                              setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                              setMenuOpenFor(partner.id);
+                            }}
+                            className="icon-action hover:bg-surface-soft dark:hover:bg-surface-dark-elevated"
+                            title="إجراءات"
+                            aria-label="إجراءات"
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+
+                          {menuOpenFor === partner.id && (
+                            createPortal(
+                              <div ref={menuRef} style={{ position: 'fixed', right: menuPos.right, top: menuPos.top, zIndex: 60 }}
+                                className="w-48 rounded-xl border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark shadow-soft overflow-hidden anim-pop">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setShowAdd(true); setEditingPartner(partner); setMenuOpenFor(null); }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                                >
+                                  <Edit size={15} className="text-muted dark:text-body-dark" />
+                                  تعديل
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSettlingPartner(partner); setMenuOpenFor(null); }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                                >
+                                  <Calculator size={15} className="text-muted dark:text-body-dark" />
+                                  تسوية جديدة
+                                </button>
+                                <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(partner.id); setMenuOpenFor(null); }}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+                                >
+                                  <Trash2 size={15} className="text-muted dark:text-body-dark" />
+                                  حذف
+                                </button>
+                              </div>,
+                              document.body
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+        </>
+        )}
+      </div>
+    </>
+  );
+}

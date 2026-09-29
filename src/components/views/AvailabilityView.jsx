@@ -119,7 +119,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex,
 };
 
 export default function AvailabilityView({ openBookingForm }) {
-  const { apartments, bookings, deleteBooking } = useData();
+  const { apartments, bookings, deleteBooking, loading } = useData();
   const { user } = useAuth();
   const canSeePrices = user?.role === 'admin' || user?.permissions?.canViewPrices !== false;
   const { darkMode } = useTheme();
@@ -289,17 +289,22 @@ export default function AvailabilityView({ openBookingForm }) {
     });
   };
 
+  const isMobileView = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+  const skeletonUnitCol = isMobileView ? 100 : 150;
+  const skeletonDays = [0, 1, 2, 3, 4, 5, 6];
+  const skeletonUnitRows = [0, 1, 2, 3, 4, 5];
+
   return (
     <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
       <div className="p-3 md:p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center gap-2 bg-canvas dark:bg-surface-dark">
-        <div className="flex items-center space-x-reverse space-x-2 md:space-x-4 min-w-0">
+        <div className="flex items-center space-x-reverse space-x-2 md:space-x-4 min-w-0 flex-1 md:flex-none">
           <h3 className="font-semibold text-ink dark:text-white flex items-center gap-1 md:gap-2 text-xs md:text-lg tracking-tight leading-tight whitespace-nowrap shrink-0">
             <Calendar size={14} className="text-ink dark:text-white shrink-0 md:hidden" />
             <Calendar size={20} className="text-ink dark:text-white shrink-0 hidden md:block" />
             <span className="md:hidden">{rangeLabelShort}</span>
-            <span className="hidden md:inline">{rangeLabel}</span>
+            <span className="hidden md:inline me-4">{rangeLabel}</span>
           </h3>
-          <div className="flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-0.5 md:p-1 mr-0 md:mr-4 shrink-0">
+          <div className="hidden md:flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-0.5 md:p-1 shrink-0">
             <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={14} className="md:hidden" /><ChevronRight size={18} className="hidden md:block" /></button>
             <button onClick={handleToday} className="px-1.5 md:px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-0.5 md:py-1 transition-colors">اليوم</button>
             <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={14} className="md:hidden" /><ChevronLeft size={18} className="hidden md:block" /></button>
@@ -308,12 +313,12 @@ export default function AvailabilityView({ openBookingForm }) {
           {/* View mode: pills on both platforms. Compact sizing on mobile so
               all three options stay visible and no dropdown menu covers the
               availability grid below. */}
-          <div className="nav-pill-group shrink-0">
+          <div className="nav-pill-group shrink-0 flex-1 md:flex-none min-w-0">
             {[{ id: 'week', t: 'أسبوع' }, { id: 'half', t: 'نصف شهر' }, { id: 'month', t: 'شهر' }].map(v => (
               <button
                 key={v.id}
                 onClick={() => setViewMode(v.id)}
-                className={`nav-pill text-2xs md:text-xs px-1.5 md:px-3 py-1 md:py-1.5 ${viewMode === v.id ? 'nav-pill-active' : ''}`}
+                className={`nav-pill text-2xs md:text-xs px-1.5 md:px-3 py-1 md:py-1.5 flex-1 md:flex-none text-center ${viewMode === v.id ? 'nav-pill-active' : ''}`}
               >
                 {v.t}
               </button>
@@ -401,7 +406,34 @@ export default function AvailabilityView({ openBookingForm }) {
         </div>
       </div>
 
-      {(() => {
+      {loading ? (
+        <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none pt-2 md:pt-0 pb-24 md:pb-0">
+          <div className="animate-pulse">
+            <div style={{ display: 'grid', gridTemplateColumns: `${skeletonUnitCol}px repeat(7, minmax(40px, 1fr))`, minWidth: 'min-content' }}>
+              <div className="h-[46px] border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center justify-center">
+                <div className="h-3 w-12 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+              </div>
+              {skeletonDays.map(i => (
+                <div key={`sh${i}`} className="h-[46px] border-b border-l border-hairline-soft dark:border-hairline-dark flex flex-col items-center justify-center gap-1">
+                  <div className="h-6 w-6 rounded-full bg-surface-strong dark:bg-hairline-dark"></div>
+                  <div className="h-2 w-5 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                </div>
+              ))}
+              {skeletonUnitRows.map(r => (
+                <Fragment key={`sr${r}`}>
+                  <div className="h-[46px] border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center gap-2 px-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-surface-strong dark:bg-hairline-dark shrink-0"></div>
+                    <div className="h-3.5 w-16 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                  </div>
+                  {skeletonDays.map(c => (
+                    <div key={`s${r}-${c}`} className="h-[46px] border-b border-l border-hairline-soft dark:border-hairline-dark"></div>
+                  ))}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (() => {
         const wd = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
         const N = range.length;
         const canBook = user?.role === 'admin' || user?.permissions?.canBook;

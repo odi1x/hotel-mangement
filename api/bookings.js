@@ -29,10 +29,8 @@ export default async function handler(req, res) {
         };
       }
 
-      // Include payments so the UI can render balance/status badges and drive
-      // the Balances (المستحقات) view without a second round-trip per booking.
       const paymentsInclude = {
-        payments: { orderBy: { date: 'desc' } }
+        payments: { orderBy: { date: 'desc' }, select: { id: true, amount: true } }
       };
 
       if (page && limit) {
@@ -63,7 +61,9 @@ export default async function handler(req, res) {
         const bookings = await prisma.booking.findMany({
           where: whereClause,
           orderBy: { startDate: 'desc' },
-          include: paymentsInclude
+          include: {
+            payments: { orderBy: { date: 'desc' }, select: { id: true, amount: true } }
+          }
         });
         return res.status(200).json(bookings);
       }
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
       }
 
       // Check for overlapping bookings (ignore checked_out_early ones if they don't actually overlap after their new endDate)
-      const overlappingBookings = await prisma.booking.findMany({
+      const overlapCount = await prisma.booking.count({
         where: {
           apartmentId,
           status: { notIn: ['checked_out_early'] },
@@ -102,7 +102,7 @@ export default async function handler(req, res) {
         }
       });
 
-      if (overlappingBookings.length > 0) {
+      if (overlapCount > 0) {
         return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
       }
 
@@ -296,7 +296,7 @@ export default async function handler(req, res) {
       }
 
       // Check for overlapping bookings
-      const overlappingBookings = await prisma.booking.findMany({
+      const overlapCount = await prisma.booking.count({
         where: {
           apartmentId,
           id: { not: id },
@@ -308,7 +308,7 @@ export default async function handler(req, res) {
         }
       });
 
-      if (overlappingBookings.length > 0) {
+      if (overlapCount > 0) {
         return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
       }
 

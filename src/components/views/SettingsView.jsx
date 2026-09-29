@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud, Check } from 'lucide-react';
+import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud, Check, Loader2, Image as ImageIcon } from 'lucide-react';
 import { ACCENTS, applyAccent, getAccentId } from '../../lib/accent';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -30,11 +30,23 @@ export default function SettingsView() {
     taxPercentage: '',
     apartmentTypes: 'غرفة,غرفة وصالة,غرفتين وصالة',
     bookingSources: 'زيارة مباشرة,Booking.com,Airbnb',
+    economicCategories: 'اقتصادية,فاخرة',
+    locations: '',
+    locationDetails: [],
+    whatsappMessage: '',
+    whatsappMessagePreliminary: '',
+    whatsappMessageConfirmed: '',
     generalExpenses: ''
   });
 
   const [apartmentTypesList, setApartmentTypesList] = useState(['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
   const [newApartmentType, setNewApartmentType] = useState('');
+
+  const [economicCategoriesList, setEconomicCategoriesList] = useState(['اقتصادية', 'فاخرة']);
+  const [newEconomicCategory, setNewEconomicCategory] = useState('');
+
+  const [locationsList, setLocationsList] = useState([]);
+  const [newLocation, setNewLocation] = useState('');
 
   const [bookingSourcesList, setBookingSourcesList] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
   const [newBookingSource, setNewBookingSource] = useState('');
@@ -49,12 +61,11 @@ export default function SettingsView() {
 
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [uploadingLocation, setUploadingLocation] = useState(null);
 
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdSuccessMsg, setPwdSuccessMsg] = useState('');
   const [pwdErrorMsg, setPwdErrorMsg] = useState('');
-
-
 
   useEffect(() => {
     if (user) {
@@ -69,10 +80,18 @@ export default function SettingsView() {
         taxPercentage: user.taxPercentage || '',
         apartmentTypes: user.apartmentTypes || 'غرفة,غرفة وصالة,غرفتين وصالة',
         bookingSources: user.bookingSources || 'زيارة مباشرة,Booking.com,Airbnb',
+        economicCategories: user.economicCategories || 'اقتصادية,فاخرة',
+        locations: user.locations || '',
+        locationDetails: Array.isArray(user.locationDetails) ? user.locationDetails : [],
+        whatsappMessage: user.whatsappMessage || '',
+        whatsappMessagePreliminary: user.whatsappMessagePreliminary || '',
+        whatsappMessageConfirmed: user.whatsappMessageConfirmed || '',
         generalExpenses: user.generalExpenses || ''
       });
       setApartmentTypesList(user.apartmentTypes ? user.apartmentTypes.split(',').map(s => s.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة']);
       setBookingSourcesList(user.bookingSources ? user.bookingSources.split(',').map(s => s.trim()).filter(Boolean) : ['زيارة مباشرة', 'Booking.com', 'Airbnb']);
+      setEconomicCategoriesList(user.economicCategories ? user.economicCategories.split(',').map(s => s.trim()).filter(Boolean) : ['اقتصادية', 'فاخرة']);
+      setLocationsList(user.locations ? user.locations.split(',').map(s => s.trim()).filter(Boolean) : []);
     }
   }, [user]);
 
@@ -147,6 +166,125 @@ export default function SettingsView() {
     const updatedList = bookingSourcesList.filter(source => source !== sourceToRemove);
     setBookingSourcesList(updatedList);
     setFormData({ ...formData, bookingSources: updatedList.join(',') });
+  };
+
+  const handleAddEconomicCategory = () => {
+    if (newEconomicCategory.trim() && !economicCategoriesList.includes(newEconomicCategory.trim())) {
+      const updatedList = [...economicCategoriesList, newEconomicCategory.trim()];
+      setEconomicCategoriesList(updatedList);
+      setFormData({ ...formData, economicCategories: updatedList.join(',') });
+      setNewEconomicCategory('');
+    }
+  };
+
+  const handleRemoveEconomicCategory = (categoryToRemove) => {
+    const updatedList = economicCategoriesList.filter(category => category !== categoryToRemove);
+    setEconomicCategoriesList(updatedList);
+    setFormData({ ...formData, economicCategories: updatedList.join(',') });
+  };
+
+  const handleAddLocation = () => {
+    if (newLocation.trim() && !locationsList.includes(newLocation.trim())) {
+      const updatedList = [...locationsList, newLocation.trim()];
+      setLocationsList(updatedList);
+      setFormData({
+        ...formData,
+        locations: updatedList.join(','),
+        locationDetails: [...(formData.locationDetails || []), { name: newLocation.trim(), link: '', photoUrl: '' }]
+      });
+      setNewLocation('');
+    }
+  };
+
+  const handleRemoveLocation = (locationToRemove) => {
+    const updatedList = locationsList.filter(location => location !== locationToRemove);
+    setLocationsList(updatedList);
+    setFormData({
+      ...formData,
+      locations: updatedList.join(','),
+      locationDetails: (formData.locationDetails || []).filter(d => d.name !== locationToRemove)
+    });
+  };
+
+  const handleLocationLinkChange = (name, link) => {
+    setFormData(prev => {
+      const details = Array.isArray(prev.locationDetails) ? prev.locationDetails : [];
+      const i = details.findIndex(d => d.name?.trim() === name.trim());
+      const next = i >= 0
+        ? details.map((d, idx) => idx === i ? { ...d, link } : d)
+        : [...details, { name: name.trim(), link, photoUrl: '' }];
+      return { ...prev, locationDetails: next };
+    });
+  };
+
+  const setLocationPhoto = (name, photoUrl) => {
+    setFormData(prev => {
+      const details = Array.isArray(prev.locationDetails) ? prev.locationDetails : [];
+      const i = details.findIndex(d => d.name?.trim() === name.trim());
+      const next = i >= 0
+        ? details.map((d, idx) => idx === i ? { ...d, photoUrl } : d)
+        : [...details, { name: name.trim(), link: '', photoUrl }];
+      return { ...prev, locationDetails: next };
+    });
+  };
+
+  // Each location's photo uploads directly to ImageKit so the stored value is
+  // a real URL — it's shared as a link in the WhatsApp message, where a data
+  // URL would blow up the message length. Mirrors ApartmentsView's upload flow.
+  const handleLocationPhotoUpload = async (name, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return toast.error('الرجاء اختيار صورة صالحة');
+
+    setUploadingLocation(name);
+    try {
+      const authRes = await axios.get('/api/auth?action=imagekit-auth');
+      const { token, expire, signature } = authRes.data;
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('fileName', file.name);
+      fd.append('publicKey', import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY || 'public_dummy');
+      fd.append('signature', signature);
+      fd.append('expire', expire);
+      fd.append('token', token);
+      fd.append('folder', '/locations');
+      const uploadRes = await axios.post('https://upload.imagekit.io/api/v1/files/upload', fd);
+      const fileId = uploadRes.data.fileId;
+      // fileId rides along in the URL so "remove" can purge it from ImageKit.
+      setLocationPhoto(name, `${uploadRes.data.url}?fileId=${fileId}`);
+      toast.success('تم رفع صورة الموقع');
+    } catch (error) {
+      console.error(error);
+      toast.error('حدث خطأ أثناء رفع الصورة');
+    } finally {
+      setUploadingLocation(null);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleRemoveLocationPhoto = async (name) => {
+    const detail = (formData.locationDetails || []).find(d => d.name?.trim() === name.trim());
+    const url = detail?.photoUrl;
+    if (!url) return;
+    let fileId = null;
+    try {
+      fileId = new URL(url).searchParams.get('fileId');
+    } catch (err) {
+      console.error('Invalid location photo URL', err);
+    }
+    // Only clear the stored URL once ImageKit has actually purged the file,
+    // so the local value can never point to a file we think we deleted.
+    if (fileId) {
+      try {
+        await axios.delete('/api/auth?action=imagekit-delete', { data: { fileId } });
+      } catch (err) {
+        console.error('Failed to delete location photo from ImageKit', err);
+        toast.error('تعذر حذف الصورة نهائياً — حاول مجدداً');
+        return;
+      }
+    }
+    setLocationPhoto(name, '');
+    toast.success('تم حذف صورة الموقع');
   };
 
   const handleSubmit = async (e) => {
@@ -393,6 +531,31 @@ export default function SettingsView() {
                     placeholder="أدخل الشروط والأحكام الخاصة بمنشأتك هنا..."
                   ></textarea>
                 </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">رسالة واتساب عند الضغط على رقم النزيل</label>
+                    <p className="text-xs text-muted dark:text-body-dark mb-3">تُفتح المحادثة برسالة الترحيب عند الضغط على رقم النزيل في قائمة النزلاء</p>
+                    <div>
+                      <label className="block text-2xs font-semibold uppercase tracking-wider text-muted dark:text-body-dark mb-2">
+                        الرموز: <span className="font-mono normal-case">{'{name}'}</span> لاسم النزيل,
+                        <span className="font-mono normal-case"> {'{businessName}'}</span> لاسم المنشأة,
+                        <span className="font-mono normal-case"> {'{apartment}'}</span> لاسم الشقة,
+                        <span className="font-mono normal-case"> {'{ref}'}</span> لرقم المرجع,
+                        <span className="font-mono normal-case"> {'{LocationLink}'}</span> لرابط الموقع,
+                        <span className="font-mono normal-case"> {'{BuildingPhoto}'}</span> لصورة المبنى
+                      </label>
+                      <textarea
+                        name="whatsappMessage"
+                        value={formData.whatsappMessage}
+                        onChange={handleChange}
+                        rows="4"
+                        className="input-field leading-relaxed"
+                        placeholder="مثال: مرحباً {name}، نرحب بك في {businessName}..."
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
               </div>
           )}
 
@@ -426,6 +589,33 @@ export default function SettingsView() {
                       <span
                         className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-ink shadow-micro transition-transform ${
                           pushStatus === 'granted' ? '-translate-x-6' : '-translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Partners Revenue Sharing Toggle */}
+                  <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg flex justify-between items-center mb-6">
+                    <div>
+                      <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2">
+                        <Shield size={18} className="text-ink dark:text-white" />
+                        وحدة الشركاء وتقاسم الإيرادات
+                      </h3>
+                      <p className="text-xs text-muted dark:text-body-dark mt-1">تفعيل ميزة إدارة الشركاء وحساب التسويات المالية</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); handleChange({ target: { name: 'partnersRevenueSharingEnabled', type: 'checkbox', checked: !formData.partnersRevenueSharingEnabled } }); }}
+                      disabled={loading}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${
+                        formData.partnersRevenueSharingEnabled
+                          ? 'bg-ink dark:bg-white'
+                          : 'bg-surface-strong dark:bg-hairline-dark-soft hover:bg-muted-soft cursor-pointer'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-ink shadow-micro transition-transform ${
+                          formData.partnersRevenueSharingEnabled ? '-translate-x-6' : '-translate-x-1'
                         }`}
                       />
                     </button>
@@ -488,6 +678,136 @@ export default function SettingsView() {
                     ))}
                     {apartmentTypesList.length === 0 && <span className="text-sm text-muted">لا توجد أنواع مضافة</span>}
                   </div>
+                </div>
+
+                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">الفئات الاقتصادية</label>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newEconomicCategory}
+                      onChange={(e) => setNewEconomicCategory(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEconomicCategory())}
+                      className="input-field flex-1"
+                      placeholder="أضف فئة اقتصادية جديدة (مثال: فاخرة)"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddEconomicCategory}
+                      className="btn-primary h-auto px-5"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {economicCategoriesList.map((category, index) => (
+                      <div key={index} className="badge-pill">
+                        <span className="text-sm font-semibold">{category}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEconomicCategory(category)}
+                          className="text-muted-soft hover:text-ink dark:hover:text-white transition-colors mr-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {economicCategoriesList.length === 0 && <span className="text-sm text-muted">لا توجد فئات مضافة</span>}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">
+                  <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1">المواقع</label>
+                  <p className="text-xs text-muted dark:text-body-dark mb-3">لكل موقع رابط وصورة خاصة به — تُستخدم تلقائياً في رسائل واتساب عبر <span className="font-mono normal-case">{'{LocationLink}'}</span> و <span className="font-mono normal-case">{'{BuildingPhoto}'}</span> حسب موقع شقة النزيل</p>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={newLocation}
+                      onChange={(e) => setNewLocation(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddLocation())}
+                      className="input-field flex-1"
+                      placeholder="أضف موقع جديد (مثال: حي الياسمين، الرياض)"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddLocation}
+                      className="btn-primary h-auto px-5"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+
+                  {locationsList.length === 0 ? (
+                    <span className="text-sm text-muted">لا توجد مواقع مضافة</span>
+                  ) : (
+                    <div className="space-y-3">
+                      {locationsList.map(location => {
+                        const detail = (formData.locationDetails || []).find(d => d.name?.trim() === location.trim()) || { name: location, link: '', photoUrl: '' };
+                        const uploading = uploadingLocation === location;
+                        return (
+                          <div key={location} className="rounded-lg border border-hairline dark:border-hairline-dark-soft bg-surface-soft dark:bg-surface-dark-elevated/40 p-3 md:p-4">
+                            <div className="flex items-center justify-between gap-2 mb-3">
+                              <span className="font-semibold text-sm text-ink dark:text-white">{location}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveLocation(location)}
+                                className="icon-action h-7 w-7 text-accent-strong"
+                                title="حذف الموقع"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+
+                            <label className="block text-2xs font-semibold text-muted dark:text-body-dark mb-1.5">رابط الموقع <span className="font-mono normal-case">{'{LocationLink}'}</span></label>
+                            <input
+                              type="url"
+                              dir="ltr"
+                              value={detail.link}
+                              onChange={(e) => handleLocationLinkChange(location, e.target.value)}
+                              className="input-field h-9 text-xs w-full mb-3"
+                              placeholder="https://maps.google.com/?q=..."
+                            />
+
+                            <div className="flex items-center gap-3">
+                              <label className={`shrink-0 border border-dashed border-hairline dark:border-hairline-dark-soft rounded-md p-2.5 flex flex-col items-center justify-center bg-canvas dark:bg-surface-dark hover:bg-surface-card dark:hover:bg-hairline-dark transition cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                                {uploading ? (
+                                  <Loader2 size={18} className="text-muted animate-spin" />
+                                ) : (
+                                  <ImageIcon size={18} className="text-muted" />
+                                )}
+                                <span className="text-2xs font-medium text-muted dark:text-body-dark mt-1">{uploading ? 'جارِ الرفع...' : detail.photoUrl ? 'تغيير الصورة' : 'صورة المبنى'}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleLocationPhotoUpload(location, e)}
+                                  className="hidden"
+                                />
+                              </label>
+                              {detail.photoUrl && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <img
+                                    src={detail.photoUrl.split('?')[0]}
+                                    alt={location}
+                                    className="w-24 h-20 object-cover rounded-md border border-hairline dark:border-hairline-dark-soft shrink-0"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveLocationPhoto(location)}
+                                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark text-accent-strong text-2xs font-semibold hover:bg-accent/5 transition-colors shrink-0"
+                                    title="حذف الصورة نهائياً من التطبيق وImageKit"
+                                    aria-label={`حذف صورة ${location}`}
+                                  >
+                                    <Trash2 size={13} />
+                                    حذف الصورة
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t border-hairline-soft dark:border-hairline-dark">

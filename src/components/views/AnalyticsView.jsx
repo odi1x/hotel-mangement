@@ -6,6 +6,7 @@ import DatePickerCal from '../ui/DatePickerCal';
 import { getAccent } from '../../lib/accent';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { gregorianToHijri, hijriYearToGregorianRange, hijriQuarterToGregorianRange, hijriMonthToGregorianRange, getAvailableHijriYears } from '../../lib/hijriCalendar';
 
 export default function AnalyticsView({ setView }) {
   const accentHex = getAccent().hex;
@@ -21,20 +22,38 @@ export default function AnalyticsView({ setView }) {
   // request (via setAnalyticsFilter dates); the trend chart just displays
   // whatever came back — no separate chart-local filter anymore.
   const [periodFilter, setPeriodFilter] = useState('year');
+  const [calendarMode, setCalendarMode] = useState('gregorian'); // 'gregorian' | 'hijri'
+  const availableHijriYears = useMemo(() => getAvailableHijriYears(bookings), [bookings]);
+  const [selectedHijriYear, setSelectedHijriYear] = useState(() => availableHijriYears[0] || gregorianToHijri(new Date()).year);
 
   const hasFilterChanges = () => {
     const startDiffers = tempFilter.startDate !== analyticsFilter.startDate;
     const endDiffers = tempFilter.endDate !== analyticsFilter.endDate;
+    const calendarDiffers = (tempFilter.calendarMode || 'gregorian') !== calendarMode;
+    const hYearDiffers = (tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year) !== selectedHijriYear;
 
     const tempIds = tempFilter.apartmentIds || [];
     const activeIds = analyticsFilter.apartmentIds || [];
     const idsDiffer = tempIds.length !== activeIds.length || !tempIds.every(id => activeIds.includes(id));
 
-    return startDiffers || endDiffers || idsDiffer;
+    return startDiffers || endDiffers || idsDiffer || calendarDiffers || hYearDiffers;
   };
 
   const handleApplyFilter = () => {
-    setAnalyticsFilter({ ...tempFilter });
+    const mode = tempFilter.calendarMode || 'gregorian';
+    const hYear = tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year;
+
+    setCalendarMode(mode);
+    setSelectedHijriYear(hYear);
+
+    const nextFilter = { ...tempFilter };
+    if (mode === 'hijri') {
+      const range = hijriYearToGregorianRange(hYear);
+      nextFilter.startDate = range.startDate;
+      nextFilter.endDate = range.endDate;
+    }
+
+    setAnalyticsFilter(nextFilter);
     setIsFilterOpen(false);
   };
 
@@ -45,10 +64,27 @@ export default function AnalyticsView({ setView }) {
   // DatePickerCal expects this format — it parses via s.split('-').map(Number),
   // which returns NaN for the day segment if there's a "T00:00:00.000Z" tail.
   // The API server also accepts either format via new Date(), so this is safe.
-  const rangeForPeriod = (period) => {
+  const rangeForPeriod = (period, mode = calendarMode, hYear = selectedHijriYear) => {
     const now = new Date();
     const toDateStr = (d) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    if (mode === 'hijri') {
+      const hToday = gregorianToHijri(now);
+      const targetYear = hYear || hToday.year;
+      if (period === 'month') {
+        return hijriMonthToGregorianRange(targetYear, hToday.month);
+      }
+      if (period === 'quarter') {
+        const q = Math.ceil(hToday.month / 3);
+        return hijriQuarterToGregorianRange(targetYear, q);
+      }
+      if (period === 'year') {
+        return hijriYearToGregorianRange(targetYear);
+      }
+      return { startDate: null, endDate: null };
+    }
+
     if (period === 'month') {
       return {
         startDate: toDateStr(new Date(now.getFullYear(), now.getMonth(), 1)),
@@ -88,6 +124,7 @@ export default function AnalyticsView({ setView }) {
       for (const chip of ['month', 'quarter', 'year']) {
         const r = rangeForPeriod(chip);
         if (r.startDate === analyticsFilter.startDate && r.endDate === analyticsFilter.endDate) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setPeriodFilter(chip);
           return;
         }
@@ -104,9 +141,9 @@ export default function AnalyticsView({ setView }) {
   }, []);
 
   // Chip click handler — updates state + dates in one shot.
-  const handlePeriodChange = (period) => {
+  const handlePeriodChange = (period, mode = calendarMode, hYear = selectedHijriYear) => {
     setPeriodFilter(period);
-    const range = rangeForPeriod(period);
+    const range = rangeForPeriod(period, mode, hYear);
     setAnalyticsFilter(prev => ({ ...prev, ...range }));
   };
 
@@ -167,16 +204,17 @@ export default function AnalyticsView({ setView }) {
   }), [analytics.totalRevenue, analytics.totalExpenses, analytics.netProfit]);
 
   const displayTrendData = useMemo(() => {
-    if (trendData.length === 1) {
+    const data = trendData;
+    if (data.length === 1) {
       // Pad with dummy data to force area fill
-      const item = trendData[0];
+      const item = data[0];
       return [
         { ...item, name: ' ' },
         item,
         { ...item, name: '  ' }
       ];
     }
-    return trendData;
+    return data;
   }, [trendData]);
 
 
@@ -261,58 +299,85 @@ export default function AnalyticsView({ setView }) {
 
   if (isAnalyticsLoading) {
     return (
-      <div className="h-full overflow-hidden flex flex-col space-y-4 animate-pulse">
-        <div className="flex justify-between items-center mb-4">
-          <div className="h-10 w-48 bg-surface-card dark:bg-surface-dark-elevated rounded-md"></div>
-          <div className="h-10 w-32 bg-surface-card dark:bg-surface-dark-elevated rounded-md"></div>
+      <div className="h-full overflow-hidden flex flex-col animate-pulse">
+        {/* Compact action strip — mirrors the filter chip + period chips + export row */}
+        <div className="flex justify-between items-center mb-5 gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-24 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+            <div className="hidden md:flex items-center gap-2">
+              <div className="h-7 w-14 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+              <div className="h-7 w-16 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+              <div className="h-7 w-14 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+              <div className="h-7 w-12 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
+            </div>
+          </div>
+          <div className="h-9 w-20 bg-surface-card dark:bg-surface-dark-elevated rounded-full"></div>
         </div>
 
-        {/* 4 KPI Skeleton Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg h-28 flex flex-col justify-center">
-              <div className="h-4 w-20 bg-surface-strong dark:bg-hairline-dark rounded mb-3"></div>
+        {/* Hero — net profit card with the leading accent bar */}
+        <div className="relative bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-6 md:p-7 overflow-hidden shrink-0 mb-5">
+          <span className="absolute right-0 top-6 bottom-6 w-[3px] rounded-l-full bg-surface-strong dark:bg-hairline-dark"></span>
+          <div className="pr-3">
+            <div className="h-3 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-3"></div>
+            <div className="h-10 w-56 bg-surface-strong dark:bg-hairline-dark rounded mb-3"></div>
+            <div className="h-3 w-40 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+          </div>
+        </div>
+
+        {/* 3 KPI cards — revenue, occupancy, nights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 shrink-0 mb-5">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg">
+              <div className="h-3 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-3"></div>
               <div className="h-8 w-32 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
-              <div className="h-3 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+              <div className="h-3 w-28 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
             </div>
           ))}
         </div>
 
-        <div className="flex-1 min-h-0 w-full overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-4 pb-2">
-          {/* Top Performers and Pie Chart Skeleton */}
-          <div className="lg:col-span-1 flex flex-col gap-5 h-full min-h-0">
-            <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col">
-               <div className="h-5 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
-               <div className="h-3 w-32 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-4"></div>
-               <div className="flex-1 flex flex-col gap-3 justify-center">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="flex justify-between items-center">
-                       <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-surface-strong dark:bg-hairline-dark"></div><div className="h-4 w-20 bg-surface-strong dark:bg-hairline-dark rounded"></div></div>
-                       <div className="h-6 w-16 bg-surface-strong dark:bg-hairline-dark rounded"></div>
-                    </div>
-                  ))}
-               </div>
-            </div>
-
-            <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg flex-1 min-h-0 flex flex-col items-center justify-center">
-              <div className="self-start h-5 w-24 bg-surface-strong dark:bg-hairline-dark rounded mb-2"></div>
-              <div className="self-start h-3 w-32 bg-surface-strong/60 dark:bg-hairline-dark rounded mb-4"></div>
-              <div className="w-32 h-32 rounded-full border-8 border-surface-strong dark:border-hairline-dark mt-4"></div>
-            </div>
-          </div>
-
-          {/* Area Chart Skeleton */}
-          <div className="lg:col-span-2 bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-5 flex flex-col h-full min-h-0">
-            <div className="flex justify-between items-center mb-6">
-              <div className="h-5 w-40 bg-surface-strong dark:bg-hairline-dark rounded"></div>
-              <div className="h-8 w-48 bg-surface-strong/60 dark:bg-hairline-dark rounded-full"></div>
-            </div>
-            <div className="flex gap-6 mb-6">
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
-               <div className="h-10 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+        {/* Trend chart (2/3) + Sources (1/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-0 shrink-0">
+          <div className="bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[280px]">
+            <div className="h-5 w-44 bg-surface-strong dark:bg-hairline-dark rounded mb-5"></div>
+            <div className="flex gap-6 mb-5">
+              <div className="h-4 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+              <div className="h-4 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+              <div className="h-4 w-24 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
             </div>
             <div className="flex-1 w-full bg-surface-soft dark:bg-hairline-dark rounded-lg"></div>
+          </div>
+          <div className="bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-5 flex flex-col gap-4">
+            <div className="h-5 w-36 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+            <div className="h-3 w-40 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+            {[1,2,3].map(i => (
+              <div key={i}>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <div className="h-3 w-20 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                  <div className="h-3 w-14 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                </div>
+                <div className="h-1.5 rounded-full bg-surface-soft dark:bg-hairline-dark/60 overflow-hidden">
+                  <div className="h-full w-3/5 rounded-full bg-surface-strong dark:bg-hairline-dark"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Per-unit P&L rows */}
+        <div className="bg-surface-card dark:bg-surface-dark-elevated rounded-lg p-4 md:p-5 shrink-0 mt-5">
+          <div className="h-5 w-40 bg-surface-strong dark:bg-hairline-dark rounded mb-4"></div>
+          <div className="space-y-3.5">
+            {[1,2,3,4,5].map(i => (
+              <div key={i} className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-6 h-6 rounded-full bg-surface-strong dark:bg-hairline-dark shrink-0"></div>
+                  <div className="h-3 w-32 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                </div>
+                <div className="h-3 w-16 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                <div className="h-3 w-16 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+                <div className="hidden sm:block h-3 w-16 bg-surface-strong/60 dark:bg-hairline-dark rounded"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -329,16 +394,14 @@ export default function AnalyticsView({ setView }) {
         <div className="relative flex items-center gap-2 flex-wrap">
           <button
             onClick={() => {
-              // Snapshot the CURRENT analyticsFilter into tempFilter when
-              // opening. useState's initializer only runs once (at mount),
-              // so if analyticsFilter was empty at that moment (before the
-              // mount-sync effect populated it), tempFilter would be
-              // permanently stale — DatePicker would receive undefined
-              // dates and render "undefined NaN". Refreshing on each open
-              // fixes it and also picks up any changes made via the chips
-              // since the last open.
               const nextOpen = !isFilterOpen;
-              if (nextOpen) setTempFilter({ ...analyticsFilter });
+              if (nextOpen) {
+                setTempFilter({
+                  ...analyticsFilter,
+                  calendarMode,
+                  selectedHijriYear
+                });
+              }
               setIsFilterOpen(nextOpen);
             }}
             className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold transition-colors border ${
@@ -348,14 +411,32 @@ export default function AnalyticsView({ setView }) {
             }`}
           >
             <Filter size={13} />
-            <span>تصفية</span>
+            <span>{calendarMode === 'hijri' ? `تصفية (${selectedHijriYear} هـ)` : 'تصفية'}</span>
             {hasActiveFilters && <span className="w-1.5 h-1.5 bg-accent rounded-full mx-0.5"></span>}
             <ChevronDown size={13} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
 
+          {/* Mobile Excel export — sits directly next to the filter chip.
+              Desktop keeps the trailing export group (hidden here). */}
+          <button
+            onClick={() => exportToExcel(false)}
+            className="md:hidden inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold bg-ink text-white dark:bg-white dark:text-ink transition-colors hover:opacity-90"
+            title="تحميل تقرير Excel"
+          >
+            <Download size={13} />
+            <span>Excel</span>
+          </button>
+
           {hasActiveFilters && (
             <button
-              onClick={() => { const empty = { apartmentIds: [], startDate: null, endDate: null }; setAnalyticsFilter(empty); setTempFilter(empty); setIsFilterOpen(false); }}
+              onClick={() => {
+                const empty = { apartmentIds: [], startDate: null, endDate: null, calendarMode: 'gregorian', selectedHijriYear: gregorianToHijri(new Date()).year };
+                setCalendarMode('gregorian');
+                setSelectedHijriYear(empty.selectedHijriYear);
+                setAnalyticsFilter(empty);
+                setTempFilter(empty);
+                setIsFilterOpen(false);
+              }}
               className="icon-action opacity-100 h-8 w-8"
               title="إلغاء التصفية"
             >
@@ -363,17 +444,15 @@ export default function AnalyticsView({ setView }) {
             </button>
           )}
 
-          {/* Period chips — inline with تصفية. Mirrors the Expenses tab
-              pattern. Changing a chip updates analyticsFilter's date range,
-              which triggers a refetch — every card on the page reflects
-              the same period. */}
-          <div className="nav-pill-group shrink-0">
+<div className="nav-pill-group shrink-0 overflow-x-auto max-w-full scrollbar-none md:overflow-visible">
             {[
-              { id: 'month',   label: 'هذا الشهر' },
-              { id: 'quarter', label: 'الربع الحالي' },
-              { id: 'year',    label: 'هذه السنة' },
+              { id: 'month',   label: 'هذا الشهر', hideForPast: true },
+              { id: 'quarter', label: 'الربع الحالي', hideForPast: true },
+              { id: 'year',    label: calendarMode === 'hijri' && selectedHijriYear < gregorianToHijri(new Date()).year ? `سنة ${selectedHijriYear}` : (calendarMode === 'hijri' ? 'السنة الحالية' : 'هذه السنة') },
               { id: 'all',     label: 'الكل' },
-            ].map(o => (
+            ]
+            .filter(o => !(calendarMode === 'hijri' && selectedHijriYear < gregorianToHijri(new Date()).year && o.hideForPast))
+            .map(o => (
               <button
                 key={o.id}
                 onClick={() => handlePeriodChange(o.id)}
@@ -385,46 +464,115 @@ export default function AnalyticsView({ setView }) {
           </div>
 
           {isFilterOpen && (
-            <div className="absolute top-full right-0 mt-2 w-[320px] bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 p-4">
-              <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الفترة الزمنية:</span>
-                <DatePickerCal
-                  value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
-                  onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
-                />
-              </div>
+            <div className="absolute top-full right-0 mt-2 w-[320px] md:w-[680px] max-h-[calc(100dvh-160px)] md:max-h-none flex flex-col bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 overflow-hidden max-md:fixed max-md:inset-x-4 max-md:bottom-28 max-md:top-auto max-md:mt-0 max-md:w-auto">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                <div className="min-w-0">
+                  <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">نظام التقويم:</span>
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setTempFilter({
+                        ...tempFilter,
+                        calendarMode: 'gregorian',
+                        selectedHijriYear: gregorianToHijri(new Date()).year
+                      })}
+                      className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
+                        (tempFilter.calendarMode || 'gregorian') === 'gregorian'
+                          ? 'bg-ink text-white dark:bg-white dark:text-ink border-ink dark:border-white shadow-sm'
+                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
+                      }`}
+                    >
+                      ميلادي
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTempFilter({
+                        ...tempFilter,
+                        calendarMode: 'hijri',
+                        selectedHijriYear: tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year
+                      })}
+                      className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
+                        tempFilter.calendarMode === 'hijri'
+                          ? 'bg-accent text-white border-accent shadow-sm'
+                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
+                      }`}
+                    >
+                      هجري
+                    </button>
+                  </div>
 
-              <div className="mb-4">
-                <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الوحدات:</span>
-                <div className="max-h-48 overflow-y-auto space-y-1.5 p-1">
-                  {apartments.map(a => {
-                      const isChecked = tempFilter.apartmentIds?.includes(a.id);
-                      return (
-                          <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated p-2 rounded-md transition-colors">
-                              <input
-                                  type="checkbox"
-                                  checked={isChecked || false}
-                                  onChange={(e) => {
-                                      const currentIds = tempFilter.apartmentIds || [];
-                                      const newIds = e.target.checked
-                                          ? [...currentIds, a.id]
-                                          : currentIds.filter(id => id !== a.id);
-                                      setTempFilter({...tempFilter, apartmentIds: newIds});
-                                  }}
-                                  className="rounded border-hairline accent-black w-4 h-4"
-                              />
-                              <span>{a.name}</span>
-                          </label>
-                      );
-                  })}
+                  {tempFilter.calendarMode === 'hijri' ? (
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-muted-soft">اختر السنة الهجرية للتقرير:</label>
+                      <select
+                        value={tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year}
+                        onChange={(e) => {
+                          const y = parseInt(e.target.value, 10);
+                          const range = hijriYearToGregorianRange(y);
+                          setTempFilter({
+                            ...tempFilter,
+                            selectedHijriYear: y,
+                            startDate: range.startDate,
+                            endDate: range.endDate
+                          });
+                        }}
+                        className="w-full h-9 px-3 rounded-md text-xs font-semibold bg-canvas text-ink border border-hairline dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark focus:outline-none focus:ring-1 focus:ring-accent"
+                      >
+                        {availableHijriYears.map(y => (
+                          <option key={y} value={y}>
+                            {y} هـ
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-muted-soft leading-normal">
+                        سيتم ضبط الفترة تلقائياً من 1 محرم إلى 30 ذو الحجة للعام {tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year} هـ.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الفترة الزمنية:</span>
+                      <DatePickerCal
+                        value={{ startDate: tempFilter.startDate || null, endDate: tempFilter.endDate || null }}
+                        onChange={(val) => setTempFilter({ ...tempFilter, startDate: val?.startDate || null, endDate: val?.endDate || null })}
+                      />
+                    </div>
+                  )}
                 </div>
+
+                <div className="min-w-0 flex flex-col">
+                  <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">الوحدات:</span>
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 p-1">
+                    {apartments.map(a => {
+                        const isChecked = tempFilter.apartmentIds?.includes(a.id);
+                        return (
+                            <label key={a.id} className="flex items-center space-x-reverse space-x-2 cursor-pointer text-sm font-medium text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated p-2 rounded-md transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={isChecked || false}
+                                    onChange={(e) => {
+                                        const currentIds = tempFilter.apartmentIds || [];
+                                        const newIds = e.target.checked
+                                            ? [...currentIds, a.id]
+                                            : currentIds.filter(id => id !== a.id);
+                                        setTempFilter({...tempFilter, apartmentIds: newIds});
+                                    }}
+                                    className="rounded border-hairline accent-black w-4 h-4"
+                                />
+                                <span>{a.name}</span>
+                            </label>
+                        );
+                    })}
+                  </div>
+                </div>
+              </div>
               </div>
 
               {hasFilterChanges() && (
-                <div className="pt-3 border-t border-hairline-soft dark:border-hairline-dark flex justify-end">
+                <div className="shrink-0 border-t border-hairline-soft dark:border-hairline-dark px-4 py-3 bg-canvas dark:bg-surface-dark flex justify-end">
                   <button
                     onClick={handleApplyFilter}
-                    className="btn-primary h-9 px-4 text-sm"
+                    className="btn-primary h-9 px-5 text-sm w-full md:w-auto"
                   >
                     <Check size={16} />
                     <span>تطبيق الفلاتر</span>
@@ -435,8 +583,9 @@ export default function AnalyticsView({ setView }) {
           )}
         </div>
 
-        {/* Excel export — trailing side (RTL end) */}
-        <div className="flex items-center gap-2">
+        {/* Excel export — trailing side (RTL end). Desktop only; on mobile the
+            Excel button renders inline next to the filter chip above. */}
+        <div className="hidden md:flex items-center gap-2">
           {hasActiveFilters && (
             <button
               onClick={() => exportToExcel(true)}
@@ -556,11 +705,17 @@ export default function AnalyticsView({ setView }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Trend chart — col-span-2 on desktop */}
         <div className="card-surface p-4 md:p-5 lg:col-span-2 flex flex-col min-h-[320px] md:min-h-[440px]">
-          <div className="mb-4 shrink-0">
+          <div className="mb-4 shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
             <h4 className="font-semibold tracking-tight text-ink dark:text-white flex items-center">
               <TrendingUp size={18} className="ml-2 text-muted" />
               اتجاه الإيرادات والمصروفات
             </h4>
+            {calendarMode === 'hijri' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted bg-surface-soft dark:bg-surface-dark-elevated px-2 py-1 rounded">
+                <Globe size={11} />
+                <span>التوزيع حسب الأشهر الهجرية — {selectedHijriYear} هـ</span>
+              </span>
+            )}
           </div>
 
           <div className="flex gap-6 mb-4 shrink-0 border-b border-hairline dark:border-hairline-dark pb-4">
@@ -579,7 +734,7 @@ export default function AnalyticsView({ setView }) {
           </div>
 
           <div className="flex-1 w-full min-h-[280px] relative overflow-hidden" dir="ltr">
-            <div className="absolute inset-0 pb-8 pr-4">
+            <div className="absolute inset-0 pb-8 pl-6">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={displayTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <defs>
@@ -723,7 +878,7 @@ export default function AnalyticsView({ setView }) {
                           className={`px-3 py-3 text-left font-bold ${isLoss ? 'text-accent-strong' : 'text-ink dark:text-white'}`}
                           style={{ fontVariantNumeric: 'tabular-nums' }}
                         >
-                          {isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}
+                          <span dir="ltr">{isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}</span>
                           <span className="text-2xs font-medium text-muted-soft mr-0.5">ر.س</span>
                         </td>
                         <td
@@ -785,7 +940,7 @@ export default function AnalyticsView({ setView }) {
                           className={`text-lg font-bold leading-none mt-0.5 ${isLoss ? 'text-accent-strong' : 'text-ink dark:text-white'}`}
                           style={{ fontVariantNumeric: 'tabular-nums' }}
                         >
-                          {isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}
+                          <span dir="ltr">{isLoss && '-'}{Math.abs(Math.round(u.netProfit)).toLocaleString()}</span>
                           <span className="text-2xs font-medium text-muted-soft mr-0.5">ر.س</span>
                         </p>
                       </div>
@@ -820,7 +975,7 @@ export default function AnalyticsView({ setView }) {
           reaches the true viewport and blurs the header, no matter what
           stacking context our view ancestors have. */}
       {breakdownModal && createPortal(
-        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
           <div className="absolute inset-0" onClick={() => setBreakdownModal(null)}></div>
           <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-hairline dark:border-hairline-dark-soft">
             <div className="px-6 py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">

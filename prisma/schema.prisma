@@ -35,8 +35,17 @@ model User {
   taxPercentage    Decimal?
   apartmentTypes   String?
   bookingSources   String?
+  economicCategories String?
+  locations         String?
+  locationDetails   Json?      /// [{ name, link, photoUrl }] — each location's own map link + building photo
+  whatsappMessage   String?
+  whatsappMessagePreliminary String?
+  whatsappMessageConfirmed   String?
 
   generalExpenses  Decimal?
+
+  // Partners / Revenue Sharing feature flag
+  partnersRevenueSharingEnabled  Boolean     @default(false)
 
   createdAt        DateTime    @default(now())
 
@@ -54,6 +63,10 @@ model User {
   cleaningTasksOwned    CleaningTask[] @relation("CleaningTaskOwner")
   cleaningTasksStarted  CleaningTask[] @relation("CleaningTaskStarter")
   cleaningTasksCompleted CleaningTask[] @relation("CleaningTaskCompleter")
+  cleaningTemplates      CleaningTemplate[]
+  partners              Partner[]
+  settlements           Settlement[]
+  settlementPayments    SettlementPayment[]
 }
 
 model License {
@@ -71,11 +84,15 @@ model Apartment {
   id            String    @id @default(uuid())
   userId        String
   name          String
+  owner         String?
   type          String
+  economicCategory String?
+  location      String?
   description   String?
   basePrice     Decimal
   needsCleaning Boolean   @default(false)
   lastCleanedAt DateTime  @default(now())
+  isActive      Boolean   @default(true)
 
   // Per-booking fees — these are pricing parameters, not expenses.
   // Applied to each booking's math; not tracked separately in the ledger.
@@ -124,6 +141,9 @@ model Booking {
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments      Payment[]
   cleaningTasks CleaningTask[]
+
+  @@index([userId, startDate])
+  @@index([apartmentId, startDate, endDate])
 }
 
 model Payment {
@@ -142,6 +162,7 @@ model Payment {
 
   @@index([bookingId])
   @@index([userId])
+  @@index([bookingId, date])
 }
 
 /// A single maintenance issue against an apartment. History is preserved
@@ -175,6 +196,7 @@ model MaintenanceIssue {
   @@index([apartmentId])
   @@index([userId])
   @@index([status])
+  @@index([userId, status, reportedAt])
 }
 
 /// A seasonal or dynamic pricing rule. Applies to either a specific apartment
@@ -297,6 +319,7 @@ model CleaningTask {
   bookingId    String?                    /// null for manual/ad-hoc tasks
   status       String    @default("pending")  /// 'pending' | 'in_progress' | 'done'
   checklist    Json      @default("[]")   /// [{ area, note, checked }]
+  templateId   String?                    /// which cleaning template seeded this task (null = custom/manual)
   notes        String?                    /// free-form task-level notes from admin
   cleanerNotes String?                    /// cleaner's own notes when finishing
   dueBy        DateTime?                  /// usually next check-in date after checkout
@@ -311,10 +334,121 @@ model CleaningTask {
   user      User      @relation("CleaningTaskOwner",     fields: [userId],      references: [id], onDelete: Cascade)
   starter   User?     @relation("CleaningTaskStarter",   fields: [startedBy],   references: [id], onDelete: SetNull)
   completer User?     @relation("CleaningTaskCompleter", fields: [completedBy], references: [id], onDelete: SetNull)
+  template  CleaningTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   apartment Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   booking   Booking?  @relation(fields: [bookingId],   references: [id], onDelete: SetNull)
 
   @@index([userId, status])
   @@index([apartmentId])
   @@index([bookingId])
+  @@index([templateId])
+}
+
+/// Reusable admin-defined cleaning routines. The default template is copied
+/// into every task created automatically after a check-out — staff see the
+/// standard routine exactly as before, while manually-created tasks stay
+/// distinguishable as "custom". Setting a new default unsets the previous one.
+model CleaningTemplate {
+  id        String   @id @default(uuid())
+  userId    String                     /// owner (multi-tenant)
+  name      String
+  checklist Json     @default("[]")    /// same shape as CleaningTask.checklist [{ area, note, checked }]
+  notes     String?                    /// free-form instructions for the cleaner
+  isDefault Boolean  @default(false)   /// at most one default per owner
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks CleaningTask[]
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+/// Revenue Sharing Partner — a person/entity who receives a share of revenue/profit.
+/// Admin-only module, gated by the tenant's `partnersRevenueSharingEnabled` flag.
+model Partner {
+  id            String   @id @default(uuid())
+  userId        String                        // tenant owner (admin)
+  name          String
+  phone         String?
+  email         String?
+  notes         String?
+  // Compensation
+  compType      String   @default("percentage_gross") // percentage_gross | percentage_net | fixed | fixed_percentage
+  percentage    Decimal?                       // for %-type, and the % part of fixed+%
+  fixedAmount   Decimal?                       // for fixed, and the fixed part of fixed+%
+  // Scope
+  apartmentIds  String[]  @default([])         // [] = all units; else explicit units
+  // Recurring settlement
+  recurringPeriod String? // null = manual only | monthly | quarterly | yearly
+  startMonth      String? // "YYYY-MM" — first eligible month for per-month splitting/backfill
+  // Status
+  status        String   @default("active")    // active | inactive | paused
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settlements   Settlement[]
+
+  @@index([userId, status])
+}
+
+/// Immutable financial snapshot for a partner settlement.
+/// Each record freezes the agreement terms AND the financial basis at settlement time
+/// so future partner agreement updates never alter past payouts.
+model Settlement {
+  id             String   @id @default(uuid())
+  partnerId      String
+  userId         String
+  // Snapshot of the comp terms AT settlement time (immutable)
+  partnerNameSnap String  // frozen partner name at creation time
+  compTypeSnap   String
+  percentageSnap Decimal?
+  fixedAmountSnap Decimal?
+  scopeSnap      String[]   // apartmentIds captured at settlement
+  // Financial basis snapshot
+  periodStart    DateTime
+  periodEnd      DateTime
+  basisGross     Decimal   // gross revenue for the period
+  basisExpenses  Decimal   // net basis: expenses subtracted
+  basisNet       Decimal   // net profit = basisGross - basisExpenses
+  // Payout
+  amount         Decimal   // final computed payout (Signed: refunds → negative)
+  currency       String    @default("sar")
+  // Ledger/state
+  status         String    @default("draft") // draft | paid | void
+  paidAt         DateTime?
+  paymentId      String?   // SettlementPayment id if paid as part of a batch
+  memo           String?
+  source         String    @default("manual") // manual | auto
+  createdAt      DateTime  @default(now())
+
+  partner        Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment        SettlementPayment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([partnerId, createdAt])
+  @@index([userId, periodStart, periodEnd])
+  @@index([userId, status])
+  @@index([paymentId])
+}
+
+/// A batch payment that settles MULTIPLE partner settlements as one transaction.
+/// Selecting several settlements and paying creates one record here; each
+/// referenced settlement gets its `status` set to paid and `paymentId` linked.
+model SettlementPayment {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Decimal
+  method      String   @default("cash")
+  date        DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  settlements Settlement[]
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

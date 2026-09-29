@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users } from 'lucide-react';
+import { Phone, Printer, Trash2, Search, Edit2, MessageSquare, LogOut, X, AlertTriangle, Wallet, ArrowLeftRight, CalendarDays, Users, MoreVertical, PhoneCall, MessageCircle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +8,8 @@ import PrintAgreement from '../ui/PrintAgreement';
 import EmptyState from '../ui/EmptyState';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import { computeBookingTotals } from '../../lib/paymentUtils';
+import { fillTemplate, buildWhatsAppUrl } from '../../lib/documentShare';
+import { bookingRef } from '../../lib/bookingRef';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
@@ -35,6 +37,11 @@ export default function ResidentsView({ openBookingForm }) {
     }
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [menuOpenFor, setMenuOpenFor] = useState(null);
+  const [menuSource, setMenuSource] = useState(null);
+  const [menuPos, setMenuPos] = useState(null);
+  const menuRef = useRef(null);
+  const [phoneActionBooking, setPhoneActionBooking] = useState(null);
 
   useEffect(() => {
     const fetchPaginatedBookings = async () => {
@@ -71,6 +78,109 @@ export default function ResidentsView({ openBookingForm }) {
 
     return () => clearTimeout(timeoutId);
   }, [currentPage, searchQuery, bookings]); // Depend on bookings to re-fetch when global context bookings update (like after adding/deleting)
+
+
+  // Close the row menu when clicking anywhere outside the open menu
+  useEffect(() => {
+    if (!menuOpenFor) return;
+    function onClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenFor(null);
+      }
+    }
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('touchstart', onClick, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('touchstart', onClick);
+    };
+  }, [menuOpenFor]);
+
+  // Keep the ⋯ menu inside the viewport. It's anchored with its RIGHT edge at
+  // the button (extends left), so in these RTL rows — where the action column
+  // sits at the viewport's left/bottom edges — the menu bleeds off-screen.
+  // Measure the rendered menu in a layout effect and nudge it back in before
+  // paint; no visible flash, no stored state to reconcile.
+  useLayoutEffect(() => {
+    if (!menuOpenFor || !menuRef.current) return;
+    const m = menuRef.current;
+    const rect = m.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const M = 8;
+    if (rect.left < M) {
+      m.style.right = 'auto';
+      m.style.left = '8px';
+    } else if (rect.right > vw - M) {
+      m.style.right = 'auto';
+      m.style.left = `${vw - rect.width - M}px`;
+    }
+    if (rect.top < M) m.style.top = '8px';
+    else if (rect.bottom > vh - M) m.style.top = `${vh - rect.height - M}px`;
+  }, [menuOpenFor, menuPos]);
+
+  // Shared ⋯ action menu for a booking (used by desktop table + mobile cards),
+  // anchored from the same portal pattern as the partners page.
+  const renderBookingMenu = (booking, canCheckout) => (
+    createPortal(
+      <div ref={menuRef} style={{ position: 'fixed', right: menuPos.right, top: menuPos.top, zIndex: 60 }}
+        className="w-52 rounded-xl border border-hairline dark:border-hairline-dark-soft bg-canvas dark:bg-surface-dark shadow-soft overflow-hidden anim-pop">
+        {canCheckout && (
+          <>
+            <button
+              onClick={() => { handleCheckout(booking); setMenuOpenFor(null); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+            >
+              <LogOut size={15} className="text-muted dark:text-body-dark" />
+              تسجيل خروج مبكر
+            </button>
+            <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
+          </>
+        )}
+        <button
+          onClick={() => { setPrintSelectorBooking(booking); setMenuOpenFor(null); }}
+          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+        >
+          <Printer size={15} className="text-muted dark:text-body-dark" />
+          طباعة العقد
+        </button>
+        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+          <button
+            onClick={() => { openNoteModal(booking); setMenuOpenFor(null); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+          >
+            <MessageSquare size={15} className="text-muted dark:text-body-dark" />
+            ملاحظات النزيل
+            {booking.notes && booking.notes.trim() !== '' && (
+              <span className="w-1.5 h-1.5 bg-accent rounded-full mr-auto"></span>
+            )}
+          </button>
+        )}
+        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+          <button
+            onClick={() => { openBookingForm(booking); setMenuOpenFor(null); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+          >
+            <Edit2 size={15} className="text-muted dark:text-body-dark" />
+            تعديل الحجز
+          </button>
+        )}
+        {(user?.role === 'admin' || user?.permissions?.canDelete) && (
+          <>
+            <div className="h-px bg-hairline-soft dark:bg-hairline-dark-soft" />
+            <button
+              onClick={() => handleDelete(booking.id)}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+            >
+              <Trash2 size={15} className="text-muted dark:text-body-dark" />
+              حذف الحجز
+            </button>
+          </>
+        )}
+      </div>,
+      document.body
+    )
+  );
 
 
   const formatDate = (date) => new Date(date).toLocaleDateString('ar-EG', {
@@ -215,7 +325,7 @@ export default function ResidentsView({ openBookingForm }) {
                       <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-16"></div>
                     </td>
                     <td className="px-6 py-4"><div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-20"></div></td>
-                    <td className="px-6 py-4"><div className="h-8 bg-surface-card dark:bg-surface-dark-elevated rounded-md w-24"></div></td>
+                    <td className="px-6 py-4"><div className="h-8 bg-surface-card dark:bg-surface-dark-elevated rounded-md w-8 mx-auto"></div></td>
                   </tr>
                 ))
               ) : currentBookings.map((booking) => {
@@ -235,7 +345,13 @@ export default function ResidentsView({ openBookingForm }) {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium flex items-center text-body dark:text-body-dark"><Phone size={14} className="ml-1.5 text-muted-soft"/> <span dir="ltr">{sanitizePhone(booking.phone)}</span></div>
+                      <button
+                        onClick={() => setPhoneActionBooking(booking)}
+                        className="text-sm font-medium flex items-center text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
+                        title="خيارات الاتصال"
+                      >
+                        <Phone size={14} className="ml-1.5 text-muted-soft" /> <span dir="ltr">{sanitizePhone(booking.phone)}</span>
+                      </button>
                       <div className="text-xs text-muted dark:text-body-dark mt-1">هوية: {booking.residentId}</div>
                     </td>
                     <td className="px-6 py-4">
@@ -260,47 +376,25 @@ export default function ResidentsView({ openBookingForm }) {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-center space-x-reverse space-x-1">
-                        {isCurrent && booking.status !== 'checked_out_early' && (
+                      <div className="flex items-center justify-center">
+                        {/* Overflow (⋯) action menu */}
+                        <div className="relative shrink-0">
                           <button
-                            onClick={() => handleCheckout(booking)}
-                            className="icon-action hover:text-accent"
-                            title="تسجيل خروج مبكر"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const r = e.currentTarget.getBoundingClientRect();
+                              setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                              setMenuSource('desktop');
+                              setMenuOpenFor(booking.id);
+                            }}
+                            className="icon-action hover:bg-surface-soft dark:hover:bg-surface-dark-elevated"
+                            title="إجراءات"
+                            aria-label="إجراءات"
                           >
-                            <LogOut size={18} />
+                            <MoreVertical size={18} />
                           </button>
-                        )}
-
-                        <button
-                          onClick={() => setPrintSelectorBooking(booking)}
-                          className="icon-action hover:text-accent"
-                          title="طباعة العقد"
-                        >
-                          <Printer size={18} />
-                        </button>
-                        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                          <button
-                            onClick={() => openNoteModal(booking)}
-                            className={`icon-action hover:text-accent ${booking.notes && booking.notes.trim() !== '' ? 'opacity-100 text-accent' : ''}`}
-                            title="ملاحظات النزيل"
-                          >
-                            <MessageSquare size={18} />
-                          </button>
-                        )}
-                        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                          <button
-                            onClick={() => openBookingForm(booking)}
-                            className="icon-action hover:text-accent"
-                            title="تعديل الحجز"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                        )}
-                        {(user?.role === 'admin' || user?.permissions?.canDelete) && (
-                          <button onClick={() => handleDelete(booking.id)} className="icon-action hover:text-accent" title="حذف الحجز">
-                            <Trash2 size={18} />
-                          </button>
-                        )}
+{menuOpenFor === booking.id && menuSource === 'desktop' && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -340,6 +434,7 @@ export default function ResidentsView({ openBookingForm }) {
                     <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-24"></div>
                   </div>
                   <div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-full w-20 shrink-0"></div>
+                  <div className="h-6 bg-surface-card dark:bg-surface-dark-elevated rounded-md w-6 shrink-0"></div>
                 </div>
                 <div className="h-3 bg-surface-card dark:bg-surface-dark-elevated rounded w-full"></div>
               </div>
@@ -372,10 +467,14 @@ export default function ResidentsView({ openBookingForm }) {
                       <p className="font-semibold text-ink dark:text-white truncate leading-tight">
                         {booking.residentName}
                       </p>
-                      <p className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5">
+                      <button
+                        onClick={() => setPhoneActionBooking(booking)}
+                        className="text-xs text-muted dark:text-body-dark mt-1 flex items-center gap-1.5 hover:text-ink dark:hover:text-white hover:underline underline-offset-2 transition-colors"
+                        title="خيارات الاتصال"
+                      >
                         <Phone size={12} className="text-muted-soft shrink-0" />
                         <span dir="ltr" className="truncate">{sanitizePhone(booking.phone)}</span>
-                      </p>
+                      </button>
                     </div>
                     <div className="shrink-0">
                       {booking.status === 'checked_out_early' ? (
@@ -406,47 +505,23 @@ export default function ResidentsView({ openBookingForm }) {
                     </p>
                   )}
 
-                  {/* Actions — trailing, tap-target sized */}
-                  <div className="flex items-center gap-1 justify-end -mr-2">
-                    {isCurrent && booking.status !== 'checked_out_early' && (
-                      <button
-                        onClick={() => handleCheckout(booking)}
-                        className="icon-action p-2.5 hover:text-accent"
-                        title="تسجيل خروج مبكر"
-                      >
-                        <LogOut size={18} />
-                      </button>
-                    )}
+                  {/* Actions — single ⋯ menu, tap-target sized */}
+                  <div className="flex items-center gap-1 justify-end -mr-2 relative shrink-0">
                     <button
-                      onClick={() => setPrintSelectorBooking(booking)}
-                      className="icon-action p-2.5 hover:text-accent"
-                      title="طباعة العقد"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const r = e.currentTarget.getBoundingClientRect();
+                        setMenuPos({ right: window.innerWidth - r.right, top: r.bottom + 4 });
+                        setMenuSource('mobile');
+                        setMenuOpenFor(booking.id);
+                      }}
+                      className="icon-action p-2.5 hover:bg-surface-soft dark:hover:bg-surface-dark-elevated"
+                      title="إجراءات"
+                      aria-label="إجراءات"
                     >
-                      <Printer size={18} />
+                      <MoreVertical size={18} />
                     </button>
-                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                      <button
-                        onClick={() => openNoteModal(booking)}
-                        className={`icon-action p-2.5 hover:text-accent ${booking.notes && booking.notes.trim() !== '' ? 'opacity-100 text-accent' : ''}`}
-                        title="ملاحظات النزيل"
-                      >
-                        <MessageSquare size={18} />
-                      </button>
-                    )}
-                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                      <button
-                        onClick={() => openBookingForm(booking)}
-                        className="icon-action p-2.5 hover:text-accent"
-                        title="تعديل الحجز"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                    )}
-                    {(user?.role === 'admin' || user?.permissions?.canDelete) && (
-                      <button onClick={() => handleDelete(booking.id)} className="icon-action p-2.5 hover:text-accent" title="حذف الحجز">
-                        <Trash2 size={18} />
-                      </button>
-                    )}
+                    {menuOpenFor === booking.id && menuSource === 'mobile' && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
                   </div>
                 </div>
               );
@@ -784,6 +859,83 @@ export default function ResidentsView({ openBookingForm }) {
         </div>
       , document.body)}
 
+      {/* Phone Actions Modal */}
+      {phoneActionBooking && createPortal(
+        <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
+          <div className="absolute inset-0" onClick={() => setPhoneActionBooking(null)}></div>
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+            <div className="px-6 py-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
+              <h3 className="font-semibold tracking-tight text-ink dark:text-white text-lg flex items-center gap-2">
+                <Phone size={20} className="text-ink dark:text-white" />
+                <span dir="ltr">{sanitizePhone(phoneActionBooking.phone)}</span>
+              </h3>
+              <button onClick={() => setPhoneActionBooking(null)} className="icon-action hover:text-accent">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <a
+                href={buildWhatsAppUrl(phoneActionBooking.phone)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setPhoneActionBooking(null)}
+                className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
+              >
+                <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
+                  <MessageCircle size={24} />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="font-semibold text-lg mb-0.5 tracking-tight">فتح واتساب</span>
+                  <span className="text-sm text-muted dark:text-body-dark">بدون رسالة</span>
+                </div>
+              </a>
+
+              <a
+                href={buildWhatsAppUrl(phoneActionBooking.phone, (() => {
+                  const apt = apartments.find(a => a.id === phoneActionBooking.apartmentId);
+                  const locDetail = (user?.locationDetails || []).find(d => d.name === apt?.location);
+                  return fillTemplate(user?.whatsappMessage, {
+                    name: phoneActionBooking.residentName || "",
+                    businessName: user?.businessName || "",
+                    apartment: apt?.name || "",
+                    ref: bookingRef(phoneActionBooking),
+                    locationLink: locDetail?.link || "",
+                    buildingPhoto: locDetail?.photoUrl || ""
+                  });
+                })())}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setPhoneActionBooking(null)}
+                className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
+              >
+                <div className="bg-accent/10 text-accent p-3 rounded-md">
+                  <MessageSquare size={24} />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="font-semibold text-lg mb-0.5 tracking-tight">فتح واتساب مع رسالة</span>
+                  <span className="text-sm text-muted dark:text-body-dark">رسالة الترحيب المخصصة</span>
+                </div>
+              </a>
+
+              <a
+                href={`tel:${sanitizePhone(phoneActionBooking.phone)}`}
+                onClick={() => setPhoneActionBooking(null)}
+                className="w-full flex items-center gap-4 p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
+              >
+                <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
+                  <PhoneCall size={24} />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="font-semibold text-lg mb-0.5 tracking-tight">اتصال بالرقم</span>
+                  <span className="text-sm text-muted dark:text-body-dark">بدء مكالمة</span>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+
       {/* Print Options Modal */}
       {printSelectorBooking && createPortal(
         <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
@@ -808,7 +960,7 @@ export default function ResidentsView({ openBookingForm }) {
                 className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="flex flex-col text-right">
-                  <span className="font-semibold text-lg mb-1 tracking-tight">طباعة تقرير مالي</span>
+                  <span className="font-semibold text-lg mb-1 tracking-tight">حجز مبدئي</span>
                   <span className="text-sm text-muted dark:text-body-dark">سند قبض للمبالغ المدفوعة</span>
                 </div>
                 <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">
@@ -824,7 +976,7 @@ export default function ResidentsView({ openBookingForm }) {
                 className="w-full flex items-center justify-between p-4 bg-surface-card hover:bg-surface-strong/60 dark:bg-surface-dark-elevated dark:hover:bg-hairline-dark text-ink dark:text-white rounded-lg transition-colors group"
               >
                 <div className="flex flex-col text-right">
-                  <span className="font-semibold text-lg mb-1 tracking-tight">طباعة تأكيد الحجز</span>
+                  <span className="font-semibold text-lg mb-1 tracking-tight">حجز مؤكد</span>
                   <span className="text-sm text-muted dark:text-body-dark">تفاصيل الحجز وشروطه</span>
                 </div>
                 <div className="bg-canvas dark:bg-surface-dark p-3 rounded-md border border-hairline dark:border-hairline-dark-soft">

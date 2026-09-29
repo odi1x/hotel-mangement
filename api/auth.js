@@ -41,6 +41,7 @@ export default async function handler(req, res) {
         user: {
           id: user.id, username: user.username, name: user.name, profilePicture: user.profilePicture,
           role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
+          partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
             canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
@@ -71,6 +72,7 @@ export default async function handler(req, res) {
         user: {
           id: user.id, username: user.username, name: user.name, profilePicture: user.profilePicture,
           role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
+          partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
             canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
@@ -119,6 +121,10 @@ export default async function handler(req, res) {
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
+        economicCategories: user.economicCategories, locations: user.locations, locationDetails: user.locationDetails,
+        whatsappMessage: user.whatsappMessage,
+        whatsappMessagePreliminary: user.whatsappMessagePreliminary, whatsappMessageConfirmed: user.whatsappMessageConfirmed,
+        partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
           canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean
@@ -128,7 +134,7 @@ export default async function handler(req, res) {
 
     // ME PUT
     if (action === 'me' && req.method === 'PUT') {
-      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses } = req.body;
+      const { name, profilePicture, businessName, tourismLicense, logoUrl, stampUrl, customTerms, taxEnabled, taxPercentage, apartmentTypes, bookingSources, generalExpenses, economicCategories, locations, locationDetails, whatsappMessage, whatsappMessagePreliminary, whatsappMessageConfirmed } = req.body;
       const user = await prisma.user.update({
         where: { id: decoded.userId },
         data: {
@@ -138,6 +144,12 @@ export default async function handler(req, res) {
           taxPercentage: taxPercentage ? parseFloat(taxPercentage) : null,
           apartmentTypes: apartmentTypes !== undefined ? apartmentTypes : null,
           bookingSources: bookingSources !== undefined ? bookingSources : null,
+          economicCategories: economicCategories !== undefined ? economicCategories : null,
+          locations: locations !== undefined ? locations : null,
+          locationDetails: locationDetails !== undefined ? locationDetails : null,
+          whatsappMessage: whatsappMessage !== undefined ? whatsappMessage : null,
+          whatsappMessagePreliminary: whatsappMessagePreliminary !== undefined ? whatsappMessagePreliminary : null,
+          whatsappMessageConfirmed: whatsappMessageConfirmed !== undefined ? whatsappMessageConfirmed : null,
           generalExpenses: generalExpenses ? parseFloat(generalExpenses) : null
         }
       });
@@ -147,6 +159,10 @@ export default async function handler(req, res) {
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
+        economicCategories: user.economicCategories, locations: user.locations, locationDetails: user.locationDetails,
+        whatsappMessage: user.whatsappMessage,
+        whatsappMessagePreliminary: user.whatsappMessagePreliminary, whatsappMessageConfirmed: user.whatsappMessageConfirmed,
+        partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
           canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean

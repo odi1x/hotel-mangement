@@ -7,8 +7,27 @@ const DataContext = createContext();
 
 export const useData = () => useContext(DataContext);
 
+// Client-side fetch TTL cache (per-endpoint, keyed by URL + params)
+// Prevents redundant re-fetches when switching tabs within a short window.
+const FETCH_TTL_MS = 10_000;
+const fetchCache = new Map();
+
+function getFetchCache(key) {
+  const entry = fetchCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    fetchCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setFetchCache(key, data) {
+  fetchCache.set(key, { data, expiresAt: Date.now() + FETCH_TTL_MS });
+}
+
 export const DataProvider = ({ children }) => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [apartments, setApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -17,60 +36,170 @@ export const DataProvider = ({ children }) => {
   const [pricingRules, setPricingRules] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [cleaningTasks, setCleaningTasks] = useState([]);
+  const [cleaningTemplates, setCleaningTemplates] = useState([]);
+  const [partners, setPartners] = useState([]);
+  const [settlements, setSettlements] = useState([]);
   const [analytics, setAnalytics] = useState({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalNights: 0, occupancyRate: 0, sourceCounts: {}, count: 0, dailyTrend: [] });
   const [analyticsFilter, setAnalyticsFilter] = useState({});
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
 
   const API_BASE_URL = '/api';
 
-  const fetchApartments = async () => {
+  const isAdmin = user?.role === 'admin';
+  const perms = user?.permissions || {};
+
+  const shouldFetchAnalytics = isAdmin || perms.canViewAnalytics;
+  const shouldFetchPricing = isAdmin || perms.canViewPricing;
+  const shouldFetchMaintenance = isAdmin || perms.canViewMaintenance;
+  const shouldFetchCleaning = isAdmin || perms.canClean;
+  const shouldFetchCleaningTemplates = isAdmin; // template config is admin-only
+  const shouldFetchExpenses = isAdmin || perms.canViewAnalytics; // expenses share analytics permission
+  const shouldFetchBalances = isAdmin || perms.canViewBalances;
+  const shouldFetchPartners = isAdmin && user?.partnersRevenueSharingEnabled;
+
+  const buildBookingsUrl = (params = {}) => {
+    const url = new URL(`${API_BASE_URL}/bookings`, window.location.origin);
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+    });
+    return url.toString();
+  };
+
+  const fetchWithTTL = async (url, setter, cacheKey) => {
+    const cached = getFetchCache(cacheKey || url);
+    if (cached) {
+      setter(cached);
+      return cached;
+    }
     try {
-      const res = await axios.get(`${API_BASE_URL}/apartments`);
-      setApartments(res.data);
-    } catch (err) { console.error(err); }
+      const res = await axios.get(url);
+      setFetchCache(cacheKey || url, res.data);
+      setter(res.data);
+      return res.data;
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchApartments = async () => {
+    await fetchWithTTL(`${API_BASE_URL}/apartments`, setApartments, 'apartments');
   };
 
   const fetchLicenses = async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/licenses`);
-      setLicenses(res.data);
-    } catch (err) { console.error(err); }
+    await fetchWithTTL(`${API_BASE_URL}/licenses`, setLicenses, 'licenses');
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (options = {}) => {
+    const { from, to, force = false } = options;
+    const params = {};
+    if (from) params.startDate = from;
+    if (to) params.endDate = to;
+    const url = buildBookingsUrl(params);
+    const cacheKey = `bookings:${from || 'all'}:${to || 'all'}`;
+    if (!force) {
+      const cached = getFetchCache(cacheKey);
+      if (cached) {
+        setBookings(cached);
+        return cached;
+      }
+    }
     try {
-      const res = await axios.get(`${API_BASE_URL}/bookings`);
+      const res = await axios.get(url);
+      setFetchCache(cacheKey, res.data);
       setBookings(res.data);
+      return res.data;
     } catch (err) { console.error(err); }
   };
 
   const fetchMaintenance = async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=maintenance`);
-      setMaintenanceIssues(res.data);
-    } catch (err) { console.error(err); }
+    if (!shouldFetchMaintenance) return;
+    await fetchWithTTL(
+      `${API_BASE_URL}/admin-resources?resource=maintenance`,
+      setMaintenanceIssues,
+      'maintenance'
+    );
   };
 
   const fetchPricingRules = async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=pricing-rules`);
-      setPricingRules(res.data);
-    } catch (err) { console.error(err); }
+    if (!shouldFetchPricing) return;
+    await fetchWithTTL(
+      `${API_BASE_URL}/admin-resources?resource=pricing-rules`,
+      setPricingRules,
+      'pricing-rules'
+    );
   };
 
   const fetchExpenses = async () => {
+    if (!shouldFetchExpenses) return;
+    await fetchWithTTL(
+      `${API_BASE_URL}/admin-resources?resource=expenses`,
+      setExpenses,
+      'expenses'
+    );
+  };
+
+  const fetchCleaningTasks = async () => {
+    if (!shouldFetchCleaning) return;
+    await fetchWithTTL(
+      `${API_BASE_URL}/admin-resources?resource=cleaning`,
+      setCleaningTasks,
+      'cleaning'
+    );
+  };
+
+  const fetchCleaningTemplates = async () => {
+    if (!shouldFetchCleaningTemplates) return;
+    await fetchWithTTL(
+      `${API_BASE_URL}/admin-resources?resource=cleaning-templates`,
+      setCleaningTemplates,
+      'cleaning-templates'
+    );
+  };
+
+  const fetchPartners = async () => {
+    if (!shouldFetchPartners) return;
+    await fetchWithTTL(
+      `${API_BASE_URL}/admin-resources?resource=partners&action=list`,
+      setPartners,
+      'partners'
+    );
+  };
+
+  const fetchPartnerDetail = async (id) => {
+    if (!shouldFetchPartners) return;
     try {
-      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=expenses`);
-      setExpenses(res.data);
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=partners&id=${id}`);
+      return res.data;
     } catch (err) { console.error(err); }
   };
 
-  // --- Cleaning tasks -----------------------------------------------------
-  const fetchCleaningTasks = async () => {
+  const fetchPartnerSettlements = async (id) => {
+    if (!shouldFetchPartners) return;
     try {
-      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=cleaning`);
-      setCleaningTasks(res.data);
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=partners&id=${id}`);
+      setSettlements(res.data.settlements || []);
+      return res.data.settlements || [];
+    } catch (err) { console.error(err); }
+  };
+
+  const calculatePartnerSettlement = async (partnerData, periodStart, periodEnd) => {
+    if (!shouldFetchPartners) return;
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=calculate`, {
+        ...partnerData,
+        periodStart,
+        periodEnd,
+      });
+      return res.data;
+    } catch (err) { console.error(err); }
+  };
+
+  const calculatePartnerSettlementById = async (id, periodStart, periodEnd) => {
+    if (!shouldFetchPartners) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/admin-resources?resource=partners&action=calculate&id=${id}&periodStart=${periodStart}&periodEnd=${periodEnd}`);
+      return res.data;
     } catch (err) { console.error(err); }
   };
 
@@ -78,7 +207,6 @@ export const DataProvider = ({ children }) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=cleaning`, data);
       setCleaningTasks(prev => [res.data, ...prev]);
-      // Apartment may have been flagged needsCleaning; re-fetch to sync badges.
       fetchApartments();
       return res.data;
     } catch (err) { console.error(err); throw err; }
@@ -88,8 +216,6 @@ export const DataProvider = ({ children }) => {
     try {
       const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=cleaning&id=${id}`, patch);
       setCleaningTasks(prev => prev.map(t => t.id === id ? { ...t, ...res.data } : t));
-      // If we just completed the task, needsCleaning may have been cleared —
-      // refresh apartments so the badge disappears immediately.
       if (patch.action === 'complete') fetchApartments();
       return res.data;
     } catch (err) { console.error(err); throw err; }
@@ -100,6 +226,133 @@ export const DataProvider = ({ children }) => {
       await axios.delete(`${API_BASE_URL}/admin-resources?resource=cleaning&id=${id}`);
       setCleaningTasks(prev => prev.filter(t => t.id !== id));
     } catch (err) { console.error(err); throw err; }
+  };
+
+  const createCleaningTemplate = async (data) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=cleaning-templates`, data);
+      setCleaningTemplates(prev => [res.data, ...prev]);
+      return res.data;
+    } catch (err) { console.error(err); throw err; }
+  };
+
+  const updateCleaningTemplate = async (id, patch) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=cleaning-templates&id=${id}`, patch);
+      setCleaningTemplates(prev => prev.map(t => t.id === id ? { ...t, ...res.data } : t));
+      return res.data;
+    } catch (err) { console.error(err); throw err; }
+  };
+
+  const deleteCleaningTemplate = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=cleaning-templates&id=${id}`);
+      setCleaningTemplates(prev => prev.filter(t => t.id !== id));
+    } catch (err) { console.error(err); throw err; }
+  };
+
+  const createPartner = async (data) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners`, data);
+      setPartners(prev => [res.data, ...prev]);
+      toast.success('تم إنشاء الشريك بنجاح');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في إنشاء الشريك');
+      throw err;
+    }
+  };
+
+  const updatePartner = async (data) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/admin-resources?resource=partners&id=${data.id}`, data);
+      setPartners(prev => prev.map(p => p.id === data.id ? res.data : p));
+      toast.success('تم حفظ التعديلات');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الحفظ');
+      throw err;
+    }
+  };
+
+  const deletePartner = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/admin-resources?resource=partners&id=${id}`);
+      setPartners(prev => prev.filter(p => p.id !== id));
+      toast.success('تم حذف الشريك');
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الحذف');
+      throw err;
+    }
+  };
+
+  const settlePartner = async (id, periodStart, periodEnd, memo) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=settle&id=${id}`, { periodStart, periodEnd, memo });
+      setSettlements(prev => [res.data, ...prev]);
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في إنشاء التسوية');
+      throw err;
+    }
+  };
+
+  const backfillMissingMonths = async (id, startMonth) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=backfill-missing-months&id=${id}`, { startMonth });
+      if (Array.isArray(res.data.created) && res.data.created.length > 0) {
+        setSettlements(prev => [...res.data.created, ...prev]);
+      }
+      toast.success(res.data.message || 'تم إنشاء التسويات');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في إنشاء التسويات الشهرية');
+      throw err;
+    }
+  };
+
+  const paySettlements = async ({ settlementIds, method, date, notes }) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=pay-settlements`, { settlementIds, method, date, notes });
+      setSettlements(prev => prev.map(s => settlementIds.includes(s.id) ? { ...s, status: 'paid', paidAt: res.data.payment?.date || new Date().toISOString() } : s));
+      toast.success(`تم دفع ${res.data.count} تسويات دفعة واحدة (${Number(res.data.total).toLocaleString()} ر.س)`);
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الدفع');
+      throw err;
+    }
+  };
+
+  const markSettlementPaid = async (settlementId) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=mark-paid&settlementId=${settlementId}`);
+      setSettlements(prev => prev.map(s => s.id === settlementId ? res.data : s));
+      toast.success('تم تحديد التسوية كمدفوعة');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في التحديث');
+      throw err;
+    }
+  };
+
+  const voidSettlement = async (settlementId) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/admin-resources?resource=partners&action=void-settlement&settlementId=${settlementId}`);
+      setSettlements(prev => prev.map(s => s.id === settlementId ? res.data : s));
+      toast.success('تم إلغاء التسوية');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'فشل في الإلغاء');
+      throw err;
+    }
   };
 
   const createExpense = async (data) => {
@@ -135,6 +388,7 @@ export const DataProvider = ({ children }) => {
   };
 
   const fetchAnalytics = async () => {
+    if (!shouldFetchAnalytics) return;
     setIsAnalyticsLoading(true);
     try {
       const params = {};
@@ -145,28 +399,40 @@ export const DataProvider = ({ children }) => {
         params.startDate = analyticsFilter.startDate;
         params.endDate = analyticsFilter.endDate;
       }
+      if (analyticsFilter.calendarMode === 'hijri') {
+        params.trendBins = 'hijri';
+      }
       const res = await axios.get(`${API_BASE_URL}/analytics`, { params });
       setAnalytics(res.data);
     } catch (err) { console.error(err); }
     finally { setIsAnalyticsLoading(false); }
   };
 
+  // Initial bootstrap — gated by permissions
   useEffect(() => {
-    if (token) {
-      fetchApartments();
-      fetchBookings();
-      fetchLicenses();
-      fetchMaintenance();
-      fetchPricingRules();
-      fetchExpenses();
-      fetchCleaningTasks();
-    }
-  }, [token]);
+    if (!token) return;
 
+    const jobs = [
+      // Core data everyone needs
+      fetchApartments(),
+      fetchBookings(), // full history for Balances/Excel export
+      fetchLicenses(),
+      // Permission-gated data
+      ...(shouldFetchMaintenance ? [fetchMaintenance()] : []),
+      ...(shouldFetchPricing ? [fetchPricingRules()] : []),
+      ...(shouldFetchExpenses ? [fetchExpenses()] : []),
+      ...(shouldFetchCleaning ? [fetchCleaningTasks()] : []),
+      ...(shouldFetchCleaningTemplates ? [fetchCleaningTemplates()] : []),
+      ...(shouldFetchPartners ? [fetchPartners()] : []),
+    ];
+    Promise.all(jobs).finally(() => setLoading(false));
+  }, [token, shouldFetchMaintenance, shouldFetchPricing, shouldFetchExpenses, shouldFetchCleaning, shouldFetchCleaningTemplates, shouldFetchPartners]);
+
+  // Analytics fetch — gated and dependent on filter
   useEffect(() => {
-    if (token) fetchAnalytics();
+    if (token && shouldFetchAnalytics) fetchAnalytics();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, analyticsFilter, bookings]);
+  }, [token, analyticsFilter, bookings, shouldFetchAnalytics]);
 
   const addApartment = async (apartmentData) => {
     try {
@@ -403,8 +669,41 @@ export const DataProvider = ({ children }) => {
       updateCleaningTask,
       deleteCleaningTask,
 
+      cleaningTemplates,
+      fetchCleaningTemplates,
+      createCleaningTemplate,
+      updateCleaningTemplate,
+      deleteCleaningTemplate,
+
+      partners,
+      settlements,
+      fetchPartners,
+      fetchPartnerDetail,
+      fetchPartnerSettlements,
+      calculatePartnerSettlement,
+      calculatePartnerSettlementById,
+      createPartner,
+      updatePartner,
+      deletePartner,
+      settlePartner,
+      backfillMissingMonths,
+      markSettlementPaid,
+      voidSettlement,
+      paySettlements,
+
       loading,
-      isAnalyticsLoading
+      isAnalyticsLoading,
+      // Expose permission flags so views can conditionally render
+      permissions: {
+        isAdmin,
+        canViewAnalytics: shouldFetchAnalytics,
+        canViewPricing: shouldFetchPricing,
+        canViewMaintenance: shouldFetchMaintenance,
+        canViewCleaning: shouldFetchCleaning,
+        canViewExpenses: shouldFetchExpenses,
+        canViewBalances: shouldFetchBalances,
+        canViewPartners: shouldFetchPartners,
+      }
     }}>
       {children}
     </DataContext.Provider>

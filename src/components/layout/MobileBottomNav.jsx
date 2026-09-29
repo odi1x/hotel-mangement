@@ -22,7 +22,7 @@ import { computeBookingTotals } from '../../lib/paymentUtils';
  */
 export default function MobileBottomNav({
   view, setView,
-  onNewBooking, onNewCleaningTask, onNewExpense, onNewMaintenance, onNewPricingRule,
+  onNewBooking, onNewCleaningTask, onNewExpense, onNewMaintenance, onNewPricingRule, onNewPartner,
 }) {
   const { user } = useAuth();
   const { bookings, maintenanceIssues } = useData();
@@ -73,13 +73,16 @@ export default function MobileBottomNav({
     if (view === 'pricing' && canSeePricing) {
       return { show: true, onClick: onNewPricingRule, label: 'قاعدة جديدة' };
     }
+    if (view === 'partners' && isAdmin) {
+      return { show: true, onClick: onNewPartner, label: 'شريك جديد' };
+    }
     return { show: false, onClick: () => {}, label: '' };
   })();
 
   const showFAB = fabConfig.show;
 
   return (
-    <div className="md:hidden fixed bottom-4 inset-x-4 z-40 flex items-center anim-nav mobile-nav-shield">
+    <div className="md:hidden fixed bottom-4 left-4 right-6 z-40 flex items-center anim-nav mobile-nav-shield">
       <div className="flex-1 flex items-center gap-1 bg-canvas/85 dark:bg-surface-dark/85 backdrop-blur-lg border border-hairline/60 dark:border-hairline-dark/60 rounded-full h-14 shadow-lift px-1">
         <TabItem
           icon={CalendarDays}
@@ -125,7 +128,7 @@ export default function MobileBottomNav({
         tabIndex={showFAB ? 0 : -1}
         className={`shrink-0 h-14 rounded-full bg-accent text-white shadow-lift flex items-center justify-center overflow-hidden transition-[width,margin,opacity,transform] duration-[350ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-accent-strong active:scale-95 ${
           showFAB
-            ? 'w-14 mr-3 opacity-100 scale-100'
+            ? 'w-14 mr-4 opacity-100 scale-100'
             : 'w-0 mr-0 opacity-0 scale-75 pointer-events-none'
         }`}
       >

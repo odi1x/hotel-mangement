@@ -46,24 +46,38 @@
 
   ::placeholder { color: #78716c; }  /* matches tailwind `muted-soft` token */
 
+  /* Phone: no visible scrollbar at all (content still scrolls) */
+  @media (max-width: 767px) {
+    * {
+      scrollbar-width: none;
+    }
+    *::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
+    }
+  }
+
   /* Thin, accent-tinted scrollbar (replaces the chunky default, works in dark too) */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(var(--accent-rgb) / 0.45) transparent;
+  @media (min-width: 768px) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgb(var(--accent-rgb) / 0.45) transparent;
+    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background-color: rgb(var(--accent-rgb) / 0.4);
+      border-radius: 9999px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: rgb(var(--accent-rgb) / 0.7);
+      background-clip: content-box;
+    }
+    ::-webkit-scrollbar-corner { background: transparent; }
   }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb {
-    background-color: rgb(var(--accent-rgb) / 0.4);
-    border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(var(--accent-rgb) / 0.7);
-    background-clip: content-box;
-  }
-  ::-webkit-scrollbar-corner { background: transparent; }
 
   /* Accent focus ring — quiet but present */
   *:focus-visible {

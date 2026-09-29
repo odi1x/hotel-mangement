@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Wallet, Repeat } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { EXPENSE_CATEGORIES, EXPENSE_SCOPES, RECURRING_PERIODS } from '../../lib/expenseUtils';
+import SingleDatePicker from './SingleDatePicker';
 
 /**
  * Create-or-edit form for expense records.
@@ -134,12 +135,10 @@ export default function ExpenseForm({ onClose, initialData }) {
             </div>
             <div>
               <label className="block eyebrow mb-1.5">التاريخ</label>
-              <input
-                type="date"
+              <SingleDatePicker
                 value={form.date}
-                onChange={(e) => update('date', e.target.value)}
-                className="input-field w-full"
-                required
+                onChange={(d) => update('date', d)}
+                max={today}
               />
             </div>
           </div>

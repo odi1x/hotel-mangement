@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   try {
     if (action === 'apartments' && req.method === 'GET') {
-      const { adminId } = req.query;
+      const { adminId, category } = req.query;
 
       if (!adminId) {
         return res.status(400).json({ message: 'adminId is required' });
@@ -26,8 +26,26 @@ export default async function handler(req, res) {
       }
 
       // 2. Fetch apartments belonging ONLY to this admin
+      // Use precise select to expose only public-facing fields (hides internal fields like platformFee, needsCleaning)
+      // Inactive (hidden) units never appear on the public page, and if a
+      // `category` filter came with the link, only units of that economic
+      // category are shown.
       const apartments = await prisma.apartment.findMany({
-        where: { userId: adminId }
+        where: {
+          userId: adminId,
+          isActive: true,
+          ...(category ? { economicCategory: category } : {})
+        },
+        select: {
+          id: true,
+          name: true,
+          basePrice: true,
+          coverPhoto: true,
+          description: true,
+          images: true,
+          type: true,
+          economicCategory: true,
+        }
       });
 
       // 3. Fetch active bookings for these apartments to calculate availability
@@ -46,6 +64,9 @@ export default async function handler(req, res) {
           status: true
         }
       });
+
+      // Public endpoint — safe to cache for a short window (anonymous traffic, same data for all users of this admin)
+      res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=120');
 
       return res.status(200).json({ admin, apartments, bookings });
     }
@@ -95,6 +116,9 @@ export default async function handler(req, res) {
       // Create Booking
       // Fetch apartment to get the name
       const apt = await prisma.apartment.findUnique({ where: { id: apartmentId } });
+      if (!apt || !apt.isActive) {
+        return res.status(403).json({ message: 'هذه الوحدة غير متاحة حالياً' });
+      }
       const aptName = apt ? apt.name : 'غير معروف';
 
       const booking = await prisma.booking.create({

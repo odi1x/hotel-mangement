@@ -1,17 +1,24 @@
 import { createPortal } from 'react-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useData } from '../../context/DataContext';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Copy, Check, Building2, ArrowDownCircle } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Building2, ArrowDownCircle, Search, LayoutGrid, List as ListIcon, Rows3, Eye, EyeOff, MapPin, SlidersHorizontal, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
 import ShareLinkModal from '../ui/ShareLinkModal';
+
+// View layouts, cycled by the layout toggle in the toolbar. First one is
+// the classic card grid; the other two add a horizontal list and a dense
+// compact table — all three work on phone and desktop.
+const LAYOUT_ORDER = ['grid', 'list', 'compact'];
 export default function ApartmentsView({ setView }) {
   const { apartments, addApartment, updateApartment, deleteApartment, licenses, refreshData } = useData();
   const { user } = useAuth();
   const customTypes = user?.apartmentTypes ? user.apartmentTypes.split(',').map(t => t.trim()).filter(Boolean) : ['غرفة', 'غرفة وصالة', 'غرفتين وصالة', 'استوديو', 'شقة'];
   const defaultType = customTypes.length > 0 ? customTypes[0] : 'استوديو';
+  const customCategories = user?.economicCategories ? user.economicCategories.split(',').map(c => c.trim()).filter(Boolean) : [];
+  const customLocations = user?.locations ? user.locations.split(',').map(l => l.trim()).filter(Boolean) : [];
   const [isModalOpen, setIsModalOpen] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -20,6 +27,45 @@ export default function ApartmentsView({ setView }) {
   const [showAdvancedFinancials, setShowAdvancedFinancials] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [layout, setLayout] = useState(() => {
+    if (typeof window === 'undefined') return 'grid';
+    const saved = window.localStorage.getItem('apartmentsLayout');
+    return LAYOUT_ORDER.includes(saved) ? saved : 'grid';
+  });
+  const [sortKey, setSortKey] = useState('');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const filterBtnRef = useRef(null);
+  const [filterPos, setFilterPos] = useState({ top: 0, right: 0 });
+  const positionFilterPanel = useCallback(() => {
+    if (!filterBtnRef.current) return;
+    const r = filterBtnRef.current.getBoundingClientRect();
+    const gap = 8;
+    const panelW = window.innerWidth < 640 ? Math.min(320, window.innerWidth - 32) : 320;
+    let right = window.innerWidth - r.right;
+    let top = r.bottom + gap;
+    right = Math.max(16, Math.min(right, window.innerWidth - panelW - 16));
+    if (top + 400 > window.innerHeight) top = r.top - gap - 400;
+    setFilterPos({ top, right });
+  }, []);
+
+  useEffect(() => {
+    if (showFilterPanel) positionFilterPanel();
+  }, [showFilterPanel, positionFilterPanel]);
+
+  useEffect(() => {
+    if (!showFilterPanel) return;
+    const handle = () => positionFilterPanel();
+    window.addEventListener('resize', handle);
+    window.addEventListener('scroll', handle, true);
+    return () => { window.removeEventListener('resize', handle); window.removeEventListener('scroll', handle, true); };
+  }, [showFilterPanel, positionFilterPanel]);
+
+  useEffect(() => {
+    window.localStorage.setItem('apartmentsLayout', layout);
+  }, [layout]);
 
   // Public booking URL — computed inline so the mobile Share button
   // in this view can pass it to ShareLinkModal. Isolated from Layout's
@@ -35,7 +81,7 @@ export default function ApartmentsView({ setView }) {
       name: '', type: defaultType, description: '', basePrice: '',
       cleaningFeePerStay: '',
       platformFeeType: 'percentage', platformFee: '',
-      licenseId: ''
+      licenseId: '', economicCategory: '', location: ''
   });
 
 
@@ -128,10 +174,10 @@ export default function ApartmentsView({ setView }) {
       setEditingId(apt.id);
     } else {
       setFormData({
-          name: '', type: defaultType, description: '', basePrice: '',
+          name: '', owner: '', type: defaultType, description: '', basePrice: '',
           cleaningFeePerStay: '',
           platformFeeType: 'percentage', platformFee: '',
-          licenseId: ''
+          licenseId: '', economicCategory: '', location: ''
       });
       setEditingId(null);
     }
@@ -182,25 +228,286 @@ export default function ApartmentsView({ setView }) {
   const handleToggleCleaningStatus = async (apt) => {
     await updateApartment({ ...apt, needsCleaning: !apt.needsCleaning });
   };
-  const totalPages = Math.ceil(apartments.length / itemsPerPage);
-  const paginatedApartments = apartments.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+  const handleToggleStatus = async (apt) => {
+    await updateApartment({ ...apt, isActive: !apt.isActive });
+  };
+  const cycleLayout = () => {
+    setLayout(prev => {
+      const idx = LAYOUT_ORDER.indexOf(prev);
+      return LAYOUT_ORDER[(idx + 1) % LAYOUT_ORDER.length];
+    });
+  };
+
+  // Locations come from the settings-managed list (like الفئات الاقتصادية).
+  const allLocations = [...customLocations].sort((a, b) => a.localeCompare(b, 'ar'));
+
+  const filteredApartments = apartments.filter(a => {
+    const q = search.trim().toLowerCase();
+    if (q && !(a.name || '').toLowerCase().includes(q)
+        && !(a.type || '').toLowerCase().includes(q)
+        && !(a.economicCategory || '').toLowerCase().includes(q)
+        && !(a.location || '').toLowerCase().includes(q)) {
+      return false;
+    }
+    if (locationFilter !== 'all' && (a.location || '').trim() !== locationFilter) {
+      return false;
+    }
+    if (categoryFilter !== 'all' && (a.economicCategory || '').trim() !== categoryFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  const sortedApartments = (() => {
+    const list = [...filteredApartments];
+    switch (sortKey) {
+      case 'category':
+        list.sort((a, b) => (a.economicCategory || '').localeCompare(b.economicCategory || '', 'ar'));
+        break;
+      case 'priceAsc':
+        list.sort((a, b) => Number(a.basePrice) - Number(b.basePrice));
+        break;
+      case 'priceDesc':
+        list.sort((a, b) => Number(b.basePrice) - Number(a.basePrice));
+        break;
+      case 'type':
+        list.sort((a, b) => (a.type || '').localeCompare(b.type || '', 'ar'));
+        break;
+      case 'name':
+        list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+        break;
+    }
+    return list;
+  })();
+
+  const totalPages = Math.ceil(sortedApartments.length / itemsPerPage);
+  const clampedPage = Math.min(currentPage, totalPages || 1);
+  const paginatedApartments = sortedApartments.slice(
+    (clampedPage - 1) * itemsPerPage,
+    clampedPage * itemsPerPage
   );
+
+  // Shared action cluster for every layout. stopPropagation guards the
+  // row/photo click-through (the same portal-bubbling fix as the partner
+  // menu). The status toggle flips the unit's متاحة/مخفية flag.
+  const actionBtnBase = "p-2 md:p-1.5 rounded-md bg-canvas/95 dark:bg-surface-dark-elevated/95 text-ink dark:text-white hover:text-accent border border-hairline dark:border-hairline-dark-soft backdrop-blur-sm transition-colors";
+  const renderActionButtons = (apt) => (
+    <>
+      {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleOpenModal(apt); }}
+          className={actionBtnBase}
+          title="تعديل"
+        >
+          <Edit3 size={15} />
+        </button>
+      )}
+      {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleToggleStatus(apt); }}
+          className={actionBtnBase}
+          title={apt.isActive ? 'إخفاء الوحدة' : 'إظهار الوحدة'}
+        >
+          {apt.isActive ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      )}
+      {(user?.role === 'admin' || user?.permissions?.canDelete) && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDelete(apt.id); }}
+          className={actionBtnBase}
+          title="حذف"
+        >
+          <Trash2 size={15} />
+        </button>
+      )}
+    </>
+  );
+  const layoutIcon = layout === 'grid' ? <LayoutGrid size={16} /> : layout === 'list' ? <ListIcon size={16} /> : <Rows3 size={16} />;
+
+  const sortOptions = [
+    { value: '', label: 'الافتراضي' },
+    { value: 'category', label: 'الفئة' },
+    { value: 'priceAsc', label: 'السعر: من الأقل' },
+    { value: 'priceDesc', label: 'السعر: من الأعلى' },
+    { value: 'type', label: 'النوع' },
+    { value: 'name', label: 'الاسم' },
+  ];
+  const activeFilterCount = (sortKey !== '' ? 1 : 0) + (locationFilter !== 'all' ? 1 : 0) + (categoryFilter !== 'all' ? 1 : 0);
+  const clearAllFilters = () => { setSortKey(''); setLocationFilter('all'); setCategoryFilter('all'); };
+
+  // Shared filter panel content used by both phone (bottom-sheet portal)
+  // and desktop (fixed dropdown anchored to button).
+  const filterPanelBody = (
+    <>
+      {/* Sort section */}
+      <div className="px-5 pt-5 pb-3">
+        <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الترتيب</p>
+        <div className="space-y-1">
+          {sortOptions.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { setSortKey(opt.value); setCurrentPage(1); }}
+              className="flex items-center gap-3 w-full py-2.5 px-3 rounded-lg hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+            >
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${sortKey === opt.value ? 'border-ink dark:border-white' : 'border-hairline dark:border-hairline-dark'}`}>
+                {sortKey === opt.value && <div className="w-2 h-2 rounded-full bg-ink dark:bg-white" />}
+              </div>
+              <span className={`text-sm ${sortKey === opt.value ? 'font-semibold text-ink dark:text-white' : 'text-body dark:text-body-dark'}`}>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-hairline-soft dark:border-hairline-dark-soft" />
+
+      {/* Category section */}
+      {customCategories.length > 0 && (
+        <div className="px-5 py-4">
+          <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الفئة الاقتصادية</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => { setCategoryFilter('all'); setCurrentPage(1); }}
+              className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors min-h-[40px] ${categoryFilter === 'all' ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
+            >الكل</button>
+            {customCategories.map(c => (
+              <button
+                key={c}
+                onClick={() => { setCategoryFilter(categoryFilter === c ? 'all' : c); setCurrentPage(1); }}
+                className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors min-h-[40px] ${categoryFilter === c ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
+              >{c}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Location section */}
+      {allLocations.length > 0 && (
+        <>
+          <div className="border-t border-hairline-soft dark:border-hairline-dark-soft" />
+          <div className="px-5 py-4">
+            <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الموقع</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => { setLocationFilter('all'); setCurrentPage(1); }}
+                className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors min-h-[40px] ${locationFilter === 'all' ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
+              >الكل</button>
+              {allLocations.map(l => (
+                <button
+                  key={l}
+                  onClick={() => { setLocationFilter(locationFilter === l ? 'all' : l); setCurrentPage(1); }}
+                  className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors min-h-[40px] ${locationFilter === l ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
+                >{l}</button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Footer */}
+      <div className="border-t border-hairline-soft dark:border-hairline-dark-soft px-5 py-4 flex items-center justify-between">
+        <button
+          onClick={() => { clearAllFilters(); setCurrentPage(1); }}
+          className="text-sm font-semibold text-muted hover:text-ink dark:hover:text-white transition-colors"
+        >مسح الكل</button>
+        <button
+          onClick={() => setShowFilterPanel(false)}
+          className="btn-primary h-10 px-6 text-sm"
+        >تم</button>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex-1 min-h-0 flex flex-col h-full overflow-hidden">
 
-      {/* Mobile-only share button. Opens ShareLinkModal (same component
-          the desktop Share button opens). Sits above the grid, only for
-          admin + canBook. Clean icon+label button — no ugly inline card. */}
-      {(user?.role === 'admin' || user?.permissions?.canBook) && (
-        <button
-          onClick={() => setIsShareOpen(true)}
-          className="md:hidden inline-flex items-center gap-2 h-10 px-3.5 rounded-md bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white transition-colors text-sm font-semibold mb-3 shrink-0 self-start"
-        >
-          <Share2 size={15} />
-          <span>مشاركة رابط الحجز</span>
-        </button>
+      {/* Toolbar — search + filter button + layout toggle.
+          PHONE: wraps into two rows. DESKTOP: inline. */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4 md:mb-5 shrink-0">
+        <div className="relative flex-1 min-w-0 w-full order-2 sm:order-1">
+          <input
+            type="text"
+            placeholder="ابحث بالاسم أو النوع أو الفئة أو الموقع..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="input-field pl-10 pr-4 py-2 w-full"
+          />
+          <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 shrink-0 order-1 sm:order-2">
+          {/* Mobile-only share icon */}
+          {(user?.role === 'admin' || user?.permissions?.canBook) && (
+            <button
+              onClick={() => setIsShareOpen(true)}
+              className="sm:hidden inline-flex items-center justify-center h-10 w-10 rounded-md bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white transition-colors shrink-0"
+              title="مشاركة رابط الحجز"
+            >
+              <Share2 size={15} />
+            </button>
+          )}
+
+          {/* Advanced filter button — opens popover panel */}
+          <button
+            ref={filterBtnRef}
+            onClick={() => setShowFilterPanel(p => !p)}
+            className={`inline-flex items-center justify-center gap-2 h-10 px-3 rounded-md border transition-colors text-sm font-semibold shrink-0 ${activeFilterCount > 0
+              ? 'bg-ink text-white dark:bg-white dark:text-ink border-ink dark:border-white'
+              : 'bg-canvas dark:bg-surface-dark-elevated border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:border-ink dark:hover:border-white'}`}
+          >
+            <SlidersHorizontal size={15} />
+            <span className="hidden sm:inline">التصفية</span>
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[11px] font-bold leading-none">{activeFilterCount}</span>
+            )}
+          </button>
+
+          {/* Layout toggle */}
+          <button
+            onClick={cycleLayout}
+            className="inline-flex items-center justify-center gap-2 h-10 px-3 rounded-md bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft text-body dark:text-body-dark hover:text-ink dark:hover:text-white hover:border-ink dark:hover:border-white transition-colors text-sm font-semibold shrink-0"
+            title={layout === 'grid' ? 'تبديل إلى عرض القائمة' : layout === 'list' ? 'تبديل إلى العرض المختصر' : 'تبديل إلى عرض البطاقات'}
+          >
+            {layoutIcon}
+            <span className="hidden sm:inline">عرض</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter panel — phone: bottom-sheet portal, desktop: fixed dropdown from button */}
+      {showFilterPanel && (
+        <>
+          {/* Phone: bottom-sheet via portal */}
+          {createPortal(
+            <div className="sm:hidden fixed inset-0 z-50" dir="rtl">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowFilterPanel(false)} />
+              <div className="absolute inset-x-0 bottom-0 bg-canvas dark:bg-surface-dark rounded-t-2xl border border-hairline dark:border-hairline-dark-soft shadow-xl max-h-[85vh] flex flex-col overflow-hidden anim-sheet">
+                <div className="px-5 py-4 border-b border-hairline-soft dark:border-hairline-dark-soft flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal size={16} className="text-muted" />
+                    <h3 className="font-semibold text-ink dark:text-white">التصفية والترتيب</h3>
+                  </div>
+                  <button onClick={() => setShowFilterPanel(false)} className="p-2 -m-2 rounded-md hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
+                    <X size={18} className="text-muted" />
+                  </button>
+                </div>
+                <div className="overflow-y-auto flex-1 overscroll-contain">{filterPanelBody}</div>
+              </div>
+            </div>,
+            document.body
+          )}
+
+          {/* Desktop: fixed dropdown anchored to button */}
+          <div className="hidden sm:block">
+            <div className="fixed inset-0 z-40" onClick={() => setShowFilterPanel(false)} />
+            <div
+              className="fixed z-50 w-80 bg-canvas dark:bg-surface-dark rounded-xl border border-hairline dark:border-hairline-dark-soft shadow-xl overflow-hidden"
+              dir="rtl"
+              style={{ top: filterPos.top, right: filterPos.right }}
+            >
+              {filterPanelBody}
+            </div>
+          </div>
+        </>
       )}
 
       <div className="flex-1 overflow-y-auto pt-2 md:pt-0 pb-24 md:pb-0">
@@ -219,8 +526,15 @@ export default function ApartmentsView({ setView }) {
               )
             }
           />
-        ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-4">
+        ) : filteredApartments.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title="لا توجد نتائج مطابقة"
+            subtitle="جرّب تعديل البحث أو عوامل التصفية."
+            variant="dashed"
+          />
+        ) : layout === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-4 mt-[0.1rem]">
         {paginatedApartments.map((apt) => {
           const isNotClean = apt.needsCleaning;
           const isBooked = isApartmentCurrentlyBooked(apt.id);
@@ -249,11 +563,14 @@ export default function ApartmentsView({ setView }) {
                 )}
 
                 {/* Operational status — leading edge (RTL: top-right).
-                    Uses design-system .badge-* variants: dashed=attention,
-                    solid=occupied, outline=available. Backdrop-blur retained
-                    so the pills sit legibly over the cover photo. */}
+                    A hidden (inactive) unit takes priority; otherwise the
+                    badge reflects cleaning / occupancy. Uses design-system
+                    .badge-* variants: dashed=attention, solid=occupied,
+                    outline=available, ghost=hidden. */}
                 <div className="absolute top-3 right-3">
-                  {isNotClean ? (
+                  {!apt.isActive ? (
+                    <span className="badge-pill badge-ghost backdrop-blur-sm bg-canvas/90 dark:bg-surface-dark/90">مخفية</span>
+                  ) : isNotClean ? (
                     <span className="badge-pill badge-dashed backdrop-blur-sm bg-canvas/90 dark:bg-surface-dark/90">تحتاج تنظيف</span>
                   ) : isBooked ? (
                     <span className="badge-pill badge-solid backdrop-blur-sm bg-ink/90 dark:bg-white/90">مشغولة</span>
@@ -265,36 +582,31 @@ export default function ApartmentsView({ setView }) {
                   )}
                 </div>
 
-                {/* Edit / delete — trailing edge. Always visible on mobile
-                    (touch devices don't hover); revealed on hover on desktop. */}
+                {/* Edit / toggle status / delete — trailing edge. Always
+                    visible on mobile (touch devices don't hover); revealed
+                    on hover on desktop. */}
                 <div className="absolute top-3 left-3 flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                    {(user?.role === 'admin' || user?.permissions?.canEdit) && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleOpenModal(apt); }}
-                        className="p-2 md:p-1.5 rounded-md bg-canvas/95 dark:bg-surface-dark-elevated/95 text-ink dark:text-white hover:text-accent border border-hairline dark:border-hairline-dark-soft backdrop-blur-sm transition-colors"
-                        title="تعديل"
-                    >
-                        <Edit3 size={15} />
-                    </button>
-                    )}
-                    {(user?.role === 'admin' || user?.permissions?.canDelete) && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(apt.id); }}
-                        className="p-2 md:p-1.5 rounded-md bg-canvas/95 dark:bg-surface-dark-elevated/95 text-ink dark:text-white hover:text-accent border border-hairline dark:border-hairline-dark-soft backdrop-blur-sm transition-colors"
-                        title="حذف"
-                    >
-                        <Trash2 size={15} />
-                    </button>
-                    )}
+                    {renderActionButtons(apt)}
                 </div>
             </div>
 
             {/* Body — name & price lead; type is a quiet eyebrow */}
             <div className="p-5 flex flex-col flex-1">
-              <p className="text-xs font-semibold text-muted-soft mb-1">{apt.type}</p>
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                <p className="text-xs font-semibold text-muted-soft">{apt.type}</p>
+                {apt.economicCategory && (
+                  <span className="badge-pill text-[10px] px-2 py-0 text-muted dark:text-body-dark">{apt.economicCategory}</span>
+                )}
+              </div>
               <h3 className="text-lg font-bold tracking-tight text-ink dark:text-white leading-tight">{apt.name}</h3>
               {apt.description && (
                 <p className="text-xs text-muted dark:text-body-dark mt-1 line-clamp-1">{apt.description}</p>
+              )}
+              {apt.location && (
+                <p className="text-xs text-muted-soft mt-1 flex items-center gap-1 truncate">
+                  <MapPin size={11} className="shrink-0" />
+                  <span className="truncate">{apt.location}</span>
+                </p>
               )}
 
               <div className="mt-auto pt-4 flex items-end justify-between border-t border-hairline-soft dark:border-[#2a2825]">
@@ -325,23 +637,159 @@ export default function ApartmentsView({ setView }) {
           </button>
         )}
       </div>
+        ) : layout === 'list' ? (
+        <div className="flex flex-col gap-3 pb-4">
+        {paginatedApartments.map((apt) => {
+          const isNotClean = apt.needsCleaning;
+          return (
+          <div key={apt.id} className="card-surface flex items-stretch overflow-hidden group transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5">
+            {/* Thumbnail — tap to manage photos */}
+            <div
+              className="relative shrink-0 w-28 sm:w-40 bg-surface-card dark:bg-surface-dark cursor-pointer overflow-hidden"
+              onClick={() => handleOpenPhotoModal(apt)}
+            >
+              {apt.coverPhoto ? (
+                <img src={apt.coverPhoto} alt={apt.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-soft gap-1.5">
+                  <ImageIcon size={20} className="opacity-40" />
+                  <span className="text-xs font-medium">أضف صورة</span>
+                </div>
+              )}
+              {!apt.isActive && (
+                <div className="absolute inset-0 flex items-center justify-center bg-ink/40">
+                  <span className="badge-pill badge-ghost">مخفية</span>
+                </div>
+              )}
+            </div>
+
+            {/* Info + actions */}
+            <div className="flex-1 min-w-0 p-4 sm:p-5 flex flex-col">
+              <div className="flex items-start justify-between gap-3 min-w-0">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    <p className="text-xs font-semibold text-muted-soft">{apt.type}</p>
+                    {apt.economicCategory && (
+                      <span className="badge-pill text-[10px] px-2 py-0 text-muted dark:text-body-dark">{apt.economicCategory}</span>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-bold tracking-tight text-ink dark:text-white leading-tight truncate">{apt.name}</h3>
+                  {apt.location && (
+                    <p className="text-xs text-muted-soft mt-1 flex items-center gap-1 truncate">
+                      <MapPin size={11} className="shrink-0" />
+                      <span className="truncate">{apt.location}</span>
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  {renderActionButtons(apt)}
+                </div>
+              </div>
+              {apt.description && (
+                <p className="text-xs text-muted dark:text-body-dark mt-2 line-clamp-1">{apt.description}</p>
+              )}
+
+              <div className="mt-auto pt-3 flex items-center justify-between gap-3 border-t border-hairline-soft dark:border-[#2a2825]">
+                <div>
+                  <p className="text-2xs text-muted-soft font-semibold mb-1">السعر الأساسي</p>
+                  <p className="text-xl font-bold tracking-tightest text-ink dark:text-white leading-none">{apt.basePrice} <span className="text-xs text-muted font-semibold">ر.س / ليلة</span></p>
+                </div>
+                {isNotClean && (
+                  <button
+                    onClick={() => handleToggleCleaningStatus(apt)}
+                    className="text-xs font-semibold text-ink dark:text-white bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft hover:bg-surface-soft dark:hover:bg-hairline-dark px-3 py-1.5 rounded-md transition-colors shrink-0"
+                  >
+                    تم التنظيف
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          );
+        })}
+        {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+          <button
+            onClick={() => handleOpenModal()}
+            className="w-full border border-dashed border-hairline dark:border-hairline-dark-soft rounded-lg flex items-center justify-center gap-2 py-4 text-muted hover:border-ink hover:text-ink dark:hover:border-white dark:hover:text-white transition-colors"
+          >
+            <Plus size={18} />
+            <span className="font-semibold text-sm">إضافة وحدة جديدة</span>
+          </button>
+        )}
+        </div>
+        ) : (
+        <div className="flex flex-col rounded-lg border border-hairline dark:border-hairline-dark-soft overflow-hidden pb-4">
+          {/* Table header — desktop only; mobile rows show a compact meta line instead */}
+          <div className="hidden md:grid grid-cols-[1fr_140px_130px_110px_100px_auto] gap-3 px-5 py-2.5 bg-surface-soft dark:bg-surface-dark-elevated text-2xs font-semibold text-muted-soft uppercase tracking-wider items-center">
+            <span>الوحدة</span>
+            <span>النوع</span>
+            <span>الفئة</span>
+            <span>السعر / ليلة</span>
+            <span>الحالة</span>
+            <span></span>
+          </div>
+          {paginatedApartments.map((apt) => {
+            const isNotClean = apt.needsCleaning;
+            return (
+            <div
+              key={apt.id}
+              onClick={() => handleOpenModal(apt)}
+              className="grid grid-cols-1 md:grid-cols-[1fr_140px_130px_110px_100px_auto] gap-y-1 md:gap-3 items-center px-4 md:px-5 py-3 border-b border-hairline-soft dark:border-hairline-dark hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60 transition-colors cursor-pointer last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="font-semibold text-sm text-ink dark:text-white truncate">{apt.name}</p>
+                <p className="text-xs text-muted-soft md:hidden truncate">
+                  {apt.type}{apt.economicCategory ? ` · ${apt.economicCategory}` : ''} · {apt.basePrice} ر.س
+                </p>
+                {isNotClean && (
+                  <p className="text-[11px] font-medium text-muted dark:text-body-dark md:hidden mt-0.5">تحتاج تنظيف</p>
+                )}
+              </div>
+              <p className="hidden md:block text-sm text-body dark:text-body-dark truncate">{apt.type}</p>
+              <span className="hidden md:inline-flex items-center">
+                {apt.economicCategory
+                  ? <span className="badge-pill text-[10px] px-2 py-0 text-muted dark:text-body-dark">{apt.economicCategory}</span>
+                  : <span className="text-muted-soft text-sm">—</span>}
+              </span>
+              <p className="hidden md:block text-sm font-semibold text-ink dark:text-white">{apt.basePrice} <span className="text-xs text-muted font-normal">ر.س</span></p>
+              <span className="hidden md:inline-flex">
+                {apt.isActive
+                  ? <span className="badge-pill text-[10px] badge-outline px-2 py-0">متاحة</span>
+                  : <span className="badge-pill text-[10px] badge-ghost px-2 py-0">مخفية</span>}
+              </span>
+              <div className="flex items-center justify-end gap-1.5">
+                {renderActionButtons(apt)}
+              </div>
+            </div>
+            );
+          })}
+          {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+            <button
+              onClick={() => handleOpenModal()}
+              className="w-full border border-dashed border-hairline dark:border-hairline-dark-soft flex items-center justify-center gap-2 py-4 text-muted hover:border-ink hover:text-ink dark:hover:border-white dark:hover:text-white transition-colors bg-transparent"
+            >
+              <Plus size={18} />
+              <span className="font-semibold text-sm">إضافة وحدة جديدة</span>
+            </button>
+          )}
+        </div>
         )}
       {totalPages > 1 && (
         <div className="flex justify-center items-center py-4 border-t border-hairline-soft dark:border-hairline-dark shrink-0">
           <div className="nav-pill-group">
             <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(Math.max(1, clampedPage - 1))}
+              disabled={clampedPage === 1}
               className="nav-pill disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight size={18} />
             </button>
             <span className="nav-pill nav-pill-active text-sm font-semibold">
-              صفحة {currentPage} من {totalPages}
+              صفحة {clampedPage} من {totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(Math.min(totalPages, clampedPage + 1))}
+              disabled={clampedPage === totalPages}
               className="nav-pill disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={18} />
@@ -373,6 +821,11 @@ export default function ApartmentsView({ setView }) {
                   <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">اسم / رقم الوحدة</label>
                   <input required type="text" placeholder="مثال: شقة 101" className="input-field" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
                 </div>
+                <div>
+                  <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">المالك / المؤجر (اختياري)</label>
+                  <input type="text" placeholder="اسم مالك العقار..." className="input-field" value={formData.owner || ''} onChange={(e) => setFormData({ ...formData, owner: e.target.value })} />
+                  <p className="text-2xs text-muted-soft mt-1">يظهر في سندات النزيل «المؤجر / المدير». إن تُرك فارغاً تُستخدم اسم المنشأة.</p>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">النوع</label>
@@ -387,6 +840,21 @@ export default function ApartmentsView({ setView }) {
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-soft font-medium pointer-events-none">ر.س</span>
                     </div>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">الفئة</label>
+                  <select className="input-field" value={formData.economicCategory || ''} onChange={(e) => setFormData({ ...formData, economicCategory: e.target.value })}>
+                    <option value="">بدون فئة</option>
+                    {customCategories.map((c, idx) => (<option key={idx} value={c}>{c}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">الموقع (اختياري)</label>
+                  <select className="input-field" value={formData.location || ''} onChange={(e) => setFormData({ ...formData, location: e.target.value })}>
+                    <option value="">بدون موقع</option>
+                    {customLocations.map((l, idx) => (<option key={idx} value={l}>{l}</option>))}
+                  </select>
+                  <p className="text-2xs text-muted-soft mt-1">تُدار المواقع من الإعدادات — تبويب «المواقع».</p>
                 </div>
                 <div>
                   <label className="block text-2xs font-semibold text-muted dark:text-body-dark uppercase tracking-wide mb-1.5">ملاحظات / وصف</label>
@@ -523,6 +991,7 @@ export default function ApartmentsView({ setView }) {
         <ShareLinkModal
           link={shareableLink}
           businessName={user?.businessName || user?.name}
+          categories={customCategories}
           onClose={() => setIsShareOpen(false)}
         />
       )}

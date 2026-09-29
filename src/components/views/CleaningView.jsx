@@ -1,27 +1,15 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Plus, Search, Sparkles, ShowerHead, ChefHat, Bed, Sofa, DoorOpen, Package,
-  MoreHorizontal, Check, X, Trash2, AlertTriangle, Building2, ArrowLeft, Clock, Calendar,
+  Plus, Search, Sparkles, Settings2,
+  Check, X, Trash2, AlertTriangle, Building2, ArrowLeft, Clock, Calendar,
+  Wand2, CheckCircle2,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
-
-// Fixed vocabulary — must match CLEANING_AREAS in api/admin-resources.js.
-// The "general" area is a marker with no note (design decision).
-const AREAS = [
-  { value: 'bathroom',    label: 'الحمام',            Icon: ShowerHead },
-  { value: 'kitchen',     label: 'المطبخ',            Icon: ChefHat },
-  { value: 'bedroom',     label: 'غرفة النوم',        Icon: Bed },
-  { value: 'living_room', label: 'الصالة',            Icon: Sofa },
-  { value: 'entrance',    label: 'المدخل',            Icon: DoorOpen },
-  { value: 'supplies',    label: 'تجديد المستلزمات',  Icon: Package },
-  { value: 'general',     label: 'تنظيف عام',         Icon: Sparkles, noNote: true },
-  { value: 'other',       label: 'أخرى',              Icon: MoreHorizontal },
-];
-
-const areaMeta = (value) => AREAS.find(a => a.value === value) || AREAS[AREAS.length - 1];
+import { AREAS, areaMeta } from '../../lib/cleaningAreas';
+import CleaningTemplates from './CleaningTemplates';
 
 // Human-friendly relative-date label. Used for the urgency chip.
 function urgencyBadge(task) {
@@ -41,17 +29,22 @@ function formatDate(d) {
 }
 
 export default function CleaningView({ addTrigger = 0 }) {
-  const { cleaningTasks, apartments, createCleaningTask, updateCleaningTask, deleteCleaningTask } = useData();
+  const { cleaningTasks, apartments, cleaningTemplates, createCleaningTask, updateCleaningTask, deleteCleaningTask } = useData();
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
   const canClean = isAdmin || !!user?.permissions?.canClean;
+
+  // The default template (if any) — offered in the manual task modal so an
+  // ad-hoc task can still follow the standard routine.
+  const defaultTemplate = (cleaningTemplates || []).find(t => t.isDefault) || null;
 
   const [statusFilter, setStatusFilter] = useState('pending'); // 'pending' | 'done' | 'all'
   const [openTask, setOpenTask] = useState(null);              // task object being viewed
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [search, setSearch] = useState('');
+  const [templatesSheet, setTemplatesSheet] = useState(false); // mobile: templates bottom sheet
 
   // React to Layout's "New Task" button. The counter increments on each
   // click; we open the add modal only when the incoming number DIFFERS from
@@ -125,10 +118,13 @@ export default function CleaningView({ addTrigger = 0 }) {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col lg:flex-row gap-3 lg:gap-4 overflow-hidden">
+      {/* Main column — tasks. Primary content on the right (RTL); templates
+          sit to its left for admins on desktop. */}
+      <section className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Hero counter */}
       <div className="card-surface p-4 md:p-5 mb-4 shrink-0">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <p className="eyebrow mb-1.5">تحتاج تنظيف</p>
             <p
@@ -142,6 +138,16 @@ export default function CleaningView({ addTrigger = 0 }) {
               {pendingCount === 0 ? 'كل الوحدات نظيفة، عمل ممتاز.' : 'تظهر أولاً حسب الأقرب موعد استقبال ضيف قادم.'}
             </p>
           </div>
+          {isAdmin && (
+            <button
+              onClick={() => setTemplatesSheet(true)}
+              className="lg:hidden h-11 w-11 shrink-0 rounded-lg border border-hairline dark:border-hairline-dark bg-canvas dark:bg-surface-dark-elevated text-muted dark:text-body-dark hover:text-ink dark:hover:text-white flex items-center justify-center active:scale-95 transition-colors"
+              aria-label="قوالب التنظيف"
+              title="قوالب التنظيف"
+            >
+              <Settings2 size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -214,6 +220,7 @@ export default function CleaningView({ addTrigger = 0 }) {
       {showAddModal && isAdmin && createPortal(
         <AddTaskModal
           apartments={apartments}
+          defaultTemplate={defaultTemplate}
           onClose={() => setShowAddModal(false)}
           onSubmit={async (data) => { await createCleaningTask(data); setShowAddModal(false); }}
         />,
@@ -235,6 +242,45 @@ export default function CleaningView({ addTrigger = 0 }) {
               >
                 حذف
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      </section>
+
+      {/* Templates panel — desktop admin only. Renders as the left column
+          of the split page (in RTL the flex-end side). */}
+      {isAdmin && (
+        <aside
+          className="hidden lg:flex flex-col w-72 xl:w-80 shrink-0 min-h-0 rounded-lg border border-hairline dark:border-hairline-dark bg-canvas dark:bg-surface-dark overflow-hidden"
+          aria-label="قوالب التنظيف"
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto p-3.5">
+            <CleaningTemplates />
+          </div>
+        </aside>
+      )}
+
+      {/* Templates sheet — mobile admin: the gear button in the counter hero
+          opens templates as a bottom sheet (same app modal language as the
+          task editor: grab handle + rounded top + slide-up). */}
+      {isAdmin && templatesSheet && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm lg:hidden" data-modal-active>
+          <div className="absolute inset-0" onClick={() => setTemplatesSheet(false)}></div>
+          <div className="relative bg-canvas dark:bg-surface-dark-elevated rounded-t-2xl border border-hairline dark:border-hairline-dark-soft shadow-soft w-full max-h-[92vh] flex flex-col overflow-hidden anim-sheet">
+            <div className="pt-2 flex justify-center shrink-0">
+              <div className="w-9 h-1 rounded-full bg-hairline dark:bg-hairline-dark" />
+            </div>
+            <div className="flex items-center justify-between px-4 pb-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-muted shrink-0" />
+                <h3 className="font-semibold text-sm text-ink dark:text-white">قوالب التنظيف</h3>
+              </div>
+              <button onClick={() => setTemplatesSheet(false)} className="icon-action h-9 w-9" aria-label="إغلاق" title="إغلاق"><X size={16} /></button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
+              <CleaningTemplates compact />
             </div>
           </div>
         </div>,
@@ -273,6 +319,14 @@ function TaskRow({ task, onOpen }) {
             )}
           </div>
           <div className="flex items-center gap-3 mt-1 text-2xs text-muted-soft">
+            {/* Default-template tasks look exactly like before. Tasks with no
+                template origin are the exception — a subtle dashed "مخصص" tag
+                flags them so staff know this is NOT the standard routine. */}
+            {!task.templateId && (
+              <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-full border border-dashed border-muted-soft/60 text-muted-soft">
+                <Wand2 size={10} /> مخصص
+              </span>
+            )}
             <span className="inline-flex items-center gap-1">
               <Calendar size={11} />
               {formatDate(task.scheduledFor)}
@@ -410,6 +464,15 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
               <h3 className="font-semibold text-ink dark:text-white truncate">{task.apartment?.name || 'وحدة'}</h3>
             </div>
             <div className="flex items-center gap-3 text-2xs text-muted-soft">
+              {task.templateId ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-accent-strong">
+                  <CheckCircle2 size={11} /> من القالب الافتراضي
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 font-semibold text-muted-soft">
+                  <Wand2 size={11} /> مهمة مخصصة
+                </span>
+              )}
               <span className="inline-flex items-center gap-1">
                 <Calendar size={11} /> جدولة: {formatDate(task.scheduledFor)}
               </span>
@@ -620,16 +683,24 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
 
 /* ---------------- Add manual task modal ---------------- */
 
-function AddTaskModal({ apartments, onClose, onSubmit }) {
+function AddTaskModal({ apartments, defaultTemplate, onClose, onSubmit }) {
   const [apartmentId, setApartmentId] = useState('');
   const [notes, setNotes] = useState('');
+  const [useDefault, setUseDefault] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
     if (!apartmentId || submitting) return;
     setSubmitting(true);
-    try { await onSubmit({ apartmentId, notes }); }
-    finally { setSubmitting(false); }
+    try {
+      // When the admin opts into the default routine, the template's
+      // checklist and instructions seed the task on the server.
+      await onSubmit({
+        apartmentId,
+        notes,
+        ...(useDefault && defaultTemplate ? { templateId: defaultTemplate.id } : {}),
+      });
+    } finally { setSubmitting(false); }
   };
 
   return (
@@ -671,6 +742,27 @@ function AddTaskModal({ apartments, onClose, onSubmit }) {
               placeholder="سبب المهمة، تعليمات عامة..."
             />
           </div>
+          {defaultTemplate && (
+            <label
+              className={`flex items-center gap-2 p-3 rounded-lg border text-xs font-semibold cursor-pointer select-none transition-colors ${
+                useDefault
+                  ? 'border-accent bg-accent/5 text-accent-strong'
+                  : 'border-hairline dark:border-hairline-dark-soft text-muted dark:text-body-dark hover:text-ink dark:hover:text-white'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={useDefault}
+                onChange={(e) => setUseDefault(e.target.checked)}
+                className="hidden"
+              />
+              <CheckCircle2 size={15} />
+              <span>طبق القالب الافتراضي</span>
+              <span className="inline-flex items-center gap-1 font-semibold text-2xs px-1.5 py-0.5 rounded-full bg-accent/10 text-accent-strong ml-auto">
+                {defaultTemplate.name}
+              </span>
+            </label>
+          )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <button onClick={onClose} className="btn-ghost h-9 px-4 text-xs">إلغاء</button>
@@ -680,10 +772,10 @@ function AddTaskModal({ apartments, onClose, onSubmit }) {
             className="btn-primary h-9 px-4 text-xs disabled:opacity-50"
           >
             <Plus size={13} /> إنشاء
-          </button>
+</button>
         </div>
         </div>
       </div>
-    </div>
+      </div>
   );
 }
