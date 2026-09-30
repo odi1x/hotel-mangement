@@ -249,7 +249,7 @@ export default function BookingForm({ onClose, initialData }) {
                 <span className="flex items-center gap-1 text-xs link-accent"><Pencil size={13} /> تعديل</span>
               </button>
             ) : (
-              <div className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-4 max-w-sm">
+              <div className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-4 max-w-sm mx-auto">
                 <DatePickerCal
                   value={dateValue}
                   onChange={(v) => { setDateValue(v); if (v.startDate && v.endDate) setShowCal(false); }}

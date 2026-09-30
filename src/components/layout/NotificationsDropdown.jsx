@@ -1,10 +1,43 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, Calendar, ChevronLeft } from 'lucide-react';
+import {
+  Bell, Check, Trash2, Info, AlertTriangle, CheckCircle2, Calendar,
+  ChevronLeft, Wrench, Sparkles, Wallet, FileText, Handshake
+} from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 
+const TYPE_META = {
+  booking:   { icon: Calendar,       accent: 'text-accent-strong dark:text-accent' },
+  request:   { icon: Calendar,       accent: 'text-accent-strong dark:text-accent' },
+  payment:   { icon: Wallet,         accent: 'text-success dark:text-success' },
+  refund:    { icon: Wallet,         accent: 'text-warning dark:text-warning' },
+  expense:   { icon: Wallet,         accent: 'text-warning dark:text-warning' },
+  settlement:{ icon: Handshake,      accent: 'text-success dark:text-success' },
+  license:   { icon: FileText,       accent: 'text-warning dark:text-warning' },
+  cleaning:  { icon: Sparkles,       accent: 'text-accent-strong dark:text-accent' },
+  maintenance:{ icon: Wrench,        accent: 'text-warning dark:text-warning' },
+  warning:   { icon: AlertTriangle,  accent: 'text-warning dark:text-warning' },
+  success:   { icon: CheckCircle2,   accent: 'text-success dark:text-success' },
+  info:      { icon: Info,           accent: 'text-muted dark:text-body-dark' },
+};
+
+const DEFAULT_LINK = {
+  booking: 'residents',
+  request: 'requests',
+  payment: 'balances',
+  refund: 'balances',
+  expense: 'expenses',
+  settlement: 'partners',
+  license: 'settings',
+  cleaning: 'cleaning',
+  maintenance: 'maintenance',
+  warning: 'availability',
+  success: 'residents',
+  info: 'availability',
+};
+
 export default function NotificationsDropdown({ onNavigate }) {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, fetchNotifications } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, fetchNotifications, hasMore, loadMore, loadingMore } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   // buttonRef anchors the dropdown against the bell button so we can compute
   // a viewport-fixed position on desktop. dropdownRef is used for click-away
@@ -15,19 +48,10 @@ export default function NotificationsDropdown({ onNavigate }) {
   const dropdownRef = useRef(null);
   const [buttonRect, setButtonRect] = useState(null);
 
-  // Map a notification to the page it should open
-  const targetFor = (n) => {
-    if (n.link) return n.link;
-    switch (n.type) {
-      case 'booking':
-      case 'warning':
-        return 'requests';
-      case 'success':
-        return 'residents';
-      default:
-        return null;
-    }
-  };
+  // Map a notification to the page it should open. The server stores an
+  // explicit `link` per event, so that always wins; the per-type default is
+  // only a fallback for rows created before links existed.
+  const targetFor = (n) => n.link || DEFAULT_LINK[n.type] || null;
 
   const handleNotifClick = (n) => {
     if (!n.isRead) markAsRead(n.id);
@@ -64,13 +88,9 @@ export default function NotificationsDropdown({ onNavigate }) {
   }, []);
 
   const getIcon = (type) => {
-    switch (type) {
-      case 'warning': return <AlertTriangle className="w-5 h-5 text-ink dark:text-white" />;
-      case 'success': return <CheckCircle2 className="w-5 h-5 text-ink dark:text-white" />;
-      case 'booking': return <Calendar className="w-5 h-5 text-ink dark:text-white" />;
-      case 'info':
-      default: return <Info className="w-5 h-5 text-muted dark:text-body-dark" />;
-    }
+    const meta = TYPE_META[type] || TYPE_META.info;
+    const Icon = meta.icon;
+    return <Icon className={`w-5 h-5 ${meta.accent}`} />;
   };
 
   const formatDate = (dateString) => {
@@ -203,6 +223,7 @@ export default function NotificationsDropdown({ onNavigate }) {
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-1">
                           <p className={`text-sm font-semibold truncate ${notif.isRead ? 'text-body dark:text-body-dark' : 'text-ink dark:text-white'}`}>
+                            {notif.urgent && <span className="text-warning mr-1">•</span>}
                             {notif.title}
                           </p>
                           <span className="text-2xs text-muted-soft shrink-0 mr-2 whitespace-nowrap">
@@ -225,6 +246,17 @@ export default function NotificationsDropdown({ onNavigate }) {
                   </li>
                 ))}
               </ul>
+            )}
+            {notifications.length > 0 && hasMore && (
+              <div className="border-t border-hairline-soft dark:border-hairline-dark p-3">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="w-full text-xs font-semibold text-accent hover:text-accent-strong transition-colors disabled:opacity-50 py-1"
+                >
+                  {loadingMore ? 'جاري التحميل...' : 'عرض المزيد'}
+                </button>
+              </div>
             )}
           </div>
         </div>,

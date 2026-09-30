@@ -101,7 +101,9 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
       <nav className="flex flex-col gap-1 w-full flex-1 justify-start min-h-0 overflow-y-auto scrollbar-none">
         <SidebarItem icon={Calendar} label="التوفر" id="availability" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
-        <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
+        {(user?.role === 'admin' || user?.permissions?.canBook) && (
+          <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
+        )}
         <SidebarItem icon={Users} label="سجل النزلاء" id="residents" view={view} setView={setView} isCollapsed={isCollapsed} />
         {(user?.role === 'admin' || user?.permissions?.canViewBalances) && (
           <SidebarItem icon={Wallet} label="المستحقات" id="balances" badgeCount={duesCount} view={view} setView={setView} isCollapsed={isCollapsed} />

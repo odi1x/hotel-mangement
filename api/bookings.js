@@ -1,6 +1,6 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { sendWebPush } from '../push-helper.js';
+import { notify, isLargeAmount } from './notify.js';
 import { createCleaningTaskForBooking } from './admin-resources.js';
 
 export default async function handler(req, res) {
@@ -129,27 +129,24 @@ export default async function handler(req, res) {
 
       // Edge case: If creating a historical booking (endDate < today), instantly flag unit as needing cleaning.
       // Create notification for new booking
-      await prisma.notification.create({
-        data: {
-          userId: targetUserId, // Send to Admin
-          title: 'حجز جديد',
-          message: `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name} بواسطة ${user.name || user.username}`,
-          type: 'booking'
-        }
+      await notify({
+        userIds: [targetUserId],
+        title: 'حجز جديد',
+        message: `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name} بواسطة ${user.name || user.username}`,
+        type: 'booking',
+        link: 'residents',
+        tag: `booking-new:${booking.id}`
       });
-      await sendWebPush(targetUserId, 'حجز جديد', `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name}`);
 
-      // If a staff member created this, ALSO notify the staff member so they see the confirmation!
       if (user.userId !== targetUserId) {
-          await prisma.notification.create({
-            data: {
-              userId: user.userId,
-              title: 'تم تأكيد الحجز',
-              message: `تم تأكيد حجزك للنزيل ${residentName} في وحدة ${apartment.name}`,
-              type: 'success'
-            }
+          await notify({
+            userIds: [user.userId],
+            title: 'تم تأكيد الحجز',
+            message: `تم تأكيد حجزك للنزيل ${residentName} في وحدة ${apartment.name}`,
+            type: 'success',
+            link: 'residents',
+            tag: `booking-own:${booking.id}`
           });
-          await sendWebPush(user.userId, 'تم تأكيد الحجز', `تم تأكيد حجزك للنزيل ${residentName} في وحدة ${apartment.name}`);
       }
 
       const today = new Date(new Date().toISOString().split('T')[0] + 'T12:00:00.000Z').getTime();
@@ -192,27 +189,24 @@ export default async function handler(req, res) {
         const apartment = await prisma.apartment.findUnique({ where: { id: existing.apartmentId } });
 
         // Notify the Admin (apartment owner)
-        await prisma.notification.create({
-            data: {
-                userId: targetUserId,
-                title: 'مغادرة مبكرة',
-                message: `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`,
-                type: 'warning'
-            }
+        await notify({
+          userIds: [targetUserId],
+          title: 'مغادرة مبكرة',
+          message: `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`,
+          type: 'warning',
+          link: 'residents',
+          tag: `checkout-early:${existing.id}`
         });
-        await sendWebPush(targetUserId, 'مغادرة مبكرة', `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`);
 
-        // Also notify the staff who performed the checkout if they are different
         if (user.userId !== targetUserId) {
-            await prisma.notification.create({
-                data: {
-                    userId: user.userId,
-                    title: 'مغادرة مبكرة',
-                    message: `تم تسجيل المغادرة المبكرة للنزيل ${existing.residentName} بنجاح.`,
-                    type: 'success'
-                }
+            await notify({
+              userIds: [user.userId],
+              title: 'مغادرة مبكرة',
+              message: `تم تسجيل المغادرة المبكرة للنزيل ${existing.residentName} بنجاح.`,
+              type: 'success',
+              link: 'residents',
+              tag: `checkout-early-own:${existing.id}`
             });
-            await sendWebPush(user.userId, 'مغادرة مبكرة', `تم تسجيل المغادرة المبكرة للنزيل ${existing.residentName} بنجاح.`);
         }
 
         const booking = await prisma.booking.update({
@@ -264,10 +258,28 @@ export default async function handler(req, res) {
           data: { needsCleaning: true }
         });
         try {
-          await createCleaningTaskForBooking(existing, targetUserId);
+          await createCleaningTaskForBooking(existing, targetUserId, user);
         } catch (e) {
           // Task creation failure shouldn't fail the checkout — log and move on.
           console.error('Failed to auto-create cleaning task on checkout:', e);
+        }
+
+        const paidTotal = booking.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        const outstanding = Number(booking.totalPrice || 0) - paidTotal;
+        if (outstanding > 0.01) {
+          const owner = await prisma.user.findUnique({
+            where: { id: targetUserId },
+            select: { largeAmountAlertThreshold: true, largeAmountAlertRatio: true }
+          });
+          const large = isLargeAmount(outstanding, booking.totalPrice, owner);
+          await notify({
+            userIds: [targetUserId],
+            title: large ? 'مبلغ متبقٍ كبير بعد المغادرة' : 'مبلغ متبقٍ على الحجز',
+            message: `على حجز ${existing.residentName} في وحدة ${apartment?.name || ''} مبلغ متبقٍ ${Math.round(outstanding * 100) / 100} ر.س بعد المغادرة المبكرة.`,
+            type: large ? 'warning' : 'info',
+            link: 'balances',
+            tag: `balance-due:${id}`
+          });
         }
 
         return res.status(200).json(booking);

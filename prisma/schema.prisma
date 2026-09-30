@@ -27,6 +27,18 @@ model User {
   canViewPrices       Boolean     @default(true)
   canClean            Boolean     @default(false)
   canManageCleaningTemplates Boolean @default(false)
+
+  // Per-user notification preferences. JSON shape:
+  // { categories: { booking: true, cleaning: true, maintenance: true, finance: true, system: true }, push: true }
+  // Missing keys fall back to ON, so a null/partial value never silences a user.
+  notificationPrefs Json?
+
+  // A single expense/refund at or above this amount (or largeAmountAlertRatio
+  // of the booking total, whichever is lower) raises a "large amount" alert.
+  // Stored in SAR; null falls back to the built-in default.
+  largeAmountAlertThreshold Decimal?
+  largeAmountAlertRatio     Decimal?
+
   businessName     String?
   tourismLicense   String?
   logoUrl          String?
@@ -60,6 +72,7 @@ model User {
   notifications     Notification[]
   pushSubscriptions PushSubscription[]
   maintenanceIssues MaintenanceIssue[]
+  reportedMaintenanceIssues MaintenanceIssue[] @relation("MaintenanceReporter")
   pricingRules      PricingRule[]
   cleaningTasksOwned    CleaningTask[] @relation("CleaningTaskOwner")
   cleaningTasksStarted  CleaningTask[] @relation("CleaningTaskStarter")
@@ -182,6 +195,7 @@ model MaintenanceIssue {
   status      String    @default("open")
   // "open" | "in_progress" | "resolved"
   reportedBy  String?   // staff name who logged the issue
+  reportedById String?  // that staff member's userId — lets us notify them when it's resolved
   cost        Decimal?  // final cost after resolution (feeds owner statements later)
   contractor  String?   // who fixed it — helps track which vendors are reliable
   notes       String?
@@ -193,6 +207,7 @@ model MaintenanceIssue {
 
   apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reporter    User?     @relation("MaintenanceReporter", fields: [reportedById], references: [id], onDelete: SetNull)
 
   @@index([apartmentId])
   @@index([userId])
@@ -283,11 +298,25 @@ model Notification {
   title     String
   message   String
   type      String
+  /// App view this notification points at, e.g. "maintenance" | "requests".
+  /// Nullable for older rows; the client falls back to a per-type default.
+  link      String?
+  /// "api" for live events, "cron" for the daily digest — lets us reason
+  /// about (and prune) the two sources differently.
+  source    String?
+  /// Dedupe key shared by repeat deliveries of the same underlying fact
+  /// (e.g. "lic-exp-30:<licenseId>"). Also becomes the push notification
+  /// `tag`, so a re-run replaces the banner instead of stacking duplicates.
+  tag       String?
+  urgent    Boolean  @default(false)
   isRead    Boolean  @default(false)
   isCleared Boolean  @default(false)
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isCleared, createdAt])
+  @@index([tag])
 }
 
 model PushSubscription {

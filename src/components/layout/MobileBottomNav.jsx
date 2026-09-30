@@ -34,6 +34,7 @@ export default function MobileBottomNav({
   const canSeeCleaning    = user?.role === 'admin' || user?.permissions?.canClean;
   const canEditExpenses   = user?.role === 'admin' || user?.permissions?.canEdit;
   const canSeePricing     = user?.role === 'admin' || user?.permissions?.canViewPricing;
+  const canSeeRequests    = user?.role === 'admin' || user?.permissions?.canBook;
   const isAdmin            = user?.role === 'admin';
 
   const duesCount = canSeeBalances
@@ -91,13 +92,15 @@ export default function MobileBottomNav({
           isActive={view === 'availability'}
           onClick={() => setView('availability')}
         />
-        <TabItem
-          icon={BellRing}
-          label="الطلبات"
-          isActive={view === 'requests'}
-          onClick={() => setView('requests')}
-          badge={pendingCount}
-        />
+        {(isAdmin || canSeeRequests) && (
+          <TabItem
+            icon={BellRing}
+            label="الطلبات"
+            isActive={view === 'requests'}
+            onClick={() => setView('requests')}
+            badge={pendingCount}
+          />
+        )}
         <TabItem
           icon={Users}
           label="النزلاء"

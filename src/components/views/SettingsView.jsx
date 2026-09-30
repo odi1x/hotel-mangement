@@ -3,17 +3,30 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import {  Save, Plus, Trash2, Settings, Shield , BellRing, UploadCloud, Check, Loader2, Image as ImageIcon } from 'lucide-react';
+import {  Save, Plus, Trash2, Settings, Shield , BellRing, Bell, UploadCloud, Check, Loader2, Image as ImageIcon } from 'lucide-react';
 import { ACCENTS, applyAccent, getAccentId } from '../../lib/accent';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
+
+const NOTIF_CATEGORIES = [
+  { key: 'booking', label: 'الحجوزات والطلبات' },
+  { key: 'cleaning', label: 'التنظيف' },
+  { key: 'maintenance', label: 'الصيانة' },
+  { key: 'finance', label: 'المدفوعات والتكاليف' },
+  { key: 'system', label: 'التنبيهات العامة' },
+];
 
 export default function SettingsView() {
   const { user, updateProfile, changePassword } = useAuth();
   const { subscribeToPushNotifications } = useNotifications();
 
   const [pushStatus, setPushStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
+  const [notifPrefs, setNotifPrefs] = useState({
+    categories: { booking: true, cleaning: true, maintenance: true, finance: true, system: true },
+    threshold: '',
+  });
+  const [savingNotifPrefs, setSavingNotifPrefs] = useState(false);
   const { apartments, licenses, addLicense, deleteLicense } = useData();
   const [newStaff, setNewStaff] = useState({ name: '', monthlySalary: '', scope: [] });
   const [activeTab, setActiveTab] = useState('general');
@@ -92,6 +105,17 @@ export default function SettingsView() {
       setBookingSourcesList(user.bookingSources ? user.bookingSources.split(',').map(s => s.trim()).filter(Boolean) : ['زيارة مباشرة', 'Booking.com', 'Airbnb']);
       setEconomicCategoriesList(user.economicCategories ? user.economicCategories.split(',').map(s => s.trim()).filter(Boolean) : ['اقتصادية', 'فاخرة']);
       setLocationsList(user.locations ? user.locations.split(',').map(s => s.trim()).filter(Boolean) : []);
+      const rawPrefs = user.notificationPrefs?.categories || {};
+      setNotifPrefs({
+        categories: {
+          booking: rawPrefs.booking !== false,
+          cleaning: rawPrefs.cleaning !== false,
+          maintenance: rawPrefs.maintenance !== false,
+          finance: rawPrefs.finance !== false,
+          system: rawPrefs.system !== false,
+        },
+        threshold: user.largeAmountAlertThreshold != null ? String(user.largeAmountAlertThreshold) : '',
+      });
     }
   }, [user]);
 
@@ -112,6 +136,29 @@ export default function SettingsView() {
     } else {
       setPushStatus('denied');
       toast.error('لم يتم تفعيل إشعارات المتصفح. قد تكون محظورة من المتصفح.');
+    }
+  };
+
+  const toggleNotifCategory = (key) => {
+    setNotifPrefs((prev) => ({
+      ...prev,
+      categories: { ...prev.categories, [key]: !prev.categories[key] },
+    }));
+  };
+
+  const handleSaveNotifPrefs = async () => {
+    setSavingNotifPrefs(true);
+    try {
+      await axios.put('/api/notifications?action=prefs', {
+        prefs: { categories: notifPrefs.categories },
+        threshold: notifPrefs.threshold === '' ? null : notifPrefs.threshold,
+      });
+      toast.success('تم حفظ تفضيلات الإشعارات');
+    } catch (err) {
+      console.error('Failed to save notification preferences', err);
+      toast.error('تعذّر حفظ التفضيلات');
+    } finally {
+      setSavingNotifPrefs(false);
     }
   };
 
@@ -592,6 +639,63 @@ export default function SettingsView() {
                         }`}
                       />
                     </button>
+                  </div>
+
+                  {/* Notification categories + large-amount alert threshold */}
+                  <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg mb-6">
+                    <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2">
+                      <Bell size={18} className="text-ink dark:text-white" />
+                      أنواع الإشعارات
+                    </h3>
+                    <p className="text-xs text-muted dark:text-body-dark mt-1 mb-4">
+                      اختر ما تصلك تنبيهاته. التنبيهات العاجلة تظهر دائماً.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                      {NOTIF_CATEGORIES.map((cat) => (
+                        <label
+                          key={cat.key}
+                          className="flex items-center justify-between gap-3 rounded-md border border-hairline dark:border-hairline-dark-soft px-3 py-2 cursor-pointer hover:bg-surface-soft dark:hover:bg-hairline-dark transition-colors"
+                        >
+                          <span className="text-sm text-body dark:text-body-dark">{cat.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={notifPrefs.categories[cat.key]}
+                            onChange={() => toggleNotifCategory(cat.key)}
+                            className="accent-accent w-4 h-4 cursor-pointer"
+                          />
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-hairline-soft dark:border-hairline-dark pt-4">
+                      <label className="block text-sm font-medium text-body dark:text-body-dark mb-1">
+                        تنبيه المبالغ الكبيرة (ر.س)
+                      </label>
+                      <p className="text-xs text-muted dark:text-body-dark mb-2">
+                        يُرسل تنبيهاً إضافياً عندما تسجّل دفعة أو مصروف أو استرداد يتجاوز هذا المبلغ
+                        (أو ٣٠٪ من قيمة الحجز، أيهما أقل). اتركه فارغاً لاستخدام ٥٠٠ ر.س.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="50"
+                          value={notifPrefs.threshold}
+                          onChange={(e) => setNotifPrefs({ ...notifPrefs, threshold: e.target.value })}
+                          placeholder="500"
+                          className="input-field max-w-[160px]"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveNotifPrefs}
+                          disabled={savingNotifPrefs}
+                          className="px-4 py-2 rounded-md bg-ink dark:bg-white text-canvas dark:text-surface-dark font-semibold text-sm disabled:opacity-50 transition-colors"
+                        >
+                          {savingNotifPrefs ? 'جاري الحفظ...' : 'حفظ'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Partners Revenue Sharing Toggle */}

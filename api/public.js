@@ -1,6 +1,7 @@
 /* global process */
 import prisma from '../prisma.js';
 import { cors } from '../utils.js';
+import { notify } from './notify.js';
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -138,27 +139,17 @@ export default async function handler(req, res) {
         }
       });
 
-      // We will trigger SSE in a separate step or via Prisma hooks/event emitter in notifications.js.
-      // For now, we will just create the Notification record if such a model exists.
-      // The user requested: trigger browser push notification to the admin.
-      // In the previous step, SSE was implemented in api/notifications.js.
-      // The frontend NotificationContext likely polls or listens to it.
-      // Let's create a database notification record.
-
-      try {
-          await prisma.notification.create({
-             data: {
-               userId: adminId,
-               title: 'طلب حجز جديد',
-               message: `طلب حجز جديد معلق لشقة ${aptName} بانتظار موافقتك`,
-               type: 'booking',
-               isRead: false
-             }
-          });
-      } catch (e) {
-          // Ignore if Notification model doesn't exist yet
-          console.warn('Could not create notification record', e);
-      }
+      await notify({
+        ownerId: adminId,
+        permission: 'canBook',
+        includeOwner: true,
+        title: 'طلب حجز جديد',
+        message: `طلب حجز جديد معلق لشقة ${aptName} من ${customerName} بانتظار موافقتك`,
+        type: 'request',
+        link: 'requests',
+        urgent: true,
+        tag: `request-new:${booking.id}`
+      });
 
       return res.status(201).json({ message: 'Booking submitted successfully', booking });
     }
