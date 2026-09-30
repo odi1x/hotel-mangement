@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
+import { notify } from './notify.js';
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -57,18 +58,67 @@ export default async function handler(req, res) {
           updateData.password = await bcrypt.hash(password, 10);
         }
 
+        const before = await prisma.user.findUnique({
+          where: { id },
+          select: {
+            canBook: true, canClean: true, canViewMaintenance: true,
+            canViewBalances: true, canManageCleaningTemplates: true,
+          },
+        });
+
         await prisma.user.update({
           where: { id: id },
           data: updateData
         });
 
+        const changed = before
+          ? Object.keys(before).filter((key) => before[key] !== updateData[key])
+          : [];
+
+        if (changed.length > 0) {
+          await notify({
+            userIds: [id],
+            title: 'تم تعديل صلاحياتك',
+            message: `تم تحديث صلاحياتك (${changed.length} صلاحية). سجّل الخروج والدخول لتطبيق التغييرات.`,
+            type: 'warning',
+            link: 'settings',
+            urgent: true,
+            tag: `perm-changed:${id}:${Date.now()}`
+          });
+
+          await notify({
+            userIds: [decoded.userId],
+            title: 'تم تعديل صلاحيات موظف',
+            message: `تم تحديث صلاحيات ${staffMember.name || staffMember.username}.`,
+            type: 'info',
+            link: 'settings',
+            tag: `perm-admin:${id}:${Date.now()}`
+          });
+        }
+
         return res.status(200).json({ message: 'Staff updated successfully' });
       }
 
       else if (req.method === 'DELETE') {
-        await prisma.user.delete({
-          where: { id: id }
+        const doomed = await prisma.user.findUnique({
+          where: { id },
+          select: { name: true, username: true, adminId: true },
         });
+        await prisma.user.delete({
+          where: { id }
+        });
+
+        if (doomed?.adminId) {
+          await notify({
+            userIds: [doomed.adminId],
+            title: 'تم حذف موظف',
+            message: `تم حذف ${doomed.name || doomed.username}.`,
+            type: 'warning',
+            link: 'settings',
+            tag: `staff-deleted:${id}`,
+          });
+        }
+
         return res.status(200).json({ message: 'Staff deleted successfully' });
       }
 
@@ -138,6 +188,15 @@ export default async function handler(req, res) {
           canClean: canClean === true,
           canManageCleaningTemplates: canManageCleaningTemplates === true,
         }
+      });
+
+      await notify({
+        userIds: [decoded.userId],
+        title: 'تمت إضافة موظف جديد',
+        message: `أضفت الموظف ${name} (${username}).`,
+        type: 'info',
+        link: 'settings',
+        tag: `staff-added:${staffMember.id}`,
       });
 
       return res.status(201).json({ message: 'Staff created successfully', id: staffMember.id });

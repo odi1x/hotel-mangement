@@ -125,6 +125,9 @@ export default async function handler(req, res) {
         whatsappMessage: user.whatsappMessage,
         whatsappMessagePreliminary: user.whatsappMessagePreliminary, whatsappMessageConfirmed: user.whatsappMessageConfirmed,
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
+        notificationPrefs: user.notificationPrefs,
+        largeAmountAlertThreshold: user.largeAmountAlertThreshold != null ? Number(user.largeAmountAlertThreshold) : null,
+        largeAmountAlertRatio: user.largeAmountAlertRatio != null ? Number(user.largeAmountAlertRatio) : null,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
           canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
@@ -163,6 +166,9 @@ export default async function handler(req, res) {
         whatsappMessage: user.whatsappMessage,
         whatsappMessagePreliminary: user.whatsappMessagePreliminary, whatsappMessageConfirmed: user.whatsappMessageConfirmed,
         partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
+        notificationPrefs: user.notificationPrefs,
+        largeAmountAlertThreshold: user.largeAmountAlertThreshold != null ? Number(user.largeAmountAlertThreshold) : null,
+        largeAmountAlertRatio: user.largeAmountAlertRatio != null ? Number(user.largeAmountAlertRatio) : null,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
           canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates

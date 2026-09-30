@@ -1,6 +1,6 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { sendWebPush } from '../push-helper.js';
+import { notify, isLargeAmount } from './notify.js';
 
 /**
  * /api/payments
@@ -79,22 +79,52 @@ export default async function handler(req, res) {
         }
       });
 
-      // Notify admin when staff records a payment (accountability)
+      const owner = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { largeAmountAlertThreshold: true, largeAmountAlertRatio: true }
+      });
+      const large = isLargeAmount(finalAmount, booking.totalPrice, owner);
+
       if (user.userId !== targetUserId) {
         const label = finalType === 'refund' ? 'استرداد' : 'دفعة جديدة';
-        await prisma.notification.create({
-          data: {
-            userId: targetUserId,
-            title: label,
-            message: `${user.name || user.username} سجّل ${label} بقيمة ${Math.abs(finalAmount)} ر.س للنزيل ${booking.residentName} — ${booking.apartment.name}`,
-            type: finalType === 'refund' ? 'warning' : 'success'
-          }
+        const title = finalType === 'refund'
+          ? (large ? 'استرداد كبير' : 'استرداد')
+          : (large ? 'دفعة كبيرة' : 'دفعة جديدة');
+
+        await notify({
+          userIds: [targetUserId],
+          title,
+          message: `${user.name || user.username} سجّل ${label} بقيمة ${Math.abs(finalAmount)} ر.س للنزيل ${booking.residentName} — ${booking.apartment.name}${large ? ' (مبلغ مرتفع)' : ''}`,
+          type: finalType === 'refund' ? 'warning' : 'payment',
+          link: 'balances',
+          tag: `payment:${payment.id}`
         });
-        await sendWebPush(
-          targetUserId,
-          label,
-          `${user.name || user.username} سجّل ${label} بقيمة ${Math.abs(finalAmount)} ر.س للنزيل ${booking.residentName}`
-        );
+
+        if (finalType === 'refund' && large) {
+          await notify({
+            permission: 'canViewBalances',
+            ownerId: targetUserId,
+            excludeUserId: user.userId,
+            title: 'استرداد كبير يحتاج مراجعة',
+            message: `${user.name || user.username} سجّل استرداد بقيمة ${Math.abs(finalAmount)} ر.س على حجز ${booking.residentName}`,
+            type: 'warning',
+            link: 'balances',
+            tag: `payment-large:${payment.id}`
+          });
+        }
+      }
+
+      const paidTotal = [...booking.payments, payment].reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      const bookingTotal = Number(booking.totalPrice || 0);
+      if (finalType === 'payment' && bookingTotal > 0 && paidTotal >= bookingTotal - 0.01) {
+        await notify({
+          userIds: [targetUserId],
+          title: 'تم سداد الحجز بالكامل',
+          message: `سُدد حجز ${booking.residentName} في وحدة ${booking.apartment.name} بالكامل (${bookingTotal} ر.س).`,
+          type: 'success',
+          link: 'balances',
+          tag: `booking-settled:${bookingId}`
+        });
       }
 
       return res.status(201).json(payment);

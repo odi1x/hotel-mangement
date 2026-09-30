@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
@@ -22,6 +22,7 @@ import ProfileSettingsModal from '../ui/ProfileSettingsModal';
 import ShareLinkModal from '../ui/ShareLinkModal';
 import { Plus, Share2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 
 // Permission-gated views. If a staff member's permission for one of these
 // is false, setView() silently no-ops instead of navigating. Admin always
@@ -34,12 +35,14 @@ const GATED_VIEW_PERM = {
   expenses:    'canViewAnalytics',  // expenses are financial data — same permission gate
   cleaning:    'canClean',
   settings:    'canViewSettings',
+  requests:    'canBook',           // public booking requests — front-desk staff handle these
   partners:    'canViewPartners',   // admin-only + tenant feature flag (checked in DataContext)
   'partner-detail': 'canViewPartners',
 };
 
 export default function Layout() {
   const { user } = useAuth();
+  const { fetchNotifications } = useNotifications();
   const [view, setViewRaw] = useState('availability');
   // viewFilter is optional per-view context (e.g. { apartmentId: 'abc' }
   // when navigating to Expenses filtered to a specific unit). Cleared on
@@ -89,6 +92,22 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
   const shareableLink = typeof window !== 'undefined'
     ? `${window.location.origin}/book/${user?.adminId || user?.id}`
     : '';
+
+  // A clicked browser push tells the service worker to focus this tab and
+  // postMessage the target view. Route it through setView so a notification
+  // can never bypass the permission gate above.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const onMessage = (event) => {
+      const data = event.data;
+      if (!data || data.type !== 'navigate' || !data.link) return;
+      setView(data.link);
+      fetchNotifications();
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const handleOpenBookingForm = (initialData = {}) => {
     setInitialBookingData(initialData);

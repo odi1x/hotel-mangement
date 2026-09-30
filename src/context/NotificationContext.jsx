@@ -11,18 +11,38 @@ export const NotificationProvider = ({ children }) => {
   const { token } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const API_BASE_URL = '/api';
 
   const fetchNotifications = async () => {
     if (!token) return;
-    if (!token) return;
     try {
       const res = await axios.get(`${API_BASE_URL}/notifications`);
-      setNotifications(res.data);
-      setUnreadCount(res.data.filter(n => !n.isRead).length);
+      const list = Array.isArray(res.data) ? res.data : res.data.notifications;
+      setNotifications(list);
+      setUnreadCount(list.filter(n => !n.isRead).length);
+      setHasMore(Array.isArray(res.data) ? false : Boolean(res.data.hasMore));
     } catch (err) {
       console.error('Failed to fetch notifications', err);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!token || !hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/notifications`, {
+        params: { skip: notifications.length, take: 20 },
+      });
+      const list = Array.isArray(res.data) ? res.data : res.data.notifications;
+      setNotifications(prev => [...prev, ...list]);
+      setHasMore(Array.isArray(res.data) ? false : Boolean(res.data.hasMore));
+    } catch (err) {
+      console.error('Failed to load more notifications', err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -160,6 +180,9 @@ export const NotificationProvider = ({ children }) => {
     <NotificationContext.Provider value={{
       notifications,
       unreadCount,
+      hasMore,
+      loadingMore,
+      loadMore,
       markAsRead,
       markAllAsRead,
       clearAll,

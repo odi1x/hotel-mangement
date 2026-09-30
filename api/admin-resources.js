@@ -1,6 +1,6 @@
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { sendWebPush } from '../push-helper.js';
+import { notify, isLargeAmount } from './notify.js';
 
 /** Return the next calendar month in "YYYY-MM" format. */
 function nextMonth(ym) {
@@ -100,6 +100,7 @@ async function maintenanceHandler(req, res, user) {
           severity: severity || 'normal',
           status: 'open',
           reportedBy: user.name || user.username,
+          reportedById: user.userId !== targetUserId ? user.userId : null,
           cost: cost != null && cost !== '' ? parseFloat(cost) : null,
           contractor: contractor || null,
           notes: notes || null
@@ -113,19 +114,38 @@ async function maintenanceHandler(req, res, user) {
 
       if (user.userId !== targetUserId) {
         const isUrgent = (severity || 'normal') === 'urgent';
-        await prisma.notification.create({
-          data: {
-            userId: targetUserId,
-            title: isUrgent ? 'بلاغ صيانة عاجل' : 'بلاغ صيانة جديد',
-            message: `${user.name || user.username} أبلغ عن مشكلة "${title}" في وحدة ${apartment.name}`,
-            type: isUrgent ? 'warning' : 'info'
-          }
+        await notify({
+          userIds: [targetUserId],
+          title: isUrgent ? 'بلاغ صيانة عاجل' : 'بلاغ صيانة جديد',
+          message: `${user.name || user.username} أبلغ عن مشكلة "${title}" في وحدة ${apartment.name}`,
+          type: 'maintenance',
+          link: 'maintenance',
+          urgent: isUrgent,
+          tag: `maint-new:${issue.id}`
         });
-        await sendWebPush(
-          targetUserId,
-          isUrgent ? 'بلاغ صيانة عاجل' : 'بلاغ صيانة جديد',
-          `${user.name || user.username} أبلغ عن مشكلة في وحدة ${apartment.name}`
-        );
+
+        if (isUrgent) {
+          await notify({
+            permission: 'canViewMaintenance',
+            ownerId: targetUserId,
+            excludeUserId: user.userId,
+            title: 'بلاغ صيانة عاجل',
+            message: `${title} — وحدة ${apartment.name}`,
+            type: 'maintenance',
+            link: 'maintenance',
+            urgent: true,
+            tag: `maint-urgent:${issue.id}`
+          });
+        }
+
+        await notify({
+          userIds: [user.userId],
+          title: 'تم تسجيل بلاغك',
+          message: `تم تسجيل بلاغ "${title}" في وحدة ${apartment.name}، سيتم المتابعة معه.`,
+          type: 'success',
+          link: 'maintenance',
+          tag: `maint-own:${issue.id}`
+        });
       }
 
       return res.status(201).json(issue);
@@ -164,6 +184,49 @@ async function maintenanceHandler(req, res, user) {
       // updates it if already existed, deletes it if issue was unresolved
       // or cost was cleared. All logic lives in the helper.
       await syncMaintenanceExpense(issue);
+
+      const wasResolved = existing.status === 'resolved';
+      const isNowResolved = data.status === 'resolved';
+
+      if (!wasResolved && isNowResolved) {
+        const apt = await prisma.apartment.findUnique({
+          where: { id: existing.apartmentId },
+          select: { name: true }
+        });
+
+        const ownerRecipients = [targetUserId].filter((id) => id !== user.userId);
+        if (ownerRecipients.length) {
+          await notify({
+            userIds: ownerRecipients,
+            title: 'تم حل بلاغ صيانة',
+            message: `تم حل "${existing.title}" في وحدة ${apt?.name || ''}${issue.cost ? ` بتكلفة ${issue.cost} ر.س` : ''}.`,
+            type: 'success',
+            link: 'maintenance',
+            tag: `maint-resolved:${id}`
+          });
+        }
+
+        if (existing.reportedById && existing.reportedById !== user.userId) {
+          await notify({
+            userIds: [existing.reportedById],
+            title: 'تم حل بلاغك',
+            message: `تم حل البلاغ "${existing.title}" الذي أبلغت عنه في وحدة ${apt?.name || ''}.`,
+            type: 'success',
+            link: 'maintenance',
+            tag: `maint-resolved:${id}`
+          });
+        }
+      } else if (wasResolved !== isNowResolved && data.status === 'in_progress' && user.userId !== targetUserId) {
+        await notify({
+          userIds: [targetUserId],
+          title: 'تم بدء العمل على بلاغ',
+          message: `${user.name || user.username} بدأ العمل على البلاغ "${existing.title}".`,
+          type: 'maintenance',
+          link: 'maintenance',
+          tag: `maint-progress:${id}`
+        });
+      }
+
       return res.status(200).json(issue);
     }
 
@@ -401,6 +464,23 @@ async function expensesHandler(req, res, user) {
           sourceRefId: sourceRefId || null,
         },
       });
+      if (user.userId !== targetUserId && (sourceType || 'manual') === 'manual') {
+        const owner = await prisma.user.findUnique({
+          where: { id: targetUserId },
+          select: { largeAmountAlertThreshold: true, largeAmountAlertRatio: true },
+        });
+        const large = isLargeAmount(amount, 0, owner);
+        await notify({
+          userIds: [targetUserId],
+          title: large ? 'مصروف كبير' : 'مصروف جديد',
+          message: `${user.name || user.username} سجّل مصروف "${created.title}" بقيمة ${amount} ر.س.`,
+          type: 'expense',
+          link: 'expenses',
+          urgent: large,
+          tag: `expense:${created.id}`
+        });
+      }
+
       return res.status(201).json(created);
     }
 
@@ -575,6 +655,34 @@ export async function syncMaintenanceExpense(issue) {
 // frontend's AREA_META object.
 const CLEANING_AREAS = ['bathroom', 'kitchen', 'bedroom', 'living_room', 'entrance', 'supplies', 'general', 'other'];
 
+async function notifyNewCleaningTask(task, apartment, actor, ownerId) {
+  if (!task) return;
+  const aptName = apartment?.name || '';
+  const actorId = actor?.userId;
+
+  await notify({
+    permission: 'canClean',
+    ownerId,
+    excludeUserId: actorId,
+    title: 'مهمة تنظيف جديدة',
+    message: `وحدة ${aptName} تحتاج تنظيف.${actorId ? ` أضافها ${actor.name || actor.username}.` : ''}`,
+    type: 'cleaning',
+    link: 'cleaning',
+    tag: `clean-new:${task.id}`
+  });
+
+  if (actorId) {
+    await notify({
+      userIds: [actorId],
+      title: 'تم إنشاء مهمة التنظيف',
+      message: `تم إنشاء مهمة تنظيف لوحدة ${aptName}.`,
+      type: 'success',
+      link: 'cleaning',
+      tag: `clean-new-own:${task.id}`
+    });
+  }
+}
+
 /**
  * Cleaning tasks handler.
  *
@@ -673,6 +781,8 @@ async function cleaningHandler(req, res, user) {
         data: { needsCleaning: true },
       });
 
+      await notifyNewCleaningTask(task, apt, user, targetUserId);
+
       return res.status(201).json(task);
     }
 
@@ -683,6 +793,7 @@ async function cleaningHandler(req, res, user) {
       // Verify ownership.
       const existing = await prisma.cleaningTask.findFirst({
         where: { id, userId: targetUserId },
+        include: { apartment: { select: { id: true, name: true } } },
       });
       if (!existing) return res.status(404).json({ message: 'Task not found' });
 
@@ -701,6 +812,21 @@ async function cleaningHandler(req, res, user) {
             startedAt: existing.startedAt || new Date(),
           },
         });
+
+        if (!existing.startedBy && existing.startedBy !== user.userId) {
+          await notify({
+            permission: 'canClean',
+            ownerId: targetUserId,
+            excludeUserId: user.userId,
+            includeOwner: true,
+            title: 'بدأ تنفيذ مهمة تنظيف',
+            message: `${user.name || user.username} بدأ مهمة تنظيف وحدة ${existing.apartment?.name || ''}.`,
+            type: 'cleaning',
+            link: 'cleaning',
+            tag: `clean-start:${id}`
+          });
+        }
+
         return res.status(200).json(updated);
       }
 
@@ -728,6 +854,27 @@ async function cleaningHandler(req, res, user) {
           await prisma.apartment.update({
             where: { id: existing.apartmentId },
             data: { needsCleaning: false, lastCleanedAt: new Date() },
+          });
+
+          await notify({
+            ownerId: targetUserId,
+            includeOwner: true,
+            excludeUserId: user.userId,
+            permission: 'canClean',
+            title: 'الوحدة جاهزة',
+            message: `أكمل ${user.name || user.username} تنظيف وحدة ${existing.apartment?.name || ''}${existing.cleanerNotes ? ` — ${existing.cleanerNotes}` : ''}`,
+            type: 'success',
+            link: 'cleaning',
+            tag: `clean-done:${id}`
+          });
+        } else {
+          await notify({
+            userIds: [targetUserId],
+            title: 'اكتملت مهمة تنظيف',
+            message: `أكمل ${user.name || user.username} مهمة تنظيف وحدة ${existing.apartment?.name || ''} (تبقى ${stillActive} مهمة أخرى).`,
+            type: 'success',
+            link: 'cleaning',
+            tag: `clean-done:${id}`
           });
         }
         return res.status(200).json(updated);
@@ -968,7 +1115,7 @@ async function backfillCleaningTasks(userId) {
  * bookings.js checkout handler. Idempotent: skips if a task already
  * exists for this booking.
  */
-export async function createCleaningTaskForBooking(booking, userId) {
+export async function createCleaningTaskForBooking(booking, userId, actor) {
   const existing = await prisma.cleaningTask.findFirst({
     where: { bookingId: booking.id },
   });
@@ -990,7 +1137,7 @@ export async function createCleaningTaskForBooking(booking, userId) {
   // standard routine without any extra admin work.
   const seed = await defaultTemplateSeed(userId);
 
-  return prisma.cleaningTask.create({
+  const task = await prisma.cleaningTask.create({
     data: {
       userId,
       apartmentId: booking.apartmentId,
@@ -1003,6 +1150,26 @@ export async function createCleaningTaskForBooking(booking, userId) {
       dueBy: nextBooking?.startDate || null,
     },
   });
+
+  const apt = await prisma.apartment.findUnique({
+    where: { id: booking.apartmentId },
+    select: { name: true },
+  });
+
+  await notify({
+    permission: 'canClean',
+    ownerId: userId,
+    includeOwner: true,
+    excludeUserId: actor?.userId,
+    title: 'مهمة تنظيف جديدة',
+    message: `غادر النزيل ${booking.residentName || ''} وحدة ${apt?.name || ''}${nextBooking ? ' ولها حجز قادم — يُفضّل إنجازها قبل الوصول.' : ''}`,
+    type: 'cleaning',
+    link: 'cleaning',
+    urgent: Boolean(nextBooking),
+    tag: `clean-new:${task.id}`
+  });
+
+  return task;
 }
 
 /**
@@ -1671,6 +1838,16 @@ async function partnersHandler(req, res, user) {
         where: { id: settlementId },
         data: { status: 'paid', paidAt: new Date() },
       });
+
+      await notify({
+        userIds: [targetUserId],
+        title: 'تمت تسوية دفعة شريك',
+        message: `تم تسجيل تسوية ${settlement.partnerNameSnap} بمبلغ ${settlement.amount} ر.س.`,
+        type: 'settlement',
+        link: 'partners',
+        tag: `settlement-paid:${settlementId}`,
+      });
+
       return res.status(200).json(updated);
     }
 
@@ -1731,6 +1908,15 @@ async function partnersHandler(req, res, user) {
       await prisma.settlement.updateMany({
         where: { id: { in: settlementIds }, userId: targetUserId },
         data: { status: 'paid', paidAt, paymentId: payment.id },
+      });
+
+      await notify({
+        userIds: [targetUserId],
+        title: 'تمت تسوية دفعات الشركاء',
+        message: `تم تسجيل ${settlements.length} تسوية بإجمالي ${Math.round(total * 100) / 100} ر.س.`,
+        type: 'settlement',
+        link: 'partners',
+        tag: `settlement-batch:${payment.id}`,
       });
 
       return res.status(201).json({ payment, count: settlements.length, total });

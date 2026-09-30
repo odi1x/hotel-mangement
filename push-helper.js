@@ -2,7 +2,6 @@
 import webpush from 'web-push';
 import prisma from './prisma.js';
 
-// Configure Web Push with VAPID keys
 const publicVapidKey = process.env.VAPID_PUBLIC_KEY;
 const privateVapidKey = process.env.VAPID_PRIVATE_KEY;
 const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@rentflow.com';
@@ -11,51 +10,59 @@ if (publicVapidKey && privateVapidKey) {
   webpush.setVapidDetails(vapidSubject, publicVapidKey, privateVapidKey);
 }
 
-export async function sendWebPush(userId, title, message) {
+export async function sendWebPush(userId, payload) {
   if (!publicVapidKey || !privateVapidKey) {
     console.warn('VAPID keys not configured. Skipping push notification.');
-    return;
+    return false;
   }
 
   try {
-    // 1. Fetch all active subscriptions for the target user
     const userSubscriptions = await prisma.pushSubscription.findMany({
       where: { userId }
     });
 
     if (!userSubscriptions || userSubscriptions.length === 0) {
-        return; // No active devices to notify
+      return false;
     }
 
-    const payload = JSON.stringify({
+    const { title, body, link = null, tag = null, urgent = false } = payload || {};
+    const data = JSON.stringify({
       title,
-      body: message
+      body,
+      link,
+      tag,
+      urgent: Boolean(urgent)
     });
 
-    // 2. Broadcast and handle cleanup for expired/invalid subscriptions
     const pushPromises = userSubscriptions.map(async (subRecord) => {
       try {
-        await webpush.sendNotification(subRecord.subscription, payload);
+        await webpush.sendNotification(subRecord.subscription, data);
+        return true;
       } catch (error) {
-        // 3. Cleanup logic for 410 Gone or 404 Not Found
         if (error.statusCode === 410 || error.statusCode === 404) {
-          console.log(`Subscription expired or invalid (Status \${error.statusCode}). Deleting record...`);
+          console.log(`Subscription expired or invalid (Status ${error.statusCode}). Deleting record...`);
           await prisma.pushSubscription.delete({
             where: { id: subRecord.id }
           });
         } else {
           console.error('Error sending web push:', error);
         }
+        return false;
       }
     });
 
     const results = await Promise.allSettled(pushPromises);
+    let delivered = 0;
     results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-            console.error(`Push notification ${index} failed:`, result.reason);
-        }
+      if (result.status === 'rejected') {
+        console.error(`Push notification ${index} failed:`, result.reason);
+      } else if (result.value) {
+        delivered++;
+      }
     });
+    return delivered > 0;
   } catch (err) {
     console.error('Error in sendWebPush helper:', err);
+    return false;
   }
 }

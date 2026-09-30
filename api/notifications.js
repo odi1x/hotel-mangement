@@ -51,16 +51,67 @@ if (req.method === 'GET') {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
+    if (action === 'prefs') {
+      const row = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          notificationPrefs: true,
+          largeAmountAlertThreshold: true,
+          largeAmountAlertRatio: true,
+        },
+      });
+
+      if (req.method === 'GET') {
+        return res.status(200).json({
+          prefs: row?.notificationPrefs || null,
+          threshold: row?.largeAmountAlertThreshold != null ? Number(row.largeAmountAlertThreshold) : null,
+          ratio: row?.largeAmountAlertRatio != null ? Number(row.largeAmountAlertRatio) : null,
+        });
+      }
+
+      if (req.method === 'PUT') {
+        const { prefs, threshold, ratio } = req.body || {};
+        const data = {};
+        if (prefs !== undefined) data.notificationPrefs = prefs;
+        if (threshold !== undefined) {
+          data.largeAmountAlertThreshold = threshold === null || threshold === '' ? null : parseFloat(threshold);
+        }
+        if (ratio !== undefined) {
+          data.largeAmountAlertRatio = ratio === null || ratio === '' ? null : parseFloat(ratio);
+        }
+        if (Object.keys(data).length === 0) {
+          return res.status(400).json({ message: 'Nothing to update' });
+        }
+        const updated = await prisma.user.update({
+          where: { id: userId },
+          data,
+          select: { notificationPrefs: true, largeAmountAlertThreshold: true, largeAmountAlertRatio: true },
+        });
+        return res.status(200).json(updated);
+      }
+
+      return res.status(405).json({ message: 'Method Not Allowed' });
+    }
+
     if (req.method === 'GET') {
+      const take = Math.min(Math.max(parseInt(req.query.take, 10) || 10, 1), 100);
+      const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
+
       const notifications = await prisma.notification.findMany({
         where: {
             userId: userId,
             isCleared: false
         },
         orderBy: { createdAt: 'desc' },
-        take: 10
+        skip,
+        take
       });
-      return res.status(200).json(notifications);
+
+      const total = await prisma.notification.count({
+        where: { userId: userId, isCleared: false }
+      });
+
+      return res.status(200).json({ notifications, total, hasMore: skip + notifications.length < total });
     }
 
     else if (req.method === 'PUT') {
