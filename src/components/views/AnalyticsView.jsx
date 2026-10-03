@@ -7,6 +7,7 @@ import { getAccent } from '../../lib/accent';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { gregorianToHijri, hijriYearToGregorianRange, hijriQuarterToGregorianRange, hijriMonthToGregorianRange, getAvailableHijriYears } from '../../lib/hijriCalendar';
+import toast from 'react-hot-toast';
 
 export default function AnalyticsView({ setView }) {
   const accentHex = getAccent().hex;
@@ -167,11 +168,18 @@ export default function AnalyticsView({ setView }) {
     }
   };
 
-  const calculateNights = (start, end) => {
-    const s = new Date(start);
-    const e = new Date(end);
-    const diffTime = Math.abs(e - s);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+  const EXPORT_DAY_MS = 1000 * 60 * 60 * 24;
+
+  const exportDayIndex = (value) => Math.floor(new Date(value).getTime() / EXPORT_DAY_MS);
+
+  // Resident name / source / unit name are free text, so every value is escaped:
+  // commas, quotes and newlines get quoted, and a leading = + - @ gets an
+  // apostrophe so Excel stores it as literal text instead of evaluating it.
+  const csvCell = (value) => {
+    if (value === null || value === undefined) return '';
+    let text = String(value);
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    return /[",;\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
 
   // Per-unit P&L breakdown — populated post-migration by the API. Empty
@@ -227,55 +235,121 @@ export default function AnalyticsView({ setView }) {
   }, [analytics.sourceCounts]);
 
 
-  const exportToExcel = (isFiltered = false) => {
-    let csvContent = "اسم النزيل,رقم الهوية,الجوال,الشقة,تاريخ الدخول,تاريخ الخروج,عدد الليالي,سعر الليلة,الإجمالي,المصدر\n";
+  const exportToCsv = (isFiltered = false) => {
+    const useWindow = isFiltered && hasActiveFilters;
+    const round2 = (n) => Math.round(n * 100) / 100;
+    const aptNameById = new Map(apartments.map(a => [a.id, a.name]));
+
+    // Window bounds as whole-day indices, matching api/analytics.js nightsInWindow.
+    // A booking occupies calendar days [startIndex .. endIndex - 1]; the checkout
+    // day is not a slept night, so a stay that departs exactly on the window
+    // start contributes nothing.
+    const windowStart = useWindow && analyticsFilter.startDate ? exportDayIndex(analyticsFilter.startDate) : null;
+    const windowEnd = useWindow && analyticsFilter.endDate ? exportDayIndex(analyticsFilter.endDate) : null;
 
     let exportBookings = bookings;
 
-    if (isFiltered && hasActiveFilters) {
-      if (analyticsFilter.apartmentIds?.length > 0) {
-        exportBookings = exportBookings.filter(b => analyticsFilter.apartmentIds.includes(b.apartmentId));
-      }
-      if (analyticsFilter.startDate && analyticsFilter.endDate) {
-        const fStart = new Date(analyticsFilter.startDate).getTime();
-        const fEnd = new Date(analyticsFilter.endDate).getTime();
-        exportBookings = exportBookings.filter(b => {
-          const bStart = new Date(b.startDate).getTime();
-          const bEnd = new Date(b.endDate).getTime();
-          return bStart <= fEnd && bEnd >= fStart;
-        });
-      }
+    if (useWindow && analyticsFilter.apartmentIds?.length > 0) {
+      exportBookings = exportBookings.filter(b => analyticsFilter.apartmentIds.includes(b.apartmentId));
+    }
+    if (windowStart !== null && windowEnd !== null) {
+      exportBookings = exportBookings.filter(b => {
+        const startIndex = exportDayIndex(b.startDate);
+        const endIndex = exportDayIndex(b.endDate);
+        return startIndex <= windowEnd && (endIndex - 1) >= windowStart;
+      });
     }
 
-    exportBookings.forEach(b => {
-      const apt = apartments.find(a => a.id === b.apartmentId);
-      const nights = calculateNights(b.startDate, b.endDate);
-      const total = b.totalPrice || (b.pricePerNight * nights);
+    const rows = [];
+    let periodNights = 0;
+    let periodRevenue = 0;
+    let bookingNights = 0;
 
-      const row = [
+    exportBookings.forEach(b => {
+      const startIndex = exportDayIndex(b.startDate);
+      const endIndex = exportDayIndex(b.endDate);
+      const fullNights = Math.max(1, endIndex - startIndex);
+      const lo = Math.max(startIndex, windowStart ?? Number.NEGATIVE_INFINITY);
+      const hi = Math.min(endIndex - 1, windowEnd ?? Number.POSITIVE_INFINITY);
+      const nights = Math.max(0, hi - lo + 1);
+      if (nights <= 0) return;
+
+      const fullValue = b.totalPrice != null ? Number(b.totalPrice) : Number(b.pricePerNight) * fullNights;
+      const periodValue = fullValue * (nights / fullNights);
+
+      periodNights += nights;
+      periodRevenue += periodValue;
+      bookingNights += fullNights;
+
+      rows.push([
         b.residentName,
         b.residentId,
         b.phone,
-        apt?.name || 'غير معروف',
-        new Date(b.startDate).toLocaleDateString('en-CA'),
-        new Date(b.endDate).toLocaleDateString('en-CA'),
+        aptNameById.get(b.apartmentId) || 'غير معروف',
+        new Date(b.startDate).toISOString().slice(0, 10),
+        new Date(b.endDate).toISOString().slice(0, 10),
         nights,
-        b.pricePerNight,
-        total,
+        fullNights,
+        round2(Number(b.pricePerNight)),
+        round2(fullValue),
+        round2(periodValue),
         b.source || 'زيارة مباشرة'
-      ];
-      csvContent += row.join(",") + "\n";
+      ]);
     });
 
-    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
+    if (rows.length === 0) {
+      toast.error('لا توجد بيانات مطابقة للتصدير');
+      return;
+    }
+
+    const rangeLabel = analyticsFilter.startDate && analyticsFilter.endDate
+      ? `${analyticsFilter.startDate} → ${analyticsFilter.endDate}`
+      : 'كل الفترات';
+
+    const filterLabel = analyticsFilter.apartmentIds?.length > 0
+      ? analyticsFilter.apartmentIds.map(id => aptNameById.get(id) || 'غير معروف').join(' / ')
+      : 'كل الشقق';
+
+    const header = [
+      'اسم النزيل', 'رقم الهوية', 'الجوال', 'الشقة', 'تاريخ الدخول', 'تاريخ الخروج',
+      'ليالي الفترة', 'ليالي الحجز', 'سعر الليلة', 'قيمة الحجز', 'إيراد الفترة', 'المصدر'
+    ];
+
+    const summary = [
+      ['تقرير التحليلات'],
+      ['نوع التقرير', useWindow ? 'مصفى' : 'شامل'],
+      ['الفترة', rangeLabel],
+      ['الفلاتر', filterLabel],
+      ['تاريخ التصدير', new Date().toISOString().slice(0, 16).replace('T', ' ')],
+      ['عدد الحجوزات', rows.length],
+      ['إجمالي ليالي الفترة', periodNights],
+      ['إجمالي ليالي الحجوزات', bookingNights],
+      ['متوسط سعر الليلة', round2(periodNights > 0 ? periodRevenue / periodNights : 0)],
+      ['إيراد الفترة', round2(periodRevenue)],
+      []
+    ];
+
+    const totals = ['الإجمالي', '', '', '', '', '', periodNights, bookingNights, '', '', round2(periodRevenue), ''];
+
+    const csvContent = [
+      ...summary.map(r => r.map(csvCell).join(',')),
+      header.map(csvCell).join(','),
+      ...rows.map(r => r.map(csvCell).join(',')),
+      totals.map(csvCell).join(',')
+    ].join('\r\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    const fileName = isFiltered && hasActiveFilters ? `تقرير_التحليلات_المصفى_${new Date().toLocaleDateString('ar-EG')}.csv` : `تقرير_التحليلات_الشامل_${new Date().toLocaleDateString('ar-EG')}.csv`;
-    link.setAttribute("download", fileName);
+    const link = document.createElement('a');
+    link.href = url;
+    const stamp = new Date().toISOString().slice(0, 10);
+    link.download = `${useWindow ? 'تقرير_التحليلات_المصفى' : 'تقرير_التحليلات_الشامل'}_${stamp}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`تم تصدير ${rows.length} حجز`);
   };
 
   // Does the current filter state include anything that a user could think
@@ -387,7 +461,7 @@ export default function AnalyticsView({ setView }) {
   return (
     <>
     <div className="h-full flex flex-col">
-      {/* Compact action strip — filter chip + Excel export. Was two full-size
+      {/* Compact action strip — filter chip + CSV export. Was two full-size
           button rows (~130px total). Now a single ~36px row so the analytics
           content below gets that vertical space back. */}
       <div className="flex justify-between items-center mb-5 gap-3 shrink-0 flex-wrap">
@@ -416,15 +490,15 @@ export default function AnalyticsView({ setView }) {
             <ChevronDown size={13} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {/* Mobile Excel export — sits directly next to the filter chip.
+          {/* Mobile CSV export — sits directly next to the filter chip.
               Desktop keeps the trailing export group (hidden here). */}
           <button
-            onClick={() => exportToExcel(false)}
+            onClick={() => exportToCsv(false)}
             className="md:hidden inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold bg-ink text-white dark:bg-white dark:text-ink transition-colors hover:opacity-90"
-            title="تحميل تقرير Excel"
+            title="تحميل تقرير CSV"
           >
             <Download size={13} />
-            <span>Excel</span>
+            <span>CSV</span>
           </button>
 
           {hasActiveFilters && (
@@ -583,12 +657,12 @@ export default function AnalyticsView({ setView }) {
           )}
         </div>
 
-        {/* Excel export — trailing side (RTL end). Desktop only; on mobile the
-            Excel button renders inline next to the filter chip above. */}
+        {/* CSV export — trailing side (RTL end). Desktop only; on mobile the
+            CSV button renders inline next to the filter chip above. */}
         <div className="hidden md:flex items-center gap-2">
           {hasActiveFilters && (
             <button
-              onClick={() => exportToExcel(true)}
+              onClick={() => exportToCsv(true)}
               className="btn-secondary h-9 px-3 text-xs"
               title="تحميل التقرير المصفى"
             >
@@ -597,12 +671,12 @@ export default function AnalyticsView({ setView }) {
             </button>
           )}
           <button
-            onClick={() => exportToExcel(false)}
+            onClick={() => exportToCsv(false)}
             className="btn-primary h-9 px-3 text-xs"
             title="تحميل التقرير الشامل"
           >
             <Download size={14} />
-            <span>Excel</span>
+            <span>CSV</span>
           </button>
         </div>
       </div>
