@@ -110,21 +110,26 @@ export const NotificationProvider = ({ children }) => {
     return outputArray;
   };
 
-  const subscribeToPushNotifications = async () => {
+  const subscribeToPushNotifications = async ({ interactive = true } = {}) => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       console.warn('Push notifications are not supported by the browser.');
       return false;
     }
 
     try {
-      // 1. Request permission
-      const permission = await Notification.requestPermission();
+      // 1. Permission — only prompt when the user explicitly asked (interactive).
+      // Auto-resubscribe on load must never surface a permission prompt.
+      let permission = typeof Notification !== 'undefined' ? Notification.permission : 'denied';
       if (permission !== 'granted') {
-        console.warn('Permission for notifications was denied');
-        return false;
+        if (!interactive) return false;
+        permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          console.warn('Permission for notifications was denied');
+          return false;
+        }
       }
 
-// 2. Register Service Worker using exact origin
+      // 2. Register Service Worker using exact origin
       const registration = await navigator.serviceWorker.register(`${window.location.origin}/sw.js`)
         .then(reg => {
           console.log('Service Worker registered on correct origin:', reg.scope);
@@ -145,14 +150,18 @@ export const NotificationProvider = ({ children }) => {
           throw new Error('No VAPID public key returned from server.');
       }
 
-      // 4. Subscribe
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
-      });
-      console.log('Push subscription generated:', subscription);
+      // 4. Reuse an existing subscription when present so a browser-rotated
+      // endpoint gets re-synced; only create a new one if none exists.
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+        });
+        console.log('Push subscription generated:', subscription);
+      }
 
-      // 5. Send subscription to backend
+      // 5. Send subscription to backend (idempotent by endpoint)
       await axios.post(`${API_BASE_URL}/notifications?action=push`, {
         subscription: subscription
       });
@@ -164,6 +173,16 @@ export const NotificationProvider = ({ children }) => {
       return false;
     }
   };
+
+  // Best-effort self-heal: if the user already granted notification permission,
+  // make sure this browser has a live subscription registered server-side.
+  // Runs quietly on login — never prompts and never throws.
+  useEffect(() => {
+    if (!token) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    subscribeToPushNotifications({ interactive: false });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const clearAll = async () => {
     try {

@@ -1,6 +1,7 @@
 /* global process */
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
+import { notify } from './notify.js';
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -146,6 +147,21 @@ if (req.method === 'GET') {
                 data: { isCleared: true }
             });
             return res.status(200).json({ message: 'All read notifications cleared' });
+        }
+
+        else if (action === 'test') {
+            // Fires a real push to the current user (no tag → never deduped),
+            // so the Settings screen can verify the whole push pipeline.
+            const result = await notify({
+                userIds: [userId],
+                title: 'إشعار تجريبي',
+                message: 'اختبار الإشعارات: إن وصلتك هذه الرسالة فإشعارات المتصفح تعمل بشكل صحيح.',
+                type: 'info',
+                link: 'settings',
+                source: 'api',
+                push: true,
+            });
+            return res.status(200).json(result);
         }
 
         return res.status(400).json({ message: 'Invalid action' });

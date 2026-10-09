@@ -27,6 +27,7 @@ export default function SettingsView() {
     threshold: '',
   });
   const [savingNotifPrefs, setSavingNotifPrefs] = useState(false);
+  const [testingPush, setTestingPush] = useState(false);
   const { apartments, licenses, addLicense, deleteLicense } = useData();
   const [newStaff, setNewStaff] = useState({ name: '', monthlySalary: '', scope: [] });
   const [activeTab, setActiveTab] = useState('general');
@@ -136,6 +137,31 @@ export default function SettingsView() {
     } else {
       setPushStatus('denied');
       toast.error('لم يتم تفعيل إشعارات المتصفح. قد تكون محظورة من المتصفح.');
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    setTestingPush(true);
+    try {
+      if (pushStatus !== 'granted') {
+        const ok = await subscribeToPushNotifications();
+        if (!ok) {
+          toast.error('فعّل إشعارات المتصفح أولاً لإرسال إشعار تجريبي');
+          return;
+        }
+        setPushStatus('granted');
+      }
+      const res = await axios.post('/api/notifications?action=test');
+      if (!res.data || res.data.recipients === 0) {
+        toast.error('لم يتم تسليم الإشعار — تأكد من تفعيل إشعارات المتصفح');
+      } else {
+        toast.success('تم إرسال إشعار تجريبي');
+      }
+    } catch (err) {
+      console.error('Failed to send test notification', err);
+      toast.error('تعذّر إرسال الإشعار التجريبي');
+    } finally {
+      setTestingPush(false);
     }
   };
 
@@ -615,7 +641,7 @@ export default function SettingsView() {
               <div className="space-y-8 anim-tab">
 
                   {/* Push Notifications Toggle */}
-                  <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg flex justify-between items-center mb-6">
+                  <div className="bg-surface-card dark:bg-surface-dark-elevated p-5 rounded-lg flex justify-between items-start mb-6">
                     <div>
                       <h3 className="font-semibold text-ink dark:text-white flex items-center gap-2">
                         <BellRing size={18} className="text-ink dark:text-white" />
@@ -623,22 +649,32 @@ export default function SettingsView() {
                       </h3>
                       <p className="text-xs text-muted dark:text-body-dark mt-1">تلقي تنبيهات فورية حتى عند إغلاق التطبيق</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleEnablePush}
-                      disabled={pushStatus === 'granted'}
-                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${
-                        pushStatus === 'granted'
-                          ? 'bg-ink dark:bg-white cursor-not-allowed'
-                          : 'bg-surface-strong dark:bg-hairline-dark-soft hover:bg-muted-soft cursor-pointer'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-ink shadow-micro transition-transform ${
-                          pushStatus === 'granted' ? '-translate-x-6' : '-translate-x-1'
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleEnablePush}
+                        disabled={pushStatus === 'granted'}
+                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${
+                          pushStatus === 'granted'
+                            ? 'bg-ink dark:bg-white cursor-not-allowed'
+                            : 'bg-surface-strong dark:bg-hairline-dark-soft hover:bg-muted-soft cursor-pointer'
                         }`}
-                      />
-                    </button>
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-ink shadow-micro transition-transform ${
+                            pushStatus === 'granted' ? '-translate-x-6' : '-translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSendTestNotification}
+                        disabled={testingPush}
+                        className="text-xs font-semibold text-accent-strong hover:underline disabled:opacity-50 transition-opacity"
+                      >
+                        {testingPush ? 'جاري الإرسال...' : 'إرسال إشعار تجريبي'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Notification categories + large-amount alert threshold */}

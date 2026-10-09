@@ -49,7 +49,7 @@ async function overdueCleaningDigest(todayStart, ownerIds) {
       link: 'cleaning',
       source: 'cron',
       tag: `clean-overdue:${task.id}`,
-      push: false,
+      push: true,
     });
     sent++;
   }
@@ -78,7 +78,7 @@ async function overdueCleaningDigest(todayStart, ownerIds) {
       urgent: true,
       source: 'cron',
       tag: `clean-urgency:${booking.apartment.id}:${shiftDays(todayStart, 1).toISOString().slice(0, 10)}`,
-      push: false,
+      push: true,
     });
     sent += result.created;
   }
@@ -110,7 +110,7 @@ async function staleMaintenanceDigest(ownerIds) {
       urgent: true,
       source: 'cron',
       tag: `maint-stale:${issue.id}`,
-      push: false,
+      push: true,
     });
   }
 
@@ -280,14 +280,16 @@ export default async function handler(req, res) {
 
     for (const booking of arrivals) {
       await run('arrival-notify', () => notify({
-        userIds: [booking.apartment.userId],
+        ownerId: booking.apartment.userId,
+        permission: 'canBook',
+        includeOwner: true,
         title: 'وصول متوقع اليوم',
         message: `وصول متوقع اليوم: النزيل ${booking.residentName} في شقة ${booking.apartment.name}`,
         type: 'booking',
         link: 'availability',
         source: 'cron',
         tag: `arrival:${booking.id}:${today.toISOString().slice(0, 10)}`,
-        push: false,
+        push: true,
       }));
     }
 
@@ -301,14 +303,63 @@ export default async function handler(req, res) {
 
     for (const booking of departures) {
       await run('departure-notify', () => notify({
-        userIds: [booking.apartment.userId],
+        ownerId: booking.apartment.userId,
+        permission: 'canBook',
+        includeOwner: true,
         title: 'مغادرة متوقعة اليوم',
         message: `مغادرة متوقعة اليوم: النزيل ${booking.residentName} من شقة ${booking.apartment.name}`,
         type: 'booking',
         link: 'availability',
         source: 'cron',
         tag: `departure:${booking.id}:${today.toISOString().slice(0, 10)}`,
-        push: false,
+        push: true,
+      }));
+    }
+
+    // Day-before reminders: give staff a head start on tomorrow's arrivals and checkouts.
+    const arrivalsTomorrow = await run('arrivals-tomorrow', () => prisma.booking.findMany({
+      where: {
+        status: 'active',
+        startDate: { gte: tomorrow, lt: shiftDays(today, 2) },
+      },
+      include: { apartment: { select: { userId: true, name: true } } },
+    })) || [];
+
+    for (const booking of arrivalsTomorrow) {
+      await run('arrival-advance-notify', () => notify({
+        ownerId: booking.apartment.userId,
+        permission: 'canBook',
+        includeOwner: true,
+        title: 'تذكير: وصول غداً',
+        message: `وصول النزيل ${booking.residentName} غداً في شقة ${booking.apartment.name}.`,
+        type: 'booking',
+        link: 'availability',
+        source: 'cron',
+        tag: `arrival-tomorrow:${booking.id}:${tomorrow.toISOString().slice(0, 10)}`,
+        push: true,
+      }));
+    }
+
+    const departuresTomorrow = await run('departures-tomorrow', () => prisma.booking.findMany({
+      where: {
+        status: 'active',
+        endDate: { gte: tomorrow, lt: shiftDays(today, 2) },
+      },
+      include: { apartment: { select: { userId: true, name: true } } },
+    })) || [];
+
+    for (const booking of departuresTomorrow) {
+      await run('departure-advance-notify', () => notify({
+        ownerId: booking.apartment.userId,
+        permission: 'canBook',
+        includeOwner: true,
+        title: 'تذكير: مغادرة غداً',
+        message: `مغادرة النزيل ${booking.residentName} غداً من شقة ${booking.apartment.name} — جهّز الفاتورة والتسوية.`,
+        type: 'booking',
+        link: 'balances',
+        source: 'cron',
+        tag: `departure-tomorrow:${booking.id}:${tomorrow.toISOString().slice(0, 10)}`,
+        push: true,
       }));
     }
 
@@ -382,6 +433,8 @@ export default async function handler(req, res) {
       processed: {
         arrivals: arrivals.length,
         departures: departures.length,
+        arrivalsTomorrow: arrivalsTomorrow.length,
+        departuresTomorrow: departuresTomorrow.length,
         licenses30Days: licenses30Days.length,
         licenses7Days: licenses7Days.length,
         licensesExpired: expiredLicenses.length,
