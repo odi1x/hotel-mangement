@@ -70,7 +70,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'POST') {
-      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, customerRequest, status } = req.body;
+      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, pricingMode, source, startDate, endDate, notes, customerRequest, status } = req.body;
 
       // Validate dates
       const startStr = (startDate.split && startDate.split('T')[0]) || new Date(startDate).toISOString().split('T')[0];
@@ -116,6 +116,7 @@ export default async function handler(req, res) {
           address,
           pricePerNight: parseFloat(pricePerNight),
           totalPrice: totalPrice !== undefined ? parseFloat(totalPrice) : null,
+          pricingMode: pricingMode === 'total' ? 'total' : 'per_night',
           source,
           startDate: start,
           endDate: end,
@@ -285,7 +286,7 @@ export default async function handler(req, res) {
         return res.status(200).json(booking);
       }
 
-      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, source, startDate, endDate, notes, customerRequest, status } = updateDataObj;
+      const { apartmentId, residentName, residentId, phone, address, pricePerNight, totalPrice, pricingMode, source, startDate, endDate, notes, customerRequest, status } = updateDataObj;
 
       // Validate dates
       const startStr = (startDate.split && startDate.split('T')[0]) || new Date(startDate).toISOString().split('T')[0];
@@ -334,6 +335,7 @@ export default async function handler(req, res) {
           address,
           pricePerNight: parseFloat(pricePerNight),
           totalPrice: totalPrice !== undefined ? parseFloat(totalPrice) : null,
+          pricingMode: pricingMode === 'total' ? 'total' : (existing.pricingMode || 'per_night'),
           source,
           startDate: start,
           endDate: end,

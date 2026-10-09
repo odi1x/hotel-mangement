@@ -141,6 +141,7 @@ model Booking {
   address       String?
   pricePerNight Decimal
   totalPrice    Decimal?
+  pricingMode   String    @default("per_night")
   source        String    @default("زيارة مباشرة")
   startDate     DateTime
   endDate       DateTime
