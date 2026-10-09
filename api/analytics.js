@@ -71,6 +71,20 @@ function inclusiveEndOfDay(str) {
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
+// Net cash actually collected on a booking (refunds are stored negative, so a
+// plain sum handles them). Used for cancelled bookings, which contribute their
+// collected payments as revenue instead of their contracted stay value.
+function collectedPayments(booking) {
+  return (booking.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+}
+
+// Revenue status/date fields every analytics booking query needs so cancelled
+// bookings can be valued on a cash basis.
+const bookingMoneySelect = {
+  status: true,
+  payments: { select: { amount: true, date: true } },
+};
+
 const gregKeyOf = (d) => d.toLocaleDateString('en-CA', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 function dayIndex(d) {
@@ -234,6 +248,7 @@ export default async function handler(req, res) {
           where: filter,
           select: {
             totalPrice: true, pricePerNight: true, startDate: true, endDate: true,
+            ...bookingMoneySelect,
             apartment: { select: { id: true, name: true } }
           }
         });
@@ -243,6 +258,16 @@ export default async function handler(req, res) {
 
         bookings.forEach(b => {
           if (!b.apartment) return;
+          if (b.status === 'cancelled') {
+            const collected = collectedPayments(b);
+            if (collected === 0) return;
+            if (!aptMap[b.apartment.id]) {
+              aptMap[b.apartment.id] = { id: b.apartment.id, name: b.apartment.name, revenue: 0, count: 0, nights: 0, availableNights: periodDays };
+            }
+            aptMap[b.apartment.id].revenue += collected;
+            totalRev += collected;
+            return;
+          }
           const s = new Date(b.startDate);
           const e = new Date(b.endDate);
           const fullNights = Math.max(1, Math.ceil(Math.abs(e - s) / DAY_MS));
@@ -295,6 +320,7 @@ export default async function handler(req, res) {
           where: filter,
           select: {
             totalPrice: true, pricePerNight: true, startDate: true, endDate: true,
+            ...bookingMoneySelect,
             apartment: { select: { id: true, cleaningFeePerStay: true, platformFeeType: true, platformFee: true } }
           }
         });
@@ -304,6 +330,12 @@ export default async function handler(req, res) {
         let cleaning = 0;
 
         bookings.forEach(b => {
+          // Cancelled: cash collected only, and no cleaning/platform fees since
+          // the stay never happened.
+          if (b.status === 'cancelled') {
+            rev += collectedPayments(b);
+            return;
+          }
           const s = new Date(b.startDate);
           const e = new Date(b.endDate);
           const fullNights = Math.max(1, Math.ceil(Math.abs(e - s) / DAY_MS));
@@ -408,6 +440,7 @@ export default async function handler(req, res) {
         totalPrice: true,
         startDate: true,
         endDate: true,
+        ...bookingMoneySelect,
         apartment: {
           select: {
             id: true,
@@ -483,6 +516,41 @@ export default async function handler(req, res) {
     let contributingCount = 0;
 
     bookings.forEach(booking => {
+      // Cancelled bookings never occupied a night: they contribute only the
+      // money actually collected (cash basis) and no nights, expenses, unit
+      // stats, source counts or booking-count.
+      if (booking.status === 'cancelled') {
+        const collected = collectedPayments(booking);
+        if (collected === 0) return;
+        totalRevenue += collected;
+
+        const trendWindows = hijriWindows || gregorianWindows;
+        const bs = new Date(booking.startDate);
+        for (const p of (booking.payments || [])) {
+          const amt = Number(p.amount || 0);
+          if (!amt) continue;
+          const pd = new Date(p.date);
+          let key = null;
+          if (trendWindows) {
+            const w = trendWindows.find(win => pd >= win.start && pd <= win.end)
+              || trendWindows.find(win => bs >= win.start && bs <= win.end);
+            if (w) key = hijriTrend ? `h${w.index}` : w.key;
+          } else {
+            key = hijriTrend ? `h${hijriParts(pd).month}` : gregKeyOf(pd);
+          }
+          if (!key) continue;
+          if (!dailyTrendMap[key]) {
+            dailyTrendMap[key] = {
+              name: hijriTrend ? HIJRI_MONTH_NAMES[hijriParts(pd).month - 1] : key,
+              revenue: 0,
+              expenses: 0
+            };
+          }
+          dailyTrendMap[key].revenue += amt;
+        }
+        return;
+      }
+
       const s = new Date(booking.startDate);
       const e = new Date(booking.endDate);
       const fullNights = Math.max(1, Math.ceil(Math.abs(e - s) / DAY_MS));
