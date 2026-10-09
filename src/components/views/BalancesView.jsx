@@ -23,6 +23,7 @@ export default function BalancesView() {
 
   const dues = useMemo(() => {
     return bookings
+      .filter(b => b.status !== 'cancelled')
       .map(b => ({ booking: b, totals: computeBookingTotals(b) }))
       .filter(x => x.totals.balanceDue > 0.01)
       .sort((a, b) => {
@@ -207,21 +208,21 @@ export default function BalancesView() {
                 return (
                   <li
                     key={booking.id}
-                    className="px-6 py-4 hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors"
+                    className="px-4 py-4 md:px-6 hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors"
                   >
-                    <div className="flex items-center gap-5">
-                      {/* Guest & unit */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-semibold text-ink dark:text-white truncate">
+                    <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
+                      {/* Guest & stay details — stacked on mobile, leading block on desktop */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <div className="flex items-center justify-between md:justify-start gap-2">
+                          <p className="font-bold text-ink dark:text-white truncate min-w-0">
                             {booking.residentName}
                           </p>
                           <PaymentStatusBadge status={totals.status} />
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted dark:text-body-dark">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted dark:text-body-dark">
                           <span className="truncate">{apt?.name || 'وحدة محذوفة'}</span>
                           <span className="text-muted-soft">·</span>
-                          <span className="flex items-center gap-1" dir="ltr">
+                          <span className="flex items-center gap-1 shrink-0" dir="ltr">
                             <Phone size={11} />{sanitizePhone(booking.phone)}
                           </span>
                         </div>
@@ -232,46 +233,51 @@ export default function BalancesView() {
                               ? 'text-muted'
                               : 'text-muted-soft'
                         }`}>
-                          {daysLabel(days)} <span className="mx-1 text-muted-soft">·</span> {dateFormat(booking.endDate)}
+                          <span className="whitespace-nowrap">{daysLabel(days)}</span>
+                          <span className="mx-1 text-muted-soft">·</span>
+                          <span className="whitespace-nowrap">{dateFormat(booking.endDate)}</span>
                         </div>
                       </div>
 
-                      {/* Balance */}
-                      <div className="text-left shrink-0">
-                        <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-0.5">
-                          المتبقّي
-                        </p>
-                        <p
-                          className="text-xl font-bold tracking-tight text-ink dark:text-white leading-none"
-                          style={{ fontVariantNumeric: 'tabular-nums' }}
-                        >
-                          {formatSAR(totals.balanceDue)}
-                          <span className="text-xs font-medium text-muted mr-1">ر.س</span>
-                        </p>
-                        <p
-                          className="text-2xs text-muted-soft mt-1"
-                          style={{ fontVariantNumeric: 'tabular-nums' }}
-                        >
-                          من {formatSAR(totals.totalDue)} ر.س
-                        </p>
-                      </div>
+                      {/* Financial & actions — divider on mobile, trailing block on desktop */}
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6 border-t md:border-t-0 pt-3 md:pt-0 border-hairline-soft dark:border-hairline-dark md:shrink-0">
+                        {/* Balance */}
+                        <div className="text-right">
+                          <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-0.5">
+                            المتبقّي
+                          </p>
+                          <p
+                            className="text-xl font-bold tracking-tight text-ink dark:text-white leading-none"
+                            style={{ fontVariantNumeric: 'tabular-nums' }}
+                          >
+                            {formatSAR(totals.balanceDue)}
+                            <span className="text-xs font-medium text-muted mr-1">ر.س</span>
+                          </p>
+                          <p
+                            className="text-2xs text-muted-soft mt-1"
+                            style={{ fontVariantNumeric: 'tabular-nums' }}
+                          >
+                            من {formatSAR(totals.totalDue)} ر.س
+                          </p>
+                        </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => setPrintBooking(booking)}
-                          className="icon-action hover:text-accent"
-                          title="طباعة حجز مبدئي"
-                        >
-                          <Printer size={18} />
-                        </button>
-                        <button
-                          onClick={() => setLedgerBooking(booking)}
-                          className="btn-accent h-9 px-4"
-                        >
-                          <Wallet size={14} />
-                          <span>تسجيل دفعة</span>
-                        </button>
+                        {/* Actions — full-width footer on mobile */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setPrintBooking(booking)}
+                            className="icon-action hover:text-accent shrink-0"
+                            title="طباعة حجز مبدئي"
+                          >
+                            <Printer size={18} />
+                          </button>
+                          <button
+                            onClick={() => setLedgerBooking(booking)}
+                            className="btn-accent h-9 px-4 flex-1 md:flex-none justify-center"
+                          >
+                            <Wallet size={14} />
+                            <span>تسجيل دفعة</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </li>

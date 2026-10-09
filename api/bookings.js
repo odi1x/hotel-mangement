@@ -15,9 +15,14 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const { page, limit, search } = req.query;
+      const { page, limit, search, excludeCancelled } = req.query;
 
       let whereClause = { userId: targetUserId };
+
+      // Opt-in: hide soft-cancelled bookings (kept in DB with their ledger).
+      if (excludeCancelled === '1') {
+        whereClause.status = { not: 'cancelled' };
+      }
 
       if (search) {
         whereClause = {
@@ -90,11 +95,12 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
-      // Check for overlapping bookings (ignore checked_out_early ones if they don't actually overlap after their new endDate)
+      // Check for overlapping bookings (ignore checked_out_early/cancelled ones
+      // — they don't hold the dates)
       const overlapCount = await prisma.booking.count({
         where: {
           apartmentId,
-          status: { notIn: ['checked_out_early'] },
+          status: { notIn: ['checked_out_early', 'cancelled'] },
           AND: [
             { startDate: { lt: queryEnd } },
             { endDate: { gt: queryStart } }
@@ -168,6 +174,28 @@ export default async function handler(req, res) {
       const existing = await prisma.booking.findUnique({ where: { id } });
       if (!existing || existing.userId !== targetUserId) {
         return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      // Soft-cancel: mark the booking cancelled but KEEP the row and its
+      // payments (ledger/analytics history survives). Frees the dates because
+      // the overlap checks exclude 'cancelled'.
+      if (updateDataObj.cancel) {
+        const cancelled = await prisma.booking.update({
+          where: { id },
+          data: { status: 'cancelled' },
+          include: { payments: true }
+        });
+
+        await notify({
+          userIds: [targetUserId],
+          title: 'إلغاء حجز',
+          message: `تم إلغاء حجز النزيل ${existing.residentName}. سجل الدفعات محفوظ للمراجعة.`,
+          type: 'warning',
+          link: 'residents',
+          tag: `booking-cancelled:${id}`
+        });
+
+        return res.status(200).json(cancelled);
       }
 
       if (isCheckout) {
@@ -313,7 +341,7 @@ export default async function handler(req, res) {
         where: {
           apartmentId,
           id: { not: id },
-          status: { notIn: ['checked_out_early'] },
+          status: { notIn: ['checked_out_early', 'cancelled'] },
           AND: [
             { startDate: { lt: queryEnd } },
             { endDate: { gt: queryStart } }

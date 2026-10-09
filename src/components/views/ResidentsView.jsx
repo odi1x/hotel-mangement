@@ -7,13 +7,13 @@ import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
 import EmptyState from '../ui/EmptyState';
 import { sanitizePhone } from '../../lib/phoneUtils';
-import { computeBookingTotals } from '../../lib/paymentUtils';
+import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { fillTemplate, buildWhatsAppUrl } from '../../lib/documentShare';
 import { bookingRef } from '../../lib/bookingRef';
 import toast from 'react-hot-toast';
 
 export default function ResidentsView({ openBookingForm }) {
-  const { apartments, bookings, deleteBooking, checkoutBooking, updateBooking, fetchBookings, fetchApartments } = useData(); // eslint-disable-line no-unused-vars
+  const { apartments, bookings, deleteBooking, cancelBooking, checkoutBooking, updateBooking, fetchBookings, fetchApartments } = useData(); // eslint-disable-line no-unused-vars
   const { user } = useAuth();
   const [printBooking, setPrintBooking] = useState(null);
   const [printSelectorBooking, setPrintSelectorBooking] = useState(null);
@@ -51,7 +51,8 @@ export default function ResidentsView({ openBookingForm }) {
           params: {
             page: currentPage,
             limit: ITEMS_PER_PAGE,
-            search: searchQuery.trim() || undefined
+            search: searchQuery.trim() || undefined,
+            excludeCancelled: 1
           }
         });
         if (response.data && response.data.metadata) {
@@ -281,6 +282,13 @@ export default function ResidentsView({ openBookingForm }) {
 
   const { bookings: currentBookings, metadata } = paginatedData;
   const totalPages = metadata.totalPages;
+
+  const deleteTarget = deleteConfirmId
+    ? (currentBookings.find(b => b.id === deleteConfirmId) || bookings.find(b => b.id === deleteConfirmId) || null)
+    : null;
+  const deleteTotals = deleteTarget ? computeBookingTotals(deleteTarget) : null;
+  const deleteCollected = deleteTotals ? deleteTotals.totalReceived : 0;
+  const deleteHasPayments = deleteCollected > 0.01 || (deleteTarget?.payments?.length > 0);
 
   return (
     <>
@@ -825,34 +833,64 @@ export default function ResidentsView({ openBookingForm }) {
         );
       })()}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete / Cancel Confirmation Modal */}
       {deleteConfirmId && createPortal(
         <div className="fixed inset-0 z-[100] flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
           <div className="absolute inset-0" onClick={() => setDeleteConfirmId(null)}></div>
-          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full md:max-w-sm overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
-            <div className="p-6 text-center">
+          <div className="relative z-10 bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl shadow-soft w-full md:max-w-md overflow-hidden border border-hairline dark:border-hairline-dark-soft transform transition-all">
+            <div className="p-6">
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-surface-card dark:bg-surface-dark-elevated mb-5">
                 <AlertTriangle className="h-8 w-8 text-ink dark:text-white" />
               </div>
-              <h3 className="text-xl font-semibold tracking-tight text-ink dark:text-white mb-2">
-                تأكيد الحذف
+              <h3 className="text-xl font-semibold tracking-tight text-ink dark:text-white mb-2 text-center">
+                إلغاء أو حذف الحجز؟
               </h3>
-              <p className="text-sm text-muted dark:text-body-dark font-medium">
-                هل أنت متأكد من حذف هذا النزيل؟ لا يمكن التراجع عن هذا الإجراء.
-              </p>
+
+              {deleteHasPayments ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted dark:text-body-dark font-medium text-center">
+                    هذا الحجز عليه دفعات مسجّلة بقيمة{' '}
+                    <span className="font-bold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {formatSAR(deleteCollected)} ر.س
+                    </span>
+                    .
+                  </p>
+                  <div className="text-xs bg-surface-card dark:bg-surface-dark-elevated rounded-xl p-3.5 space-y-2.5">
+                    <p className="flex items-start gap-2">
+                      <span className="text-accent-strong font-bold shrink-0">إلغاء الحجز:</span>
+                      <span className="text-body dark:text-body-dark">يبقى الحجز وسجل الدفعات محفوظين للمراجعة، ويختفي من الحجوزات النشطة وتُحرَّر التواريخ.</span>
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0">حذف نهائي:</span>
+                      <span className="text-body dark:text-body-dark">يُمحى الحجز وكل دفعاته نهائياً، وتُخصم {formatSAR(deleteCollected)} ر.س من الإيرادات.</span>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted dark:text-body-dark font-medium text-center">
+                  لا توجد دفعات مسجّلة على هذا الحجز. يمكنك حذفه نهائياً أو إلغاءه للاحتفاظ به في السجل.
+                </p>
+              )}
             </div>
-            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex space-x-reverse space-x-3">
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex flex-col gap-2">
+              <button
+                onClick={() => { cancelBooking(deleteConfirmId); setDeleteConfirmId(null); }}
+                className="btn-accent h-11 w-full"
+              >
+                إلغاء الحجز (الاحتفاظ بالسجل)
+              </button>
               <button
                 onClick={confirmDelete}
-                className="btn-primary flex-1"
+                className="inline-flex items-center justify-center gap-2 h-11 w-full rounded-md bg-rose-600 text-white font-semibold text-sm hover:bg-rose-700 transition-colors"
               >
-                تأكيد الحذف
+                <Trash2 size={16} />
+                حذف نهائي
               </button>
               <button
                 onClick={() => setDeleteConfirmId(null)}
-                className="btn-secondary flex-1"
+                className="btn-secondary h-11 w-full"
               >
-                إلغاء
+                رجوع
               </button>
             </div>
           </div>

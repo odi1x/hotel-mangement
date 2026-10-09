@@ -502,6 +502,21 @@ export const DataProvider = ({ children }) => {
     } catch (err) { console.error(err); }
   };
 
+  // Soft-cancel: keeps the booking row + its payments (ledger/analytics intact)
+  // but marks it 'cancelled' so it drops out of active views and frees the dates.
+  const cancelBooking = async (id) => {
+    try {
+      const res = await axios.put(`${API_BASE_URL}/bookings`, { id, cancel: true });
+      setBookings(bookings.map(b => b.id === id ? res.data : b));
+      toast.success('تم إلغاء الحجز مع الاحتفاظ بسجل الدفعات');
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'تعذّر إلغاء الحجز');
+      throw err;
+    }
+  };
+
   /* ------------------------------------------------------------------ */
   /*  Payments                                                          */
   /* ------------------------------------------------------------------ */
@@ -639,6 +654,7 @@ export const DataProvider = ({ children }) => {
       addBooking,
       updateBooking,
       deleteBooking,
+      cancelBooking,
       checkoutBooking,
       fetchBookings,
       fetchApartments,
