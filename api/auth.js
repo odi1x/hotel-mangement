@@ -15,6 +15,11 @@ import { verifyToken, cors } from '../utils.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// A staff member flagged as master admin (مشرف عام) is promoted to the full
+// "admin" role everywhere — every individual permission is bypassed while the
+// account still operates inside its owner's tenant via adminId.
+const effectiveRole = (user) => (user.role === 'admin' || user.isAdminMaster ? 'admin' : user.role);
+
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -33,18 +38,18 @@ export default async function handler(req, res) {
       if (!isPasswordValid) return res.status(401).json({ message: 'Invalid credentials' });
 
       const token = jwt.sign({
-        userId: user.id, username: user.username, role: user.role, adminId: user.adminId, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, name: user.name
+        userId: user.id, username: user.username, role: effectiveRole(user), adminId: user.adminId, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, isAdminMaster: !!user.isAdminMaster, name: user.name
       }, JWT_SECRET, { expiresIn: '7d' });
 
       return res.status(200).json({
         token,
         user: {
           id: user.id, username: user.username, name: user.name, profilePicture: user.profilePicture,
-          role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
+          role: effectiveRole(user), adminId: user.adminId, isAdminMaster: !!user.isAdminMaster, businessName: user.businessName, tourismLicense: user.tourismLicense,
           partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
+            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, isAdminMaster: !!user.isAdminMaster
           }
         }
       });
@@ -64,18 +69,18 @@ export default async function handler(req, res) {
       });
 
       const token = jwt.sign({
-        userId: user.id, username: user.username, role: user.role, adminId: user.adminId, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, name: user.name
+        userId: user.id, username: user.username, role: effectiveRole(user), adminId: user.adminId, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, isAdminMaster: !!user.isAdminMaster, name: user.name
       }, JWT_SECRET, { expiresIn: '7d' });
 
       return res.status(201).json({
         token,
         user: {
           id: user.id, username: user.username, name: user.name, profilePicture: user.profilePicture,
-          role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
+          role: effectiveRole(user), adminId: user.adminId, isAdminMaster: !!user.isAdminMaster, businessName: user.businessName, tourismLicense: user.tourismLicense,
           partnersRevenueSharingEnabled: user.partnersRevenueSharingEnabled,
           permissions: {
             canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
+            canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, isAdminMaster: !!user.isAdminMaster
           }
         }
       });
@@ -117,7 +122,7 @@ export default async function handler(req, res) {
       if (!user) return res.status(404).json({ message: 'User not found' });
       return res.status(200).json({
         id: user.id, username: user.username, name: user.name, profilePicture: user.profilePicture,
-        role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
+        role: effectiveRole(user), adminId: user.adminId, isAdminMaster: !!user.isAdminMaster, businessName: user.businessName, tourismLicense: user.tourismLicense,
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
@@ -130,7 +135,7 @@ export default async function handler(req, res) {
         largeAmountAlertRatio: user.largeAmountAlertRatio != null ? Number(user.largeAmountAlertRatio) : null,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
+          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, isAdminMaster: !!user.isAdminMaster
         }
       });
     }
@@ -158,7 +163,7 @@ export default async function handler(req, res) {
       });
       return res.status(200).json({
         id: user.id, username: user.username, name: user.name, profilePicture: user.profilePicture,
-        role: user.role, adminId: user.adminId, businessName: user.businessName, tourismLicense: user.tourismLicense,
+        role: effectiveRole(user), adminId: user.adminId, isAdminMaster: !!user.isAdminMaster, businessName: user.businessName, tourismLicense: user.tourismLicense,
         logoUrl: user.logoUrl, stampUrl: user.stampUrl, customTerms: user.customTerms,
         taxEnabled: user.taxEnabled, taxPercentage: user.taxPercentage,
         apartmentTypes: user.apartmentTypes, bookingSources: user.bookingSources, generalExpenses: user.generalExpenses,
@@ -171,7 +176,7 @@ export default async function handler(req, res) {
         largeAmountAlertRatio: user.largeAmountAlertRatio != null ? Number(user.largeAmountAlertRatio) : null,
         permissions: {
           canBook: user.canBook, canEdit: user.canEdit, canDelete: user.canDelete,
-          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates
+          canViewAnalytics: user.canViewAnalytics, canViewSettings: user.canViewSettings, canViewBalances: user.canViewBalances, canViewMaintenance: user.canViewMaintenance, canViewPricing: user.canViewPricing, canViewPrices: user.canViewPrices, canClean: user.canClean, canManageCleaningTemplates: user.canManageCleaningTemplates, isAdminMaster: !!user.isAdminMaster
         }
       });
     }

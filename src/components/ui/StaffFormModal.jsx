@@ -1,9 +1,25 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Eye, EyeOff } from 'lucide-react';
+import { X, Save, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import ImageUpload from './ImageUpload';
+
+// Every individual permission a staff member can hold. Kept at module scope so
+// the master "مشرف عام" toggle and the render loop share one source of truth.
+const PERMISSIONS = [
+  { name: 'canBook',            title: 'إضافة حجوزات',        desc: 'يسمح للموظف بإنشاء حجوزات جديدة' },
+  { name: 'canEdit',            title: 'تعديل البيانات',       desc: 'تعديل الشقق وتفاصيل الحجوزات القائمة' },
+  { name: 'canDelete',          title: 'حذف البيانات',         desc: 'حذف الحجوزات والشقق والنزلاء' },
+  { name: 'canViewPrices',      title: 'عرض الأسعار',          desc: 'رؤية الأسعار الليلية والإجماليات في سجل النزلاء وتفاصيل الحجوزات. أوقفه للاستقبال والموظفين الذين لا يجب أن يرَوا المبالغ.' },
+  { name: 'canViewBalances',    title: 'إدارة المستحقات',      desc: 'تسجيل الدفعات ومراجعة الأرصدة المتبقية على الحجوزات' },
+  { name: 'canViewMaintenance', title: 'إدارة الصيانة',         desc: 'تسجيل بلاغات الصيانة ومتابعة حالتها حتى الحل' },
+  { name: 'canViewPricing',     title: 'إدارة الأسعار الموسمية', desc: 'إنشاء وتعديل قواعد الأسعار للمواسم والفترات الخاصة' },
+  { name: 'canViewAnalytics',   title: 'عرض الإحصائيات',        desc: 'الوصول إلى تقارير الأداء المالي والتحليلات' },
+  { name: 'canViewSettings',    title: 'إدارة الإعدادات',       desc: 'الوصول لإعدادات النظام العامة (باستثناء الموظفين)' },
+  { name: 'canClean',           title: 'قسم التنظيف',           desc: 'الوصول إلى تبويب التنظيف وإنهاء مهام تنظيف الوحدات' },
+  { name: 'canManageCleaningTemplates', title: 'إدارة قوالب التنظيف', desc: 'إنشاء وتعديل قوالب التنظيف وتعيين القالب الافتراضي الذي يُطبَّق تلقائياً بعد كل مغادرة' },
+];
 
 export default function StaffFormModal({ staff, onClose, onSuccess }) {
   const isEditing = !!staff;
@@ -15,6 +31,7 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
     password: '',
     name: staff?.name || '',
     profilePicture: staff?.profilePicture || null,
+    isAdminMaster:     staff ? !!staff.isAdminMaster    : false,
     canBook:            staff ? staff.canBook            : true,
     canEdit:            staff ? staff.canEdit            : false,
     canDelete:          staff ? staff.canDelete          : false,
@@ -30,10 +47,26 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    setFormData(prev => {
+      const next = { ...prev, [name]: type === 'checkbox' ? checked : value };
+      // Unchecking any single permission while master admin is on means the
+      // operator wants a custom set — drop the master flag so it's saved as-is.
+      if (type === 'checkbox' && checked === false && prev.isAdminMaster) {
+        next.isAdminMaster = false;
+      }
+      return next;
+    });
+  };
+
+  // Master toggle — full access on, clear-all off. Individual boxes are set in
+  // lockstep so the saved record stays consistent.
+  const handleMasterToggle = (e) => {
+    const checked = e.target.checked;
+    setFormData(prev => {
+      const next = { ...prev, isAdminMaster: checked };
+      PERMISSIONS.forEach(p => { next[p.name] = checked; });
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -65,20 +98,6 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
       setLoading(false);
     }
   };
-
-  const permissions = [
-    { name: 'canBook',            title: 'إضافة حجوزات',        desc: 'يسمح للموظف بإنشاء حجوزات جديدة' },
-    { name: 'canEdit',            title: 'تعديل البيانات',       desc: 'تعديل الشقق وتفاصيل الحجوزات القائمة' },
-    { name: 'canDelete',          title: 'حذف البيانات',         desc: 'حذف الحجوزات والشقق والنزلاء' },
-    { name: 'canViewPrices',      title: 'عرض الأسعار',          desc: 'رؤية الأسعار الليلية والإجماليات في سجل النزلاء وتفاصيل الحجوزات. أوقفه للاستقبال والموظفين الذين لا يجب أن يرَوا المبالغ.' },
-    { name: 'canViewBalances',    title: 'إدارة المستحقات',      desc: 'تسجيل الدفعات ومراجعة الأرصدة المتبقية على الحجوزات' },
-    { name: 'canViewMaintenance', title: 'إدارة الصيانة',         desc: 'تسجيل بلاغات الصيانة ومتابعة حالتها حتى الحل' },
-    { name: 'canViewPricing',     title: 'إدارة الأسعار الموسمية', desc: 'إنشاء وتعديل قواعد الأسعار للمواسم والفترات الخاصة' },
-    { name: 'canViewAnalytics',   title: 'عرض الإحصائيات',        desc: 'الوصول إلى تقارير الأداء المالي والتحليلات' },
-    { name: 'canViewSettings',    title: 'إدارة الإعدادات',       desc: 'الوصول لإعدادات النظام العامة (باستثناء الموظفين)' },
-    { name: 'canClean',           title: 'قسم التنظيف',           desc: 'الوصول إلى تبويب التنظيف وإنهاء مهام تنظيف الوحدات' },
-    { name: 'canManageCleaningTemplates', title: 'إدارة قوالب التنظيف', desc: 'إنشاء وتعديل قوالب التنظيف وتعيين القالب الافتراضي الذي يُطبَّق تلقائياً بعد كل مغادرة' },
-  ];
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex bg-black/40 backdrop-blur-sm items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
@@ -163,8 +182,37 @@ export default function StaffFormModal({ staff, onClose, onSuccess }) {
             <div className="mt-8 border-t border-hairline dark:border-hairline-dark pt-6">
               <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white mb-4">صلاحيات الموظف</h3>
 
+              {/* Master admin (مشرف عام) — prominent toggle that grants full
+                  access. Checking it selects every permission below; unchecking
+                  it clears them. Unchecking any single permission drops back to
+                  a custom selection. */}
+              <label
+                className={`flex items-start gap-3 p-4 rounded-lg border-2 mb-5 cursor-pointer transition-colors ${
+                  formData.isAdminMaster
+                    ? 'border-ink dark:border-white bg-ink/5 dark:bg-white/5'
+                    : 'border-hairline dark:border-hairline-dark-soft hover:bg-surface-soft dark:hover:bg-surface-dark-elevated'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  name="isAdminMaster"
+                  checked={formData.isAdminMaster}
+                  onChange={handleMasterToggle}
+                  className="w-5 h-5 shrink-0 accent-ink dark:accent-white rounded mt-0.5"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 font-semibold text-ink dark:text-white">
+                    <ShieldCheck size={16} className="shrink-0" />
+                    <span>مشرف عام (Admin)</span>
+                  </div>
+                  <div className="text-xs text-muted dark:text-body-dark mt-1">
+                    وصول كامل وغير مقيّد لكل أجزاء النظام — يتجاوز جميع الصلاحيات الفردية أدناه. عند التفعيل تُحدَّد جميعها تلقائياً.
+                  </div>
+                </div>
+              </label>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {permissions.map(perm => (
+                {PERMISSIONS.map(perm => (
                   <label key={perm.name} className="flex items-center p-3 rounded-md border border-hairline dark:border-hairline-dark-soft cursor-pointer hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors">
                     <input
                       type="checkbox"

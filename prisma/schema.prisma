@@ -28,6 +28,11 @@ model User {
   canClean            Boolean     @default(false)
   canManageCleaningTemplates Boolean @default(false)
 
+  // Master "مشرف عام" toggle. When true, this staff member is treated as an
+  // effective admin (role bypasses every individual permission check) while
+  // still operating inside their owner's tenant via adminId.
+  isAdminMaster       Boolean     @default(false)
+
   // Per-user notification preferences. JSON shape:
   // { categories: { booking: true, cleaning: true, maintenance: true, finance: true, system: true }, push: true }
   // Missing keys fall back to ON, so a null/partial value never silences a user.
