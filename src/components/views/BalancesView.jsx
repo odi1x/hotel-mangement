@@ -213,12 +213,9 @@ export default function BalancesView() {
                     <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
                       {/* Guest & stay details — stacked on mobile, leading block on desktop */}
                       <div className="flex-1 min-w-0 flex flex-col gap-1">
-                        <div className="flex items-center justify-between md:justify-start gap-2">
-                          <p className="font-bold text-ink dark:text-white truncate min-w-0">
-                            {booking.residentName}
-                          </p>
-                          <PaymentStatusBadge status={totals.status} />
-                        </div>
+                        <p className="font-bold text-ink dark:text-white truncate min-w-0">
+                          {booking.residentName}
+                        </p>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted dark:text-body-dark">
                           <span className="truncate">{apt?.name || 'وحدة محذوفة'}</span>
                           <span className="text-muted-soft">·</span>
@@ -241,24 +238,28 @@ export default function BalancesView() {
 
                       {/* Financial & actions — divider on mobile, trailing block on desktop */}
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6 border-t md:border-t-0 pt-3 md:pt-0 border-hairline-soft dark:border-hairline-dark md:shrink-0">
-                        {/* Balance */}
-                        <div className="text-right">
-                          <p className="text-2xs font-semibold uppercase tracking-wider text-muted-soft mb-0.5">
-                            المتبقّي
-                          </p>
-                          <p
-                            className="text-xl font-bold tracking-tight text-ink dark:text-white leading-none"
-                            style={{ fontVariantNumeric: 'tabular-nums' }}
-                          >
-                            {formatSAR(totals.balanceDue)}
-                            <span className="text-xs font-medium text-muted mr-1">ر.س</span>
-                          </p>
-                          <p
-                            className="text-2xs text-muted-soft mt-1"
-                            style={{ fontVariantNumeric: 'tabular-nums' }}
-                          >
-                            من {formatSAR(totals.totalDue)} ر.س
-                          </p>
+                        {/* Compact financial & status — balance + badge share one
+                            light card so mobile doesn't leave a dead half-row */}
+                        <div className="flex items-center justify-between gap-3 bg-surface-soft dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft p-3 rounded-xl">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[11px] text-muted dark:text-body-dark">المتبقّي</span>
+                            <span
+                              className="flex items-baseline gap-1.5 leading-none mt-1"
+                              style={{ fontVariantNumeric: 'tabular-nums' }}
+                            >
+                              <span className="text-base font-bold text-ink dark:text-white">
+                                {formatSAR(totals.balanceDue)}
+                              </span>
+                              <span className="text-xs font-medium text-body dark:text-body-dark">ر.س</span>
+                            </span>
+                            <span
+                              className="text-[10px] text-muted-soft mt-1"
+                              style={{ fontVariantNumeric: 'tabular-nums' }}
+                            >
+                              من {formatSAR(totals.totalDue)} ر.س
+                            </span>
+                          </div>
+                          <PaymentStatusBadge status={totals.status} />
                         </div>
 
                         {/* Actions — full-width footer on mobile */}
