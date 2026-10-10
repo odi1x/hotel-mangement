@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, CalendarPlus, Home } from 'lucide-react';
+import { X, CalendarPlus, Home, Search, AlertTriangle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-import { useAuth } from '../../context/AuthContext';
 import DatePickerCal from './DatePickerCal';
 
 export default function BookByDateModal({ onClose, onSelectApartment }) {
-  const { apartments, bookings, updateApartment } = useData();
-  const { user } = useAuth();
+  const { apartments, bookings } = useData();
   const [dateValue, setDateValue] = useState({ startDate: null, endDate: null });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cleanConfirm, setCleanConfirm] = useState(null);
 
   const hasRange = !!(dateValue.startDate && dateValue.endDate);
 
@@ -29,6 +29,33 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
     if (!hasRange) return [];
     return apartments.filter(apt => isAvailable(apt.id));
   }, [apartments, bookings, dateValue.startDate, dateValue.endDate, hasRange]);
+
+  const filteredApartments = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return availableApartments;
+    return availableApartments.filter(apt =>
+      (apt.name || '').toLowerCase().includes(q) ||
+      (apt.type || '').toLowerCase().includes(q)
+    );
+  }, [availableApartments, searchQuery]);
+
+  const selectApartment = (apt) => {
+    onSelectApartment(apt.id, dateValue.startDate, dateValue.endDate);
+  };
+
+  const handleBook = (apt) => {
+    if (apt.needsCleaning) {
+      setCleanConfirm(apt);
+      return;
+    }
+    selectApartment(apt);
+  };
+
+  const confirmUncleaned = () => {
+    const apt = cleanConfirm;
+    setCleanConfirm(null);
+    if (apt) selectApartment(apt);
+  };
 
   return createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
@@ -54,12 +81,24 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
           {hasRange && (
             <div className="mt-6 pt-6 border-t border-hairline-soft dark:border-hairline-dark">
               <h3 className="font-semibold text-ink dark:text-white mb-4">
-                الوحدات المتاحة <span className="text-muted font-medium">({availableApartments.length})</span>
+                الوحدات المتاحة <span className="text-muted font-medium">({filteredApartments.length})</span>
               </h3>
 
-              {availableApartments.length > 0 ? (
+              {/* Search — locate a unit by name or number */}
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  placeholder="ابحث عن رقم أو اسم الوحدة..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="input-field pl-10 pr-4 py-2 w-full"
+                />
+                <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
+              </div>
+
+              {filteredApartments.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {availableApartments.map(apt => {
+                  {filteredApartments.map(apt => {
                     const isNotClean = apt.needsCleaning;
                     return (
                       <div
@@ -68,12 +107,12 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                       >
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1.5 rounded-md bg-surface-card dark:bg-surface-dark text-ink dark:text-white"><Home size={16} /></div>
-                              <span className="font-semibold text-ink dark:text-white">{apt.name}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="p-1.5 rounded-md bg-surface-card dark:bg-surface-dark text-ink dark:text-white shrink-0"><Home size={16} /></div>
+                              <span className="font-semibold text-ink dark:text-white truncate">{apt.name}</span>
                             </div>
                             {isNotClean && (
-                              <span className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1 bg-canvas dark:bg-surface-dark text-ink dark:text-white border border-dashed border-muted-soft">تحتاج تنظيف</span>
+                              <span className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 rounded-full text-xs font-semibold px-2.5 py-1 bg-canvas dark:bg-surface-dark text-ink dark:text-white border border-dashed border-muted-soft">تحتاج تنظيف</span>
                             )}
                           </div>
                           <p className="text-xs text-muted dark:text-body-dark mb-2">{apt.type}</p>
@@ -82,43 +121,60 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
                           </p>
                         </div>
 
-                        {isNotClean ? (
-                          (user?.role === 'admin' || user?.permissions?.canEdit) ? (
-                            <button
-                              onClick={async () => await updateApartment({ ...apt, needsCleaning: false })}
-                              className="w-full bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft hover:bg-surface-soft dark:hover:bg-hairline-dark text-ink dark:text-white py-2 rounded-md font-semibold text-sm transition-colors"
-                            >
-                              تحديد كـ "تم التنظيف"
-                            </button>
-                          ) : (
-                            <div className="w-full bg-surface-card dark:bg-surface-dark text-muted dark:text-body-dark py-2 rounded-md font-semibold text-sm text-center">
-                              الوحدة تحتاج لتنظيف
-                            </div>
-                          )
-                        ) : (
-                          <button
-                            onClick={() => onSelectApartment(apt.id, dateValue.startDate, dateValue.endDate)}
-                            className="btn-accent w-full h-9 text-sm"
-                          >
-                            حجز هذه الوحدة
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleBook(apt)}
+                          className="btn-accent w-full h-9 text-sm"
+                        >
+                          حجز هذه الوحدة
+                        </button>
                       </div>
                     );
                   })}
                 </div>
-              ) : (
+              ) : availableApartments.length === 0 ? (
                 <div className="text-center py-10 bg-surface-card dark:bg-surface-dark-elevated rounded-lg">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-canvas dark:bg-surface-dark mb-3 border border-hairline dark:border-hairline-dark-soft">
                     <CalendarPlus size={24} className="text-muted-soft" />
                   </div>
                   <p className="text-muted dark:text-body-dark font-medium">لا توجد وحدات متاحة في هذه الفترة.</p>
                 </div>
+              ) : (
+                <div className="text-center py-10 bg-surface-card dark:bg-surface-dark-elevated rounded-lg">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-canvas dark:bg-surface-dark mb-3 border border-hairline dark:border-hairline-dark-soft">
+                    <Search size={24} className="text-muted-soft" />
+                  </div>
+                  <p className="text-muted dark:text-body-dark font-medium">لا توجد وحدات مطابقة للبحث.</p>
+                </div>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Uncleaned-unit confirmation — allow booking, but warn first */}
+      {cleanConfirm && createPortal(
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" data-modal-active>
+          <div className="bg-canvas dark:bg-surface-dark rounded-xl shadow-soft border border-hairline dark:border-hairline-dark-soft w-full max-w-sm p-6 text-center">
+            <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-amber-50 dark:bg-surface-dark-elevated mb-4">
+              <AlertTriangle className="h-7 w-7 text-amber-500" />
+            </div>
+            <h3 className="text-lg font-semibold tracking-tight text-ink dark:text-white mb-2">
+              الوحدة غير نظيفة
+            </h3>
+            <p className="text-sm text-muted dark:text-body-dark font-medium mb-5">
+              تنبيه: الوحدة <span className="font-semibold text-ink dark:text-white">{cleanConfirm.name}</span> غير نظيفة حالياً. هل أنت متأكد من رغبتك في حجزها؟
+            </p>
+            <div className="flex flex-col gap-2">
+              <button onClick={confirmUncleaned} className="btn-accent h-11 w-full">
+                متابعة الحجز
+              </button>
+              <button onClick={() => setCleanConfirm(null)} className="btn-secondary h-11 w-full">
+                رجوع
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
     </div>
   ,
     document.body

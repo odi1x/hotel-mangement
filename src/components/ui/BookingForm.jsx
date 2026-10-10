@@ -9,7 +9,7 @@ import { computeStayTotal, summarizeBreakdown } from '../../lib/pricingUtils';
 import toast from 'react-hot-toast';
 
 export default function BookingForm({ onClose, initialData }) {
-  const { apartments, bookings, addBooking, updateBooking, updateApartment, pricingRules, maintenanceIssues } = useData();
+  const { apartments, bookings, addBooking, updateBooking, pricingRules, maintenanceIssues } = useData();
   const { user } = useAuth();
 
   const [bookingSources, setBookingSources] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
@@ -232,6 +232,11 @@ export default function BookingForm({ onClose, initialData }) {
     );
   }, [maintenanceIssues, formData.apartmentId]);
 
+  // Advisory (warn-only) — booking an uncleaned unit is allowed, but the
+  // operator is told so they can arrange cleaning before the guest arrives.
+  const selectedApartment = apartments.find(a => a.id === formData.apartmentId);
+  const needsCleaningWarning = !!selectedApartment?.needsCleaning;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -240,8 +245,6 @@ export default function BookingForm({ onClose, initialData }) {
     const end = new Date(dateValue.endDate).setHours(0, 0, 0, 0);
     if (end < start) { setError('تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول'); return; }
     if (isOverlapping(start, end, formData.apartmentId)) { setError('هذه الوحدة محجوزة بالفعل في الفترة المحددة'); return; }
-    const selectedApt = apartments.find(a => a.id === formData.apartmentId);
-    if (selectedApt && selectedApt.needsCleaning) { setError('لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.'); return; }
     try {
       // Persist both columns consistently with the mode the operator used.
       const finalTotal = effectiveMode === 'total' ? (Number(effectiveTotalInput) || 0) : total;
@@ -289,20 +292,8 @@ export default function BookingForm({ onClose, initialData }) {
 
         <form onSubmit={handleSubmit} className="p-4 md:p-8 flex-1 overflow-y-auto min-h-0">
           {error && (
-            <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-hairline-dark-soft flex justify-between items-center">
-              <span>{error}</span>
-              {error === 'لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.' && (user?.role === 'admin' || user?.permissions?.canEdit) && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const apt = apartments.find(a => a.id === formData.apartmentId);
-                    if (apt) { await updateApartment({ ...apt, needsCleaning: false }); setError(''); }
-                  }}
-                  className="bg-ink hover:bg-primary-active text-white px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shrink-0 mr-3"
-                >
-                  تحديد كـ "تم التنظيف"
-                </button>
-              )}
+            <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-hairline-dark-soft">
+              {error}
             </div>
           )}
 
@@ -328,6 +319,21 @@ export default function BookingForm({ onClose, initialData }) {
                   )}
                 </ul>
                 <p className="text-2xs text-muted-soft mt-1.5">يمكنك المتابعة، لكن تأكّد من حل المشكلة قبل الوصول.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Cleaning warn — advisory, doesn't block. Shows when the unit still needs cleaning. */}
+          {needsCleaningWarning && (
+            <div className="mb-6 border border-dashed border-amber-400/70 bg-amber-50 dark:bg-amber-500/10 rounded-md p-3 flex items-start gap-3">
+              <div className="p-1.5 rounded-md bg-amber-500/15 text-amber-600 shrink-0">
+                <AlertTriangle size={14} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">
+                  تنبيه: هذه الوحدة غير نظيفة حالياً
+                </p>
+                <p className="text-2xs text-muted-soft mt-1.5">يمكنك المتابعة بالحجز، لكن تأكّد من تنظيف الوحدة قبل وصول النزيل.</p>
               </div>
             </div>
           )}
