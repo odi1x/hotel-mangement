@@ -56,6 +56,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
   const pendingCount = (bookings || []).filter(b => b.status === 'pending').length;
 
   const duesCount = (bookings || []).reduce((n, b) => {
+    if (b.status === 'cancelled') return n;
     const { balanceDue } = computeBookingTotals(b);
     return balanceDue > 0.01 ? n + 1 : n;
   }, 0);

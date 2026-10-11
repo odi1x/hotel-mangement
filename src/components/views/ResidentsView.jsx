@@ -51,8 +51,7 @@ export default function ResidentsView({ openBookingForm }) {
           params: {
             page: currentPage,
             limit: ITEMS_PER_PAGE,
-            search: searchQuery.trim() || undefined,
-            excludeCancelled: 1
+            search: searchQuery.trim() || undefined
           }
         });
         if (response.data && response.data.metadata) {
@@ -341,7 +340,7 @@ export default function ResidentsView({ openBookingForm }) {
                 const isCurrent = isDateBetween(new Date(), booking.startDate, booking.endDate);
                 const isFuture = isFutureBooking(booking.startDate);
                 return (
-                  <tr key={booking.id} className="hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors">
+                  <tr key={booking.id} className={`hover:bg-surface-soft/60 dark:hover:bg-surface-dark-elevated/40 transition-colors ${booking.status === 'cancelled' ? 'opacity-60' : ''}`}>
                     <td className="px-6 py-4">
                       <div className="font-semibold text-ink dark:text-white flex items-center">
                         {booking.residentName}
@@ -373,7 +372,9 @@ export default function ResidentsView({ openBookingForm }) {
                       <div className="badge-pill text-2xs font-semibold mt-1">{calculateNights(booking.startDate, booking.endDate)} ليالي</div>
                     </td>
                     <td className="px-6 py-4">
-                      {booking.status === 'checked_out_early' ? (
+                      {booking.status === 'cancelled' ? (
+                          <span className="badge-pill badge-dashed text-xs font-semibold text-rose-600 border-rose-300 dark:text-rose-400 dark:border-rose-500/30">ملغى</span>
+                      ) : booking.status === 'checked_out_early' ? (
                           <span className="badge-pill badge-dashed text-xs font-semibold">خروج مبكر</span>
                       ) : isCurrent ? (
                         <span className="badge-pill badge-solid text-xs font-semibold">مقيم حالياً</span>
@@ -401,7 +402,7 @@ export default function ResidentsView({ openBookingForm }) {
                           >
                             <MoreVertical size={18} />
                           </button>
-{menuOpenFor === booking.id && menuSource === 'desktop' && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
+{menuOpenFor === booking.id && menuSource === 'desktop' && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early' && booking.status !== 'cancelled')}
                         </div>
                       </div>
                     </td>
@@ -468,7 +469,7 @@ export default function ResidentsView({ openBookingForm }) {
               const isFuture = booking.status !== 'checked_out_early' && today < startDate;
 
               return (
-                <div key={booking.id} className="p-4 hover:bg-surface-soft/40 dark:hover:bg-surface-dark-elevated/40 transition-colors">
+                <div key={booking.id} className={`p-4 hover:bg-surface-soft/40 dark:hover:bg-surface-dark-elevated/40 transition-colors ${booking.status === 'cancelled' ? 'opacity-60' : ''}`}>
                   {/* Header row: name + status */}
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="min-w-0 flex-1">
@@ -485,7 +486,9 @@ export default function ResidentsView({ openBookingForm }) {
                       </button>
                     </div>
                     <div className="shrink-0">
-                      {booking.status === 'checked_out_early' ? (
+                      {booking.status === 'cancelled' ? (
+                        <span className="badge-pill badge-dashed text-xs font-semibold text-rose-600 border-rose-300 dark:text-rose-400 dark:border-rose-500/30">ملغى</span>
+                      ) : booking.status === 'checked_out_early' ? (
                         <span className="badge-pill badge-dashed text-xs font-semibold">خروج مبكر</span>
                       ) : isCurrent ? (
                         <span className="badge-pill badge-solid text-xs font-semibold">مقيم حالياً</span>
@@ -529,7 +532,7 @@ export default function ResidentsView({ openBookingForm }) {
                     >
                       <MoreVertical size={18} />
                     </button>
-                    {menuOpenFor === booking.id && menuSource === 'mobile' && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early')}
+                    {menuOpenFor === booking.id && menuSource === 'mobile' && renderBookingMenu(booking, isCurrent && booking.status !== 'checked_out_early' && booking.status !== 'cancelled')}
                   </div>
                 </div>
               );

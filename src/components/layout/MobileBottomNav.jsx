@@ -38,7 +38,7 @@ export default function MobileBottomNav({
   const isAdmin            = user?.role === 'admin';
 
   const duesCount = canSeeBalances
-    ? (bookings || []).reduce((n, b) => (computeBookingTotals(b).balanceDue > 0.01 ? n + 1 : n), 0)
+    ? (bookings || []).reduce((n, b) => (b.status !== 'cancelled' && computeBookingTotals(b).balanceDue > 0.01 ? n + 1 : n), 0)
     : 0;
 
   const urgentMaintenanceCount = canSeeMaintenance
