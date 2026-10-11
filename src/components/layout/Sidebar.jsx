@@ -153,7 +153,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted dark:text-body-dark">النزلاء الحاليين</span>
               <span className="text-sm font-semibold text-ink dark:text-white">
-                {bookings.filter(b => isDateBetween(new Date(), b.startDate, b.endDate)).length}
+                {bookings.filter(b => b.status !== 'cancelled' && isDateBetween(new Date(), b.startDate, b.endDate)).length}
               </span>
             </div>
           </div>
