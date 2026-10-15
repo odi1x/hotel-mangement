@@ -56,6 +56,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
   const pendingCount = (bookings || []).filter(b => b.status === 'pending').length;
 
   const duesCount = (bookings || []).reduce((n, b) => {
+    if (b.status === 'cancelled') return n;
     const { balanceDue } = computeBookingTotals(b);
     return balanceDue > 0.01 ? n + 1 : n;
   }, 0);
@@ -152,7 +153,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted dark:text-body-dark">النزلاء الحاليين</span>
               <span className="text-sm font-semibold text-ink dark:text-white">
-                {bookings.filter(b => isDateBetween(new Date(), b.startDate, b.endDate)).length}
+                {bookings.filter(b => b.status !== 'cancelled' && isDateBetween(new Date(), b.startDate, b.endDate)).length}
               </span>
             </div>
           </div>

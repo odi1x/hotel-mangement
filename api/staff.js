@@ -11,10 +11,13 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  // Only admins can access staff endpoints
-  if (decoded.role !== 'admin') {
+  // Only admins (or staff flagged as master admin) can access staff endpoints
+  if (decoded.role !== 'admin' && !decoded.isAdminMaster) {
     return res.status(403).json({ message: 'Forbidden: Only admins can manage staff' });
   }
+
+  // Master admins manage their owner's roster (tenant), never their own id.
+  const tenantId = decoded.adminId || decoded.userId;
 
   try {
     // Handle operations for a specific staff ID (PUT, DELETE)
@@ -25,12 +28,12 @@ export default async function handler(req, res) {
         where: { id: id }
       });
 
-      if (!staffMember || staffMember.adminId !== decoded.userId) {
+      if (!staffMember || staffMember.adminId !== tenantId) {
         return res.status(404).json({ message: 'Staff member not found' });
       }
 
       if (req.method === 'PUT') {
-        const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean, canManageCleaningTemplates } = req.body;
+        const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean, canManageCleaningTemplates, isAdminMaster } = req.body;
 
         const updateData = {
           name,
@@ -46,6 +49,7 @@ export default async function handler(req, res) {
           canViewPrices,
           canClean: canClean === true,
           canManageCleaningTemplates: canManageCleaningTemplates === true,
+          isAdminMaster: isAdminMaster === true,
         };
 
         if (username && username !== staffMember.username) {
@@ -63,6 +67,7 @@ export default async function handler(req, res) {
           select: {
             canBook: true, canClean: true, canViewMaintenance: true,
             canViewBalances: true, canManageCleaningTemplates: true,
+            isAdminMaster: true,
           },
         });
 
@@ -127,7 +132,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       const staff = await prisma.user.findMany({
-        where: { adminId: decoded.userId },
+        where: { adminId: tenantId },
         select: {
           id: true,
           username: true,
@@ -145,6 +150,7 @@ export default async function handler(req, res) {
           canViewPrices: true,
           canClean: true,
           canManageCleaningTemplates: true,
+          isAdminMaster: true,
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -152,7 +158,7 @@ export default async function handler(req, res) {
     }
 
     else if (req.method === 'POST') {
-      const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean, canManageCleaningTemplates } = req.body;
+      const { username, password, name, profilePicture, canBook, canEdit, canDelete, canViewAnalytics, canViewSettings, canViewBalances, canViewMaintenance, canViewPricing, canViewPrices, canClean, canManageCleaningTemplates, isAdminMaster } = req.body;
 
       if (!username || !password || !name) {
         return res.status(400).json({ message: 'Username, password, and name are required' });
@@ -175,7 +181,7 @@ export default async function handler(req, res) {
           name,
           profilePicture,
           role: 'staff',
-          adminId: decoded.userId,
+          adminId: tenantId,
           canBook,
           canEdit,
           canDelete,
@@ -187,6 +193,7 @@ export default async function handler(req, res) {
           canViewPrices,
           canClean: canClean === true,
           canManageCleaningTemplates: canManageCleaningTemplates === true,
+          isAdminMaster: isAdminMaster === true,
         }
       });
 

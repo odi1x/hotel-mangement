@@ -9,6 +9,17 @@ import StaffFormModal from '../../ui/StaffFormModal';
 // canViewBalances, canViewMaintenance, canViewPricing, plus canViewPrices).
 // Kept in one place so desktop table + mobile card list share the same logic.
 function PermissionBadges({ s }) {
+  // Master admin implies every permission — show one prominent badge instead of
+  // the full (identical) list.
+  if (s.isAdminMaster) {
+    return (
+      <span className="badge-pill badge-solid text-xs font-semibold inline-flex items-center gap-1">
+        <Shield size={12} />
+        مشرف عام
+      </span>
+    );
+  }
+
   const badges = [
     s.canBook            && { label: 'حجز' },
     s.canEdit            && { label: 'تعديل' },

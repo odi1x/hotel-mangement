@@ -266,6 +266,30 @@ export default function AnalyticsView({ setView }) {
     let bookingNights = 0;
 
     exportBookings.forEach(b => {
+      // Cancelled bookings didn't occupy: export the money actually collected
+      // (cash basis) with zero nights, flagged as cancelled.
+      if (b.status === 'cancelled') {
+        const collected = (b.payments || []).reduce((s, p) => s + Number(p.amount || 0), 0);
+        if (collected === 0) return;
+        periodRevenue += collected;
+        rows.push([
+          b.residentName,
+          b.residentId,
+          b.phone,
+          aptNameById.get(b.apartmentId) || 'غير معروف',
+          new Date(b.startDate).toISOString().slice(0, 10),
+          new Date(b.endDate).toISOString().slice(0, 10),
+          0,
+          0,
+          round2(Number(b.pricePerNight)),
+          0,
+          round2(collected),
+          b.source || 'زيارة مباشرة',
+          'ملغى'
+        ]);
+        return;
+      }
+
       const startIndex = exportDayIndex(b.startDate);
       const endIndex = exportDayIndex(b.endDate);
       const fullNights = Math.max(1, endIndex - startIndex);
@@ -293,7 +317,8 @@ export default function AnalyticsView({ setView }) {
         round2(Number(b.pricePerNight)),
         round2(fullValue),
         round2(periodValue),
-        b.source || 'زيارة مباشرة'
+        b.source || 'زيارة مباشرة',
+        'نشط'
       ]);
     });
 
@@ -312,7 +337,7 @@ export default function AnalyticsView({ setView }) {
 
     const header = [
       'اسم النزيل', 'رقم الهوية', 'الجوال', 'الشقة', 'تاريخ الدخول', 'تاريخ الخروج',
-      'ليالي الفترة', 'ليالي الحجز', 'سعر الليلة', 'قيمة الحجز', 'إيراد الفترة', 'المصدر'
+      'ليالي الفترة', 'ليالي الحجز', 'سعر الليلة', 'قيمة الحجز', 'إيراد الفترة', 'المصدر', 'الحالة'
     ];
 
     const summary = [
@@ -329,7 +354,7 @@ export default function AnalyticsView({ setView }) {
       []
     ];
 
-    const totals = ['الإجمالي', '', '', '', '', '', periodNights, bookingNights, '', '', round2(periodRevenue), ''];
+    const totals = ['الإجمالي', '', '', '', '', '', periodNights, bookingNights, '', '', round2(periodRevenue), '', ''];
 
     const csvContent = [
       ...summary.map(r => r.map(csvCell).join(',')),

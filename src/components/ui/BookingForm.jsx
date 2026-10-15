@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Pencil, AlertTriangle, TagsIcon, Wrench } from 'lucide-react';
+import { X, Calendar, CalendarClock, Banknote, Coins, Pencil, AlertTriangle, TagsIcon, Wrench } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { sanitizePhone } from '../../lib/phoneUtils';
@@ -9,7 +9,7 @@ import { computeStayTotal, summarizeBreakdown } from '../../lib/pricingUtils';
 import toast from 'react-hot-toast';
 
 export default function BookingForm({ onClose, initialData }) {
-  const { apartments, bookings, addBooking, updateBooking, updateApartment, pricingRules, maintenanceIssues } = useData();
+  const { apartments, bookings, addBooking, updateBooking, pricingRules, maintenanceIssues } = useData();
   const { user } = useAuth();
 
   const [bookingSources, setBookingSources] = useState(['زيارة مباشرة', 'Booking.com', 'Airbnb']);
@@ -56,6 +56,23 @@ export default function BookingForm({ onClose, initialData }) {
   // Track whether the user manually edited pricePerNight — if so, we stop
   // auto-overwriting it from the rules (they're overriding on purpose).
   const [priceManuallyEdited, setPriceManuallyEdited] = useState(!!initialData?.id);
+
+  // Which way the operator thinks about money for this booking:
+  //   per_night → they type the nightly rate, we derive the total
+  //   total     → they type the grand total, we derive the nightly rate
+  // Both columns are always persisted; this only decides which one is the input.
+  const [pricingMode, setPricingMode] = useState(initialData?.pricingMode === 'total' ? 'total' : 'per_night');
+  const [totalInput, setTotalInput] = useState(
+    initialData?.totalPrice != null ? String(Number(initialData.totalPrice)) : ''
+  );
+  // True once the operator types their own grand total, so an extension's
+  // computed total stops overwriting them.
+  const [totalManuallyEdited, setTotalManuallyEdited] = useState(false);
+  // Custom rate for the added nights. null = follow the seasonal engine.
+  const [customAddedRate, setCustomAddedRate] = useState(null);
+
+  const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+  const money = (n) => round2(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
 
   const [retrievedNotes, setRetrievedNotes] = useState(null);
 
@@ -106,14 +123,16 @@ export default function BookingForm({ onClose, initialData }) {
     return computeStayTotal(pricingRules, selectedApt, dateValue.startDate, dateValue.endDate);
   }, [selectedApt, dateValue.startDate, dateValue.endDate, pricingRules]);
 
-  // Auto-fill price when apartment / dates change (unless user manually edited)
+  // Auto-fill price when apartment / dates change (unless user manually edited
+  // or is in total mode, where they own the number outright).
   useEffect(() => {
+    if (pricingMode !== 'per_night') return;
     if (priceManuallyEdited || !stayCalc || stayCalc.nights === 0) return;
     const avg = Math.round(stayCalc.averagePerNight * 100) / 100;
     if (avg !== Number(formData.pricePerNight)) {
       setFormData(prev => ({ ...prev, pricePerNight: String(avg) }));
     }
-  }, [stayCalc, priceManuallyEdited]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stayCalc, priceManuallyEdited, pricingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const breakdownSummary = useMemo(() => {
     if (!stayCalc) return [];
@@ -129,6 +148,78 @@ export default function BookingForm({ onClose, initialData }) {
     return nights > 0 && formData.pricePerNight ? nights * Number(formData.pricePerNight) : 0;
   }, [priceManuallyEdited, stayCalc, nights, formData.pricePerNight]);
 
+  // ----- Extending a stay ------------------------------------------------
+  // A "pure extension" = same unit, same check-in, later check-out. Only the
+  // ADDED nights are re-priced at today's rate; the nights the guest already
+  // has keep the price they were booked at. Changing the unit or the check-in
+  // is a different booking, so we fall back to a full recompute for those.
+  const originalNights = (initialData?.startDate && initialData?.endDate)
+    ? Math.max(1, Math.round((new Date(initialData.endDate) - new Date(initialData.startDate)) / 86400000))
+    : 0;
+
+  const extension = (() => {
+    if (!formData.id || !selectedApt || !initialData?.startDate || !initialData?.endDate) return null;
+    if (!dateValue.startDate || !dateValue.endDate) return null;
+    if (formData.apartmentId !== initialData.apartmentId) return null;
+    const origStart = toDateStr(initialData.startDate);
+    const origEnd = toDateStr(initialData.endDate);
+    if (dateValue.startDate !== origStart) return null;
+    if (dateValue.endDate <= origEnd) return null; // not an extension
+
+    const added = computeStayTotal(pricingRules, selectedApt, origEnd, dateValue.endDate);
+    if (added.nights <= 0) return null;
+
+    const preservedTotal = initialData.totalPrice != null
+      ? Number(initialData.totalPrice)
+      : originalNights * Number(initialData.pricePerNight || 0);
+
+    return {
+      originalNights,
+      addedNights: added.nights,
+      defaultRate: added.nights > 0 ? added.total / added.nights : 0,
+      preservedTotal
+    };
+  })();
+
+  // An extension spans two nightly rates, so a single "per night" figure is
+  // meaningless — force the grand-total view while still letting the operator
+  // fine-tune both the added-night rate and the final total.
+  const effectiveMode = extension ? 'total' : pricingMode;
+
+  const effectiveAddedRate = (customAddedRate != null && customAddedRate !== '')
+    ? Number(customAddedRate)
+    : (extension?.defaultRate ?? 0);
+  const effectiveAddedCost = extension ? round2(effectiveAddedRate * extension.addedNights) : 0;
+  const autoNewTotal = extension ? round2(extension.preservedTotal + effectiveAddedCost) : 0;
+
+  const effectiveTotalInput = extension && !totalManuallyEdited
+    ? String(autoNewTotal)
+    : totalInput;
+
+  const perNightFromTotal = nights > 0 && Number(effectiveTotalInput) > 0 ? Number(effectiveTotalInput) / nights : 0;
+  const displayTotal = effectiveMode === 'total' ? (Number(effectiveTotalInput) || 0) : total;
+  const displayPerNight = effectiveMode === 'per_night' ? (Number(formData.pricePerNight) || 0) : perNightFromTotal;
+
+  const handleTotalChange = (value) => {
+    setTotalManuallyEdited(true);
+    setTotalInput(value);
+  };
+
+  const switchToPerNight = () => {
+    setPricingMode('per_night');
+    if (nights > 0 && Number(effectiveTotalInput) > 0) {
+      setFormData(prev => ({ ...prev, pricePerNight: String(round2(Number(effectiveTotalInput) / nights)) }));
+      setPriceManuallyEdited(true);
+    }
+  };
+
+  const switchToTotal = () => {
+    setPricingMode('total');
+    const current = total || (nights > 0 && formData.pricePerNight ? nights * Number(formData.pricePerNight) : 0);
+    setTotalManuallyEdited(true);
+    setTotalInput(current ? String(round2(current)) : '');
+  };
+
   const fmtShort = (d) => d ? new Date(d).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' }) : '';
 
   // Warn about urgent open maintenance on the selected unit (warn-only, doesn't block)
@@ -141,6 +232,11 @@ export default function BookingForm({ onClose, initialData }) {
     );
   }, [maintenanceIssues, formData.apartmentId]);
 
+  // Advisory (warn-only) — booking an uncleaned unit is allowed, but the
+  // operator is told so they can arrange cleaning before the guest arrives.
+  const selectedApartment = apartments.find(a => a.id === formData.apartmentId);
+  const needsCleaningWarning = !!selectedApartment?.needsCleaning;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -149,15 +245,26 @@ export default function BookingForm({ onClose, initialData }) {
     const end = new Date(dateValue.endDate).setHours(0, 0, 0, 0);
     if (end < start) { setError('تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول'); return; }
     if (isOverlapping(start, end, formData.apartmentId)) { setError('هذه الوحدة محجوزة بالفعل في الفترة المحددة'); return; }
-    const selectedApt = apartments.find(a => a.id === formData.apartmentId);
-    if (selectedApt && selectedApt.needsCleaning) { setError('لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.'); return; }
     try {
-      // Send the seasonally-computed total when the user hasn't overridden
-      const totalPrice = total || undefined;
+      // Persist both columns consistently with the mode the operator used.
+      const finalTotal = effectiveMode === 'total' ? (Number(effectiveTotalInput) || 0) : total;
+      const finalPerNight = effectiveMode === 'total'
+        ? (nights > 0 ? round2(Number(effectiveTotalInput) / nights) : Number(formData.pricePerNight) || 0)
+        : Number(formData.pricePerNight) || 0;
+
+      const payload = {
+        ...formData,
+        pricePerNight: finalPerNight,
+        totalPrice: finalTotal || undefined,
+        pricingMode: effectiveMode,
+        startDate: dateValue.startDate,
+        endDate: dateValue.endDate
+      };
+
       if (formData.id) {
-        await updateBooking({ ...formData, totalPrice, startDate: dateValue.startDate, endDate: dateValue.endDate, status: formData.status === 'pending' ? 'active' : formData.status });
+        await updateBooking({ ...payload, status: formData.status === 'pending' ? 'active' : formData.status });
       } else {
-        await addBooking({ ...formData, totalPrice, startDate: dateValue.startDate, endDate: dateValue.endDate });
+        await addBooking(payload);
       }
       toast.success('تم الحفظ بنجاح');
       onClose();
@@ -185,20 +292,8 @@ export default function BookingForm({ onClose, initialData }) {
 
         <form onSubmit={handleSubmit} className="p-4 md:p-8 flex-1 overflow-y-auto min-h-0">
           {error && (
-            <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-hairline-dark-soft flex justify-between items-center">
-              <span>{error}</span>
-              {error === 'لا يمكن الحجز لأن الوحدة تحتاج إلى تنظيف.' && (user?.role === 'admin' || user?.permissions?.canEdit) && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const apt = apartments.find(a => a.id === formData.apartmentId);
-                    if (apt) { await updateApartment({ ...apt, needsCleaning: false }); setError(''); }
-                  }}
-                  className="bg-ink hover:bg-primary-active text-white px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shrink-0 mr-3"
-                >
-                  تحديد كـ "تم التنظيف"
-                </button>
-              )}
+            <div className="mb-6 bg-surface-card dark:bg-surface-dark-elevated text-ink dark:text-white p-3 rounded-md text-sm font-medium border border-hairline dark:border-hairline-dark-soft">
+              {error}
             </div>
           )}
 
@@ -228,6 +323,21 @@ export default function BookingForm({ onClose, initialData }) {
             </div>
           )}
 
+          {/* Cleaning warn — advisory, doesn't block. Shows when the unit still needs cleaning. */}
+          {needsCleaningWarning && (
+            <div className="mb-6 border border-dashed border-amber-400/70 bg-amber-50 dark:bg-amber-500/10 rounded-md p-3 flex items-start gap-3">
+              <div className="p-1.5 rounded-md bg-amber-500/15 text-amber-600 shrink-0">
+                <AlertTriangle size={14} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">
+                  تنبيه: هذه الوحدة غير نظيفة حالياً
+                </p>
+                <p className="text-2xs text-muted-soft mt-1.5">يمكنك المتابعة بالحجز، لكن تأكّد من تنظيف الوحدة قبل وصول النزيل.</p>
+              </div>
+            </div>
+          )}
+
           {/* Dates */}
           <div className="mb-8">
             <label className={eyebrow}>فترة الإقامة</label>
@@ -252,7 +362,7 @@ export default function BookingForm({ onClose, initialData }) {
               <div className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-4 max-w-sm mx-auto">
                 <DatePickerCal
                   value={dateValue}
-                  onChange={(v) => { setDateValue(v); if (v.startDate && v.endDate) setShowCal(false); }}
+                  onChange={(v) => { setDateValue(v); setTotalManuallyEdited(false); if (v.startDate && v.endDate) setShowCal(false); }}
                 />
               </div>
             )}
@@ -317,6 +427,8 @@ export default function BookingForm({ onClose, initialData }) {
                   const selectedAptId = e.target.value;
                   // Changing unit resets the manual-override flag — a new unit is a fresh price context.
                   setPriceManuallyEdited(false);
+                  setCustomAddedRate(null);
+                  setTotalManuallyEdited(false);
                   const apt = apartments.find(a => a.id === selectedAptId);
                   setFormData({ ...formData, apartmentId: selectedAptId, pricePerNight: apt ? apt.basePrice : formData.pricePerNight });
                 }}>
@@ -324,36 +436,89 @@ export default function BookingForm({ onClose, initialData }) {
                   {apartments.map(a => <option key={a.id} value={a.id}>{a.name} ({a.basePrice} ر.س)</option>)}
                 </select>
               </div>
+              {/* Pricing mode — do they think in nightly rate or grand total? */}
+              <div>
+                <label className={eyebrow}>طريقة التسعير</label>
+                <div className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-surface-card dark:bg-surface-dark-elevated">
+                  <button
+                    type="button"
+                    onClick={switchToPerNight}
+                    disabled={!!extension}
+                    title={extension ? 'لا يمكن استخدام تسعير الليلة عند تمديد الإقامة' : undefined}
+                    className={`flex items-center justify-center gap-1.5 h-9 rounded-md text-xs transition-colors ${
+                      effectiveMode === 'per_night'
+                        ? 'bg-canvas dark:bg-surface-dark text-ink dark:text-white font-semibold shadow-sm'
+                        : 'text-muted dark:text-body-dark hover:text-ink dark:hover:text-white'
+                    } ${extension ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  >
+                    <Coins size={14} /> سعر الليلة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={switchToTotal}
+                    className={`flex items-center justify-center gap-1.5 h-9 rounded-md text-xs transition-colors ${
+                      effectiveMode === 'total'
+                        ? 'bg-canvas dark:bg-surface-dark text-ink dark:text-white font-semibold shadow-sm'
+                        : 'text-muted dark:text-body-dark hover:text-ink dark:hover:text-white'
+                    }`}
+                  >
+                    <Banknote size={14} /> الإجمالي
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={eyebrow}>
-                    السعر / الليلة
-                    {hasSeasonalPricing && !priceManuallyEdited && (
-                      <span className="text-accent-strong mr-1 normal-case">· متوسط موسمي</span>
-                    )}
-                  </label>
-                  <div className="relative">
-                    <input
-                      required
-                      type="number"
-                      placeholder="0"
-                      className="input-field font-semibold pl-12"
-                      value={formData.pricePerNight}
-                      onChange={(e) => {
-                        setPriceManuallyEdited(true);
-                        setFormData({ ...formData, pricePerNight: e.target.value });
-                      }}
-                    />
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-soft font-medium pointer-events-none">ر.س</span>
-                  </div>
-                  {hasSeasonalPricing && priceManuallyEdited && (
-                    <button
-                      type="button"
-                      onClick={() => setPriceManuallyEdited(false)}
-                      className="text-2xs text-accent-strong hover:underline mt-1 font-semibold"
-                    >
-                      إعادة حساب السعر تلقائياً حسب القواعد الموسمية
-                    </button>
+                  {effectiveMode === 'per_night' ? (
+                    <>
+                      <label className={eyebrow}>
+                        السعر / الليلة
+                        {hasSeasonalPricing && !priceManuallyEdited && (
+                          <span className="text-accent-strong mr-1 normal-case">· متوسط موسمي</span>
+                        )}
+                      </label>
+                      <div className="relative">
+                        <input
+                          required
+                          type="number"
+                          placeholder="0"
+                          className="input-field font-semibold pl-12"
+                          value={formData.pricePerNight}
+                          onChange={(e) => {
+                            setPriceManuallyEdited(true);
+                            setFormData({ ...formData, pricePerNight: e.target.value });
+                          }}
+                        />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-soft font-medium pointer-events-none">ر.س</span>
+                      </div>
+                      {hasSeasonalPricing && priceManuallyEdited && (
+                        <button
+                          type="button"
+                          onClick={() => setPriceManuallyEdited(false)}
+                          className="text-2xs text-accent-strong hover:underline mt-1 font-semibold"
+                        >
+                          إعادة حساب السعر تلقائياً حسب القواعد الموسمية
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <label className={eyebrow}>
+                        الإجمالي
+                        {extension && <span className="text-accent-strong mr-1 normal-case">· بعد التمديد</span>}
+                      </label>
+                      <div className="relative">
+                        <input
+                          required
+                          type="number"
+                          placeholder="0"
+                          className="input-field font-semibold pl-12"
+                          value={effectiveTotalInput}
+                          onChange={(e) => handleTotalChange(e.target.value)}
+                        />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-soft font-medium pointer-events-none">ر.س</span>
+                      </div>
+                    </>
                   )}
                 </div>
                 <div>
@@ -364,8 +529,8 @@ export default function BookingForm({ onClose, initialData }) {
                 </div>
               </div>
 
-              {/* Seasonal pricing breakdown — shows which rules applied */}
-              {hasSeasonalPricing && !priceManuallyEdited && breakdownSummary.length > 0 && (
+              {/* Seasonal pricing breakdown — only meaningful when pricing per night */}
+              {effectiveMode === 'per_night' && hasSeasonalPricing && !priceManuallyEdited && breakdownSummary.length > 0 && (
                 <div className="border border-dashed border-accent/40 rounded-md p-3 bg-accent-soft/40">
                   <div className="flex items-center gap-1.5 mb-2">
                     <TagsIcon size={11} className="text-accent-strong" />
@@ -393,13 +558,68 @@ export default function BookingForm({ onClose, initialData }) {
                 </div>
               )}
 
-              {/* Running total */}
+              {/* Extension summary — old nights stay priced, new nights at today's rate */}
+              {extension && (
+                <div className="rounded-lg border border-accent/40 bg-accent-soft/50 overflow-hidden">
+                  <div className="flex items-center gap-1.5 px-3 py-2 border-b border-accent/20 bg-accent/5">
+                    <CalendarClock size={13} className="text-accent-strong" />
+                    <span className="text-2xs font-semibold text-accent-strong uppercase tracking-wider">تمديد الإقامة</span>
+                    <span className="mr-auto text-2xs font-bold text-accent-strong">+{extension.addedNights} ليالٍ</span>
+                  </div>
+                  <div className="p-3 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-body dark:text-body-dark">الليالي الأصلية ({extension.originalNights})</span>
+                      <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>{money(extension.preservedTotal)} ر.س</span>
+                    </div>
+
+                    <div className="text-xs">
+                      <span className="text-body dark:text-body-dark">الليالي الإضافية ({extension.addedNights}) · سعر قابل للتعديل</span>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <div className="relative w-24 shrink-0">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={customAddedRate != null ? customAddedRate : String(round2(extension.defaultRate))}
+                            onChange={(e) => { setCustomAddedRate(e.target.value); setTotalManuallyEdited(false); }}
+                            className="input-field !py-1.5 !pl-10 !pr-2 !text-xs font-semibold text-left"
+                            style={{ fontVariantNumeric: 'tabular-nums' }}
+                          />
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-2xs text-muted-soft pointer-events-none">ر.س</span>
+                        </div>
+                        <span className="text-muted-soft shrink-0">× {extension.addedNights}</span>
+                        <span className="font-semibold text-ink dark:text-white mr-auto" style={{ fontVariantNumeric: 'tabular-nums' }}>{money(effectiveAddedCost)} ر.س</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm font-bold border-t border-accent/20 pt-2 mt-1">
+                      <span className="text-ink dark:text-white flex items-center gap-1.5">
+                        الإجمالي الجديد
+                        {totalManuallyEdited && (
+                          <span className="text-2xs font-semibold text-accent-strong bg-accent/10 rounded px-1.5 py-0.5">معدّل يدوياً</span>
+                        )}
+                      </span>
+                      <span className="text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>{money(Number(effectiveTotalInput) || 0)} ر.س</span>
+                    </div>
+                    <p className="text-2xs text-muted-soft leading-relaxed pt-1.5">
+                      الأسعار تتغيّر حسب الموسم والمدة: الليالي المحجوزة مسبقاً تحتفظ بسعرها الأصلي، والليالي الإضافية تُحسب بسعر اليوم ويمكنك تعديل سعرها.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Derived readout — the number the operator did NOT type */}
               <div className="flex items-center justify-between bg-surface-card dark:bg-surface-dark-elevated rounded-lg px-4 py-3 mt-2">
                 <span className="text-sm text-muted dark:text-body-dark">
-                  الإجمالي التقديري{nights > 0 ? ` (${nights} ليالٍ)` : ''}
+                  {effectiveMode === 'per_night'
+                    ? `الإجمالي التقديري${nights > 0 ? ` (${nights} ليالٍ)` : ''}`
+                    : 'السعر لكل ليلة'}
                 </span>
                 <span className="text-lg font-bold tracking-tight text-accent" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {total ? total.toLocaleString() : '—'} <span className="text-xs text-muted-soft font-semibold">ر.س</span>
+                  {effectiveMode === 'per_night'
+                    ? (displayTotal ? money(displayTotal) : '—')
+                    : (displayPerNight ? money(displayPerNight) : '—')}
+                  <span className="text-xs text-muted-soft font-semibold"> ر.س</span>
                 </span>
               </div>
             </div>

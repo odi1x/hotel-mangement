@@ -1,10 +1,14 @@
 import {  useState, useMemo , useRef, useLayoutEffect, useEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare, Filter, Check } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare, Filter, Check, Wallet, MessageCircle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { sanitizePhone } from '../../lib/phoneUtils';
+import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
+import { buildWhatsAppUrl } from '../../lib/documentShare';
+import PaymentStatusBadge from '../ui/PaymentStatusBadge';
+import PaymentLedgerModal from '../ui/PaymentLedgerModal';
 
 // Curated soft per-unit palette — muted pastels, calm not neon.
 // Green is deliberately excluded so it never collides with the emerald
@@ -145,6 +149,7 @@ export default function AvailabilityView({ openBookingForm }) {
   // Modals state
   const [selectedDayBookings, setSelectedDayBookings] = useState(null); // { date, bookings }
   const [selectedBookingDetails, setSelectedBookingDetails] = useState(null);
+  const [ledgerBooking, setLedgerBooking] = useState(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -293,6 +298,22 @@ export default function AvailabilityView({ openBookingForm }) {
   const skeletonUnitCol = isMobileView ? 100 : 150;
   const skeletonDays = [0, 1, 2, 3, 4, 5, 6];
   const skeletonUnitRows = [0, 1, 2, 3, 4, 5];
+
+  const canEdit = user?.role === 'admin' || user?.permissions?.canEdit;
+  const shortDate = (d) => new Date(d).toLocaleDateString('ar-EG', {
+    day: 'numeric', month: 'short', year: 'numeric'
+  });
+
+  // Resolve the LIVE booking from state (not the stale object captured at
+  // click time) so totals/badge refresh the instant a payment is recorded.
+  const detailBooking = selectedBookingDetails
+    ? (bookings.find(b => b.id === selectedBookingDetails.id) || selectedBookingDetails)
+    : null;
+  const detailApartment = detailBooking
+    ? apartments.find(a => a.id === detailBooking.apartmentId)
+    : null;
+  const detailTotals = detailBooking ? computeBookingTotals(detailBooking) : null;
+  const waUrl = detailBooking ? buildWhatsAppUrl(detailBooking.phone) : '';
 
   return (
     <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
@@ -488,7 +509,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 const row = r + 2;
                 const pal = UNIT_PALETTE[(unitIndex[apt.id] ?? 0) % UNIT_PALETTE.length];
                 const unitColor = darkMode ? pal.dtx : pal.tx;
-                const aptBookings = bookings.filter(b => b.apartmentId === apt.id);
+                const aptBookings = bookings.filter(b => b.apartmentId === apt.id && b.status !== 'cancelled');
                 return (
                   <Fragment key={apt.id}>
                     {/* sticky unit label */}
@@ -641,91 +662,163 @@ export default function AvailabilityView({ openBookingForm }) {
       , document.body)}
 
       {/* Second Modal: Specific Booking Details */}
-      {selectedBookingDetails && createPortal(
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active>
-          <div className="bg-canvas dark:bg-surface-dark rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center">
-              <h2 className="text-xl font-semibold tracking-tight text-ink dark:text-white">تفاصيل الحجز</h2>
-              <button onClick={() => setSelectedBookingDetails(null)} className="icon-action">
+      {detailBooking && createPortal(
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex z-50 items-end p-0 md:items-center md:justify-center md:p-4" data-modal-active dir="rtl">
+          <div className="bg-canvas dark:bg-surface-dark rounded-t-2xl md:rounded-xl w-full max-w-md shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden flex flex-col max-h-[92vh] anim-sheet">
+
+            {/* Header */}
+            <div className="px-4 py-3 md:px-5 md:py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
+              <h2 className="text-base md:text-xl font-semibold tracking-tight text-ink dark:text-white">تفاصيل الحجز</h2>
+              <button onClick={() => setSelectedBookingDetails(null)} className="icon-action shrink-0" aria-label="إغلاق">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="flex items-center space-x-reverse space-x-3 bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
-                <Home size={24} className="text-ink dark:text-white" />
-                <div>
-                  <div className="text-xs text-muted dark:text-body-dark">الوحدة المحجوزة</div>
-                  <div className="font-semibold text-ink dark:text-white">
-                    {apartments.find(a => a.id === selectedBookingDetails.apartmentId)?.name || 'غير معروف'}
+            {/* Scrollable body */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 space-y-3 md:space-y-4">
+
+              {/* Unit & tenant */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 bg-surface-card dark:bg-surface-dark-elevated rounded-xl">
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center gap-1 mb-1"><Home size={12} /> الوحدة المحجوزة</div>
+                  <div className="font-semibold text-ink dark:text-white truncate">
+                    {detailApartment?.name || 'غير معروف'}
+                  </div>
+                </div>
+                <div className="p-3 bg-surface-card dark:bg-surface-dark-elevated rounded-xl">
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center gap-1 mb-1"><User size={12} /> اسم النزيل</div>
+                  <div className="font-semibold text-ink dark:text-white truncate">{detailBooking.residentName}</div>
+                </div>
+
+                {/* Phone + quick comms */}
+                <div className="p-3 bg-surface-card dark:bg-surface-dark-elevated rounded-xl flex items-center justify-between gap-2 sm:col-span-2">
+                  <div className="min-w-0 flex items-center gap-1.5">
+                    <Phone size={13} className="text-muted dark:text-body-dark shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs text-muted dark:text-body-dark">رقم التواصل</div>
+                      <div className="font-semibold text-ink dark:text-white truncate" dir="ltr">{sanitizePhone(detailBooking.phone)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {waUrl && (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-accent-soft text-accent-strong text-xs font-semibold hover:bg-accent/15 transition-colors"
+                      >
+                        <MessageCircle size={14} />
+                        <span>واتساب</span>
+                      </a>
+                    )}
+                    <a
+                      href={`tel:${sanitizePhone(detailBooking.phone).replace(/\s/g, '')}`}
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-surface-soft dark:bg-surface-dark-elevated text-body dark:text-body-dark hover:text-ink dark:hover:text-white transition-colors"
+                      aria-label="اتصال"
+                    >
+                      <Phone size={15} />
+                    </a>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-surface-card dark:bg-surface-dark-elevated p-3 rounded-lg">
-                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><User size={12} className="ml-1"/> اسم النزيل</div>
-                  <div className="font-semibold text-sm text-ink dark:text-white">{selectedBookingDetails.residentName}</div>
+              {/* Dates */}
+              <div className="p-3 md:p-4 bg-surface-card dark:bg-surface-dark-elevated rounded-xl flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs text-muted dark:text-body-dark mb-0.5">تاريخ الوصول</div>
+                  <div className="font-semibold text-sm text-ink dark:text-white whitespace-nowrap">{shortDate(detailBooking.startDate)}</div>
                 </div>
-                <div className="bg-surface-card dark:bg-surface-dark-elevated p-3 rounded-lg">
-                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><Phone size={12} className="ml-1"/> رقم التواصل</div>
-                  <div className="font-semibold text-sm text-ink dark:text-white" dir="ltr">{sanitizePhone(selectedBookingDetails.phone)}</div>
-                </div>
-              </div>
-
-              <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
-                <div className="text-xs text-muted dark:text-body-dark flex items-center mb-2"><Calendar size={12} className="ml-1"/> فترة الحجز</div>
-                <div className="flex justify-between items-center text-sm font-semibold text-ink dark:text-white">
-                  <span>{new Date(selectedBookingDetails.startDate).toLocaleDateString('ar-EG')}</span>
-                  <span className="text-muted-soft">إلى</span>
-                  <span>{new Date(selectedBookingDetails.endDate).toLocaleDateString('ar-EG')}</span>
+                <span className="badge-pill text-2xs font-semibold shrink-0">{detailTotals.nights} ليالٍ</span>
+                <div className="text-left min-w-0">
+                  <div className="text-xs text-muted dark:text-body-dark mb-0.5">تاريخ المغادرة</div>
+                  <div className="font-semibold text-sm text-ink dark:text-white whitespace-nowrap">{shortDate(detailBooking.endDate)}</div>
                 </div>
               </div>
 
+              {/* Financial summary */}
               {canSeePrices && (
-                <div className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg">
-                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><Receipt size={12} className="ml-1"/> السعر لليلة</div>
-                  <div className="font-semibold text-lg text-ink dark:text-white">{selectedBookingDetails.pricePerNight} ر.س</div>
+                <div className="p-4 bg-surface-soft dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-xl space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-bold text-ink dark:text-white flex items-center gap-1"><Receipt size={13} /> الملخّص المالي</span>
+                    <PaymentStatusBadge status={detailTotals.status} />
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs text-muted dark:text-body-dark">
+                    <span>السعر لليلة</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {formatSAR(detailBooking.pricePerNight)} ر.س × {detailTotals.nights} ليالٍ
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-muted dark:text-body-dark">
+                    <span>إجمالي المبلغ</span>
+                    <span className="font-semibold text-ink dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatSAR(detailTotals.totalDue)} ر.س</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-muted dark:text-body-dark">
+                    <span>المبلغ المدفوع</span>
+                    <span className="font-semibold text-accent-strong" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatSAR(detailTotals.totalReceived)} ر.س</span>
+                  </div>
+
+                  <div className="border-t border-hairline-soft dark:border-hairline-dark mt-1 pt-2 flex justify-between items-center">
+                    <span className="text-sm font-bold text-ink dark:text-white">المتبقّي للإيفاء</span>
+                    <span
+                      className={`text-base font-bold ${detailTotals.balanceDue > 0.01 ? 'text-rose-600 dark:text-rose-400' : 'text-accent-strong'}`}
+                      style={{ fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      {formatSAR(detailTotals.balanceDue)} ر.س
+                    </span>
+                  </div>
                 </div>
               )}
 
-              {selectedBookingDetails.customerRequest && selectedBookingDetails.customerRequest.trim() !== '' && (
-                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-lg border border-hairline dark:border-hairline-dark-soft">
-                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> طلب النزيل الإضافي</div>
-                  <div className="text-sm font-semibold text-ink dark:text-white">{selectedBookingDetails.customerRequest}</div>
+              {/* Customer request */}
+              {detailBooking.customerRequest && detailBooking.customerRequest.trim() !== '' && (
+                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-xl border border-hairline dark:border-hairline-dark-soft">
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center gap-1 mb-1"><MessageSquare size={12} /> طلب النزيل الإضافي</div>
+                  <div className="text-sm font-semibold text-ink dark:text-white">{detailBooking.customerRequest}</div>
                 </div>
               )}
 
-              {selectedBookingDetails.notes && selectedBookingDetails.notes.trim() !== '' && (
-                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-lg border border-hairline dark:border-hairline-dark-soft">
-                  <div className="text-xs text-muted dark:text-body-dark flex items-center mb-1"><MessageSquare size={12} className="ml-1"/> ملاحظات داخلية (للموظفين)</div>
-                  <div className="text-sm font-medium text-body dark:text-body-dark">{selectedBookingDetails.notes}</div>
+              {/* Internal notes */}
+              {detailBooking.notes && detailBooking.notes.trim() !== '' && (
+                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-xl border border-hairline dark:border-hairline-dark-soft">
+                  <div className="text-xs text-muted dark:text-body-dark flex items-center gap-1 mb-1"><MessageSquare size={12} /> ملاحظات داخلية (للموظفين)</div>
+                  <div className="text-sm font-medium text-body dark:text-body-dark">{detailBooking.notes}</div>
                 </div>
               )}
 
-              {selectedBookingDetails.creatorName && (
-                <div className="text-xs text-muted dark:text-body-dark text-center">
-                  تم إضافة الحجز بواسطة: <span className="font-semibold text-ink dark:text-white">{selectedBookingDetails.creatorName}</span>
-                </div>
+              {detailBooking.creatorName && (
+                <p className="text-xs text-center text-muted-soft dark:text-body-dark">
+                  تم إضافة الحجز بواسطة: <span className="font-semibold text-ink dark:text-white">{detailBooking.creatorName}</span>
+                </p>
               )}
             </div>
 
-            <div className={`p-4 border-t border-hairline-soft dark:border-hairline-dark grid gap-3 ${user?.role === 'admin' || user?.permissions?.canEdit ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {(user?.role === 'admin' || user?.permissions?.canEdit) && (
+            {/* Actions footer — 44px tap targets, stacked on mobile */}
+            <div className="p-4 border-t border-hairline-soft dark:border-hairline-dark flex flex-col sm:flex-row gap-2 shrink-0">
+              {canSeePrices && (
+                <button
+                  onClick={() => setLedgerBooking(detailBooking)}
+                  className="btn-accent h-11 w-full sm:flex-1 text-sm"
+                >
+                  <Wallet size={16} />
+                  <span>تسجيل دفعة</span>
+                </button>
+              )}
+              {canEdit && (
                 <button
                   onClick={() => {
-                    const bookingToEdit = selectedBookingDetails;
+                    const bookingToEdit = detailBooking;
                     setSelectedBookingDetails(null);
                     openBookingForm(bookingToEdit);
                   }}
-                  className="btn-primary w-full text-sm h-10"
+                  className="btn-primary h-11 w-full sm:w-auto px-5 text-sm"
                 >
                   تعديل الحجز
                 </button>
               )}
               <button
                 onClick={() => setSelectedBookingDetails(null)}
-                className="btn-secondary w-full text-sm h-10"
+                className="btn-secondary h-11 w-full sm:w-auto px-5 text-sm"
               >
                 إغلاق
               </button>
@@ -733,6 +826,16 @@ export default function AvailabilityView({ openBookingForm }) {
           </div>
         </div>
       , document.body)}
+
+      {/* Payment ledger — z-[80] layers above the details modal and refreshes
+          its financial summary live via the state-resolved booking. */}
+      {ledgerBooking && (
+        <PaymentLedgerModal
+          booking={bookings.find(b => b.id === ledgerBooking.id) || ledgerBooking}
+          apartment={apartments.find(a => a.id === ledgerBooking.apartmentId)}
+          onClose={() => setLedgerBooking(null)}
+        />
+      )}
     </div>
   );
 }
