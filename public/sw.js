@@ -1,5 +1,6 @@
 /* global self, clients */
-const ICON = '/favicon.svg';
+const ICON = '/notification-icon.png';
+const BADGE = '/notification-badge.png';
 
 self.addEventListener('push', (event) => {
   let data;
@@ -12,8 +13,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'تنبيه جديد';
   const options = {
     body: data.body || '',
-    icon: ICON,
-    badge: ICON,
+    icon: data.icon || ICON,
+    badge: data.badge || BADGE,
     dir: 'rtl',
     lang: 'ar',
     data: {

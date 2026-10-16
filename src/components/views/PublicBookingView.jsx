@@ -72,7 +72,7 @@ export default function PublicBookingView() {
 
     const conflict = bookings.some(b => {
       if (b.apartmentId !== apt.id) return false;
-      if (b.status === 'cancelled') return false;
+      if (b.status === 'cancelled' || b.status === 'checked_out_early') return false;
       const bStart = new Date(b.startDate).setHours(0,0,0,0);
       const bEnd = new Date(b.endDate).setHours(0,0,0,0);
       return (reqStart < bEnd && reqEnd > bStart);

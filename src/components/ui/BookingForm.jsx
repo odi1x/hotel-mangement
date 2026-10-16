@@ -104,6 +104,8 @@ export default function BookingForm({ onClose, initialData }) {
   const isOverlapping = (start, end, aptId) => {
     return bookings.some(b => {
       if (b.apartmentId !== aptId) return false;
+      // Cancelled / early-checkout bookings don't hold the dates.
+      if (b.status === 'cancelled' || b.status === 'checked_out_early') return false;
       if (formData.id && b.id === formData.id) return false;
       const bStart = new Date(b.startDate).setHours(0, 0, 0, 0);
       const bEnd = new Date(b.endDate).setHours(0, 0, 0, 0);
