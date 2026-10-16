@@ -207,6 +207,8 @@ export default function ApartmentsView({ setView }) {
     const today = new Date().setHours(0,0,0,0);
     return bookings.some(b => {
       if (b.apartmentId !== apartmentId) return false;
+      // Cancelled / early-checkout bookings don't occupy the unit.
+      if (b.status === 'cancelled' || b.status === 'checked_out_early') return false;
       const start = new Date(b.startDate).setHours(0,0,0,0);
       const end = new Date(b.endDate).setHours(0,0,0,0);
       return today >= start && today <= end;
@@ -217,6 +219,7 @@ export default function ApartmentsView({ setView }) {
     const lastCleaned = new Date(apt.lastCleanedAt || 0).setHours(0,0,0,0);
     return bookings.some(b => {
       if (b.apartmentId !== apt.id) return false;
+      if (b.status === 'cancelled') return false;
       const end = new Date(b.endDate).setHours(0,0,0,0);
       return today > end && end >= lastCleaned;
     });

@@ -509,7 +509,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 const row = r + 2;
                 const pal = UNIT_PALETTE[(unitIndex[apt.id] ?? 0) % UNIT_PALETTE.length];
                 const unitColor = darkMode ? pal.dtx : pal.tx;
-                const aptBookings = bookings.filter(b => b.apartmentId === apt.id && b.status !== 'cancelled');
+                const aptBookings = bookings.filter(b => b.apartmentId === apt.id && b.status !== 'cancelled' && b.status !== 'checked_out_early');
                 return (
                   <Fragment key={apt.id}>
                     {/* sticky unit label */}

@@ -18,6 +18,8 @@ export default function BookByDateModal({ onClose, onSelectApartment }) {
     const end = new Date(dateValue.endDate).setHours(0, 0, 0, 0);
     for (const booking of bookings) {
       if (booking.apartmentId !== apartmentId) continue;
+      // Cancelled / early-checkout bookings free the dates.
+      if (booking.status === 'cancelled' || booking.status === 'checked_out_early') continue;
       const bStart = new Date(booking.startDate).setHours(0, 0, 0, 0);
       const bEnd = new Date(booking.endDate).setHours(0, 0, 0, 0);
       if (start < bEnd && end > bStart) return false;
