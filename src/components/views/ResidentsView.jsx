@@ -6,6 +6,8 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
 import EmptyState from '../ui/EmptyState';
+import ResidentFilters from '../ui/ResidentFilters';
+import { describeFilters } from '../../lib/residentFilters';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { fillTemplate, buildWhatsAppUrl } from '../../lib/documentShare';
@@ -19,7 +21,28 @@ export default function ResidentsView({ openBookingForm }) {
   const [printSelectorBooking, setPrintSelectorBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 18;
+  const ITEMS_PER_PAGE = 30;
+  const [filters, setFilters] = useState({ status: 'all', apartmentId: 'all', payment: 'all' });
+  const showPayment = user?.role === 'admin' || !!user?.permissions?.canViewBalances;
+  const activeFilterChips = describeFilters(filters, apartments, showPayment);
+
+  const handleFilterChange = (partial) => {
+    setFilters((f) => {
+      const changed = Object.keys(partial).some((k) => f[k] !== partial[k]);
+      return changed ? { ...f, ...partial } : f;
+    });
+    setCurrentPage(1);
+  };
+  const clearFilter = (key) => {
+    setFilters((f) => (f[key] === 'all' ? f : { ...f, [key]: 'all' }));
+    setCurrentPage(1);
+  };
+  const resetFilters = () => {
+    setFilters((f) => (f.status === 'all' && f.apartmentId === 'all' && f.payment === 'all'
+      ? f
+      : { status: 'all', apartmentId: 'all', payment: 'all' }));
+    setCurrentPage(1);
+  };
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteContent, setNoteContent] = useState('');
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -51,7 +74,11 @@ export default function ResidentsView({ openBookingForm }) {
           params: {
             page: currentPage,
             limit: ITEMS_PER_PAGE,
-            search: searchQuery.trim() || undefined
+            search: searchQuery.trim() || undefined,
+            status: filters.status !== 'all' ? filters.status : undefined,
+            apartmentId: filters.apartmentId !== 'all' ? filters.apartmentId : undefined,
+            payment: filters.payment !== 'all' ? filters.payment : undefined,
+            today: new Date().toLocaleDateString('en-CA')
           }
         });
         if (response.data && response.data.metadata) {
@@ -77,7 +104,7 @@ export default function ResidentsView({ openBookingForm }) {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [currentPage, searchQuery, bookings]); // Depend on bookings to re-fetch when global context bookings update (like after adding/deleting)
+  }, [currentPage, searchQuery, filters, bookings]); // Depend on bookings to re-fetch when global context bookings update (like after adding/deleting)
 
 
   // Close the row menu when clicking anywhere outside the open menu
@@ -292,18 +319,49 @@ export default function ResidentsView({ openBookingForm }) {
   return (
     <>
       <div className="flex-1 bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col min-h-0">
-        <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col md:flex-row md:justify-between md:items-center gap-3">
-          <h3 className="font-semibold tracking-tight text-ink dark:text-white shrink-0">سجلات الحجز الكاملة</h3>
-          <div className="relative flex-1 md:w-64 md:flex-none">
-            <input
-              type="text"
-              placeholder="البحث بالاسم أو رقم الجوال..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              className="input-field pl-10 pr-4 py-2 w-full"
-            />
-            <Search size={16} className="absolute left-3 top-2.5 text-muted-soft" />
+        <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col gap-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <h3 className="font-semibold tracking-tight text-ink dark:text-white shrink-0">سجلات الحجز الكاملة</h3>
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 md:flex-1 md:max-w-md">
+              <div className="relative flex-1 min-w-0">
+                <input
+                  type="text"
+                  placeholder="البحث بالاسم أو رقم الجوال..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="input-field pl-10 pr-4 w-full h-11"
+                />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-soft pointer-events-none" />
+              </div>
+              <ResidentFilters
+                filters={filters}
+                onChange={handleFilterChange}
+                onReset={resetFilters}
+                apartments={apartments}
+                showPayment={showPayment}
+              />
+            </div>
           </div>
+          {activeFilterChips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {activeFilterChips.map((chip) => (
+                <button
+                  key={chip.key}
+                  onClick={() => clearFilter(chip.key)}
+                  className="inline-flex items-center gap-1 rounded-full bg-surface-soft dark:bg-surface-dark-elevated text-body dark:text-body-dark text-xs font-semibold pl-2.5 pr-1.5 py-1 hover:bg-surface-strong/60 dark:hover:bg-hairline-dark transition-colors"
+                >
+                  {chip.label}
+                  <X size={12} className="opacity-70" />
+                </button>
+              ))}
+              <button
+                onClick={resetFilters}
+                className="text-xs font-semibold text-muted hover:text-ink dark:hover:text-white px-1.5 transition-colors"
+              >
+                مسح الكل
+              </button>
+            </div>
+          )}
         </div>
         <div className="overflow-x-auto overflow-y-auto flex-1 h-full min-h-0 hidden md:block">
           <table className="w-full text-right">

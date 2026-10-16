@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const { page, limit, search, excludeCancelled } = req.query;
+      const { page, limit, search, excludeCancelled, status, apartmentId, payment, today } = req.query;
 
       let whereClause = { userId: targetUserId };
 
@@ -25,51 +25,105 @@ export default async function handler(req, res) {
       }
 
       if (search) {
-        whereClause = {
-          ...whereClause,
-          OR: [
-            { residentName: { contains: search, mode: 'insensitive' } },
-            { phone: { contains: search, mode: 'insensitive' } }
-          ]
-        };
+        whereClause.OR = [
+          { residentName: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search, mode: 'insensitive' } }
+        ];
+      }
+
+      if (apartmentId) {
+        whereClause.apartmentId = apartmentId;
+      }
+
+      // Lifecycle filter. Date-based buckets ("current"/"upcoming"/"departed")
+      // use the client's LOCAL day (sent as `today`) so the bucket matches
+      // what the user actually sees in their timezone.
+      const NON_LIVE = ['checked_out_early', 'cancelled', 'pending'];
+      if (status && status !== 'all') {
+        const dayStr = (typeof today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(today))
+          ? today
+          : new Date().toISOString().slice(0, 10);
+        const dayStart = new Date(`${dayStr}T00:00:00.000Z`);
+        const dayEnd = new Date(`${dayStr}T23:59:59.999Z`);
+
+        if (status === 'current') {
+          whereClause.status = { notIn: NON_LIVE };
+          whereClause.startDate = { lte: dayEnd };
+          whereClause.endDate = { gte: dayStart };
+        } else if (status === 'upcoming') {
+          whereClause.status = { notIn: NON_LIVE };
+          whereClause.startDate = { gt: dayEnd };
+        } else if (status === 'departed') {
+          whereClause.status = { notIn: NON_LIVE };
+          whereClause.endDate = { lt: dayStart };
+        } else if (['early', 'cancelled', 'pending'].includes(status)) {
+          whereClause.status = { early: 'checked_out_early', cancelled: 'cancelled', pending: 'pending' }[status];
+        }
       }
 
       const paymentsInclude = {
         payments: { orderBy: { date: 'desc' }, select: { id: true, amount: true } }
       };
 
+      // Payment-status needs per-booking totals, which can't be expressed in a
+      // single Prisma where-clause — compute in memory, then paginate.
+      const payBucket = (b) => {
+        const s = new Date(b.startDate);
+        const e = new Date(b.endDate);
+        const nights = Math.ceil(Math.abs(e - s) / 86400000) || 1;
+        const due = b.totalPrice != null ? Number(b.totalPrice) : Number(b.pricePerNight) * nights;
+        const received = (b.payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
+        if (received === 0) return 'due';
+        if (received >= due - 0.01) return 'paid';
+        return 'partial';
+      };
+
       if (page && limit) {
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
 
-        const [bookings, totalCount] = await Promise.all([
-          prisma.booking.findMany({
+        let bookings;
+        let totalCount;
+        if (payment && payment !== 'all') {
+          const all = await prisma.booking.findMany({
             where: whereClause,
             orderBy: { startDate: 'desc' },
-            skip: (pageNum - 1) * limitNum,
-            take: limitNum,
             include: paymentsInclude
-          }),
-          prisma.booking.count({ where: whereClause })
-        ]);
+          });
+          const filtered = all.filter(b => payBucket(b) === payment);
+          totalCount = filtered.length;
+          bookings = filtered.slice((pageNum - 1) * limitNum, (pageNum - 1) * limitNum + limitNum);
+        } else {
+          [bookings, totalCount] = await Promise.all([
+            prisma.booking.findMany({
+              where: whereClause,
+              orderBy: { startDate: 'desc' },
+              skip: (pageNum - 1) * limitNum,
+              take: limitNum,
+              include: paymentsInclude
+            }),
+            prisma.booking.count({ where: whereClause })
+          ]);
+        }
 
         return res.status(200).json({
           bookings,
           metadata: {
             totalCount,
-            totalPages: Math.ceil(totalCount / limitNum),
+            totalPages: Math.max(1, Math.ceil(totalCount / limitNum)),
             currentPage: pageNum,
             limit: limitNum
           }
         });
       } else {
-        const bookings = await prisma.booking.findMany({
+        let bookings = await prisma.booking.findMany({
           where: whereClause,
           orderBy: { startDate: 'desc' },
-          include: {
-            payments: { orderBy: { date: 'desc' }, select: { id: true, amount: true } }
-          }
+          include: paymentsInclude
         });
+        if (payment && payment !== 'all') {
+          bookings = bookings.filter(b => payBucket(b) === payment);
+        }
         return res.status(200).json(bookings);
       }
     }
