@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
 import EmptyState from '../ui/EmptyState';
 import ResidentFilters from '../ui/ResidentFilters';
+import PaymentLedgerModal from '../ui/PaymentLedgerModal';
 import { describeFilters } from '../../lib/residentFilters';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
@@ -65,6 +66,7 @@ export default function ResidentsView({ openBookingForm }) {
   const [menuPos, setMenuPos] = useState(null);
   const menuRef = useRef(null);
   const [phoneActionBooking, setPhoneActionBooking] = useState(null);
+  const [ledgerBooking, setLedgerBooking] = useState(null);
 
   useEffect(() => {
     const fetchPaginatedBookings = async () => {
@@ -171,6 +173,15 @@ export default function ResidentsView({ openBookingForm }) {
           <Printer size={15} className="text-muted dark:text-body-dark" />
           طباعة العقد
         </button>
+        {showPayment && (
+          <button
+            onClick={() => { setLedgerBooking(booking); setMenuOpenFor(null); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink dark:text-white hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
+          >
+            <Wallet size={15} className="text-muted dark:text-body-dark" />
+            عرض كل المدفوعات
+          </button>
+        )}
         {(user?.role === 'admin' || user?.permissions?.canEdit) && (
           <button
             onClick={() => { openNoteModal(booking); setMenuOpenFor(null); }}
@@ -322,8 +333,8 @@ export default function ResidentsView({ openBookingForm }) {
         <div className="p-4 md:p-5 border-b border-hairline-soft dark:border-hairline-dark flex flex-col gap-3">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <h3 className="font-semibold tracking-tight text-ink dark:text-white shrink-0">سجلات الحجز الكاملة</h3>
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 md:flex-1 md:max-w-md">
-              <div className="relative flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 min-w-0 w-full md:w-auto md:flex-1 md:max-w-md md:justify-end">
+              <div className="relative flex-1 min-w-[150px]">
                 <input
                   type="text"
                   placeholder="البحث بالاسم أو رقم الجوال..."
@@ -1034,6 +1045,14 @@ export default function ResidentsView({ openBookingForm }) {
           </div>
         </div>
       , document.body)}
+
+      {ledgerBooking && (
+        <PaymentLedgerModal
+          booking={bookings.find(b => b.id === ledgerBooking.id) || ledgerBooking}
+          apartment={apartments.find(a => a.id === ledgerBooking.apartmentId)}
+          onClose={() => setLedgerBooking(null)}
+        />
+      )}
 
       {/* Print Options Modal */}
       {printSelectorBooking && createPortal(

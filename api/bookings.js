@@ -3,6 +3,15 @@ import { verifyToken, cors } from '../utils.js';
 import { notify, isLargeAmount } from './notify.js';
 import { createCleaningTaskForBooking } from './admin-resources.js';
 
+// Optional tenant identity fields must never be persisted as an empty string.
+// When the operator leaves them blank, store the literal string "none".
+// `undefined` is preserved so partial updates don't overwrite existing data.
+const optionalText = (value) => {
+  if (value === undefined) return undefined;
+  const trimmed = String(value).trim();
+  return trimmed === '' ? 'none' : trimmed;
+};
+
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -171,8 +180,8 @@ export default async function handler(req, res) {
           userId: targetUserId,
           apartmentId,
           residentName,
-          residentId,
-          phone,
+          residentId: optionalText(residentId),
+          phone: optionalText(phone),
           address,
           pricePerNight: parseFloat(pricePerNight),
           totalPrice: totalPrice !== undefined ? parseFloat(totalPrice) : null,
@@ -412,8 +421,8 @@ export default async function handler(req, res) {
         data: {
           apartmentId,
           residentName,
-          residentId,
-          phone,
+          residentId: optionalText(residentId),
+          phone: optionalText(phone),
           address,
           pricePerNight: parseFloat(pricePerNight),
           totalPrice: totalPrice !== undefined ? parseFloat(totalPrice) : null,
