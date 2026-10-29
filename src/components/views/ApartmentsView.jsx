@@ -123,7 +123,7 @@ export default function ApartmentsView({ setView }) {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('fileName', file.name);
-      fd.append('publicKey', import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY || 'public_dummy');
+      fd.append('publicKey', import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY || 'public_3kVK0taiC3rlUo0oMfV39qj9QAM=');
       fd.append('signature', signature);
       fd.append('expire', expire);
       fd.append('token', token);
