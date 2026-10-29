@@ -2,6 +2,7 @@ import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 import { notify, isLargeAmount } from './notify.js';
 import { createCleaningTaskForBooking } from './admin-resources.js';
+import { runArrivalDepartureReminders } from './daily-reminders.js';
 
 // Optional tenant identity fields must never be persisted as an empty string.
 // When the operator leaves them blank, store the literal string "none".
@@ -227,6 +228,16 @@ export default async function handler(req, res) {
           });
       }
 
+      // Same-day arrival/departure reminder. The 08:00 cron may be disabled
+      // or may already have run for today, so a booking that starts/ends
+      // today triggers its reminder right here. The engine is idempotent
+      // (day-scoped tags), so this never double-pushes.
+      try {
+        await runArrivalDepartureReminders({ tenantId: targetUserId });
+      } catch (e) {
+        console.error('Daily reminder check failed:', e);
+      }
+
       return res.status(201).json(booking);
     }
 
@@ -436,6 +447,21 @@ export default async function handler(req, res) {
         },
         include: { payments: true }
       });
+
+      // A rescheduled booking that now starts/ends today needs today's
+      // arrival/departure reminder (and a stale one may need to be dropped,
+      // but the reminder engine only ever sends for the current day).
+      const datesChanged =
+        existing.startDate.getTime() !== start.getTime() ||
+        existing.endDate.getTime() !== end.getTime();
+      if (datesChanged) {
+        try {
+          await runArrivalDepartureReminders({ tenantId: targetUserId });
+        } catch (e) {
+          console.error('Daily reminder check failed:', e);
+        }
+      }
+
       return res.status(200).json(booking);
     }
 

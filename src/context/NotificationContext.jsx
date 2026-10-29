@@ -49,6 +49,36 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     fetchNotifications();
     if (!token) return;
+    // Pull the daily arrival/departure reminders. The Vercel cron only runs
+    // once a day at 08:00 Riyadh and needs CRON_SECRET to authenticate at
+    // all — this trigger makes the reminders land whenever the app is
+    // opened, and catches bookings created after the cron already ran.
+    // Delivery is idempotent server-side (day-scoped tags), so repeating the
+    // call never pushes twice; the local guard just avoids needless requests.
+    const runDailySummary = async () => {
+      const now = Date.now();
+      const THROTTLE_MS = 15 * 60 * 1000;
+      try {
+        const last = Number(localStorage.getItem('daily-summary-last-run') || 0);
+        if (last && now - last < THROTTLE_MS) return;
+      } catch {
+        // storage unavailable (private mode) — just run the request
+      }
+      try {
+        const res = await axios.get(`${API_BASE_URL}/daily-summary`);
+        const sent = (res.data?.arrivals?.sent || 0) + (res.data?.departures?.sent || 0);
+        try {
+          localStorage.setItem('daily-summary-last-run', String(now));
+        } catch {
+          // ignore storage failures
+        }
+        if (sent > 0) fetchNotifications();
+      } catch (err) {
+        console.error('Daily summary trigger failed', err);
+      }
+    };
+
+    runDailySummary();
     // Polling every 60s (was 20s) — that's ~1,440 fetches/day per open tab
     // instead of ~4,320. Skip entirely when the tab is hidden: nobody's
     // looking, no point burning DB compute. focus/visibilitychange listeners
@@ -58,8 +88,8 @@ export const NotificationProvider = ({ children }) => {
       if (document.hidden) return;
       fetchNotifications();
     }, 60000);
-    const onFocus = () => fetchNotifications();
-    const onVisible = () => { if (!document.hidden) fetchNotifications(); };
+    const onFocus = () => { fetchNotifications(); runDailySummary(); };
+    const onVisible = () => { if (!document.hidden) { fetchNotifications(); runDailySummary(); } };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
     return () => {

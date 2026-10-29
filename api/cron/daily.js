@@ -2,20 +2,7 @@
 import prisma from '../../prisma.js';
 import { notify } from '../notify.js';
 import { calculateGrossRevenue, calculateExpenses, computePartnerCompensation } from '../admin-resources.js';
-
-const RIYADH_OFFSET_MIN = 180;
-
-function dayStartRiyadh(date) {
-  const shifted = new Date(date.getTime() + RIYADH_OFFSET_MIN * 60000);
-  const y = shifted.getUTCFullYear();
-  const m = shifted.getUTCMonth();
-  const d = shifted.getUTCDate();
-  return new Date(Date.UTC(y, m, d) - RIYADH_OFFSET_MIN * 60000);
-}
-
-function shiftDays(date, days) {
-  return new Date(date.getTime() + days * 86400000);
-}
+import { runArrivalDepartureReminders, dayStartRiyadh, shiftDays } from '../daily-reminders.js';
 
 function pruneOldNotifications() {
   const cutoff = new Date(Date.now() - 30 * 86400000);
@@ -229,7 +216,14 @@ async function generateMonthlyPartnerSettlements(today) {
 export default async function handler(req, res) {
   const secret = process.env.CRON_SECRET;
   const authHeader = req.headers.authorization;
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!secret) {
+    // Vercel only sends `Authorization: Bearer $CRON_SECRET` when the env
+    // var exists — without it every scheduled run is rejected and the daily
+    // digests silently never happen. Say so loudly in the logs.
+    console.error('CRON_SECRET is not configured on the server. Vercel cron requests cannot be authenticated — set CRON_SECRET in the project env vars.');
+    return res.status(500).json({ message: 'CRON_SECRET is not configured on the server' });
+  }
+  if (authHeader !== `Bearer ${secret}`) {
     return res.status(401).json({ message: 'Unauthorized cron request' });
   }
 
@@ -270,98 +264,18 @@ export default async function handler(req, res) {
       ? await run('partner-settlements', () => generateMonthlyPartnerSettlements(today))
       : { skip: true, reason: 'partners feature unused' };
 
-    const arrivals = await run('arrivals', () => prisma.booking.findMany({
-      where: {
-        status: 'active',
-        startDate: { gte: today, lt: tomorrow },
-      },
-      include: { apartment: { select: { userId: true, name: true } } },
-    })) || [];
-
-    for (const booking of arrivals) {
-      await run('arrival-notify', () => notify({
-        ownerId: booking.apartment.userId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'وصول متوقع اليوم',
-        message: `وصول متوقع اليوم: النزيل ${booking.residentName} في شقة ${booking.apartment.name}`,
-        type: 'booking',
-        link: 'availability',
-        source: 'cron',
-        tag: `arrival:${booking.id}:${today.toISOString().slice(0, 10)}`,
-        push: true,
-      }));
-    }
-
-    const departures = await run('departures', () => prisma.booking.findMany({
-      where: {
-        status: 'active',
-        endDate: { gte: today, lt: tomorrow },
-      },
-      include: { apartment: { select: { userId: true, name: true } } },
-    })) || [];
-
-    for (const booking of departures) {
-      await run('departure-notify', () => notify({
-        ownerId: booking.apartment.userId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'مغادرة متوقعة اليوم',
-        message: `مغادرة متوقعة اليوم: النزيل ${booking.residentName} من شقة ${booking.apartment.name}`,
-        type: 'booking',
-        link: 'availability',
-        source: 'cron',
-        tag: `departure:${booking.id}:${today.toISOString().slice(0, 10)}`,
-        push: true,
-      }));
-    }
-
-    // Day-before reminders: give staff a head start on tomorrow's arrivals and checkouts.
-    const arrivalsTomorrow = await run('arrivals-tomorrow', () => prisma.booking.findMany({
-      where: {
-        status: 'active',
-        startDate: { gte: tomorrow, lt: shiftDays(today, 2) },
-      },
-      include: { apartment: { select: { userId: true, name: true } } },
-    })) || [];
-
-    for (const booking of arrivalsTomorrow) {
-      await run('arrival-advance-notify', () => notify({
-        ownerId: booking.apartment.userId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'تذكير: وصول غداً',
-        message: `وصول النزيل ${booking.residentName} غداً في شقة ${booking.apartment.name}.`,
-        type: 'booking',
-        link: 'availability',
-        source: 'cron',
-        tag: `arrival-tomorrow:${booking.id}:${tomorrow.toISOString().slice(0, 10)}`,
-        push: true,
-      }));
-    }
-
-    const departuresTomorrow = await run('departures-tomorrow', () => prisma.booking.findMany({
-      where: {
-        status: 'active',
-        endDate: { gte: tomorrow, lt: shiftDays(today, 2) },
-      },
-      include: { apartment: { select: { userId: true, name: true } } },
-    })) || [];
-
-    for (const booking of departuresTomorrow) {
-      await run('departure-advance-notify', () => notify({
-        ownerId: booking.apartment.userId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'تذكير: مغادرة غداً',
-        message: `مغادرة النزيل ${booking.residentName} غداً من شقة ${booking.apartment.name} — جهّز الفاتورة والتسوية.`,
-        type: 'booking',
-        link: 'balances',
-        source: 'cron',
-        tag: `departure-tomorrow:${booking.id}:${tomorrow.toISOString().slice(0, 10)}`,
-        push: true,
-      }));
-    }
+    // Arrival / departure reminders (today + tomorrow). Shared with
+    // api/daily-summary.js so the in-app trigger and the cron can never
+    // disagree about who gets notified or how it is tagged.
+    const dailyReminders = await run('arrival-departure-reminders', () => runArrivalDepartureReminders({ today })) || {
+      arrivals: { found: 0, sent: 0, items: [] },
+      departures: { found: 0, sent: 0, items: [] },
+      arrivalsTomorrow: { found: 0, sent: 0, items: [] },
+      departuresTomorrow: { found: 0, sent: 0, items: [] },
+      skipped: 0,
+      summaries: 0,
+      failures: [],
+    };
 
     const licenses30Days = await run('licenses-30', () => prisma.license.findMany({
       where: {
@@ -431,10 +345,16 @@ export default async function handler(req, res) {
       timezone: 'Asia/Riyadh',
       window: { today: today.toISOString(), tomorrow: tomorrow.toISOString() },
       processed: {
-        arrivals: arrivals.length,
-        departures: departures.length,
-        arrivalsTomorrow: arrivalsTomorrow.length,
-        departuresTomorrow: departuresTomorrow.length,
+        arrivals: dailyReminders.arrivals.found,
+        departures: dailyReminders.departures.found,
+        arrivalsTomorrow: dailyReminders.arrivalsTomorrow.found,
+        departuresTomorrow: dailyReminders.departuresTomorrow.found,
+        arrivalsSent: dailyReminders.arrivals.sent,
+        departuresSent: dailyReminders.departures.sent,
+        arrivalsTomorrowSent: dailyReminders.arrivalsTomorrow.sent,
+        departuresTomorrowSent: dailyReminders.departuresTomorrow.sent,
+        remindersSkipped: dailyReminders.skipped,
+        reminderSummaries: dailyReminders.summaries,
         licenses30Days: licenses30Days.length,
         licenses7Days: licenses7Days.length,
         licensesExpired: expiredLicenses.length,
