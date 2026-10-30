@@ -1,21 +1,8 @@
-/* global process */
+﻿/* global process */
 import prisma from '../../prisma.js';
-import { notify } from '../notify.js';
+import { notify } from '../../notify.js';
 import { calculateGrossRevenue, calculateExpenses, computePartnerCompensation } from '../admin-resources.js';
-
-const RIYADH_OFFSET_MIN = 180;
-
-function dayStartRiyadh(date) {
-  const shifted = new Date(date.getTime() + RIYADH_OFFSET_MIN * 60000);
-  const y = shifted.getUTCFullYear();
-  const m = shifted.getUTCMonth();
-  const d = shifted.getUTCDate();
-  return new Date(Date.UTC(y, m, d) - RIYADH_OFFSET_MIN * 60000);
-}
-
-function shiftDays(date, days) {
-  return new Date(date.getTime() + days * 86400000);
-}
+import { runArrivalDepartureReminders, dayStartRiyadh, shiftDays } from '../../daily-reminders.js';
 
 function pruneOldNotifications() {
   const cutoff = new Date(Date.now() - 30 * 86400000);
@@ -43,8 +30,8 @@ async function overdueCleaningDigest(todayStart, ownerIds) {
       permission: 'canClean',
       ownerId: task.userId,
       includeOwner: true,
-      title: 'مهمة تنظيف متأخرة',
-      message: `مهمة تنظيف وحدة ${task.apartment?.name || ''} متأخرة ${daysLate} ${daysLate === 1 ? 'يوم' : 'أيام'} عن موعدها.`,
+      title: 'Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ Ù…ØªØ£Ø®Ø±Ø©',
+      message: `Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ ÙˆØ­Ø¯Ø© ${task.apartment?.name || ''} Ù…ØªØ£Ø®Ø±Ø© ${daysLate} ${daysLate === 1 ? 'ÙŠÙˆÙ…' : 'Ø£ÙŠØ§Ù…'} Ø¹Ù† Ù…ÙˆØ¹Ø¯Ù‡Ø§.`,
       type: 'warning',
       link: 'cleaning',
       source: 'cron',
@@ -71,8 +58,8 @@ async function overdueCleaningDigest(todayStart, ownerIds) {
       permission: 'canClean',
       ownerId: booking.apartment.userId,
       includeOwner: true,
-      title: '⚠️ استعجال: تنظيف قبل وصول النزيل',
-      message: `وحدة ${booking.apartment.name} تحتاج تنظيف ووصول نزيلها غداً.`,
+      title: 'âš ï¸ Ø§Ø³ØªØ¹Ø¬Ø§Ù„: ØªÙ†Ø¸ÙŠÙ Ù‚Ø¨Ù„ ÙˆØµÙˆÙ„ Ø§Ù„Ù†Ø²ÙŠÙ„',
+      message: `ÙˆØ­Ø¯Ø© ${booking.apartment.name} ØªØ­ØªØ§Ø¬ ØªÙ†Ø¸ÙŠÙ ÙˆÙˆØµÙˆÙ„ Ù†Ø²ÙŠÙ„Ù‡Ø§ ØºØ¯Ø§Ù‹.`,
       type: 'warning',
       link: 'cleaning',
       urgent: true,
@@ -103,8 +90,8 @@ async function staleMaintenanceDigest(ownerIds) {
       permission: 'canViewMaintenance',
       ownerId: issue.userId,
       includeOwner: true,
-      title: 'بلاغ عاجل لم يُحل بعد 3 أيام',
-      message: `"${issue.title}" في وحدة ${issue.apartment?.name || ''} ما زال مفتوحاً.`,
+      title: 'Ø¨Ù„Ø§Øº Ø¹Ø§Ø¬Ù„ Ù„Ù… ÙŠÙØ­Ù„ Ø¨Ø¹Ø¯ 3 Ø£ÙŠØ§Ù…',
+      message: `"${issue.title}" ÙÙŠ ÙˆØ­Ø¯Ø© ${issue.apartment?.name || ''} Ù…Ø§ Ø²Ø§Ù„ Ù…ÙØªÙˆØ­Ø§Ù‹.`,
       type: 'warning',
       link: 'maintenance',
       urgent: true,
@@ -135,8 +122,8 @@ async function staleRequestsDigest(ownerIds) {
       permission: 'canBook',
       ownerId: request.userId,
       includeOwner: true,
-      title: 'طلب حجز معلّق منذ أكثر من يوم',
-      message: `طلب من ${request.residentName || 'نزيل'} لم تتم معالجته منذ ${hours} ساعة.`,
+      title: 'Ø·Ù„Ø¨ Ø­Ø¬Ø² Ù…Ø¹Ù„Ù‘Ù‚ Ù…Ù†Ø° Ø£ÙƒØ«Ø± Ù…Ù† ÙŠÙˆÙ…',
+      message: `Ø·Ù„Ø¨ Ù…Ù† ${request.residentName || 'Ù†Ø²ÙŠÙ„'} Ù„Ù… ØªØªÙ… Ù…Ø¹Ø§Ù„Ø¬ØªÙ‡ Ù…Ù†Ø° ${hours} Ø³Ø§Ø¹Ø©.`,
       type: 'warning',
       link: 'requests',
       source: 'cron',
@@ -204,15 +191,15 @@ async function generateMonthlyPartnerSettlements(today) {
           amount,
           currency: 'sar',
           status: 'draft',
-          memo: `تسوية تلقائية لهذا الشهر`,
+          memo: `ØªØ³ÙˆÙŠØ© ØªÙ„Ù‚Ø§Ø¦ÙŠØ© Ù„Ù‡Ø°Ø§ Ø§Ù„Ø´Ù‡Ø±`,
           source: 'auto',
         },
       });
 
       await notify({
         userIds: [owner.id],
-        title: 'تسوية جديدة للشريك',
-        message: `تم إنشاء تسوية تلقائية للشريك ${partner.name} عن شهر ${prevMonthStart.toLocaleDateString('ar', { month: 'long', year: 'numeric' })} (${amount} ر.س). راجعها وسددها.`,
+        title: 'ØªØ³ÙˆÙŠØ© Ø¬Ø¯ÙŠØ¯Ø© Ù„Ù„Ø´Ø±ÙŠÙƒ',
+        message: `ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ØªØ³ÙˆÙŠØ© ØªÙ„Ù‚Ø§Ø¦ÙŠØ© Ù„Ù„Ø´Ø±ÙŠÙƒ ${partner.name} Ø¹Ù† Ø´Ù‡Ø± ${prevMonthStart.toLocaleDateString('ar', { month: 'long', year: 'numeric' })} (${amount} Ø±.Ø³). Ø±Ø§Ø¬Ø¹Ù‡Ø§ ÙˆØ³Ø¯Ø¯Ù‡Ø§.`,
         type: 'settlement',
         link: 'partners',
         source: 'cron',
@@ -229,7 +216,14 @@ async function generateMonthlyPartnerSettlements(today) {
 export default async function handler(req, res) {
   const secret = process.env.CRON_SECRET;
   const authHeader = req.headers.authorization;
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!secret) {
+    // Vercel only sends `Authorization: Bearer $CRON_SECRET` when the env
+    // var exists â€” without it every scheduled run is rejected and the daily
+    // digests silently never happen. Say so loudly in the logs.
+    console.error('CRON_SECRET is not configured on the server. Vercel cron requests cannot be authenticated â€” set CRON_SECRET in the project env vars.');
+    return res.status(500).json({ message: 'CRON_SECRET is not configured on the server' });
+  }
+  if (authHeader !== `Bearer ${secret}`) {
     return res.status(401).json({ message: 'Unauthorized cron request' });
   }
 
@@ -256,8 +250,8 @@ export default async function handler(req, res) {
     if (!vapidOk) {
       await notify({
         userIds: ownerIds.slice(0, 5),
-        title: 'إعدادات التنزيلات غير مكتملة',
-        message: 'مفاتيح VAPID غير مضبوطة على الخادم — إشعارات المتصفح معطلة.',
+        title: 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„ØªÙ†Ø²ÙŠÙ„Ø§Øª ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©',
+        message: 'Ù…ÙØ§ØªÙŠØ­ VAPID ØºÙŠØ± Ù…Ø¶Ø¨ÙˆØ·Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø§Ø¯Ù… â€” Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ù…ØªØµÙØ­ Ù…Ø¹Ø·Ù„Ø©.',
         type: 'warning',
         link: 'settings',
         source: 'cron',
@@ -270,98 +264,18 @@ export default async function handler(req, res) {
       ? await run('partner-settlements', () => generateMonthlyPartnerSettlements(today))
       : { skip: true, reason: 'partners feature unused' };
 
-    const arrivals = await run('arrivals', () => prisma.booking.findMany({
-      where: {
-        status: 'active',
-        startDate: { gte: today, lt: tomorrow },
-      },
-      include: { apartment: { select: { userId: true, name: true } } },
-    })) || [];
-
-    for (const booking of arrivals) {
-      await run('arrival-notify', () => notify({
-        ownerId: booking.apartment.userId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'وصول متوقع اليوم',
-        message: `وصول متوقع اليوم: النزيل ${booking.residentName} في شقة ${booking.apartment.name}`,
-        type: 'booking',
-        link: 'availability',
-        source: 'cron',
-        tag: `arrival:${booking.id}:${today.toISOString().slice(0, 10)}`,
-        push: true,
-      }));
-    }
-
-    const departures = await run('departures', () => prisma.booking.findMany({
-      where: {
-        status: 'active',
-        endDate: { gte: today, lt: tomorrow },
-      },
-      include: { apartment: { select: { userId: true, name: true } } },
-    })) || [];
-
-    for (const booking of departures) {
-      await run('departure-notify', () => notify({
-        ownerId: booking.apartment.userId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'مغادرة متوقعة اليوم',
-        message: `مغادرة متوقعة اليوم: النزيل ${booking.residentName} من شقة ${booking.apartment.name}`,
-        type: 'booking',
-        link: 'availability',
-        source: 'cron',
-        tag: `departure:${booking.id}:${today.toISOString().slice(0, 10)}`,
-        push: true,
-      }));
-    }
-
-    // Day-before reminders: give staff a head start on tomorrow's arrivals and checkouts.
-    const arrivalsTomorrow = await run('arrivals-tomorrow', () => prisma.booking.findMany({
-      where: {
-        status: 'active',
-        startDate: { gte: tomorrow, lt: shiftDays(today, 2) },
-      },
-      include: { apartment: { select: { userId: true, name: true } } },
-    })) || [];
-
-    for (const booking of arrivalsTomorrow) {
-      await run('arrival-advance-notify', () => notify({
-        ownerId: booking.apartment.userId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'تذكير: وصول غداً',
-        message: `وصول النزيل ${booking.residentName} غداً في شقة ${booking.apartment.name}.`,
-        type: 'booking',
-        link: 'availability',
-        source: 'cron',
-        tag: `arrival-tomorrow:${booking.id}:${tomorrow.toISOString().slice(0, 10)}`,
-        push: true,
-      }));
-    }
-
-    const departuresTomorrow = await run('departures-tomorrow', () => prisma.booking.findMany({
-      where: {
-        status: 'active',
-        endDate: { gte: tomorrow, lt: shiftDays(today, 2) },
-      },
-      include: { apartment: { select: { userId: true, name: true } } },
-    })) || [];
-
-    for (const booking of departuresTomorrow) {
-      await run('departure-advance-notify', () => notify({
-        ownerId: booking.apartment.userId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'تذكير: مغادرة غداً',
-        message: `مغادرة النزيل ${booking.residentName} غداً من شقة ${booking.apartment.name} — جهّز الفاتورة والتسوية.`,
-        type: 'booking',
-        link: 'balances',
-        source: 'cron',
-        tag: `departure-tomorrow:${booking.id}:${tomorrow.toISOString().slice(0, 10)}`,
-        push: true,
-      }));
-    }
+    // Arrival / departure reminders (today + tomorrow). Shared with
+    // api/notifications.js?action=daily-summary so the in-app trigger and
+    // the cron can never disagree about who gets notified or how it is tagged.
+    const dailyReminders = await run('arrival-departure-reminders', () => runArrivalDepartureReminders({ today })) || {
+      arrivals: { found: 0, sent: 0, items: [] },
+      departures: { found: 0, sent: 0, items: [] },
+      arrivalsTomorrow: { found: 0, sent: 0, items: [] },
+      departuresTomorrow: { found: 0, sent: 0, items: [] },
+      skipped: 0,
+      summaries: 0,
+      failures: [],
+    };
 
     const licenses30Days = await run('licenses-30', () => prisma.license.findMany({
       where: {
@@ -372,8 +286,8 @@ export default async function handler(req, res) {
     for (const license of licenses30Days) {
       await run('license-30-notify', () => notify({
         userIds: [license.userId],
-        title: 'تنبيه انتهاء ترخيص',
-        message: `الترخيص رقم ${license.licenseNumber} سينتهي بعد 30 يوماً`,
+        title: 'ØªÙ†Ø¨ÙŠÙ‡ Ø§Ù†ØªÙ‡Ø§Ø¡ ØªØ±Ø®ÙŠØµ',
+        message: `Ø§Ù„ØªØ±Ø®ÙŠØµ Ø±Ù‚Ù… ${license.licenseNumber} Ø³ÙŠÙ†ØªÙ‡ÙŠ Ø¨Ø¹Ø¯ 30 ÙŠÙˆÙ…Ø§Ù‹`,
         type: 'license',
         link: 'settings',
         source: 'cron',
@@ -391,8 +305,8 @@ export default async function handler(req, res) {
     for (const license of licenses7Days) {
       await run('license-7-notify', () => notify({
         userIds: [license.userId],
-        title: 'تنبيه هام: انتهاء ترخيص خلال أسبوع',
-        message: `الترخيص رقم ${license.licenseNumber} سينتهي بعد 7 أيام فقط!`,
+        title: 'ØªÙ†Ø¨ÙŠÙ‡ Ù‡Ø§Ù…: Ø§Ù†ØªÙ‡Ø§Ø¡ ØªØ±Ø®ÙŠØµ Ø®Ù„Ø§Ù„ Ø£Ø³Ø¨ÙˆØ¹',
+        message: `Ø§Ù„ØªØ±Ø®ÙŠØµ Ø±Ù‚Ù… ${license.licenseNumber} Ø³ÙŠÙ†ØªÙ‡ÙŠ Ø¨Ø¹Ø¯ 7 Ø£ÙŠØ§Ù… ÙÙ‚Ø·!`,
         type: 'warning',
         link: 'settings',
         urgent: true,
@@ -409,8 +323,8 @@ export default async function handler(req, res) {
     for (const license of expiredLicenses) {
       await run('license-expired-notify', () => notify({
         userIds: [license.userId],
-        title: '⚠️ ترخيص منتهٍ',
-        message: `انتهى الترخيص رقم ${license.licenseNumber} — يجب تجديده فوراً.`,
+        title: 'âš ï¸ ØªØ±Ø®ÙŠØµ Ù…Ù†ØªÙ‡Ù',
+        message: `Ø§Ù†ØªÙ‡Ù‰ Ø§Ù„ØªØ±Ø®ÙŠØµ Ø±Ù‚Ù… ${license.licenseNumber} â€” ÙŠØ¬Ø¨ ØªØ¬Ø¯ÙŠØ¯Ù‡ ÙÙˆØ±Ø§Ù‹.`,
         type: 'warning',
         link: 'settings',
         urgent: true,
@@ -431,10 +345,16 @@ export default async function handler(req, res) {
       timezone: 'Asia/Riyadh',
       window: { today: today.toISOString(), tomorrow: tomorrow.toISOString() },
       processed: {
-        arrivals: arrivals.length,
-        departures: departures.length,
-        arrivalsTomorrow: arrivalsTomorrow.length,
-        departuresTomorrow: departuresTomorrow.length,
+        arrivals: dailyReminders.arrivals.found,
+        departures: dailyReminders.departures.found,
+        arrivalsTomorrow: dailyReminders.arrivalsTomorrow.found,
+        departuresTomorrow: dailyReminders.departuresTomorrow.found,
+        arrivalsSent: dailyReminders.arrivals.sent,
+        departuresSent: dailyReminders.departures.sent,
+        arrivalsTomorrowSent: dailyReminders.arrivalsTomorrow.sent,
+        departuresTomorrowSent: dailyReminders.departuresTomorrow.sent,
+        remindersSkipped: dailyReminders.skipped,
+        reminderSummaries: dailyReminders.summaries,
         licenses30Days: licenses30Days.length,
         licenses7Days: licenses7Days.length,
         licensesExpired: expiredLicenses.length,

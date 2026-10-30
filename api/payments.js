@@ -1,13 +1,13 @@
-import prisma from '../prisma.js';
+﻿import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { notify, isLargeAmount } from './notify.js';
+import { notify, isLargeAmount } from '../notify.js';
 
 /**
  * /api/payments
  *
- * GET    ?bookingId=…        → list payments for one booking (newest first)
+ * GET    ?bookingId=â€¦        â†’ list payments for one booking (newest first)
  * POST   { bookingId, amount, method, type, date?, notes? }
- * DELETE ?id=…                → remove one entry (admin only)
+ * DELETE ?id=â€¦                â†’ remove one entry (admin only)
  *
  * Ownership: every payment belongs to the admin (targetUserId) that owns the booking.
  * Staff can add payments but only admins can delete them, mirroring the app's
@@ -43,12 +43,12 @@ export default async function handler(req, res) {
       const { bookingId, amount, method, type, date, notes } = req.body;
 
       if (!bookingId || amount === undefined || amount === null || amount === '') {
-        return res.status(400).json({ message: 'bookingId والمبلغ مطلوبان' });
+        return res.status(400).json({ message: 'bookingId ÙˆØ§Ù„Ù…Ø¨Ù„Øº Ù…Ø·Ù„ÙˆØ¨Ø§Ù†' });
       }
 
       const parsedAmount = parseFloat(amount);
       if (Number.isNaN(parsedAmount) || parsedAmount === 0) {
-        return res.status(400).json({ message: 'المبلغ غير صالح' });
+        return res.status(400).json({ message: 'Ø§Ù„Ù…Ø¨Ù„Øº ØºÙŠØ± ØµØ§Ù„Ø­' });
       }
 
       // Ownership check
@@ -86,15 +86,15 @@ export default async function handler(req, res) {
       const large = isLargeAmount(finalAmount, booking.totalPrice, owner);
 
       if (user.userId !== targetUserId) {
-        const label = finalType === 'refund' ? 'استرداد' : 'دفعة جديدة';
+        const label = finalType === 'refund' ? 'Ø§Ø³ØªØ±Ø¯Ø§Ø¯' : 'Ø¯ÙØ¹Ø© Ø¬Ø¯ÙŠØ¯Ø©';
         const title = finalType === 'refund'
-          ? (large ? 'استرداد كبير' : 'استرداد')
-          : (large ? 'دفعة كبيرة' : 'دفعة جديدة');
+          ? (large ? 'Ø§Ø³ØªØ±Ø¯Ø§Ø¯ ÙƒØ¨ÙŠØ±' : 'Ø§Ø³ØªØ±Ø¯Ø§Ø¯')
+          : (large ? 'Ø¯ÙØ¹Ø© ÙƒØ¨ÙŠØ±Ø©' : 'Ø¯ÙØ¹Ø© Ø¬Ø¯ÙŠØ¯Ø©');
 
         await notify({
           userIds: [targetUserId],
           title,
-          message: `${user.name || user.username} سجّل ${label} بقيمة ${Math.abs(finalAmount)} ر.س للنزيل ${booking.residentName} — ${booking.apartment.name}${large ? ' (مبلغ مرتفع)' : ''}`,
+          message: `${user.name || user.username} Ø³Ø¬Ù‘Ù„ ${label} Ø¨Ù‚ÙŠÙ…Ø© ${Math.abs(finalAmount)} Ø±.Ø³ Ù„Ù„Ù†Ø²ÙŠÙ„ ${booking.residentName} â€” ${booking.apartment.name}${large ? ' (Ù…Ø¨Ù„Øº Ù…Ø±ØªÙØ¹)' : ''}`,
           type: finalType === 'refund' ? 'warning' : 'payment',
           link: 'balances',
           tag: `payment:${payment.id}`
@@ -105,8 +105,8 @@ export default async function handler(req, res) {
             permission: 'canViewBalances',
             ownerId: targetUserId,
             excludeUserId: user.userId,
-            title: 'استرداد كبير يحتاج مراجعة',
-            message: `${user.name || user.username} سجّل استرداد بقيمة ${Math.abs(finalAmount)} ر.س على حجز ${booking.residentName}`,
+            title: 'Ø§Ø³ØªØ±Ø¯Ø§Ø¯ ÙƒØ¨ÙŠØ± ÙŠØ­ØªØ§Ø¬ Ù…Ø±Ø§Ø¬Ø¹Ø©',
+            message: `${user.name || user.username} Ø³Ø¬Ù‘Ù„ Ø§Ø³ØªØ±Ø¯Ø§Ø¯ Ø¨Ù‚ÙŠÙ…Ø© ${Math.abs(finalAmount)} Ø±.Ø³ Ø¹Ù„Ù‰ Ø­Ø¬Ø² ${booking.residentName}`,
             type: 'warning',
             link: 'balances',
             tag: `payment-large:${payment.id}`
@@ -119,8 +119,8 @@ export default async function handler(req, res) {
       if (finalType === 'payment' && bookingTotal > 0 && paidTotal >= bookingTotal - 0.01) {
         await notify({
           userIds: [targetUserId],
-          title: 'تم سداد الحجز بالكامل',
-          message: `سُدد حجز ${booking.residentName} في وحدة ${booking.apartment.name} بالكامل (${bookingTotal} ر.س).`,
+          title: 'ØªÙ… Ø³Ø¯Ø§Ø¯ Ø§Ù„Ø­Ø¬Ø² Ø¨Ø§Ù„ÙƒØ§Ù…Ù„',
+          message: `Ø³ÙØ¯Ø¯ Ø­Ø¬Ø² ${booking.residentName} ÙÙŠ ÙˆØ­Ø¯Ø© ${booking.apartment.name} Ø¨Ø§Ù„ÙƒØ§Ù…Ù„ (${bookingTotal} Ø±.Ø³).`,
           type: 'success',
           link: 'balances',
           tag: `booking-settled:${bookingId}`
@@ -139,9 +139,9 @@ export default async function handler(req, res) {
         return res.status(403).json({ message: 'Forbidden' });
       }
 
-      // Only admin can delete a payment entry — protects the ledger
+      // Only admin can delete a payment entry â€” protects the ledger
       if (user.userId !== targetUserId && !user.canDelete) {
-        return res.status(403).json({ message: 'صلاحية الحذف غير متاحة' });
+        return res.status(403).json({ message: 'ØµÙ„Ø§Ø­ÙŠØ© Ø§Ù„Ø­Ø°Ù ØºÙŠØ± Ù…ØªØ§Ø­Ø©' });
       }
 
       await prisma.payment.delete({ where: { id } });

@@ -123,7 +123,7 @@ const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex,
 };
 
 export default function AvailabilityView({ openBookingForm }) {
-  const { apartments, bookings, deleteBooking, loading } = useData();
+  const { apartments, bookings, deleteBooking, updateBooking, loading } = useData();
   const { user } = useAuth();
   const canSeePrices = user?.role === 'admin' || user?.permissions?.canViewPrices !== false;
   const { darkMode } = useTheme();
@@ -150,6 +150,8 @@ export default function AvailabilityView({ openBookingForm }) {
   const [selectedDayBookings, setSelectedDayBookings] = useState(null); // { date, bookings }
   const [selectedBookingDetails, setSelectedBookingDetails] = useState(null);
   const [ledgerBooking, setLedgerBooking] = useState(null);
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -314,6 +316,33 @@ export default function AvailabilityView({ openBookingForm }) {
     : null;
   const detailTotals = detailBooking ? computeBookingTotals(detailBooking) : null;
   const waUrl = detailBooking ? buildWhatsAppUrl(detailBooking.phone) : '';
+
+  const openDetails = (booking) => {
+    setEditingNote(false);
+    setNoteDraft('');
+    setSelectedBookingDetails(booking);
+  };
+  const closeDetails = () => {
+    setEditingNote(false);
+    setNoteDraft('');
+    setSelectedBookingDetails(null);
+  };
+
+  const startNoteEdit = () => {
+    setNoteDraft(detailBooking?.notes || '');
+    setEditingNote(true);
+  };
+
+  const saveNote = async () => {
+    if (!detailBooking) return;
+    try {
+      await updateBooking({ ...detailBooking, notes: noteDraft.trim() });
+      setEditingNote(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
 
   return (
     <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
@@ -573,7 +602,7 @@ export default function AvailabilityView({ openBookingForm }) {
                       return (
                         <div
                           key={b.id}
-                          onClick={(ev) => { ev.stopPropagation(); setSelectedBookingDetails(b); }}
+                          onClick={(ev) => { ev.stopPropagation(); openDetails(b); }}
                           onMouseDown={(ev) => ev.stopPropagation()}
                           title={tip}
                           className={`self-center flex items-center gap-1 pr-2.5 pl-2 h-[32px] text-[12px] font-semibold cursor-pointer transition-all hover:brightness-95 ${isPending ? 'bg-transparent text-muted border border-dashed border-hairline dark:text-body-dark dark:border-[#4a463f]' : ''}`}
@@ -616,7 +645,7 @@ export default function AvailabilityView({ openBookingForm }) {
                     return (
                       <div
                         key={booking.id}
-                        onClick={() => setSelectedBookingDetails(booking)}
+                        onClick={() => openDetails(booking)}
                         className="bg-surface-card dark:bg-surface-dark-elevated p-4 rounded-lg cursor-pointer hover:bg-surface-strong/60 dark:hover:bg-hairline-dark transition-colors group"
                       >
                         <div className="flex justify-between items-start mb-2">
@@ -669,7 +698,7 @@ export default function AvailabilityView({ openBookingForm }) {
             {/* Header */}
             <div className="px-4 py-3 md:px-5 md:py-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center shrink-0">
               <h2 className="text-base md:text-xl font-semibold tracking-tight text-ink dark:text-white">تفاصيل الحجز</h2>
-              <button onClick={() => setSelectedBookingDetails(null)} className="icon-action shrink-0" aria-label="إغلاق">
+              <button onClick={closeDetails} className="icon-action shrink-0" aria-label="إغلاق">
                 <X size={20} />
               </button>
             </div>
@@ -770,19 +799,51 @@ export default function AvailabilityView({ openBookingForm }) {
                 </div>
               )}
 
+              {/* Resident note — sits directly beneath the financial summary */}
+              <div className="p-4 bg-surface-soft dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-xl">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-xs text-muted dark:text-body-dark flex items-center gap-1">
+                    <MessageSquare size={12} /> ملاحظة النزيل
+                  </span>
+                  {canEdit && !editingNote && (
+                    <button
+                      type="button"
+                      onClick={startNoteEdit}
+                      className="text-xs font-semibold text-accent-strong hover:underline underline-offset-2"
+                    >
+                      {detailBooking.notes && detailBooking.notes.trim() !== '' ? 'تعديل' : 'إضافة ملاحظة'}
+                    </button>
+                  )}
+                </div>
+                {editingNote ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={noteDraft}
+                      onChange={(e) => setNoteDraft(e.target.value)}
+                      rows={3}
+                      autoFocus
+                      placeholder="اكتب ملاحظة عن النزيل..."
+                      className="input-field resize-none"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={saveNote} className="btn-primary h-9 px-4 text-xs">حفظ</button>
+                      <button type="button" onClick={() => setEditingNote(false)} className="btn-secondary h-9 px-4 text-xs">إلغاء</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm font-medium text-ink dark:text-white whitespace-pre-wrap">
+                    {detailBooking.notes && detailBooking.notes.trim() !== ''
+                      ? detailBooking.notes
+                      : <span className="text-muted dark:text-body-dark">لا توجد ملاحظة</span>}
+                  </div>
+                )}
+              </div>
+
               {/* Customer request */}
               {detailBooking.customerRequest && detailBooking.customerRequest.trim() !== '' && (
                 <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-xl border border-hairline dark:border-hairline-dark-soft">
                   <div className="text-xs text-muted dark:text-body-dark flex items-center gap-1 mb-1"><MessageSquare size={12} /> طلب النزيل الإضافي</div>
                   <div className="text-sm font-semibold text-ink dark:text-white">{detailBooking.customerRequest}</div>
-                </div>
-              )}
-
-              {/* Internal notes */}
-              {detailBooking.notes && detailBooking.notes.trim() !== '' && (
-                <div className="bg-surface-soft dark:bg-surface-dark-elevated p-4 rounded-xl border border-hairline dark:border-hairline-dark-soft">
-                  <div className="text-xs text-muted dark:text-body-dark flex items-center gap-1 mb-1"><MessageSquare size={12} /> ملاحظات داخلية (للموظفين)</div>
-                  <div className="text-sm font-medium text-body dark:text-body-dark">{detailBooking.notes}</div>
                 </div>
               )}
 
@@ -808,7 +869,7 @@ export default function AvailabilityView({ openBookingForm }) {
                 <button
                   onClick={() => {
                     const bookingToEdit = detailBooking;
-                    setSelectedBookingDetails(null);
+                    closeDetails();
                     openBookingForm(bookingToEdit);
                   }}
                   className="btn-primary h-11 w-full sm:w-auto px-5 text-sm"
@@ -816,12 +877,6 @@ export default function AvailabilityView({ openBookingForm }) {
                   تعديل الحجز
                 </button>
               )}
-              <button
-                onClick={() => setSelectedBookingDetails(null)}
-                className="btn-secondary h-11 w-full sm:w-auto px-5 text-sm"
-              >
-                إغلاق
-              </button>
             </div>
           </div>
         </div>

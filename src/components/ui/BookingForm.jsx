@@ -379,12 +379,11 @@ export default function BookingForm({ onClose, initialData }) {
               </div>
               <div>
                 <label className={eyebrow}>رقم الهوية / الجواز</label>
-                <input required type="text" placeholder="10XXXXXXXX" className="input-field" value={formData.residentId} onChange={(e) => setFormData({ ...formData, residentId: e.target.value })} />
+                <input type="text" placeholder="10XXXXXXXX" className="input-field" value={formData.residentId} onChange={(e) => setFormData({ ...formData, residentId: e.target.value })} />
               </div>
               <div>
                 <label className={eyebrow}>رقم الهاتف</label>
                 <input
-                  required
                   type="tel"
                   dir="ltr"
                   placeholder="05XXXXXXXX"

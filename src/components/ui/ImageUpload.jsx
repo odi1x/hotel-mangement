@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import axios from 'axios';
 import { IKContext, IKUpload } from 'imagekitio-react';
 import { Camera, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,16 +9,11 @@ const publicKey = import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY || 'public_3kVK0taiC3
 
 const authenticator = async () => {
   try {
-    const response = await fetch('/api/upload/auth');
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Request failed with status ${response.status}: ${errorText}`);
-    }
-    const data = await response.json();
-    const { signature, expire, token } = data;
+    const response = await axios.get('/api/auth?action=imagekit-auth');
+    const { signature, expire, token } = response.data;
     return { signature, expire, token };
   } catch (error) {
-    throw new Error(`Authentication request failed: ${error.message}`);
+    throw new Error(`Authentication request failed: ${error.message}`, { cause: error });
   }
 };
 
@@ -36,7 +32,7 @@ export default function ImageUpload({ onUploadSuccess, currentImage, className =
     onUploadSuccess(res.url);
   };
 
-  const handleUploadStart = (evt) => {
+  const handleUploadStart = () => {
     setUploading(true);
   };
 
