@@ -115,8 +115,14 @@ async function notifyOne(user, payload) {
     },
   });
 
+  // PUSH IS OPT-IN.
+  // A notification only reaches the device when it explicitly asks for it
+  // (`push: true`). Everything else lands in the in-app bell only — that
+  // keeps the phone quiet and reserves the banner for the daily
+  // arrival/departure schedule reminders. `prefs.push` stays the per-user
+  // master switch: turn it off and nothing is pushed for that user.
   let pushed = false;
-  if (prefs.push !== false && payload.push !== false) {
+  if (prefs.push !== false && payload.push === true) {
     pushed = await sendWebPush(user.id, {
       title: payload.title,
       body: payload.message,

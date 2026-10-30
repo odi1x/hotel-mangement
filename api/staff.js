@@ -1,4 +1,4 @@
-﻿import bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
 import { notify } from '../notify.js';
@@ -83,8 +83,8 @@ export default async function handler(req, res) {
         if (changed.length > 0) {
           await notify({
             userIds: [id],
-            title: 'ØªÙ… ØªØ¹Ø¯ÙŠÙ„ ØµÙ„Ø§Ø­ÙŠØ§ØªÙƒ',
-            message: `ØªÙ… ØªØ­Ø¯ÙŠØ« ØµÙ„Ø§Ø­ÙŠØ§ØªÙƒ (${changed.length} ØµÙ„Ø§Ø­ÙŠØ©). Ø³Ø¬Ù‘Ù„ Ø§Ù„Ø®Ø±ÙˆØ¬ ÙˆØ§Ù„Ø¯Ø®ÙˆÙ„ Ù„ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„ØªØºÙŠÙŠØ±Ø§Øª.`,
+            title: 'تم تعديل صلاحياتك',
+            message: `تم تحديث صلاحياتك (${changed.length} صلاحية). سجّل الخروج والدخول لتطبيق التغييرات.`,
             type: 'warning',
             link: 'settings',
             urgent: true,
@@ -93,8 +93,8 @@ export default async function handler(req, res) {
 
           await notify({
             userIds: [decoded.userId],
-            title: 'ØªÙ… ØªØ¹Ø¯ÙŠÙ„ ØµÙ„Ø§Ø­ÙŠØ§Øª Ù…ÙˆØ¸Ù',
-            message: `ØªÙ… ØªØ­Ø¯ÙŠØ« ØµÙ„Ø§Ø­ÙŠØ§Øª ${staffMember.name || staffMember.username}.`,
+            title: 'تم تعديل صلاحيات موظف',
+            message: `تم تحديث صلاحيات ${staffMember.name || staffMember.username}.`,
             type: 'info',
             link: 'settings',
             tag: `perm-admin:${id}:${Date.now()}`
@@ -116,8 +116,8 @@ export default async function handler(req, res) {
         if (doomed?.adminId) {
           await notify({
             userIds: [doomed.adminId],
-            title: 'ØªÙ… Ø­Ø°Ù Ù…ÙˆØ¸Ù',
-            message: `ØªÙ… Ø­Ø°Ù ${doomed.name || doomed.username}.`,
+            title: 'تم حذف موظف',
+            message: `تم حذف ${doomed.name || doomed.username}.`,
             type: 'warning',
             link: 'settings',
             tag: `staff-deleted:${id}`,
@@ -199,8 +199,8 @@ export default async function handler(req, res) {
 
       await notify({
         userIds: [decoded.userId],
-        title: 'ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© Ù…ÙˆØ¸Ù Ø¬Ø¯ÙŠØ¯',
-        message: `Ø£Ø¶ÙØª Ø§Ù„Ù…ÙˆØ¸Ù ${name} (${username}).`,
+        title: 'تمت إضافة موظف جديد',
+        message: `أضفت الموظف ${name} (${username}).`,
         type: 'info',
         link: 'settings',
         tag: `staff-added:${staffMember.id}`,
