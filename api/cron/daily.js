@@ -1,4 +1,4 @@
-﻿/* global process */
+/* global process */
 import prisma from '../../prisma.js';
 import { notify } from '../../notify.js';
 import { calculateGrossRevenue, calculateExpenses, computePartnerCompensation } from '../admin-resources.js';
@@ -30,13 +30,13 @@ async function overdueCleaningDigest(todayStart, ownerIds) {
       permission: 'canClean',
       ownerId: task.userId,
       includeOwner: true,
-      title: 'Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ Ù…ØªØ£Ø®Ø±Ø©',
-      message: `Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ ÙˆØ­Ø¯Ø© ${task.apartment?.name || ''} Ù…ØªØ£Ø®Ø±Ø© ${daysLate} ${daysLate === 1 ? 'ÙŠÙˆÙ…' : 'Ø£ÙŠØ§Ù…'} Ø¹Ù† Ù…ÙˆØ¹Ø¯Ù‡Ø§.`,
+      title: 'مهمة تنظيف متأخرة',
+      message: `مهمة تنظيف وحدة ${task.apartment?.name || ''} متأخرة ${daysLate} ${daysLate === 1 ? 'يوم' : 'أيام'} عن موعدها.`,
       type: 'warning',
       link: 'cleaning',
       source: 'cron',
       tag: `clean-overdue:${task.id}`,
-      push: true,
+      push: false,
     });
     sent++;
   }
@@ -58,14 +58,14 @@ async function overdueCleaningDigest(todayStart, ownerIds) {
       permission: 'canClean',
       ownerId: booking.apartment.userId,
       includeOwner: true,
-      title: 'âš ï¸ Ø§Ø³ØªØ¹Ø¬Ø§Ù„: ØªÙ†Ø¸ÙŠÙ Ù‚Ø¨Ù„ ÙˆØµÙˆÙ„ Ø§Ù„Ù†Ø²ÙŠÙ„',
-      message: `ÙˆØ­Ø¯Ø© ${booking.apartment.name} ØªØ­ØªØ§Ø¬ ØªÙ†Ø¸ÙŠÙ ÙˆÙˆØµÙˆÙ„ Ù†Ø²ÙŠÙ„Ù‡Ø§ ØºØ¯Ø§Ù‹.`,
+      title: '⚠️ استعجال: تنظيف قبل وصول النزيل',
+      message: `وحدة ${booking.apartment.name} تحتاج تنظيف ووصول نزيلها غداً.`,
       type: 'warning',
       link: 'cleaning',
       urgent: true,
       source: 'cron',
       tag: `clean-urgency:${booking.apartment.id}:${shiftDays(todayStart, 1).toISOString().slice(0, 10)}`,
-      push: true,
+      push: false,
     });
     sent += result.created;
   }
@@ -90,14 +90,14 @@ async function staleMaintenanceDigest(ownerIds) {
       permission: 'canViewMaintenance',
       ownerId: issue.userId,
       includeOwner: true,
-      title: 'Ø¨Ù„Ø§Øº Ø¹Ø§Ø¬Ù„ Ù„Ù… ÙŠÙØ­Ù„ Ø¨Ø¹Ø¯ 3 Ø£ÙŠØ§Ù…',
-      message: `"${issue.title}" ÙÙŠ ÙˆØ­Ø¯Ø© ${issue.apartment?.name || ''} Ù…Ø§ Ø²Ø§Ù„ Ù…ÙØªÙˆØ­Ø§Ù‹.`,
+      title: 'بلاغ عاجل لم يُحل بعد 3 أيام',
+      message: `"${issue.title}" في وحدة ${issue.apartment?.name || ''} ما زال مفتوحاً.`,
       type: 'warning',
       link: 'maintenance',
       urgent: true,
       source: 'cron',
       tag: `maint-stale:${issue.id}`,
-      push: true,
+      push: false,
     });
   }
 
@@ -122,8 +122,8 @@ async function staleRequestsDigest(ownerIds) {
       permission: 'canBook',
       ownerId: request.userId,
       includeOwner: true,
-      title: 'Ø·Ù„Ø¨ Ø­Ø¬Ø² Ù…Ø¹Ù„Ù‘Ù‚ Ù…Ù†Ø° Ø£ÙƒØ«Ø± Ù…Ù† ÙŠÙˆÙ…',
-      message: `Ø·Ù„Ø¨ Ù…Ù† ${request.residentName || 'Ù†Ø²ÙŠÙ„'} Ù„Ù… ØªØªÙ… Ù…Ø¹Ø§Ù„Ø¬ØªÙ‡ Ù…Ù†Ø° ${hours} Ø³Ø§Ø¹Ø©.`,
+      title: 'طلب حجز معلّق منذ أكثر من يوم',
+      message: `طلب من ${request.residentName || 'نزيل'} لم تتم معالجته منذ ${hours} ساعة.`,
       type: 'warning',
       link: 'requests',
       source: 'cron',
@@ -191,15 +191,15 @@ async function generateMonthlyPartnerSettlements(today) {
           amount,
           currency: 'sar',
           status: 'draft',
-          memo: `ØªØ³ÙˆÙŠØ© ØªÙ„Ù‚Ø§Ø¦ÙŠØ© Ù„Ù‡Ø°Ø§ Ø§Ù„Ø´Ù‡Ø±`,
+          memo: `تسوية تلقائية لهذا الشهر`,
           source: 'auto',
         },
       });
 
       await notify({
         userIds: [owner.id],
-        title: 'ØªØ³ÙˆÙŠØ© Ø¬Ø¯ÙŠØ¯Ø© Ù„Ù„Ø´Ø±ÙŠÙƒ',
-        message: `ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ØªØ³ÙˆÙŠØ© ØªÙ„Ù‚Ø§Ø¦ÙŠØ© Ù„Ù„Ø´Ø±ÙŠÙƒ ${partner.name} Ø¹Ù† Ø´Ù‡Ø± ${prevMonthStart.toLocaleDateString('ar', { month: 'long', year: 'numeric' })} (${amount} Ø±.Ø³). Ø±Ø§Ø¬Ø¹Ù‡Ø§ ÙˆØ³Ø¯Ø¯Ù‡Ø§.`,
+        title: 'تسوية جديدة للشريك',
+        message: `تم إنشاء تسوية تلقائية للشريك ${partner.name} عن شهر ${prevMonthStart.toLocaleDateString('ar', { month: 'long', year: 'numeric' })} (${amount} ر.س). راجعها وسددها.`,
         type: 'settlement',
         link: 'partners',
         source: 'cron',
@@ -218,9 +218,9 @@ export default async function handler(req, res) {
   const authHeader = req.headers.authorization;
   if (!secret) {
     // Vercel only sends `Authorization: Bearer $CRON_SECRET` when the env
-    // var exists â€” without it every scheduled run is rejected and the daily
+    // var exists — without it every scheduled run is rejected and the daily
     // digests silently never happen. Say so loudly in the logs.
-    console.error('CRON_SECRET is not configured on the server. Vercel cron requests cannot be authenticated â€” set CRON_SECRET in the project env vars.');
+    console.error('CRON_SECRET is not configured on the server. Vercel cron requests cannot be authenticated — set CRON_SECRET in the project env vars.');
     return res.status(500).json({ message: 'CRON_SECRET is not configured on the server' });
   }
   if (authHeader !== `Bearer ${secret}`) {
@@ -250,8 +250,8 @@ export default async function handler(req, res) {
     if (!vapidOk) {
       await notify({
         userIds: ownerIds.slice(0, 5),
-        title: 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„ØªÙ†Ø²ÙŠÙ„Ø§Øª ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©',
-        message: 'Ù…ÙØ§ØªÙŠØ­ VAPID ØºÙŠØ± Ù…Ø¶Ø¨ÙˆØ·Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø§Ø¯Ù… â€” Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ù…ØªØµÙØ­ Ù…Ø¹Ø·Ù„Ø©.',
+        title: 'إعدادات التنزيلات غير مكتملة',
+        message: 'مفاتيح VAPID غير مضبوطة على الخادم — إشعارات المتصفح معطلة.',
         type: 'warning',
         link: 'settings',
         source: 'cron',
@@ -265,8 +265,8 @@ export default async function handler(req, res) {
       : { skip: true, reason: 'partners feature unused' };
 
     // Arrival / departure reminders (today + tomorrow). Shared with
-    // api/notifications.js?action=daily-summary so the in-app trigger and
-    // the cron can never disagree about who gets notified or how it is tagged.
+    // api/daily-summary.js so the in-app trigger and the cron can never
+    // disagree about who gets notified or how it is tagged.
     const dailyReminders = await run('arrival-departure-reminders', () => runArrivalDepartureReminders({ today })) || {
       arrivals: { found: 0, sent: 0, items: [] },
       departures: { found: 0, sent: 0, items: [] },
@@ -286,8 +286,8 @@ export default async function handler(req, res) {
     for (const license of licenses30Days) {
       await run('license-30-notify', () => notify({
         userIds: [license.userId],
-        title: 'ØªÙ†Ø¨ÙŠÙ‡ Ø§Ù†ØªÙ‡Ø§Ø¡ ØªØ±Ø®ÙŠØµ',
-        message: `Ø§Ù„ØªØ±Ø®ÙŠØµ Ø±Ù‚Ù… ${license.licenseNumber} Ø³ÙŠÙ†ØªÙ‡ÙŠ Ø¨Ø¹Ø¯ 30 ÙŠÙˆÙ…Ø§Ù‹`,
+        title: 'تنبيه انتهاء ترخيص',
+        message: `الترخيص رقم ${license.licenseNumber} سينتهي بعد 30 يوماً`,
         type: 'license',
         link: 'settings',
         source: 'cron',
@@ -305,8 +305,8 @@ export default async function handler(req, res) {
     for (const license of licenses7Days) {
       await run('license-7-notify', () => notify({
         userIds: [license.userId],
-        title: 'ØªÙ†Ø¨ÙŠÙ‡ Ù‡Ø§Ù…: Ø§Ù†ØªÙ‡Ø§Ø¡ ØªØ±Ø®ÙŠØµ Ø®Ù„Ø§Ù„ Ø£Ø³Ø¨ÙˆØ¹',
-        message: `Ø§Ù„ØªØ±Ø®ÙŠØµ Ø±Ù‚Ù… ${license.licenseNumber} Ø³ÙŠÙ†ØªÙ‡ÙŠ Ø¨Ø¹Ø¯ 7 Ø£ÙŠØ§Ù… ÙÙ‚Ø·!`,
+        title: 'تنبيه هام: انتهاء ترخيص خلال أسبوع',
+        message: `الترخيص رقم ${license.licenseNumber} سينتهي بعد 7 أيام فقط!`,
         type: 'warning',
         link: 'settings',
         urgent: true,
@@ -323,8 +323,8 @@ export default async function handler(req, res) {
     for (const license of expiredLicenses) {
       await run('license-expired-notify', () => notify({
         userIds: [license.userId],
-        title: 'âš ï¸ ØªØ±Ø®ÙŠØµ Ù…Ù†ØªÙ‡Ù',
-        message: `Ø§Ù†ØªÙ‡Ù‰ Ø§Ù„ØªØ±Ø®ÙŠØµ Ø±Ù‚Ù… ${license.licenseNumber} â€” ÙŠØ¬Ø¨ ØªØ¬Ø¯ÙŠØ¯Ù‡ ÙÙˆØ±Ø§Ù‹.`,
+        title: '⚠️ ترخيص منتهٍ',
+        message: `انتهى الترخيص رقم ${license.licenseNumber} — يجب تجديده فوراً.`,
         type: 'warning',
         link: 'settings',
         urgent: true,

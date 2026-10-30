@@ -647,7 +647,7 @@ export default function SettingsView() {
                         <BellRing size={18} className="text-ink dark:text-white" />
                         إشعارات المتصفح
                       </h3>
-                      <p className="text-xs text-muted dark:text-body-dark mt-1">تلقي تنبيهات فورية حتى عند إغلاق التطبيق</p>
+                      <p className="text-xs text-muted dark:text-body-dark mt-1">يصلك على الجهاز تنبيه واحد فقط عن جدول اليوم (وصولات ومغادرات). بقية التنبيهات تظهر داخل الجرس.</p>
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <button
@@ -684,7 +684,7 @@ export default function SettingsView() {
                       أنواع الإشعارات
                     </h3>
                     <p className="text-xs text-muted dark:text-body-dark mt-1 mb-4">
-                      اختر ما تصلك تنبيهاته. التنبيهات العاجلة تظهر دائماً.
+                      اختر ما يظهر لك داخل الجرس. التنبيهات العاجلة تظهر دائماً.
                     </p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">

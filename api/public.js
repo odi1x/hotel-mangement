@@ -1,4 +1,4 @@
-﻿/* global process */
+/* global process */
 import prisma from '../prisma.js';
 import { cors } from '../utils.js';
 import { notify } from '../notify.js';
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
         }
       });
 
-      // Public endpoint â€” safe to cache for a short window (anonymous traffic, same data for all users of this admin)
+      // Public endpoint — safe to cache for a short window (anonymous traffic, same data for all users of this admin)
       res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=120');
 
       return res.status(200).json({ admin, apartments, bookings });
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
       // Validate Turnstile token with Cloudflare.
       // TURNSTILE_SECRET_KEY comes from Vercel env vars. If not set, we use
       // Cloudflare's public test secret which pairs with the test site key
-      // and always succeeds â€” that's why users see the "For testing only"
+      // and always succeeds — that's why users see the "For testing only"
       // banner. Set both VITE_TURNSTILE_SITE_KEY (client) and
       // TURNSTILE_SECRET_KEY (server) in Vercel to enable real bot protection.
       const secret = process.env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
@@ -118,9 +118,9 @@ export default async function handler(req, res) {
       // Fetch apartment to get the name
       const apt = await prisma.apartment.findUnique({ where: { id: apartmentId } });
       if (!apt || !apt.isActive) {
-        return res.status(403).json({ message: 'Ù‡Ø°Ù‡ Ø§Ù„ÙˆØ­Ø¯Ø© ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹' });
+        return res.status(403).json({ message: 'هذه الوحدة غير متاحة حالياً' });
       }
-      const aptName = apt ? apt.name : 'ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ';
+      const aptName = apt ? apt.name : 'غير معروف';
 
       const booking = await prisma.booking.create({
         data: {
@@ -143,8 +143,8 @@ export default async function handler(req, res) {
         ownerId: adminId,
         permission: 'canBook',
         includeOwner: true,
-        title: 'Ø·Ù„Ø¨ Ø­Ø¬Ø² Ø¬Ø¯ÙŠØ¯',
-        message: `Ø·Ù„Ø¨ Ø­Ø¬Ø² Ø¬Ø¯ÙŠØ¯ Ù…Ø¹Ù„Ù‚ Ù„Ø´Ù‚Ø© ${aptName} Ù…Ù† ${customerName} Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ù…ÙˆØ§ÙÙ‚ØªÙƒ`,
+        title: 'طلب حجز جديد',
+        message: `طلب حجز جديد معلق لشقة ${aptName} من ${customerName} بانتظار موافقتك`,
         type: 'request',
         link: 'requests',
         urgent: true,
