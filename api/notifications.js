@@ -1,7 +1,8 @@
-/* global process */
+﻿/* global process */
 import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { notify } from './notify.js';
+import { notify } from '../notify.js';
+import { runArrivalDepartureReminders } from '../daily-reminders.js';
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -62,7 +63,25 @@ if (req.method === 'GET') {
         },
       });
 
-      if (req.method === 'GET') {
+    // DAILY SUMMARY
+    // On-demand trigger for the arrival/departure reminders. The Vercel cron
+    // only runs once a day at 08:00 Riyadh and needs CRON_SECRET to
+    // authenticate at all — this action makes the reminders land whenever
+    // the app is opened. Delivery is idempotent server-side (day-scoped
+    // tags), so calling it often is safe: repeat calls report "skipped"
+    // instead of pushing twice.
+    if (action === 'daily-summary') {
+      // Staff accounts act inside their owner's tenant.
+      const tenantId = user.adminId || user.userId;
+      const result = await runArrivalDepartureReminders({ tenantId });
+      return res.status(200).json({
+        message: 'Daily reminders processed',
+        tenantId,
+        ...result,
+      });
+    }
+
+    if (req.method === 'GET') {
         return res.status(200).json({
           prefs: row?.notificationPrefs || null,
           threshold: row?.largeAmountAlertThreshold != null ? Number(row.largeAmountAlertThreshold) : null,
@@ -150,12 +169,12 @@ if (req.method === 'GET') {
         }
 
         else if (action === 'test') {
-            // Fires a real push to the current user (no tag → never deduped),
+            // Fires a real push to the current user (no tag â†’ never deduped),
             // so the Settings screen can verify the whole push pipeline.
             const result = await notify({
                 userIds: [userId],
-                title: 'إشعار تجريبي',
-                message: 'اختبار الإشعارات: إن وصلتك هذه الرسالة فإشعارات المتصفح تعمل بشكل صحيح.',
+                title: 'Ø¥Ø´Ø¹Ø§Ø± ØªØ¬Ø±ÙŠØ¨ÙŠ',
+                message: 'Ø§Ø®ØªØ¨Ø§Ø± Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª: Ø¥Ù† ÙˆØµÙ„ØªÙƒ Ù‡Ø°Ù‡ Ø§Ù„Ø±Ø³Ø§Ù„Ø© ÙØ¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ù…ØªØµÙØ­ ØªØ¹Ù…Ù„ Ø¨Ø´ÙƒÙ„ ØµØ­ÙŠØ­.',
                 type: 'info',
                 link: 'settings',
                 source: 'api',

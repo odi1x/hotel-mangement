@@ -1,8 +1,8 @@
-import prisma from '../prisma.js';
+﻿import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { notify, isLargeAmount } from './notify.js';
+import { notify, isLargeAmount } from '../notify.js';
 import { createCleaningTaskForBooking } from './admin-resources.js';
-import { runArrivalDepartureReminders } from './daily-reminders.js';
+import { runArrivalDepartureReminders } from '../daily-reminders.js';
 
 // Optional tenant identity fields must never be persisted as an empty string.
 // When the operator leaves them blank, store the literal string "none".
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       };
 
       // Payment-status needs per-booking totals, which can't be expressed in a
-      // single Prisma where-clause — compute in memory, then paginate.
+      // single Prisma where-clause â€” compute in memory, then paginate.
       const payBucket = (b) => {
         const s = new Date(b.startDate);
         const e = new Date(b.endDate);
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
       const start = new Date(`${startStr}T12:00:00.000Z`);
       const end = new Date(`${endStr}T12:00:00.000Z`);
       if (end < start) {
-        return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
+        return res.status(400).json({ message: 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø© Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† Ù‚Ø¨Ù„ ØªØ§Ø±ÙŠØ® Ø§Ù„ÙˆØµÙˆÙ„' });
       }
 
       const queryStart = new Date(`${startStr}T23:59:59.999Z`);
@@ -160,7 +160,7 @@ export default async function handler(req, res) {
       }
 
       // Check for overlapping bookings (ignore checked_out_early/cancelled ones
-      // — they don't hold the dates)
+      // â€” they don't hold the dates)
       const overlapCount = await prisma.booking.count({
         where: {
           apartmentId,
@@ -173,7 +173,7 @@ export default async function handler(req, res) {
       });
 
       if (overlapCount > 0) {
-        return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
+        return res.status(400).json({ message: 'Ù‡Ø°Ù‡ Ø§Ù„ÙˆØ­Ø¯Ø© Ù…Ø­Ø¬ÙˆØ²Ø© Ø¨Ø§Ù„ÙØ¹Ù„ ÙÙŠ Ø§Ù„ÙØªØ±Ø© Ø§Ù„Ù…Ø­Ø¯Ø¯Ø©' });
       }
 
       const booking = await prisma.booking.create({
@@ -202,8 +202,8 @@ export default async function handler(req, res) {
       // Create notification for new booking
       await notify({
         userIds: [targetUserId],
-        title: 'حجز جديد',
-        message: `تم تسجيل حجز جديد للنزيل ${residentName} في وحدة ${apartment.name} بواسطة ${user.name || user.username}`,
+        title: 'Ø­Ø¬Ø² Ø¬Ø¯ÙŠØ¯',
+        message: `ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø­Ø¬Ø² Ø¬Ø¯ÙŠØ¯ Ù„Ù„Ù†Ø²ÙŠÙ„ ${residentName} ÙÙŠ ÙˆØ­Ø¯Ø© ${apartment.name} Ø¨ÙˆØ§Ø³Ø·Ø© ${user.name || user.username}`,
         type: 'booking',
         link: 'residents',
         tag: `booking-new:${booking.id}`
@@ -212,8 +212,8 @@ export default async function handler(req, res) {
       if (user.userId !== targetUserId) {
           await notify({
             userIds: [user.userId],
-            title: 'تم تأكيد الحجز',
-            message: `تم تأكيد حجزك للنزيل ${residentName} في وحدة ${apartment.name}`,
+            title: 'ØªÙ… ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø­Ø¬Ø²',
+            message: `ØªÙ… ØªØ£ÙƒÙŠØ¯ Ø­Ø¬Ø²Ùƒ Ù„Ù„Ù†Ø²ÙŠÙ„ ${residentName} ÙÙŠ ÙˆØ­Ø¯Ø© ${apartment.name}`,
             type: 'success',
             link: 'residents',
             tag: `booking-own:${booking.id}`
@@ -262,8 +262,8 @@ export default async function handler(req, res) {
 
         await notify({
           userIds: [targetUserId],
-          title: 'إلغاء حجز',
-          message: `تم إلغاء حجز النزيل ${existing.residentName}. سجل الدفعات محفوظ للمراجعة.`,
+          title: 'Ø¥Ù„ØºØ§Ø¡ Ø­Ø¬Ø²',
+          message: `ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø­Ø¬Ø² Ø§Ù„Ù†Ø²ÙŠÙ„ ${existing.residentName}. Ø³Ø¬Ù„ Ø§Ù„Ø¯ÙØ¹Ø§Øª Ù…Ø­ÙÙˆØ¸ Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©.`,
           type: 'warning',
           link: 'residents',
           tag: `booking-cancelled:${id}`
@@ -286,7 +286,7 @@ export default async function handler(req, res) {
 
         let updatedNotes = existing.notes || '';
         if (reasonNotes && reasonNotes.trim() !== '') {
-            updatedNotes += (updatedNotes ? '\n\n' : '') + '--- سبب المغادرة المبكرة ---\n' + reasonNotes;
+            updatedNotes += (updatedNotes ? '\n\n' : '') + '--- Ø³Ø¨Ø¨ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø© Ø§Ù„Ù…Ø¨ÙƒØ±Ø© ---\n' + reasonNotes;
         }
 
         const apartment = await prisma.apartment.findUnique({ where: { id: existing.apartmentId } });
@@ -294,8 +294,8 @@ export default async function handler(req, res) {
         // Notify the Admin (apartment owner)
         await notify({
           userIds: [targetUserId],
-          title: 'مغادرة مبكرة',
-          message: `الموظف ${user.name || user.username} قام بتسجيل خروج مبكر للنزيل ${existing.residentName} من وحدة ${apartment.name}. السبب: ${reasonNotes || 'غير محدد'}`,
+          title: 'Ù…ØºØ§Ø¯Ø±Ø© Ù…Ø¨ÙƒØ±Ø©',
+          message: `Ø§Ù„Ù…ÙˆØ¸Ù ${user.name || user.username} Ù‚Ø§Ù… Ø¨ØªØ³Ø¬ÙŠÙ„ Ø®Ø±ÙˆØ¬ Ù…Ø¨ÙƒØ± Ù„Ù„Ù†Ø²ÙŠÙ„ ${existing.residentName} Ù…Ù† ÙˆØ­Ø¯Ø© ${apartment.name}. Ø§Ù„Ø³Ø¨Ø¨: ${reasonNotes || 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯'}`,
           type: 'warning',
           link: 'residents',
           tag: `checkout-early:${existing.id}`
@@ -304,8 +304,8 @@ export default async function handler(req, res) {
         if (user.userId !== targetUserId) {
             await notify({
               userIds: [user.userId],
-              title: 'مغادرة مبكرة',
-              message: `تم تسجيل المغادرة المبكرة للنزيل ${existing.residentName} بنجاح.`,
+              title: 'Ù…ØºØ§Ø¯Ø±Ø© Ù…Ø¨ÙƒØ±Ø©',
+              message: `ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø© Ø§Ù„Ù…Ø¨ÙƒØ±Ø© Ù„Ù„Ù†Ø²ÙŠÙ„ ${existing.residentName} Ø¨Ù†Ø¬Ø§Ø­.`,
               type: 'success',
               link: 'residents',
               tag: `checkout-early-own:${existing.id}`
@@ -341,10 +341,10 @@ export default async function handler(req, res) {
               data: {
                 bookingId: id,
                 userId: targetUserId,
-                amount: -Math.abs(overpaid),   // NEGATIVE — see comment above
+                amount: -Math.abs(overpaid),   // NEGATIVE â€” see comment above
                 method: 'cash',
                 type: 'refund',
-                notes: 'استرداد تلقائي عند المغادرة المبكرة',
+                notes: 'Ø§Ø³ØªØ±Ø¯Ø§Ø¯ ØªÙ„Ù‚Ø§Ø¦ÙŠ Ø¹Ù†Ø¯ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø© Ø§Ù„Ù…Ø¨ÙƒØ±Ø©',
                 collectedBy: user.name || user.username
               }
             });
@@ -363,7 +363,7 @@ export default async function handler(req, res) {
         try {
           await createCleaningTaskForBooking(existing, targetUserId, user);
         } catch (e) {
-          // Task creation failure shouldn't fail the checkout — log and move on.
+          // Task creation failure shouldn't fail the checkout â€” log and move on.
           console.error('Failed to auto-create cleaning task on checkout:', e);
         }
 
@@ -377,8 +377,8 @@ export default async function handler(req, res) {
           const large = isLargeAmount(outstanding, booking.totalPrice, owner);
           await notify({
             userIds: [targetUserId],
-            title: large ? 'مبلغ متبقٍ كبير بعد المغادرة' : 'مبلغ متبقٍ على الحجز',
-            message: `على حجز ${existing.residentName} في وحدة ${apartment?.name || ''} مبلغ متبقٍ ${Math.round(outstanding * 100) / 100} ر.س بعد المغادرة المبكرة.`,
+            title: large ? 'Ù…Ø¨Ù„Øº Ù…ØªØ¨Ù‚Ù ÙƒØ¨ÙŠØ± Ø¨Ø¹Ø¯ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø©' : 'Ù…Ø¨Ù„Øº Ù…ØªØ¨Ù‚Ù Ø¹Ù„Ù‰ Ø§Ù„Ø­Ø¬Ø²',
+            message: `Ø¹Ù„Ù‰ Ø­Ø¬Ø² ${existing.residentName} ÙÙŠ ÙˆØ­Ø¯Ø© ${apartment?.name || ''} Ù…Ø¨Ù„Øº Ù…ØªØ¨Ù‚Ù ${Math.round(outstanding * 100) / 100} Ø±.Ø³ Ø¨Ø¹Ø¯ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø© Ø§Ù„Ù…Ø¨ÙƒØ±Ø©.`,
             type: large ? 'warning' : 'info',
             link: 'balances',
             tag: `balance-due:${id}`
@@ -396,7 +396,7 @@ export default async function handler(req, res) {
       const start = new Date(`${startStr}T12:00:00.000Z`);
       const end = new Date(`${endStr}T12:00:00.000Z`);
       if (end < start) {
-        return res.status(400).json({ message: 'تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول' });
+        return res.status(400).json({ message: 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø© Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø£Ù† ÙŠÙƒÙˆÙ† Ù‚Ø¨Ù„ ØªØ§Ø±ÙŠØ® Ø§Ù„ÙˆØµÙˆÙ„' });
       }
 
       const queryStart = new Date(`${startStr}T23:59:59.999Z`);
@@ -424,7 +424,7 @@ export default async function handler(req, res) {
       });
 
       if (overlapCount > 0) {
-        return res.status(400).json({ message: 'هذه الوحدة محجوزة بالفعل في الفترة المحددة' });
+        return res.status(400).json({ message: 'Ù‡Ø°Ù‡ Ø§Ù„ÙˆØ­Ø¯Ø© Ù…Ø­Ø¬ÙˆØ²Ø© Ø¨Ø§Ù„ÙØ¹Ù„ ÙÙŠ Ø§Ù„ÙØªØ±Ø© Ø§Ù„Ù…Ø­Ø¯Ø¯Ø©' });
       }
 
       const booking = await prisma.booking.update({

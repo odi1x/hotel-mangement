@@ -65,7 +65,7 @@ export const NotificationProvider = ({ children }) => {
         // storage unavailable (private mode) — just run the request
       }
       try {
-        const res = await axios.get(`${API_BASE_URL}/daily-summary`);
+        const res = await axios.get(`${API_BASE_URL}/notifications?action=daily-summary`);
         const sent = (res.data?.arrivals?.sent || 0) + (res.data?.departures?.sent || 0);
         try {
           localStorage.setItem('daily-summary-last-run', String(now));

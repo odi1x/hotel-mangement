@@ -1,5 +1,5 @@
-import prisma from '../prisma.js';
-import { sendWebPush } from '../push-helper.js';
+import prisma from './prisma.js';
+import { sendWebPush } from './push-helper.js';
 
 export const NOTIFICATION_TYPES = {
   booking: 'booking',

@@ -1,4 +1,4 @@
-import prisma from '../prisma.js';
+import prisma from './prisma.js';
 import { notify } from './notify.js';
 
 const RIYADH_OFFSET_MIN = 180;
@@ -94,9 +94,10 @@ function summaryLine(bucket) {
  *
  * Runs from three places:
  *   1. api/cron/daily.js    — once a day at 08:00 Riyadh (Vercel cron).
- *   2. api/daily-summary.js — whenever the app is opened, so the reminders
- *      still land if the cron is down, was unauthorized, or the booking was
- *      created after the cron had already run for that day.
+ *   2. api/notifications.js?action=daily-summary — whenever the app is
+ *      opened, so the reminders still land if the cron is down, was
+ *      unauthorized, or the booking was created after the cron had already
+ *      run for that day.
  *   3. api/bookings.js      — right after a booking is created/rescheduled.
  *
  * Delivery is idempotent: a reminder is sent at most once per Riyadh day

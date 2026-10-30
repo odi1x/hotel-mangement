@@ -1,6 +1,6 @@
-import prisma from '../prisma.js';
+﻿import prisma from '../prisma.js';
 import { verifyToken, cors } from '../utils.js';
-import { notify, isLargeAmount } from './notify.js';
+import { notify, isLargeAmount } from '../notify.js';
 
 /** Return the next calendar month in "YYYY-MM" format. */
 function nextMonth(ym) {
@@ -10,12 +10,12 @@ function nextMonth(ym) {
 }
 
 /**
- * /api/admin-resources?resource=maintenance      → maintenance CRUD
- * /api/admin-resources?resource=pricing-rules    → pricing rules CRUD
+ * /api/admin-resources?resource=maintenance      â†’ maintenance CRUD
+ * /api/admin-resources?resource=pricing-rules    â†’ pricing rules CRUD
  *
  * Consolidated into a single serverless function to fit Vercel Hobby's
  * 12-function cap. Each resource's handler is identical to what it would be
- * as a standalone file — the only thing different is routing at the top.
+ * as a standalone file â€” the only thing different is routing at the top.
  *
  * If you upgrade to Pro later and want to split these back into separate files,
  * copy each handler function back to its own /api/{resource}.js file with the
@@ -82,7 +82,7 @@ async function maintenanceHandler(req, res, user) {
       const { apartmentId, title, description, category, severity, cost, contractor, notes } = req.body;
 
       if (!apartmentId || !title) {
-        return res.status(400).json({ message: 'الشقة والعنوان مطلوبان' });
+        return res.status(400).json({ message: 'Ø§Ù„Ø´Ù‚Ø© ÙˆØ§Ù„Ø¹Ù†ÙˆØ§Ù† Ù…Ø·Ù„ÙˆØ¨Ø§Ù†' });
       }
 
       const apartment = await prisma.apartment.findUnique({ where: { id: apartmentId } });
@@ -107,7 +107,7 @@ async function maintenanceHandler(req, res, user) {
         }
       });
 
-      // Create-time is rarely 'resolved', but call the sync anyway — it's
+      // Create-time is rarely 'resolved', but call the sync anyway â€” it's
       // a no-op if the issue isn't resolved with cost. Keeps the invariant
       // "every resolved-with-cost issue has a matching Expense row" true.
       await syncMaintenanceExpense(issue);
@@ -116,8 +116,8 @@ async function maintenanceHandler(req, res, user) {
         const isUrgent = (severity || 'normal') === 'urgent';
         await notify({
           userIds: [targetUserId],
-          title: isUrgent ? 'بلاغ صيانة عاجل' : 'بلاغ صيانة جديد',
-          message: `${user.name || user.username} أبلغ عن مشكلة "${title}" في وحدة ${apartment.name}`,
+          title: isUrgent ? 'Ø¨Ù„Ø§Øº ØµÙŠØ§Ù†Ø© Ø¹Ø§Ø¬Ù„' : 'Ø¨Ù„Ø§Øº ØµÙŠØ§Ù†Ø© Ø¬Ø¯ÙŠØ¯',
+          message: `${user.name || user.username} Ø£Ø¨Ù„Øº Ø¹Ù† Ù…Ø´ÙƒÙ„Ø© "${title}" ÙÙŠ ÙˆØ­Ø¯Ø© ${apartment.name}`,
           type: 'maintenance',
           link: 'maintenance',
           urgent: isUrgent,
@@ -129,8 +129,8 @@ async function maintenanceHandler(req, res, user) {
             permission: 'canViewMaintenance',
             ownerId: targetUserId,
             excludeUserId: user.userId,
-            title: 'بلاغ صيانة عاجل',
-            message: `${title} — وحدة ${apartment.name}`,
+            title: 'Ø¨Ù„Ø§Øº ØµÙŠØ§Ù†Ø© Ø¹Ø§Ø¬Ù„',
+            message: `${title} â€” ÙˆØ­Ø¯Ø© ${apartment.name}`,
             type: 'maintenance',
             link: 'maintenance',
             urgent: true,
@@ -140,8 +140,8 @@ async function maintenanceHandler(req, res, user) {
 
         await notify({
           userIds: [user.userId],
-          title: 'تم تسجيل بلاغك',
-          message: `تم تسجيل بلاغ "${title}" في وحدة ${apartment.name}، سيتم المتابعة معه.`,
+          title: 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø¨Ù„Ø§ØºÙƒ',
+          message: `ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø¨Ù„Ø§Øº "${title}" ÙÙŠ ÙˆØ­Ø¯Ø© ${apartment.name}ØŒ Ø³ÙŠØªÙ… Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ù…Ø¹Ù‡.`,
           type: 'success',
           link: 'maintenance',
           tag: `maint-own:${issue.id}`
@@ -198,8 +198,8 @@ async function maintenanceHandler(req, res, user) {
         if (ownerRecipients.length) {
           await notify({
             userIds: ownerRecipients,
-            title: 'تم حل بلاغ صيانة',
-            message: `تم حل "${existing.title}" في وحدة ${apt?.name || ''}${issue.cost ? ` بتكلفة ${issue.cost} ر.س` : ''}.`,
+            title: 'ØªÙ… Ø­Ù„ Ø¨Ù„Ø§Øº ØµÙŠØ§Ù†Ø©',
+            message: `ØªÙ… Ø­Ù„ "${existing.title}" ÙÙŠ ÙˆØ­Ø¯Ø© ${apt?.name || ''}${issue.cost ? ` Ø¨ØªÙƒÙ„ÙØ© ${issue.cost} Ø±.Ø³` : ''}.`,
             type: 'success',
             link: 'maintenance',
             tag: `maint-resolved:${id}`
@@ -209,8 +209,8 @@ async function maintenanceHandler(req, res, user) {
         if (existing.reportedById && existing.reportedById !== user.userId) {
           await notify({
             userIds: [existing.reportedById],
-            title: 'تم حل بلاغك',
-            message: `تم حل البلاغ "${existing.title}" الذي أبلغت عنه في وحدة ${apt?.name || ''}.`,
+            title: 'ØªÙ… Ø­Ù„ Ø¨Ù„Ø§ØºÙƒ',
+            message: `ØªÙ… Ø­Ù„ Ø§Ù„Ø¨Ù„Ø§Øº "${existing.title}" Ø§Ù„Ø°ÙŠ Ø£Ø¨Ù„ØºØª Ø¹Ù†Ù‡ ÙÙŠ ÙˆØ­Ø¯Ø© ${apt?.name || ''}.`,
             type: 'success',
             link: 'maintenance',
             tag: `maint-resolved:${id}`
@@ -219,8 +219,8 @@ async function maintenanceHandler(req, res, user) {
       } else if (wasResolved !== isNowResolved && data.status === 'in_progress' && user.userId !== targetUserId) {
         await notify({
           userIds: [targetUserId],
-          title: 'تم بدء العمل على بلاغ',
-          message: `${user.name || user.username} بدأ العمل على البلاغ "${existing.title}".`,
+          title: 'ØªÙ… Ø¨Ø¯Ø¡ Ø§Ù„Ø¹Ù…Ù„ Ø¹Ù„Ù‰ Ø¨Ù„Ø§Øº',
+          message: `${user.name || user.username} Ø¨Ø¯Ø£ Ø§Ù„Ø¹Ù…Ù„ Ø¹Ù„Ù‰ Ø§Ù„Ø¨Ù„Ø§Øº "${existing.title}".`,
           type: 'maintenance',
           link: 'maintenance',
           tag: `maint-progress:${id}`
@@ -269,26 +269,26 @@ async function pricingRulesHandler(req, res, user) {
       const { label, startDate, endDate, priceMode, value, priority, color, apartmentId, daysOfWeek } = req.body;
 
       if (!label || !startDate || !endDate || value == null || value === '') {
-        return res.status(400).json({ message: 'الاسم والتواريخ والقيمة مطلوبة' });
+        return res.status(400).json({ message: 'Ø§Ù„Ø§Ø³Ù… ÙˆØ§Ù„ØªÙˆØ§Ø±ÙŠØ® ÙˆØ§Ù„Ù‚ÙŠÙ…Ø© Ù…Ø·Ù„ÙˆØ¨Ø©' });
       }
 
       const mode = priceMode || 'multiplier';
       if (mode !== 'fixed' && mode !== 'multiplier') {
-        return res.status(400).json({ message: 'نوع السعر غير صالح' });
+        return res.status(400).json({ message: 'Ù†ÙˆØ¹ Ø§Ù„Ø³Ø¹Ø± ØºÙŠØ± ØµØ§Ù„Ø­' });
       }
 
       const parsedValue = parseFloat(value);
       if (Number.isNaN(parsedValue) || parsedValue <= 0) {
-        return res.status(400).json({ message: 'القيمة يجب أن تكون أكبر من الصفر' });
+        return res.status(400).json({ message: 'Ø§Ù„Ù‚ÙŠÙ…Ø© ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒÙˆÙ† Ø£ÙƒØ¨Ø± Ù…Ù† Ø§Ù„ØµÙØ±' });
       }
 
       const start = new Date(startDate);
       const end = new Date(endDate);
       if (end < start) {
-        return res.status(400).json({ message: 'تاريخ النهاية قبل تاريخ البداية' });
+        return res.status(400).json({ message: 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ù†Ù‡Ø§ÙŠØ© Ù‚Ø¨Ù„ ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¨Ø¯Ø§ÙŠØ©' });
       }
 
-      // Sanitize daysOfWeek — must be array of ints 0-6, unique
+      // Sanitize daysOfWeek â€” must be array of ints 0-6, unique
       let dow = [];
       if (Array.isArray(daysOfWeek)) {
         const seen = new Set();
@@ -340,7 +340,7 @@ async function pricingRulesHandler(req, res, user) {
       if (data.value != null && data.value !== '') data.value = parseFloat(data.value);
       if (data.priority != null) data.priority = Number(data.priority);
 
-      // Sanitize daysOfWeek on update — same rules as POST
+      // Sanitize daysOfWeek on update â€” same rules as POST
       if ('daysOfWeek' in data) {
         const dow = [];
         if (Array.isArray(data.daysOfWeek)) {
@@ -405,7 +405,7 @@ async function expensesHandler(req, res, user) {
 
       // Backfill maintenance-linked expenses when needed. Only triggers if
       // there are resolved maintenance issues with cost > 0 that don't yet
-      // have their linked Expense row. This is idempotent — the helper
+      // have their linked Expense row. This is idempotent â€” the helper
       // skips issues that already have a linked expense.
       const filterActive = category || scope || apartmentId || from || to;
       if (!filterActive) {
@@ -472,8 +472,8 @@ async function expensesHandler(req, res, user) {
         const large = isLargeAmount(amount, 0, owner);
         await notify({
           userIds: [targetUserId],
-          title: large ? 'مصروف كبير' : 'مصروف جديد',
-          message: `${user.name || user.username} سجّل مصروف "${created.title}" بقيمة ${amount} ر.س.`,
+          title: large ? 'Ù…ØµØ±ÙˆÙ ÙƒØ¨ÙŠØ±' : 'Ù…ØµØ±ÙˆÙ Ø¬Ø¯ÙŠØ¯',
+          message: `${user.name || user.username} Ø³Ø¬Ù‘Ù„ Ù…ØµØ±ÙˆÙ "${created.title}" Ø¨Ù‚ÙŠÙ…Ø© ${amount} Ø±.Ø³.`,
           type: 'expense',
           link: 'expenses',
           urgent: large,
@@ -543,7 +543,7 @@ async function expensesHandler(req, res, user) {
 
 /**
  * Backfill maintenance-linked expenses for a user. Legacy migration (from
- * StaffExpense and Apartment.rentCost) is DONE — those tables/fields no
+ * StaffExpense and Apartment.rentCost) is DONE â€” those tables/fields no
  * longer exist after Phase 2b. What remains is: any resolved maintenance
  * issue whose linked Expense record wasn't created (edge case for issues
  * resolved before the maintenance-to-expense auto-link shipped).
@@ -558,7 +558,7 @@ async function runInitialMigration(userId) {
   // Historical maintenance-linked expenses. Every resolved issue with
   // cost > 0 gets a matching Expense record dated on resolvedAt. Going
   // forward the maintenance PUT/POST handler creates these live via
-  // syncMaintenanceExpense — this backfills any that predate that flow.
+  // syncMaintenanceExpense â€” this backfills any that predate that flow.
   const maintIssues = await prisma.maintenanceIssue.findMany({
     where: { userId, status: 'resolved', cost: { not: null } },
   });
@@ -576,7 +576,7 @@ async function runInitialMigration(userId) {
     if (alreadyLinked.has(m.id)) continue;
     maintRows.push({
       userId,
-      title: m.title || 'صيانة',
+      title: m.title || 'ØµÙŠØ§Ù†Ø©',
       amount: m.cost,
       date: m.resolvedAt || m.updatedAt || m.createdAt || now,
       category: 'maintenance',
@@ -598,11 +598,11 @@ async function runInitialMigration(userId) {
 /**
  * Called from maintenanceHandler after a POST/PUT that leaves the issue in
  * status='resolved' with cost > 0. Ensures there's exactly one Expense row
- * linked to the issue. Idempotent — if the issue is edited multiple times,
+ * linked to the issue. Idempotent â€” if the issue is edited multiple times,
  * we upsert the linked expense to match current values.
  *
  * If the issue is re-opened (status changes away from resolved) or the cost
- * drops to 0/null, we DELETE the linked expense — the money didn't go out
+ * drops to 0/null, we DELETE the linked expense â€” the money didn't go out
  * yet. Design decision: expenses track money that has actually left.
  */
 export async function syncMaintenanceExpense(issue) {
@@ -626,7 +626,7 @@ export async function syncMaintenanceExpense(issue) {
 
   const data = {
     userId: issue.userId,
-    title: issue.title || 'صيانة',
+    title: issue.title || 'ØµÙŠØ§Ù†Ø©',
     amount: issue.cost,
     date: issue.resolvedAt || issue.updatedAt || new Date(),
     category: 'maintenance',
@@ -664,8 +664,8 @@ async function notifyNewCleaningTask(task, apartment, actor, ownerId) {
     permission: 'canClean',
     ownerId,
     excludeUserId: actorId,
-    title: 'مهمة تنظيف جديدة',
-    message: `وحدة ${aptName} تحتاج تنظيف.${actorId ? ` أضافها ${actor.name || actor.username}.` : ''}`,
+    title: 'Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ Ø¬Ø¯ÙŠØ¯Ø©',
+    message: `ÙˆØ­Ø¯Ø© ${aptName} ØªØ­ØªØ§Ø¬ ØªÙ†Ø¸ÙŠÙ.${actorId ? ` Ø£Ø¶Ø§ÙÙ‡Ø§ ${actor.name || actor.username}.` : ''}`,
     type: 'cleaning',
     link: 'cleaning',
     tag: `clean-new:${task.id}`
@@ -674,8 +674,8 @@ async function notifyNewCleaningTask(task, apartment, actor, ownerId) {
   if (actorId) {
     await notify({
       userIds: [actorId],
-      title: 'تم إنشاء مهمة التنظيف',
-      message: `تم إنشاء مهمة تنظيف لوحدة ${aptName}.`,
+      title: 'ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ù…Ù‡Ù…Ø© Ø§Ù„ØªÙ†Ø¸ÙŠÙ',
+      message: `ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ Ù„ÙˆØ­Ø¯Ø© ${aptName}.`,
       type: 'success',
       link: 'cleaning',
       tag: `clean-new-own:${task.id}`
@@ -686,14 +686,14 @@ async function notifyNewCleaningTask(task, apartment, actor, ownerId) {
 /**
  * Cleaning tasks handler.
  *
- * GET    ?resource=cleaning                → list all tasks for owner
- * POST   ?resource=cleaning                → create task manually (admin)
- * PUT    ?resource=cleaning&id=<id>        → update task (checklist, notes, status, complete)
- * DELETE ?resource=cleaning&id=<id>        → delete task (admin only)
+ * GET    ?resource=cleaning                â†’ list all tasks for owner
+ * POST   ?resource=cleaning                â†’ create task manually (admin)
+ * PUT    ?resource=cleaning&id=<id>        â†’ update task (checklist, notes, status, complete)
+ * DELETE ?resource=cleaning&id=<id>        â†’ delete task (admin only)
  *
  * Permission: `canClean` OR admin role to interact with tasks.
  * Reads (GET) are broadly allowed to any authenticated user under the owner
- *   — the sidebar controls visibility, but if someone hits the endpoint
+ *   â€” the sidebar controls visibility, but if someone hits the endpoint
  *   directly, they get an empty list rather than a leak.
  *
  * Auto-backfill on first GET: if there are apartments with needsCleaning=true
@@ -800,9 +800,9 @@ async function cleaningHandler(req, res, user) {
       const { action, checklist, notes, cleanerNotes, dueBy } = req.body || {};
 
       // Action semantics:
-      //   'start'     → status pending → in_progress, startedBy/At recorded
-      //   'complete'  → status → done, completedBy/At recorded, apartment cleared
-      //   (no action) → generic edit: checklist / notes / dueBy
+      //   'start'     â†’ status pending â†’ in_progress, startedBy/At recorded
+      //   'complete'  â†’ status â†’ done, completedBy/At recorded, apartment cleared
+      //   (no action) â†’ generic edit: checklist / notes / dueBy
       if (action === 'start') {
         const updated = await prisma.cleaningTask.update({
           where: { id },
@@ -819,8 +819,8 @@ async function cleaningHandler(req, res, user) {
             ownerId: targetUserId,
             excludeUserId: user.userId,
             includeOwner: true,
-            title: 'بدأ تنفيذ مهمة تنظيف',
-            message: `${user.name || user.username} بدأ مهمة تنظيف وحدة ${existing.apartment?.name || ''}.`,
+            title: 'Ø¨Ø¯Ø£ ØªÙ†ÙÙŠØ° Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ',
+            message: `${user.name || user.username} Ø¨Ø¯Ø£ Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ ÙˆØ­Ø¯Ø© ${existing.apartment?.name || ''}.`,
             type: 'cleaning',
             link: 'cleaning',
             tag: `clean-start:${id}`
@@ -861,8 +861,8 @@ async function cleaningHandler(req, res, user) {
             includeOwner: true,
             excludeUserId: user.userId,
             permission: 'canClean',
-            title: 'الوحدة جاهزة',
-            message: `أكمل ${user.name || user.username} تنظيف وحدة ${existing.apartment?.name || ''}${existing.cleanerNotes ? ` — ${existing.cleanerNotes}` : ''}`,
+            title: 'Ø§Ù„ÙˆØ­Ø¯Ø© Ø¬Ø§Ù‡Ø²Ø©',
+            message: `Ø£ÙƒÙ…Ù„ ${user.name || user.username} ØªÙ†Ø¸ÙŠÙ ÙˆØ­Ø¯Ø© ${existing.apartment?.name || ''}${existing.cleanerNotes ? ` â€” ${existing.cleanerNotes}` : ''}`,
             type: 'success',
             link: 'cleaning',
             tag: `clean-done:${id}`
@@ -870,8 +870,8 @@ async function cleaningHandler(req, res, user) {
         } else {
           await notify({
             userIds: [targetUserId],
-            title: 'اكتملت مهمة تنظيف',
-            message: `أكمل ${user.name || user.username} مهمة تنظيف وحدة ${existing.apartment?.name || ''} (تبقى ${stillActive} مهمة أخرى).`,
+            title: 'Ø§ÙƒØªÙ…Ù„Øª Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ',
+            message: `Ø£ÙƒÙ…Ù„ ${user.name || user.username} Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ ÙˆØ­Ø¯Ø© ${existing.apartment?.name || ''} (ØªØ¨Ù‚Ù‰ ${stillActive} Ù…Ù‡Ù…Ø© Ø£Ø®Ø±Ù‰).`,
             type: 'success',
             link: 'cleaning',
             tag: `clean-done:${id}`
@@ -959,16 +959,16 @@ async function defaultTemplateSeed(userId) {
 /* ------------------------------------------------------------------------- */
 
 /**
- * Cleaning templates handler — admin-defined cleaning routines, with exactly
+ * Cleaning templates handler â€” admin-defined cleaning routines, with exactly
  * one active default per owner. The default template is copied into every
  * task created automatically after a check-out (and on backfill), so staff
  * see the standard routine exactly as before; tasks without a template
  * origin are treated as custom.
  *
- * GET    ?resource=cleaning-templates         → list templates (default first)
- * POST   ?resource=cleaning-templates         → create template (admin only)
- * PUT    ?resource=cleaning-templates&id=<id> → update template (admin only)
- * DELETE ?resource=cleaning-templates&id=<id> → delete template (admin only)
+ * GET    ?resource=cleaning-templates         â†’ list templates (default first)
+ * POST   ?resource=cleaning-templates         â†’ create template (admin only)
+ * PUT    ?resource=cleaning-templates&id=<id> â†’ update template (admin only)
+ * DELETE ?resource=cleaning-templates&id=<id> â†’ delete template (admin only)
  *
  * Setting isDefault=true on any template clears the flag from all others.
  */
@@ -1066,7 +1066,7 @@ async function cleaningTemplatesHandler(req, res, user) {
  * that don't have an active task yet. Runs on every GET but is a no-op
  * when everything's in sync (single COUNT-check, then early return).
  *
- * This makes the Cleaning tab useful on day one — otherwise apartments
+ * This makes the Cleaning tab useful on day one â€” otherwise apartments
  * flagged from before this feature shipped would sit in "needs cleaning"
  * limbo without appearing in the task list.
  */
@@ -1093,7 +1093,7 @@ async function backfillCleaningTasks(userId) {
   const needBackfill = dirtyApts.filter(a => !withTaskSet.has(a.id));
   if (needBackfill.length === 0) return;
 
-  // When a default template exists, backfilled tasks get its routine too —
+  // When a default template exists, backfilled tasks get its routine too â€”
   // keeps every auto-created task consistent with the default.
   const seed = await defaultTemplateSeed(userId);
 
@@ -1122,7 +1122,7 @@ export async function createCleaningTaskForBooking(booking, userId, actor) {
   if (existing) return existing;
 
   // If there's a next booking scheduled for this apartment, its start date
-  // becomes the "due by" for this cleaning — urgency signal for the cleaner.
+  // becomes the "due by" for this cleaning â€” urgency signal for the cleaner.
   const nextBooking = await prisma.booking.findFirst({
     where: {
       apartmentId: booking.apartmentId,
@@ -1133,7 +1133,7 @@ export async function createCleaningTaskForBooking(booking, userId, actor) {
     select: { startDate: true },
   });
 
-  // The default template becomes the task's checklist — staff see the
+  // The default template becomes the task's checklist â€” staff see the
   // standard routine without any extra admin work.
   const seed = await defaultTemplateSeed(userId);
 
@@ -1161,8 +1161,8 @@ export async function createCleaningTaskForBooking(booking, userId, actor) {
     ownerId: userId,
     includeOwner: true,
     excludeUserId: actor?.userId,
-    title: 'مهمة تنظيف جديدة',
-    message: `غادر النزيل ${booking.residentName || ''} وحدة ${apt?.name || ''}${nextBooking ? ' ولها حجز قادم — يُفضّل إنجازها قبل الوصول.' : ''}`,
+    title: 'Ù…Ù‡Ù…Ø© ØªÙ†Ø¸ÙŠÙ Ø¬Ø¯ÙŠØ¯Ø©',
+    message: `ØºØ§Ø¯Ø± Ø§Ù„Ù†Ø²ÙŠÙ„ ${booking.residentName || ''} ÙˆØ­Ø¯Ø© ${apt?.name || ''}${nextBooking ? ' ÙˆÙ„Ù‡Ø§ Ø­Ø¬Ø² Ù‚Ø§Ø¯Ù… â€” ÙŠÙÙØ¶Ù‘Ù„ Ø¥Ù†Ø¬Ø§Ø²Ù‡Ø§ Ù‚Ø¨Ù„ Ø§Ù„ÙˆØµÙˆÙ„.' : ''}`,
     type: 'cleaning',
     link: 'cleaning',
     urgent: Boolean(nextBooking),
@@ -1202,7 +1202,7 @@ export async function completeActiveTasksForApartment(apartmentId, userId, compl
 /* ------------------------------------------------------------------------- */
 
 /**
- * Revenue calculation helper — mirrors the logic in analytics.js.
+ * Revenue calculation helper â€” mirrors the logic in analytics.js.
  * Returns gross revenue for bookings within a date range and apartment scope.
  */
 export async function calculateGrossRevenue(userId, apartmentIds, periodStart, periodEnd) {
@@ -1250,7 +1250,7 @@ export async function calculateGrossRevenue(userId, apartmentIds, periodStart, p
 }
 
 /**
- * Expense calculation helper — mirrors the logic in analytics.js.
+ * Expense calculation helper â€” mirrors the logic in analytics.js.
  * Returns total expenses for the given scope and period.
  */
 export async function calculateExpenses(userId, apartmentIds, periodStart, periodEnd) {
@@ -1371,7 +1371,7 @@ export async function calculateExpenses(userId, apartmentIds, periodStart, perio
 }
 
 /**
- * Core compensation engine — single source of truth for payout calculation.
+ * Core compensation engine â€” single source of truth for payout calculation.
  * Returns { amount, formulaLabel, basis }.
  */
 export function computePartnerCompensation(partner, basisGross, basisExpenses) {
@@ -1385,23 +1385,23 @@ export function computePartnerCompensation(partner, basisGross, basisExpenses) {
   switch (partner.compType) {
     case 'percentage_gross':
       amount = basisGross * (pct / 100);
-      label = `${pct}% من إجمالي الإيرادات`;
+      label = `${pct}% Ù…Ù† Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª`;
       break;
     case 'percentage_net':
       amount = basisNet * (pct / 100);
-      label = `${pct}% من صافي الربح`;
+      label = `${pct}% Ù…Ù† ØµØ§ÙÙŠ Ø§Ù„Ø±Ø¨Ø­`;
       break;
     case 'fixed':
       amount = fixed;
-      label = `مبلغ ثابت ${fixed.toLocaleString()} ر.س`;
+      label = `Ù…Ø¨Ù„Øº Ø«Ø§Ø¨Øª ${fixed.toLocaleString()} Ø±.Ø³`;
       break;
     case 'fixed_percentage':
       amount = fixed + basisGross * (pct / 100);
-      label = `مبلغ ثابت ${fixed.toLocaleString()} ر.س + ${pct}% من الإجمالي`;
+      label = `Ù…Ø¨Ù„Øº Ø«Ø§Ø¨Øª ${fixed.toLocaleString()} Ø±.Ø³ + ${pct}% Ù…Ù† Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ`;
       break;
     default:
       amount = basisGross * (pct / 100);
-      label = `${pct}% من إجمالي الإيرادات`;
+      label = `${pct}% Ù…Ù† Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª`;
   }
 
   return {
@@ -1414,10 +1414,10 @@ export function computePartnerCompensation(partner, basisGross, basisExpenses) {
 async function partnersHandler(req, res, user) {
   const targetUserId = user.adminId || user.userId;
 
-  // Feature flag gate — server-side enforcement
+  // Feature flag gate â€” server-side enforcement
   const owner = await prisma.user.findUnique({ where: { id: targetUserId }, select: { partnersRevenueSharingEnabled: true } });
   if (!owner?.partnersRevenueSharingEnabled) {
-    return res.status(403).json({ message: 'ميزة الشركاء غير مفعّلة' });
+    return res.status(403).json({ message: 'Ù…ÙŠØ²Ø© Ø§Ù„Ø´Ø±ÙƒØ§Ø¡ ØºÙŠØ± Ù…ÙØ¹Ù‘Ù„Ø©' });
   }
 
   try {
@@ -1471,7 +1471,7 @@ async function partnersHandler(req, res, user) {
       return res.status(200).json(enriched);
     }
 
-    // GET /api/admin-resources?resource=partners&id=<id> — partner detail + settlements
+    // GET /api/admin-resources?resource=partners&id=<id> â€” partner detail + settlements
     if (req.method === 'GET' && !action && id) {
       const partner = await prisma.partner.findUnique({
         where: { id },
@@ -1484,13 +1484,13 @@ async function partnersHandler(req, res, user) {
         },
       });
       if (!partner || partner.userId !== targetUserId) {
-        return res.status(404).json({ message: 'الشريك غير موجود' });
+        return res.status(404).json({ message: 'Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' });
       }
       return res.status(200).json(partner);
     }
 
     // GET /api/admin-resources?resource=partners&action=calculate&id=<id>&periodStart&periodEnd
-    // POST /api/admin-resources?resource=partners&action=calculate — for preview with form data (no saved partner needed)
+    // POST /api/admin-resources?resource=partners&action=calculate â€” for preview with form data (no saved partner needed)
     if ((req.method === 'GET' || req.method === 'POST') && action === 'calculate') {
       const { periodStart, periodEnd } = req.method === 'GET' ? req.query : req.body;
       if (!periodStart || !periodEnd) {
@@ -1505,7 +1505,7 @@ async function partnersHandler(req, res, user) {
         if (!id) return res.status(400).json({ message: 'partner id required' });
         partner = await prisma.partner.findUnique({ where: { id } });
         if (!partner || partner.userId !== targetUserId) {
-          return res.status(404).json({ message: 'الشريك غير موجود' });
+          return res.status(404).json({ message: 'Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' });
         }
         aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
       } else {
@@ -1539,35 +1539,35 @@ async function partnersHandler(req, res, user) {
       });
     }
 
-    // POST /api/admin-resources?resource=partners — create partner (NOT action-routed calls like settle/pay-settlements/mark-paid/void)
+    // POST /api/admin-resources?resource=partners â€” create partner (NOT action-routed calls like settle/pay-settlements/mark-paid/void)
     if (req.method === 'POST' && !action) {
       const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod, startMonth } = req.body;
 
-      if (!name) return res.status(400).json({ message: 'اسم الشريك مطلوب' });
+      if (!name) return res.status(400).json({ message: 'Ø§Ø³Ù… Ø§Ù„Ø´Ø±ÙŠÙƒ Ù…Ø·Ù„ÙˆØ¨' });
 
       const type = compType || 'percentage_gross';
       const validTypes = ['percentage_gross', 'percentage_net', 'fixed', 'fixed_percentage'];
       if (!validTypes.includes(type)) {
-        return res.status(400).json({ message: 'نوع التعويض غير صالح' });
+        return res.status(400).json({ message: 'Ù†ÙˆØ¹ Ø§Ù„ØªØ¹ÙˆÙŠØ¶ ØºÙŠØ± ØµØ§Ù„Ø­' });
       }
 
       // Validate based on type
       if (type === 'percentage_gross' || type === 'percentage_net' || type === 'fixed_percentage') {
         if (percentage == null || percentage === '') {
-          return res.status(400).json({ message: 'النسبة المئوية مطلوبة لهذا النوع' });
+          return res.status(400).json({ message: 'Ø§Ù„Ù†Ø³Ø¨Ø© Ø§Ù„Ù…Ø¦ÙˆÙŠØ© Ù…Ø·Ù„ÙˆØ¨Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ù†ÙˆØ¹' });
         }
         const pct = Number(percentage);
         if (isNaN(pct) || pct < 0 || pct > 100) {
-          return res.status(400).json({ message: 'النسبة يجب أن تكون بين 0 و 100' });
+          return res.status(400).json({ message: 'Ø§Ù„Ù†Ø³Ø¨Ø© ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒÙˆÙ† Ø¨ÙŠÙ† 0 Ùˆ 100' });
         }
       }
       if (type === 'fixed' || type === 'fixed_percentage') {
         if (fixedAmount == null || fixedAmount === '') {
-          return res.status(400).json({ message: 'المبلغ الثابت مطلوب لهذا النوع' });
+          return res.status(400).json({ message: 'Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ø«Ø§Ø¨Øª Ù…Ø·Ù„ÙˆØ¨ Ù„Ù‡Ø°Ø§ Ø§Ù„Ù†ÙˆØ¹' });
         }
         const amt = Number(fixedAmount);
         if (isNaN(amt) || amt < 0) {
-          return res.status(400).json({ message: 'المبلغ يجب أن يكون أكبر من أو يساوي الصفر' });
+          return res.status(400).json({ message: 'Ø§Ù„Ù…Ø¨Ù„Øº ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙƒÙˆÙ† Ø£ÙƒØ¨Ø± Ù…Ù† Ø£Ùˆ ÙŠØ³Ø§ÙˆÙŠ Ø§Ù„ØµÙØ±' });
         }
       }
 
@@ -1590,20 +1590,20 @@ async function partnersHandler(req, res, user) {
       return res.status(201).json(partner);
     }
 
-    // PUT /api/admin-resources?resource=partners&id=<id> — update partner
+    // PUT /api/admin-resources?resource=partners&id=<id> â€” update partner
     if (req.method === 'PUT' && id) {
       const { name, phone, email, notes, compType, percentage, fixedAmount, apartmentIds, status, recurringPeriod, startMonth } = req.body;
 
       const existing = await prisma.partner.findUnique({ where: { id } });
       if (!existing || existing.userId !== targetUserId) {
-        return res.status(404).json({ message: 'الشريك غير موجود' });
+        return res.status(404).json({ message: 'Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' });
       }
 
       // Validate type if provided
       if (compType) {
         const validTypes = ['percentage_gross', 'percentage_net', 'fixed', 'fixed_percentage'];
         if (!validTypes.includes(compType)) {
-          return res.status(400).json({ message: 'نوع التعويض غير صالح' });
+          return res.status(400).json({ message: 'Ù†ÙˆØ¹ Ø§Ù„ØªØ¹ÙˆÙŠØ¶ ØºÙŠØ± ØµØ§Ù„Ø­' });
         }
       }
 
@@ -1614,18 +1614,18 @@ async function partnersHandler(req, res, user) {
       // Validate based on type
       if (type === 'percentage_gross' || type === 'percentage_net' || type === 'fixed_percentage') {
         if (pct == null) {
-          return res.status(400).json({ message: 'النسبة المئوية مطلوبة لهذا النوع' });
+          return res.status(400).json({ message: 'Ø§Ù„Ù†Ø³Ø¨Ø© Ø§Ù„Ù…Ø¦ÙˆÙŠØ© Ù…Ø·Ù„ÙˆØ¨Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ù†ÙˆØ¹' });
         }
         if (isNaN(pct) || pct < 0 || pct > 100) {
-          return res.status(400).json({ message: 'النسبة يجب أن تكون بين 0 و 100' });
+          return res.status(400).json({ message: 'Ø§Ù„Ù†Ø³Ø¨Ø© ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒÙˆÙ† Ø¨ÙŠÙ† 0 Ùˆ 100' });
         }
       }
       if (type === 'fixed' || type === 'fixed_percentage') {
         if (fixed == null) {
-          return res.status(400).json({ message: 'المبلغ الثابت مطلوب لهذا النوع' });
+          return res.status(400).json({ message: 'Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ø«Ø§Ø¨Øª Ù…Ø·Ù„ÙˆØ¨ Ù„Ù‡Ø°Ø§ Ø§Ù„Ù†ÙˆØ¹' });
         }
         if (isNaN(fixed) || fixed < 0) {
-          return res.status(400).json({ message: 'المبلغ يجب أن يكون أكبر من أو يساوي الصفر' });
+          return res.status(400).json({ message: 'Ø§Ù„Ù…Ø¨Ù„Øº ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙƒÙˆÙ† Ø£ÙƒØ¨Ø± Ù…Ù† Ø£Ùˆ ÙŠØ³Ø§ÙˆÙŠ Ø§Ù„ØµÙØ±' });
         }
       }
 
@@ -1656,7 +1656,7 @@ async function partnersHandler(req, res, user) {
 
       const partner = await prisma.partner.findUnique({ where: { id } });
       if (!partner || partner.userId !== targetUserId) {
-        return res.status(404).json({ message: 'الشريك غير موجود' });
+        return res.status(404).json({ message: 'Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' });
       }
 
       const pStart = new Date(periodStart);
@@ -1675,9 +1675,9 @@ async function partnersHandler(req, res, user) {
         select: { id: true, periodStart: true, periodEnd: true, status: true },
       });
       if (existing) {
-        const label = `${new Date(existing.periodStart).toLocaleDateString('ar', { day: 'numeric', month: 'long' })} — ${new Date(existing.periodEnd).toLocaleDateString('ar', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        const label = `${new Date(existing.periodStart).toLocaleDateString('ar', { day: 'numeric', month: 'long' })} â€” ${new Date(existing.periodEnd).toLocaleDateString('ar', { day: 'numeric', month: 'long', year: 'numeric' })}`;
         return res.status(409).json({
-          message: `يوجد بالفعل تسوية لهذا الشريك في الفترة (${label}). لا يمكن إنشاء تسوية تتعارض مع تسوية موجودة.`,
+          message: `ÙŠÙˆØ¬Ø¯ Ø¨Ø§Ù„ÙØ¹Ù„ ØªØ³ÙˆÙŠØ© Ù„Ù‡Ø°Ø§ Ø§Ù„Ø´Ø±ÙŠÙƒ ÙÙŠ Ø§Ù„ÙØªØ±Ø© (${label}). Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø¥Ù†Ø´Ø§Ø¡ ØªØ³ÙˆÙŠØ© ØªØªØ¹Ø§Ø±Ø¶ Ù…Ø¹ ØªØ³ÙˆÙŠØ© Ù…ÙˆØ¬ÙˆØ¯Ø©.`,
           existing,
         });
       }
@@ -1723,7 +1723,7 @@ async function partnersHandler(req, res, user) {
 
       const partner = await prisma.partner.findUnique({ where: { id } });
       if (!partner || partner.userId !== targetUserId) {
-        return res.status(404).json({ message: 'الشريك غير موجود' });
+        return res.status(404).json({ message: 'Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' });
       }
 
       const aptIds = partner.apartmentIds.length > 0 ? partner.apartmentIds : [];
@@ -1744,7 +1744,7 @@ async function partnersHandler(req, res, user) {
       const lastEligible = `${prevComplete.getFullYear()}-${String(prevComplete.getMonth() + 1).padStart(2, '0')}`;
 
       if (cursorStartMonth > lastEligible) {
-        return res.status(200).json({ created: 0, skipped: 0, message: 'لا توجد أشهر مكتملة بعد للترحيل' });
+        return res.status(200).json({ created: 0, skipped: 0, message: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø´Ù‡Ø± Ù…ÙƒØªÙ…Ù„Ø© Ø¨Ø¹Ø¯ Ù„Ù„ØªØ±Ø­ÙŠÙ„' });
       }
 
       const created = [];
@@ -1785,8 +1785,8 @@ async function partnersHandler(req, res, user) {
         const { amount, formulaLabel, basis } = computePartnerCompensation(partner, gross, expenses);
 
         if (Number(gross) <= 0) {
-          // No revenue that month → don't create a zero settlement, just skip
-          skipped.push(`${cursor} (لا إيرادات)`);
+          // No revenue that month â†’ don't create a zero settlement, just skip
+          skipped.push(`${cursor} (Ù„Ø§ Ø¥ÙŠØ±Ø§Ø¯Ø§Øª)`);
           cursor = nextMonth(cursor);
           continue;
         }
@@ -1808,7 +1808,7 @@ async function partnersHandler(req, res, user) {
             amount,
             currency: 'sar',
             status: 'draft',
-            memo: 'تسوية شهرية تلقائية (ترحيل فترات سابقة)',
+            memo: 'ØªØ³ÙˆÙŠØ© Ø´Ù‡Ø±ÙŠØ© ØªÙ„Ù‚Ø§Ø¦ÙŠØ© (ØªØ±Ø­ÙŠÙ„ ÙØªØ±Ø§Øª Ø³Ø§Ø¨Ù‚Ø©)',
             source: 'manual',
           },
         });
@@ -1820,7 +1820,7 @@ async function partnersHandler(req, res, user) {
         created,
         skipped,
         partnerName: partner.name,
-        message: `تم إنشاء ${created.length} تسوية شهرية وتجاوز ${skipped.length} شهر.`,
+        message: `ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ${created.length} ØªØ³ÙˆÙŠØ© Ø´Ù‡Ø±ÙŠØ© ÙˆØªØ¬Ø§ÙˆØ² ${skipped.length} Ø´Ù‡Ø±.`,
       });
     }
 
@@ -1831,7 +1831,7 @@ async function partnersHandler(req, res, user) {
 
       const settlement = await prisma.settlement.findUnique({ where: { id: settlementId } });
       if (!settlement || settlement.userId !== targetUserId) {
-        return res.status(404).json({ message: 'التسوية غير موجودة' });
+        return res.status(404).json({ message: 'Ø§Ù„ØªØ³ÙˆÙŠØ© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©' });
       }
 
       const updated = await prisma.settlement.update({
@@ -1841,8 +1841,8 @@ async function partnersHandler(req, res, user) {
 
       await notify({
         userIds: [targetUserId],
-        title: 'تمت تسوية دفعة شريك',
-        message: `تم تسجيل تسوية ${settlement.partnerNameSnap} بمبلغ ${settlement.amount} ر.س.`,
+        title: 'ØªÙ…Øª ØªØ³ÙˆÙŠØ© Ø¯ÙØ¹Ø© Ø´Ø±ÙŠÙƒ',
+        message: `ØªÙ… ØªØ³Ø¬ÙŠÙ„ ØªØ³ÙˆÙŠØ© ${settlement.partnerNameSnap} Ø¨Ù…Ø¨Ù„Øº ${settlement.amount} Ø±.Ø³.`,
         type: 'settlement',
         link: 'partners',
         tag: `settlement-paid:${settlementId}`,
@@ -1858,7 +1858,7 @@ async function partnersHandler(req, res, user) {
 
       const settlement = await prisma.settlement.findUnique({ where: { id: settlementId } });
       if (!settlement || settlement.userId !== targetUserId) {
-        return res.status(404).json({ message: 'التسوية غير موجودة' });
+        return res.status(404).json({ message: 'Ø§Ù„ØªØ³ÙˆÙŠØ© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©' });
       }
 
       const updated = await prisma.settlement.update({
@@ -1882,11 +1882,11 @@ async function partnersHandler(req, res, user) {
         where: { id: { in: settlementIds }, userId: targetUserId },
       });
       if (settlements.length !== settlementIds.length) {
-        return res.status(404).json({ message: 'تسوية أو أكثر غير موجودة' });
+        return res.status(404).json({ message: 'ØªØ³ÙˆÙŠØ© Ø£Ùˆ Ø£ÙƒØ«Ø± ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©' });
       }
       const nonDraft = settlements.find(s => s.status !== 'draft');
       if (nonDraft) {
-        return res.status(409).json({ message: 'لا يمكن دفع تسوية ليست بمسودة: ' + nonDraft.partnerNameSnap });
+        return res.status(409).json({ message: 'Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø¯ÙØ¹ ØªØ³ÙˆÙŠØ© Ù„ÙŠØ³Øª Ø¨Ù…Ø³ÙˆØ¯Ø©: ' + nonDraft.partnerNameSnap });
       }
 
       const total = settlements.reduce((sum, s) => sum + Number(s.amount), 0);
@@ -1912,8 +1912,8 @@ async function partnersHandler(req, res, user) {
 
       await notify({
         userIds: [targetUserId],
-        title: 'تمت تسوية دفعات الشركاء',
-        message: `تم تسجيل ${settlements.length} تسوية بإجمالي ${Math.round(total * 100) / 100} ر.س.`,
+        title: 'ØªÙ…Øª ØªØ³ÙˆÙŠØ© Ø¯ÙØ¹Ø§Øª Ø§Ù„Ø´Ø±ÙƒØ§Ø¡',
+        message: `ØªÙ… ØªØ³Ø¬ÙŠÙ„ ${settlements.length} ØªØ³ÙˆÙŠØ© Ø¨Ø¥Ø¬Ù…Ø§Ù„ÙŠ ${Math.round(total * 100) / 100} Ø±.Ø³.`,
         type: 'settlement',
         link: 'partners',
         tag: `settlement-batch:${payment.id}`,
@@ -1922,11 +1922,11 @@ async function partnersHandler(req, res, user) {
       return res.status(201).json({ payment, count: settlements.length, total });
     }
 
-    // DELETE /api/admin-resources?resource=partners&id=<id> — delete partner (cascades settlements)
+    // DELETE /api/admin-resources?resource=partners&id=<id> â€” delete partner (cascades settlements)
     if (req.method === 'DELETE' && id) {
       const existing = await prisma.partner.findUnique({ where: { id } });
       if (!existing || existing.userId !== targetUserId) {
-        return res.status(404).json({ message: 'الشريك غير موجود' });
+        return res.status(404).json({ message: 'Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' });
       }
 
       await prisma.partner.delete({ where: { id } });
