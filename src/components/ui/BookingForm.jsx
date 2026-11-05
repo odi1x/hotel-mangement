@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, CalendarClock, Banknote, Coins, Pencil, AlertTriangle, TagsIcon, Wrench } from 'lucide-react';
+import { X, Calendar, CalendarClock, Banknote, Coins, Pencil, AlertTriangle, TagsIcon, Wrench, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { sanitizePhone } from '../../lib/phoneUtils';
@@ -100,6 +100,7 @@ export default function BookingForm({ onClose, initialData }) {
   }, [formData.phone, formData.residentId, bookings, formData.notes, formData.id]);
 
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const isOverlapping = (start, end, aptId) => {
     return bookings.some(b => {
@@ -247,6 +248,8 @@ export default function BookingForm({ onClose, initialData }) {
     const end = new Date(dateValue.endDate).setHours(0, 0, 0, 0);
     if (end < start) { setError('تاريخ المغادرة لا يمكن أن يكون قبل تاريخ الوصول'); return; }
     if (isOverlapping(start, end, formData.apartmentId)) { setError('هذه الوحدة محجوزة بالفعل في الفترة المحددة'); return; }
+    if (submitting) return;
+    setSubmitting(true);
     try {
       // Persist both columns consistently with the mode the operator used.
       const finalTotal = effectiveMode === 'total' ? (Number(effectiveTotalInput) || 0) : total;
@@ -272,6 +275,8 @@ export default function BookingForm({ onClose, initialData }) {
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء الحجز');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -626,7 +631,20 @@ export default function BookingForm({ onClose, initialData }) {
             </div>
           </div>
 
-          <button type="submit" className="btn-accent w-full h-12 text-base mt-8">{formData.id ? 'حفظ التعديلات' : 'تأكيد الحجز'}</button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="btn-accent w-full h-12 text-base mt-8 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <Loader2 size={18} className="animate-spin" />
+                {formData.id ? 'جاري حفظ التعديلات...' : 'جاري تأكيد الحجز...'}
+              </span>
+            ) : (
+              formData.id ? 'حفظ التعديلات' : 'تأكيد الحجز'
+            )}
+          </button>
         </form>
       </div>
     </div>
