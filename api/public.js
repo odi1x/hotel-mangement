@@ -3,6 +3,36 @@ import prisma from '../prisma.js';
 import { cors } from '../utils.js';
 import { notify } from '../notify.js';
 
+/* ── Abuse limits for the public booking link ──────────────────────────────
+ * The link is anonymous by design, so every write is bounded:
+ *   • Turnstile is verified server-side (when a real secret is configured).
+ *   • Per-admin and per-phone request rates.
+ *   • Duplicate detection for the same unit + overlapping dates.
+ *   • Strict input validation (lengths, phone format, date sanity).
+ *   • The apartment must belong to the admin in the URL.
+ */
+const MAX_REQUESTS_PER_ADMIN_PER_HOUR = 10;
+const MAX_REQUESTS_PER_PHONE_PER_HOUR = 3;
+const MAX_NOTIFY_PER_ADMIN_PER_HOUR = 3;
+const MAX_STAY_NIGHTS = 90;
+const MAX_NAME_LENGTH = 80;
+const MAX_NOTES_LENGTH = 600;
+
+const CLOUDFLARE_TEST_SECRET = '1x0000000000000000000000000000000AA';
+
+const hoursAgo = (hours) => new Date(Date.now() - hours * 3600 * 1000);
+
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
+
+const normalizePhone = (value) => {
+  let digits = digitsOnly(value);
+  if (!digits) return '';
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('966') && digits.length === 12) digits = `0${digits.slice(3)}`;
+  else if (digits.startsWith('9') && digits.length === 10) digits = `0${digits.slice(1)}`;
+  return digits;
+};
+
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -73,6 +103,10 @@ export default async function handler(req, res) {
     }
 
     if (action === 'book' && req.method === 'POST') {
+      let body = req.body;
+      if (typeof body === 'string') {
+        try { body = JSON.parse(body); } catch { body = {}; }
+      }
       const {
         adminId,
         apartmentId,
@@ -82,74 +116,156 @@ export default async function handler(req, res) {
         customerPhone,
         notes,
         turnstileToken
-      } = req.body;
+      } = body || {};
 
-      if (!turnstileToken) {
+      // 1. Turnstile — verified SERVER-side. A token is useless if the server
+      //    never asks Cloudflare whether it is real, so the check is enforced
+      //    here whenever a real secret is configured. Cloudflare's public test
+      //    secret accepts everything, which is the only case we let an
+      //    unverified token through (the rate limits still apply).
+      if (!turnstileToken || typeof turnstileToken !== 'string' || turnstileToken.length > 2048) {
         return res.status(400).json({ message: 'Turnstile token required' });
       }
 
-      // Validate Turnstile token with Cloudflare.
-      // TURNSTILE_SECRET_KEY comes from Vercel env vars. If not set, we use
-      // Cloudflare's public test secret which pairs with the test site key
-      // and always succeeds — that's why users see the "For testing only"
-      // banner. Set both VITE_TURNSTILE_SITE_KEY (client) and
-      // TURNSTILE_SECRET_KEY (server) in Vercel to enable real bot protection.
-      const secret = process.env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
-      const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `secret=${secret}&response=${turnstileToken}`,
+      const secret = process.env.TURNSTILE_SECRET_KEY || CLOUDFLARE_TEST_SECRET;
+      let turnstileOk = false;
+      try {
+        const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `secret=${encodeURIComponent(secret)}&response=${encodeURIComponent(turnstileToken)}`,
+        });
+        const verifyData = await verifyRes.json();
+        turnstileOk = !!verifyData.success;
+      } catch (err) {
+        console.error('Turnstile verification request failed:', err);
+      }
+
+      if (!turnstileOk) {
+        if (secret !== CLOUDFLARE_TEST_SECRET) {
+          return res.status(403).json({ message: 'تعذر التحقق من رمز الأمان، يرجى إعادة المحاولة' });
+        }
+        console.warn('TURNSTILE_SECRET_KEY is not configured — accepting unverified token (rate limits still apply).');
+      }
+
+      // 2. Validate the submitted fields
+      const name = String(customerName || '').trim();
+      const phone = normalizePhone(customerPhone);
+      const cleanNotes = notes ? String(notes).trim().slice(0, MAX_NOTES_LENGTH) : null;
+
+      if (name.length < 2 || name.length > MAX_NAME_LENGTH) {
+        return res.status(400).json({ message: 'الاسم غير صالح' });
+      }
+      if (phone.length < 9 || phone.length > 15) {
+        return res.status(400).json({ message: 'رقم الجوال غير صالح' });
+      }
+      if (!adminId || !apartmentId) {
+        return res.status(400).json({ message: 'بيانات ناقصة' });
+      }
+
+      // 3. Validate dates
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return res.status(400).json({ message: 'التواريخ غير صالحة' });
+      }
+      if (end <= start) {
+        return res.status(400).json({ message: 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية' });
+      }
+      const stayNights = Math.round((end - start) / 86400000);
+      if (stayNights > MAX_STAY_NIGHTS) {
+        return res.status(400).json({ message: `المدة القصوى للحجز ${MAX_STAY_NIGHTS} ليلة` });
+      }
+      const today = new Date();
+      const startOfToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+      if (start < startOfToday) {
+        return res.status(400).json({ message: 'لا يمكن الحجز في تاريخ سابق' });
+      }
+
+      // 4. The admin in the link must exist and be a tenant owner
+      const admin = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, role: true },
       });
-
-      const verifyData = await verifyRes.json();
-      // Allow bypass in test environments by checking success or dummy secret
-      if (!verifyData.success && process.env.NODE_ENV !== 'development') {
-         // return res.status(403).json({ message: 'Invalid Turnstile token' });
+      if (!admin || admin.role !== 'admin') {
+        return res.status(404).json({ message: 'رابط الحجز غير متاح' });
       }
 
-      // Validate dates
-      if (!startDate || !endDate) {
-        return res.status(400).json({ message: 'Dates are required' });
-      }
-
-      // Create Booking
-      // Fetch apartment to get the name
-      const apt = await prisma.apartment.findUnique({ where: { id: apartmentId } });
+      // 5. The apartment must belong to THIS admin — otherwise a stranger
+      //    could file a request into someone else's ledger.
+      const apt = await prisma.apartment.findFirst({
+        where: { id: apartmentId, userId: adminId },
+        select: { id: true, name: true, basePrice: true, isActive: true },
+      });
       if (!apt || !apt.isActive) {
         return res.status(403).json({ message: 'هذه الوحدة غير متاحة حالياً' });
       }
-      const aptName = apt ? apt.name : 'غير معروف';
 
+      // 6. Rate limits — per tenant and per phone number
+      const windowStart = hoursAgo(1);
+      const recentForAdmin = await prisma.booking.count({
+        where: { userId: adminId, source: 'Public Link', createdAt: { gte: windowStart } },
+      });
+      if (recentForAdmin >= MAX_REQUESTS_PER_ADMIN_PER_HOUR) {
+        return res.status(429).json({ message: 'تم تجاوز عدد الطلبات المسموح بها، يرجى المحاولة لاحقاً' });
+      }
+      const recentForPhone = await prisma.booking.count({
+        where: { userId: adminId, phone, source: 'Public Link', createdAt: { gte: windowStart } },
+      });
+      if (recentForPhone >= MAX_REQUESTS_PER_PHONE_PER_HOUR) {
+        return res.status(429).json({ message: 'تم استلام عدة طلبات من هذا الرقم، يرجى المحاولة لاحقاً' });
+      }
+
+      // 7. Duplicate request — same phone, same unit, overlapping dates
+      const duplicate = await prisma.booking.findFirst({
+        where: {
+          userId: adminId,
+          apartmentId,
+          phone,
+          status: { in: ['pending', 'active'] },
+          startDate: { lt: end },
+          endDate: { gt: start },
+        },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return res.status(409).json({ message: 'لديك طلب قائم لنفس التواريخ في هذه الوحدة' });
+      }
+
+      // Create Booking
       const booking = await prisma.booking.create({
         data: {
           userId: adminId,
           apartmentId,
-          residentName: customerName,
+          residentName: name,
           residentId: 'NA', // public booking placeholder
-          phone: customerPhone || 'NA',
-          customerRequest: notes, // Save public notes here
-          pricePerNight: apt ? apt.basePrice : 0,
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
+          phone,
+          customerRequest: cleanNotes, // Save public notes here
+          pricePerNight: apt.basePrice,
+          startDate: start,
+          endDate: end,
           status: 'pending',
           source: 'Public Link',
           totalPrice: 0 // Will be calculated by admin upon approval
         }
       });
 
-      await notify({
-        ownerId: adminId,
-        permission: 'canBook',
-        includeOwner: true,
-        title: 'طلب حجز جديد',
-        message: `طلب حجز جديد معلق لشقة ${aptName} من ${customerName} بانتظار موافقتك`,
-        type: 'request',
-        link: 'requests',
-        urgent: true,
-        tag: `request-new:${booking.id}`
-      });
+      // 8. Notify the owner — but only for the first few requests in the
+      //    window, so a spam burst cannot flood the bell. The requests are
+      //    still visible in the requests view.
+      if (recentForAdmin < MAX_NOTIFY_PER_ADMIN_PER_HOUR) {
+        await notify({
+          ownerId: adminId,
+          permission: 'canBook',
+          includeOwner: true,
+          title: 'طلب حجز جديد',
+          message: `طلب حجز جديد معلق لشقة ${apt.name} من ${name} بانتظار موافقتك`,
+          type: 'request',
+          link: 'requests',
+          urgent: true,
+          tag: `request-new:${booking.id}`
+        });
+      }
 
       return res.status(201).json({ message: 'Booking submitted successfully', booking });
     }
