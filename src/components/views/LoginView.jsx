@@ -5,6 +5,10 @@ import ImageUpload from '../ui/ImageUpload';
 import toast from 'react-hot-toast';
 import logoWide from '../../assets/brand/logo.png';
 
+const DEMO_ACCOUNT = 'demo';
+const DEMO_STAFF_ACCOUNT = 'demo.frontdesk';
+const DEMO_PASSWORD = 'demo1234';
+
 export default function LoginView() {
   const { login, register } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
@@ -39,6 +43,13 @@ export default function LoginView() {
     }
   };
 
+  const fillDemo = (user = DEMO_ACCOUNT) => {
+    setIsLogin(true);
+    setUsername(user);
+    setPassword(DEMO_PASSWORD);
+    setError('');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas dark:bg-surface-dark p-4" dir="rtl">
       <div className="bg-canvas dark:bg-surface-dark-elevated p-6 md:p-8 rounded-xl shadow-soft w-full max-w-md border border-hairline dark:border-hairline-dark-soft">
@@ -47,6 +58,37 @@ export default function LoginView() {
           <h1 className="text-2xl font-semibold tracking-tight text-ink dark:text-white">رنت فلو</h1>
           <p className="text-muted dark:text-body-dark text-sm mt-2">نظام إدارة الضيافة</p>
         </div>
+
+        {isLogin && (
+          <div className="mb-5 rounded-lg border border-hairline dark:border-hairline-dark-soft bg-surface-soft dark:bg-surface-dark p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="eyebrow text-2xs text-muted-soft dark:text-body-dark">نسخة العرض التجريبية</span>
+              <span className="text-2xs text-muted-soft dark:text-body-dark">حساب جاهز ببيانات كاملة</span>
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+              <dt className="text-muted dark:text-body-dark">اسم المستخدم</dt>
+              <dd className="font-mono text-ink dark:text-white">{DEMO_ACCOUNT}</dd>
+              <dt className="text-muted dark:text-body-dark">كلمة المرور</dt>
+              <dd className="font-mono text-ink dark:text-white">{DEMO_PASSWORD}</dd>
+            </dl>
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => fillDemo()}
+                className="btn-secondary flex-1 h-10 text-sm"
+              >
+                تعبئة بيانات الدخول
+              </button>
+              <button
+                type="button"
+                onClick={() => fillDemo(DEMO_STAFF_ACCOUNT)}
+                className="text-sm link-accent hover:underline whitespace-nowrap"
+              >
+                دخول كموظف
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && <div className="bg-surface-card dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft text-ink dark:text-white p-3 rounded-md mb-4 text-sm text-center">{error}</div>}
 
