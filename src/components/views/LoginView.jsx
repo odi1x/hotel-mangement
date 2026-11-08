@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import ImageUpload from '../ui/ImageUpload';
 import toast from 'react-hot-toast';
@@ -12,23 +13,29 @@ export default function LoginView() {
   const [name, setName] = useState('');
   const [profilePicture, setProfilePicture] = useState(null);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (submitting) return;
+    setSubmitting(true);
     try {
       if (isLogin) {
         const user = await login(username, password);
         toast.success(`مرحباً بك ${user.name || user.username}`);
       } else {
         if (!name.trim()) {
-          return setError('الاسم الكامل مطلوب');
+          setError('الاسم الكامل مطلوب');
+          return;
         }
         const user = await register({ username, password, name, profilePicture });
         toast.success(`مرحباً بك ${user.name || user.username}`);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ ما');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -91,16 +98,25 @@ export default function LoginView() {
           </div>
           <button
             type="submit"
-            className="btn-primary w-full h-12 text-base mt-2"
+            disabled={submitting}
+            className="btn-primary w-full h-12 text-base mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'}
+            {submitting ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <Loader2 size={18} className="animate-spin" />
+                {isLogin ? 'جاري تسجيل الدخول...' : 'جاري إنشاء الحساب...'}
+              </span>
+            ) : (
+              isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'
+            )}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-sm link-accent hover:underline"
+            disabled={submitting}
+            className="text-sm link-accent hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLogin ? 'ليس لديك حساب؟ إنشاء حساب جديد' : 'لديك حساب بالفعل؟ تسجيل الدخول'}
           </button>

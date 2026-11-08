@@ -8,7 +8,11 @@
     "build": "prisma db push --accept-data-loss && vite build",
     "postinstall": "prisma generate",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:demo": "node prisma/seed.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
