@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import ImageUpload from '../ui/ImageUpload';
 import toast from 'react-hot-toast';
 import logoWide from '../../assets/brand/logo.png';
 
@@ -9,12 +8,9 @@ const DEMO_ACCOUNT = 'demo';
 const DEMO_PASSWORD = 'demo1234';
 
 export default function LoginView() {
-  const { login, register } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [profilePicture, setProfilePicture] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,26 +30,7 @@ export default function LoginView() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      if (isLogin) {
-        const user = await login(username, password);
-        toast.success(`مرحباً بك ${user.name || user.username}`);
-      } else {
-        if (!name.trim()) {
-          setError('الاسم الكامل مطلوب');
-          return;
-        }
-        const user = await register({ username, password, name, profilePicture });
-        toast.success(`مرحباً بك ${user.name || user.username}`);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'حدث خطأ ما');
-    } finally {
-      setSubmitting(false);
-    }
+    await submitLogin(username, password);
   };
 
   return (
@@ -68,27 +45,6 @@ export default function LoginView() {
         {error && <div className="bg-surface-card dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft text-ink dark:text-white p-3 rounded-md mb-4 text-sm text-center">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div className="flex flex-col items-center mb-6">
-              <label className="block text-sm font-semibold text-body dark:text-body-dark mb-3">الصورة الشخصية (اختياري)</label>
-              <ImageUpload
-                onUploadSuccess={url => setProfilePicture(url)}
-                currentImage={profilePicture}
-              />
-            </div>
-          )}
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">الاسم الكامل</label>
-              <input
-                required={!isLogin}
-                type="text"
-                className="input-field h-11 text-base"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-          )}
           <div>
             <label className="block text-sm font-semibold text-body dark:text-body-dark mb-1.5">اسم المستخدم</label>
             <input
@@ -107,7 +63,7 @@ export default function LoginView() {
               name="password"
               required
               type="password"
-              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              autoComplete="current-password"
               className="input-field h-11 text-base"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -121,32 +77,23 @@ export default function LoginView() {
             {submitting ? (
               <span className="inline-flex items-center justify-center gap-2">
                 <Loader2 size={18} className="animate-spin" />
-                {isLogin ? 'جاري تسجيل الدخول...' : 'جاري إنشاء الحساب...'}
+                جاري تسجيل الدخول...
               </span>
             ) : (
-              isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'
+              'تسجيل الدخول'
             )}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            type="button"
+            onClick={() => submitLogin(DEMO_ACCOUNT, DEMO_PASSWORD)}
             disabled={submitting}
-            className="text-sm link-accent hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-sm text-muted-soft dark:text-body-dark hover:text-ink dark:hover:text-white hover:underline underline-offset-4 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLogin ? 'ليس لديك حساب؟ إنشاء حساب جديد' : 'لديك حساب بالفعل؟ تسجيل الدخول'}
+            اضغط هنا للدخول بحساب تجريبي جاهز
           </button>
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => submitLogin(DEMO_ACCOUNT, DEMO_PASSWORD)}
-              disabled={submitting}
-              className="text-sm text-muted-soft dark:text-body-dark hover:text-ink dark:hover:text-white hover:underline underline-offset-4 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              اضغط هنا للدخول بحساب تجريبي جاهز
-            </button>
-          </div>
         </div>
       </div>
     </div>
