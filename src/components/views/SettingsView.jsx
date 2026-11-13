@@ -8,6 +8,7 @@ import { ACCENTS, applyAccent, getAccentId } from '../../lib/accent';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import StaffManagement from './settings/StaffManagement';
+import SegmentedControl from '../ui/SegmentedControl';
 
 const NOTIF_CATEGORIES = [
   { key: 'booking', label: 'الحجوزات والطلبات' },
@@ -410,21 +411,16 @@ export default function SettingsView() {
     <div className="h-full overflow-hidden flex flex-col w-full max-w-6xl mx-auto">
 
       {user?.role === 'admin' && (
-        <div className="flex gap-6 border-b border-hairline dark:border-hairline-dark">
-          <button
-            onClick={() => setActiveTab('general')}
-            className={`tab-underline flex items-center gap-2 ${activeTab === 'general' ? 'tab-underline-active' : ''}`}
-          >
-            <Settings size={18} />
-            إعدادات المنشأة
-          </button>
-          <button
-            onClick={() => setActiveTab('staff')}
-            className={`tab-underline flex items-center gap-2 ${activeTab === 'staff' ? 'tab-underline-active' : ''}`}
-          >
-            <Shield size={18} />
-            إدارة الموظفين
-          </button>
+        <div className="shrink-0">
+          <SegmentedControl
+            options={[
+              { value: 'general', label: 'إعدادات المنشأة', icon: Settings },
+              { value: 'staff', label: 'إدارة الموظفين', icon: Shield },
+            ]}
+            value={activeTab}
+            onChange={setActiveTab}
+            ariaLabel="أقسام الإعدادات"
+          />
         </div>
       )}
 
@@ -440,12 +436,12 @@ export default function SettingsView() {
             desktop where there's plenty of space. */}
         <div className="p-3 md:p-8 pb-0 shrink-0">
           <div className="mb-4 border-b border-hairline-soft dark:border-hairline-dark pb-4">
-            <div className="nav-pill-group">
+            <div className="seg-group">
               {facilitySubTabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setFacilityTab(tab.id)}
-                  className={`nav-pill text-xs md:text-sm font-semibold ${facilityTab === tab.id ? 'nav-pill-active' : ''}`}
+                  className={`seg-item text-xs md:text-sm font-semibold ${facilityTab === tab.id ? 'seg-item-active' : ''}`}
                 >
                   <span className="md:hidden">{tab.shortLabel}</span>
                   <span className="hidden md:inline">{tab.label}</span>

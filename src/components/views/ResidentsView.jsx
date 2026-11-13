@@ -619,7 +619,7 @@ export default function ResidentsView({ openBookingForm }) {
             >
               السابق
             </button>
-            <div className="nav-pill-group">
+            <div className="seg-group">
               {(() => {
                 const pages = [];
                 const maxVisible = 5;
@@ -639,12 +639,12 @@ export default function ResidentsView({ openBookingForm }) {
                     key={`${page}-${index}`}
                     onClick={() => typeof page === 'number' && setCurrentPage(page)}
                     disabled={page === '...'}
-                    className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    className={`seg-item w-8 h-8 px-0 py-0 text-sm ${
                       currentPage === page
-                        ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
+                        ? 'seg-item-active'
                         : page === '...'
                         ? 'text-muted-soft cursor-default'
-                        : 'text-muted hover:text-ink dark:hover:text-white'
+                        : ''
                     }`}
                   >
                     {page}

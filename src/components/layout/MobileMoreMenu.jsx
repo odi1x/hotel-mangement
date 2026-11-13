@@ -1,4 +1,4 @@
-import { Home, Wallet, Wrench, Tag, BarChart2, Settings, Moon, Sun, LogOut, User as UserIcon, ChevronLeft, ArrowDownCircle, Sparkles, Handshake } from 'lucide-react';
+import { Home, Wallet, Wrench, Tag, BarChart2, Settings, Moon, Sun, LogOut, User as UserIcon, ChevronLeft, ArrowDownCircle, Sparkles, Handshake, CalendarDays } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -59,6 +59,7 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
         </button>
 
         <SectionTitle>إدارة المنشأة</SectionTitle>
+        <MenuItem icon={CalendarDays} label="جدول التوفر" onClick={() => setView('availability')} />
         <MenuItem icon={Home}  label="الشقق"      onClick={() => setView('apartments')} />
         {canSeeBalances && (
           <MenuItem icon={Wallet}  label="المستحقات" badge={duesCount} onClick={() => setView('balances')} />

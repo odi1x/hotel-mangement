@@ -15,6 +15,16 @@ export default function Header({ openStaffSettings, onNavigate, title, isCollaps
   const buttonRef = useRef(null);
   const dropdownRef = useRef(null);
   const [buttonRect, setButtonRect] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  ));
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const handleChange = (event) => setIsMobile(event.matches);
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
 
   const toggleOpen = () => {
     const next = !dropdownOpen;
@@ -53,7 +63,7 @@ export default function Header({ openStaffSettings, onNavigate, title, isCollaps
           sidebar at all. */}
       {isCollapsed && (
         <button
-          onClick={() => onNavigate('availability')}
+          onClick={() => onNavigate('today')}
           className="hidden md:flex items-center text-muted hover:text-ink dark:text-body-dark dark:hover:text-white transition-colors"
           title="رنت فلو"
         >
@@ -66,8 +76,8 @@ export default function Header({ openStaffSettings, onNavigate, title, isCollaps
           below in the main content area. Truncates with ellipsis for long
           titles ("المستحقات المالية" etc.). Hidden on desktop where the big
           title in main padding still owns the visual hierarchy. */}
-      {title && (
-        <h1 className="md:hidden text-lg font-bold tracking-tight text-ink dark:text-white leading-tight truncate min-w-0 flex-1">
+      {title && isMobile && (
+        <h1 className="text-lg font-bold tracking-tight text-ink dark:text-white leading-tight truncate min-w-0 flex-1">
           {title}
         </h1>
       )}

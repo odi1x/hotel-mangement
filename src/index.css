@@ -136,17 +136,44 @@
   .badge-ghost   { @apply bg-surface-soft text-muted-soft dark:bg-surface-dark-elevated; }  /* departed */
   .badge-dashed  { @apply bg-transparent text-muted border border-dashed border-muted-soft; } /* early checkout */
 
-  /* ---- nav-pill-group: capsule track, white active pill ---- */
-  .nav-pill-group {
-    @apply inline-flex items-center gap-1 rounded-full bg-surface-soft p-1.5
+  /* ---- seg-group: segmented control -------------------------------------
+     The app's one signature "pick one of these" control. A soft capsule
+     track holds mutually exclusive segments; the active one fills with
+     near-black ink and flips to white text (Airbnb's category switcher).
+     In dark mode the fill inverts to white so the pill still reads as the
+     selected one against the dark track.
+
+     Every "button options" group in the app uses this — filters, sort
+     toggles, period pickers, the Today/Upcoming switcher, the settings
+     tabs. One look, one component language.
+
+     Use it like:
+       <div className="seg-group" role="tablist">
+         <button className={`seg-item ${active ? 'seg-item-active' : ''}`}>…</button>
+       </div>
+     -------------------------------------------------------------------- */
+  .seg-group {
+    @apply inline-flex items-center gap-1 rounded-full bg-surface-soft p-1
            dark:bg-surface-dark-elevated;
   }
-  .nav-pill {
-    @apply px-3.5 py-1.5 rounded-full text-sm font-medium text-muted
-           transition-colors hover:text-ink dark:hover:text-white;
+  .seg-item {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full
+           px-4 py-2 text-sm font-semibold text-muted
+           transition-[color,background-color,transform] duration-150 ease-out
+           active:scale-[0.97]
+           motion-reduce:transition-none motion-reduce:active:scale-100;
   }
-  .nav-pill-active {
-    @apply bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white;
+  .seg-item-active {
+    @apply bg-primary text-white shadow-pill
+           dark:bg-white dark:text-ink;
+  }
+  /* Hover darkening only for real pointers — a touch tap would otherwise
+     leave a segment stuck in its hover colour. The active pill keeps its
+     own text colour, so it is excluded from the rule. */
+  @media (hover: hover) and (pointer: fine) {
+    .seg-item:not(.seg-item-active):hover {
+      @apply text-ink dark:text-white;
+    }
   }
 
   /* ---- monochrome icon action ---- */
@@ -324,20 +351,10 @@
     @apply text-xs text-muted dark:text-body-dark mt-0.5;
   }
 
-  /* ---- Tab underline: the "border-b-2 -mb-px" pattern used in Settings.
-     One layer tabs live above a shared bottom border and the active tab's
-     underline overlaps the border, hiding it selectively. Use it like:
-       <div className="flex gap-6 border-b border-hairline">
-         <button className={`tab-underline ${active === 'x' ? 'tab-underline-active' : ''}`}>...
-     -------------------------------------------------------------------- */
-  .tab-underline {
-    @apply relative pb-3 -mb-px border-b-2 border-transparent
-           text-sm font-semibold text-muted transition-colors
-           hover:text-ink dark:text-body-dark dark:hover:text-white;
-  }
-  .tab-underline-active {
-    @apply border-ink text-ink dark:border-white dark:text-white;
-  }
+  /* ---- Tab underline: retired.
+     The "border-b-2 -mb-px" underline tabs were replaced by the segmented
+     control (`.seg-group` / `.seg-item` / `.seg-item-active`), which every
+     button-options group in the app now uses. ---------------------------- */
 
   /* ---- Eyebrow: uppercase micro-label used above card titles / form fields ---- */
   .eyebrow {

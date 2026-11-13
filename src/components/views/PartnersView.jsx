@@ -356,15 +356,15 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="nav-pill-group flex-none w-fit max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
+              <div className="seg-group flex-none w-fit max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
                 {['all', 'active', 'inactive', 'paused'].map((status) => (
                   <button
                     key={status}
                     role="tab"
                     aria-selected={statusFilter === status}
                     onClick={() => setStatusFilter(status)}
-                    className={`nav-pill text-2xs md:text-xs flex-1 md:flex-none text-center ${
-                      statusFilter === status ? 'nav-pill-active' : ''
+                    className={`seg-item text-2xs md:text-xs flex-1 md:flex-none text-center ${
+                      statusFilter === status ? 'seg-item-active' : ''
                     }`}>
                     {status === 'all' && 'الكل'}
                     {status === 'active' && 'نشط'}

@@ -417,6 +417,8 @@ Avatar photos use `{rounded.full}` (perfect circles) at 36px or 40px. Product UI
 
 **`nav-pill-group`** — A small pill-radius wrapper around 2-3 sub-nav segments (e.g., the product-mode switcher between "Personal" / "Teams" / "Enterprise"). Background `{colors.surface-soft}` with internal padding 6px, rounded `{rounded.pill}`. Active segment renders as a white-canvas pill with a subtle drop shadow inside the wrapper. The pill-in-pill treatment is one of Cal.com's signature interactive components.
 
+> **Rent Flow override.** The reference system fills the active segment with white canvas. Rent Flow inverts it: the active segment fills with `{colors.primary}` (#111111) and flips to white text (white fill + `{colors.ink}` text in dark mode), following the Airbnb category-switcher pattern. The active pill keeps its subtle drop shadow so it lifts off the track. Implemented in `src/index.css` as `.seg-group` / `.seg-item` / `.seg-item-active` and owned by `src/components/ui/SegmentedControl.jsx`. Every "pick one of these" group in the app — the Today/Upcoming switcher, notification filters, period pickers, sort toggles, settings tabs — uses this one control.
+
 ### Buttons
 
 **`button-primary`** — The signature primary CTA. Background `{colors.primary}` (#111111), text `{colors.on-primary}`, type `{typography.button}` (Inter 14px / 600), padding 12px × 20px, height 40px, rounded `{rounded.md}` (8px). Active state `button-primary-active` shifts to `{colors.primary-active}` (#242424).
@@ -463,7 +465,7 @@ Avatar photos use `{rounded.full}` (perfect circles) at 36px or 40px. Product UI
 
 ### Tab / Filter
 
-**`category-tab`** + **`category-tab-active`** — Used inside the nav-pill-group. Inactive: transparent background, `{colors.muted}` text. Active: `{colors.canvas}` background, `{colors.ink}` text, subtle drop shadow inside the pill-group wrapper. Padding 8px × 14px, rounded `{rounded.md}`.
+**`category-tab`** + **`category-tab-active`** — Used inside the nav-pill-group. Inactive: transparent background, `{colors.muted}` text. Active: `{colors.canvas}` background, `{colors.ink}` text, subtle drop shadow inside the pill-group wrapper. Padding 8px × 14px, rounded `{rounded.md}`. Rent Flow overrides the active treatment to a filled `{colors.primary}` pill with white text — see the nav-pill-group override above.
 
 ### CTA / Footer
 

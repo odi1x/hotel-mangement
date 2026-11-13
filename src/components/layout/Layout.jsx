@@ -14,6 +14,7 @@ import MaintenanceView from '../views/MaintenanceView';
 import PricingView from '../views/PricingView';
 import ExpensesView from '../views/ExpensesView';
 import CleaningView from '../views/CleaningView';
+import TodayView from '../views/TodayView';
 import PartnersView from '../views/PartnersView';
 import PartnerDetailView from '../views/PartnerDetailView';
 import BookingForm from '../ui/BookingForm';
@@ -43,7 +44,7 @@ const GATED_VIEW_PERM = {
 export default function Layout() {
   const { user } = useAuth();
   const { fetchNotifications } = useNotifications();
-  const [view, setViewRaw] = useState('availability');
+  const [view, setViewRaw] = useState('today');
   // viewFilter is optional per-view context (e.g. { apartmentId: 'abc' }
   // when navigating to Expenses filtered to a specific unit). Cleared on
   // any navigation that doesn't pass a filter argument.
@@ -125,6 +126,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
 
   const getViewTitle = () => {
     switch (view) {
+      case 'today':        return 'اليوم';
       case 'availability': return 'جدول التوفر';
       case 'apartments':   return 'إدارة الشقق';
       case 'residents':    return 'سجل النزلاء';
@@ -149,6 +151,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
     // fallback was showing on multiple tabs (Expenses, Cleaning, Analytics)
     // and made every page feel identical.
     switch (view) {
+      case 'today':        return 'حركة اليوم، الحجوزات القادمة، والإشعارات المهمة.';
       case 'availability': return 'شاهد وأدِر أشغال الوحدات في التقويم اليومي.';
       case 'apartments':   return 'شقق ومرافق، بيانات وأسعار، مشاركة روابط الحجز.';
       case 'residents':    return 'كل الحجوزات القادمة والحالية والسابقة في مكان واحد.';
@@ -207,7 +210,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
               )}
 
               {/* Primary action — depends on the current view. */}
-              {(view === 'availability' || view === 'residents' || view === 'apartments' || view === 'requests') && (
+              {(view === 'today' || view === 'availability' || view === 'residents' || view === 'apartments' || view === 'requests') && (
                 <button
                   onClick={() => setIsBookingByDate(true)}
                   className="btn-accent"
@@ -271,6 +274,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
               gives the mobile tab-swap a native feel. Desktop looks the
               same since duration is quick and translate is tiny. */}
           <div key={view} className="flex-1 min-h-0 h-full flex flex-col anim-tab">
+            {view === 'today' && <TodayView key={viewFilter?.focus || 'today'} onNavigate={setView} initialFilter={viewFilter} />}
             {view === 'availability' && <AvailabilityView openBookingForm={handleOpenBookingForm} />}
             {view === 'requests' && <RequestsView openBookingForm={handleOpenBookingForm} />}
             {view === 'apartments' && <ApartmentsView setView={setView} />}

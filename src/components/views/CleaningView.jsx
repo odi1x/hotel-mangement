@@ -153,7 +153,7 @@ export default function CleaningView({ addTrigger = 0 }) {
 
       {/* Filter chips + search */}
       <div className="flex items-center gap-2 mb-4 shrink-0 flex-wrap">
-        <div className="nav-pill-group shrink-0">
+        <div className="seg-group shrink-0">
           {[
             { id: 'pending', label: 'قيد التنفيذ' },
             { id: 'done',    label: 'المكتمل' },
@@ -162,7 +162,7 @@ export default function CleaningView({ addTrigger = 0 }) {
             <button
               key={o.id}
               onClick={() => setStatusFilter(o.id)}
-              className={`nav-pill text-xs ${statusFilter === o.id ? 'nav-pill-active' : ''}`}
+              className={`seg-item text-xs ${statusFilter === o.id ? 'seg-item-active' : ''}`}
             >
               {o.label}
             </button>

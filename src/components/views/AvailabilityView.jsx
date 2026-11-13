@@ -363,12 +363,12 @@ export default function AvailabilityView({ openBookingForm }) {
           {/* View mode: pills on both platforms. Compact sizing on mobile so
               all three options stay visible and no dropdown menu covers the
               availability grid below. */}
-          <div className="nav-pill-group shrink-0 flex-1 md:flex-none min-w-0">
+          <div className="seg-group shrink-0 flex-1 md:flex-none min-w-0">
             {[{ id: 'week', t: 'أسبوع' }, { id: 'half', t: 'نصف شهر' }, { id: 'month', t: 'شهر' }].map(v => (
               <button
                 key={v.id}
                 onClick={() => setViewMode(v.id)}
-                className={`nav-pill text-2xs md:text-xs px-1.5 md:px-3 py-1 md:py-1.5 flex-1 md:flex-none text-center ${viewMode === v.id ? 'nav-pill-active' : ''}`}
+                className={`seg-item text-2xs md:text-xs px-1.5 md:px-3 py-1 md:py-1.5 flex-1 md:flex-none text-center ${viewMode === v.id ? 'seg-item-active' : ''}`}
               >
                 {v.t}
               </button>

@@ -398,7 +398,7 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
                 تصفية:
               </span>
             </div>
-            <div className="nav-pill-group shrink-0">
+            <div className="seg-group shrink-0">
               {[
                 { id: 'month',   label: 'هذا الشهر' },
                 { id: 'quarter', label: 'الربع الحالي' },
@@ -408,7 +408,7 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
                 <button
                   key={o.id}
                   onClick={() => setTimeFilter(o.id)}
-                  className={`nav-pill text-2xs md:text-xs ${timeFilter === o.id ? 'nav-pill-active' : ''}`}
+                  className={`seg-item text-2xs md:text-xs ${timeFilter === o.id ? 'seg-item-active' : ''}`}
                 >
                   {o.label}
                 </button>

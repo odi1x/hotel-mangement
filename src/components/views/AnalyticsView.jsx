@@ -543,7 +543,7 @@ export default function AnalyticsView({ setView }) {
             </button>
           )}
 
-<div className="nav-pill-group shrink-0 overflow-x-auto max-w-full scrollbar-none md:overflow-visible">
+<div className="seg-group shrink-0 overflow-x-auto max-w-full scrollbar-none md:overflow-visible">
             {[
               { id: 'month',   label: 'هذا الشهر', hideForPast: true },
               { id: 'quarter', label: 'الربع الحالي', hideForPast: true },
@@ -555,7 +555,7 @@ export default function AnalyticsView({ setView }) {
               <button
                 key={o.id}
                 onClick={() => handlePeriodChange(o.id)}
-                className={`nav-pill text-xs ${periodFilter === o.id ? 'nav-pill-active' : ''}`}
+                className={`seg-item text-xs ${periodFilter === o.id ? 'seg-item-active' : ''}`}
               >
                 {o.label}
               </button>

@@ -83,7 +83,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         {!isCollapsed && (
           <div
             className="flex items-center space-x-reverse space-x-2.5 flex-1 min-w-0 cursor-pointer"
-            onClick={() => setView('availability')}
+            onClick={() => setView('today')}
             title="رنت فلو"
           >
             <img src={logoWide} alt="رنت فلو" className="h-8 object-contain" />
@@ -100,6 +100,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
       </div>
 
       <nav className="flex flex-col gap-1 w-full flex-1 justify-start min-h-0 overflow-y-auto scrollbar-none">
+        <SidebarItem icon={Sun} label="اليوم" id="today" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Calendar} label="التوفر" id="availability" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
         {(user?.role === 'admin' || user?.permissions?.canBook) && (

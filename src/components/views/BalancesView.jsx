@@ -92,17 +92,17 @@ export default function BalancesView() {
         </div>
 
         {/* Sort toggle — inline pills, no card wrapper */}
-        <div className="nav-pill-group w-full mt-3">
+        <div className="seg-group w-full mt-3">
           <button
             onClick={() => setSort('checkout')}
-            className={`nav-pill flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'checkout' ? 'nav-pill-active' : ''}`}
+            className={`seg-item flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'checkout' ? 'seg-item-active' : ''}`}
           >
             <ArrowUpNarrowWide size={13} />
             الأقرب مغادرة
           </button>
           <button
             onClick={() => setSort('amount')}
-            className={`nav-pill flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'amount' ? 'nav-pill-active' : ''}`}
+            className={`seg-item flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'amount' ? 'seg-item-active' : ''}`}
           >
             <ArrowDownWideNarrow size={13} />
             الأكبر مبلغاً
@@ -158,20 +158,20 @@ export default function BalancesView() {
           <div>
             <p className="eyebrow mb-2">الترتيب</p>
           </div>
-          {/* Sort toggle — nav-pill-group matches the sub-nav pattern used
+          {/* Sort toggle — seg-group matches the sub-nav pattern used
               in Settings, Maintenance filters, and the analytics chart-range
               picker. One pattern for "pick one option from a small set". */}
-          <div className="nav-pill-group w-full">
+          <div className="seg-group w-full">
             <button
               onClick={() => setSort('checkout')}
-              className={`nav-pill flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'checkout' ? 'nav-pill-active' : ''}`}
+              className={`seg-item flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'checkout' ? 'seg-item-active' : ''}`}
             >
               <ArrowUpNarrowWide size={13} />
               الأقرب مغادرة
             </button>
             <button
               onClick={() => setSort('amount')}
-              className={`nav-pill flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'amount' ? 'nav-pill-active' : ''}`}
+              className={`seg-item flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'amount' ? 'seg-item-active' : ''}`}
             >
               <ArrowDownWideNarrow size={13} />
               الأكبر مبلغاً

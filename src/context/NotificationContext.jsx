@@ -13,6 +13,7 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
 
   const API_BASE_URL = '/api';
 
@@ -27,6 +28,15 @@ export const NotificationProvider = ({ children }) => {
     } catch (err) {
       console.error('Failed to fetch notifications', err);
     }
+  };
+
+  const openNotificationsPanel = () => {
+    setNotificationsPanelOpen(true);
+    fetchNotifications();
+  };
+
+  const closeNotificationsPanel = () => {
+    setNotificationsPanelOpen(false);
   };
 
   const loadMore = async () => {
@@ -231,6 +241,9 @@ export const NotificationProvider = ({ children }) => {
       unreadCount,
       hasMore,
       loadingMore,
+      notificationsPanelOpen,
+      openNotificationsPanel,
+      closeNotificationsPanel,
       loadMore,
       markAsRead,
       markAllAsRead,

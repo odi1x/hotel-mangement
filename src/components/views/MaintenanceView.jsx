@@ -246,7 +246,7 @@ export default function MaintenanceView({ addTrigger = 0 }) {
               <span className="hidden md:inline text-2xs font-semibold uppercase tracking-wider text-muted-soft">تصفية:</span>
             </div>
 
-            <div className="nav-pill-group shrink-0">
+            <div className="seg-group shrink-0">
               {[
                 { v: 'open',        label: 'مفتوح' },
                 { v: 'in_progress', label: 'قيد المعالجة' },
@@ -256,10 +256,8 @@ export default function MaintenanceView({ addTrigger = 0 }) {
                 <button
                   key={o.v}
                   onClick={() => setStatusFilter(o.v)}
-                  className={`h-7 px-3 rounded-full text-xs font-semibold transition-colors ${
-                    statusFilter === o.v
-                      ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
-                      : 'text-muted hover:text-ink dark:hover:text-white'
+                  className={`seg-item text-xs px-3 py-1.5 ${
+                    statusFilter === o.v ? 'seg-item-active' : ''
                   }`}
                 >
                   {o.label}

@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Understand-Anything analysis data (generated knowledge graph + scratch)
+.ua/
+.understand-anything/
+.taste-skill/

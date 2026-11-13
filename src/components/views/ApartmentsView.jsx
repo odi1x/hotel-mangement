@@ -784,21 +784,21 @@ export default function ApartmentsView({ setView }) {
         )}
       {totalPages > 1 && (
         <div className="flex justify-center items-center py-4 border-t border-hairline-soft dark:border-hairline-dark shrink-0">
-          <div className="nav-pill-group">
+          <div className="seg-group">
             <button
               onClick={() => setCurrentPage(Math.max(1, clampedPage - 1))}
               disabled={clampedPage === 1}
-              className="nav-pill disabled:opacity-40 disabled:cursor-not-allowed"
+              className="seg-item disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight size={18} />
             </button>
-            <span className="nav-pill nav-pill-active text-sm font-semibold">
+            <span className="seg-item seg-item-active text-sm font-semibold">
               صفحة {clampedPage} من {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, clampedPage + 1))}
               disabled={clampedPage === totalPages}
-              className="nav-pill disabled:opacity-40 disabled:cursor-not-allowed"
+              className="seg-item disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={18} />
             </button>

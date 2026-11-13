@@ -1,4 +1,4 @@
-import { CalendarDays, BellRing, Users, Menu as MenuIcon, Plus } from 'lucide-react';
+import { Sun, BellRing, Users, Menu as MenuIcon, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { computeBookingTotals } from '../../lib/paymentUtils';
@@ -53,14 +53,14 @@ export default function MobileBottomNav({
   // Any other view (analytics, settings, apartments, cleaning, expenses,
   // maintenance, pricing, etc.) reached via the More menu should keep
   // "More" highlighted so the user knows where they are.
-  const primaryContentTabs = ['availability', 'requests', 'residents'];
+  const primaryContentTabs = ['today', 'requests', 'residents'];
   const moreIsActive = view === 'more' || !primaryContentTabs.includes(view);
 
   // Per-view FAB config — mirrors the desktop header's primary-action button
   // logic (same permission gates). booking-related tabs keep the original
   // action; other tabs reached via "More" get their own create-action.
   const fabConfig = (() => {
-    if (['availability', 'requests', 'residents', 'apartments'].includes(view)) {
+    if (['today', 'availability', 'requests', 'residents', 'apartments'].includes(view)) {
       return { show: true, onClick: onNewBooking, label: 'حجز جديد' };
     }
     if (view === 'cleaning' && canSeeCleaning) {
@@ -87,10 +87,10 @@ export default function MobileBottomNav({
     <div className="md:hidden fixed bottom-4 left-4 right-6 z-40 flex items-center anim-nav mobile-nav-shield">
       <div className="flex-1 flex items-center gap-1 bg-canvas/85 dark:bg-surface-dark/85 backdrop-blur-lg border border-hairline/60 dark:border-hairline-dark/60 rounded-full h-14 shadow-lift px-1">
         <TabItem
-          icon={CalendarDays}
-          label="التوفر"
-          isActive={view === 'availability'}
-          onClick={() => setView('availability')}
+          icon={Sun}
+          label="اليوم"
+          isActive={view === 'today'}
+          onClick={() => setView('today')}
         />
         {(isAdmin || canSeeRequests) && (
           <TabItem
@@ -156,12 +156,12 @@ function TabItem({ icon: Icon, label, isActive, onClick, badge }) {
       <div className="relative">
         <Icon size={22} strokeWidth={isActive ? 2.25 : 1.75} />
         {badge > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-accent text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-canvas dark:border-surface-dark leading-none">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-accent text-white text-[11px] font-bold rounded-full flex items-center justify-center border-2 border-canvas dark:border-surface-dark leading-none">
             {badge > 9 ? '9+' : badge}
           </span>
         )}
       </div>
-      <span className="text-[10px] font-semibold leading-none">{label}</span>
+      <span className="text-[11px] font-semibold leading-none">{label}</span>
     </button>
   );
 }

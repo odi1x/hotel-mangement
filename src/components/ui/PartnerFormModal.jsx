@@ -222,7 +222,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
             <legend className="eyebrow mb-2">طريقة التعويض <span className="text-rose-500">*</span></legend>
 
             {/* Comp Type Pills */}
-            <div className="nav-pill-group" role="radiogroup">
+            <div className="seg-group" role="radiogroup">
               {COMP_TYPES.map((type) => (
                 <button
                   key={type.value}
@@ -230,10 +230,8 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
                   role="radio"
                   aria-checked={formData.compType === type.value}
                   onClick={() => handleChange('compType', type.value)}
-                  className={`h-10 px-4 rounded-full text-sm font-semibold transition-colors ${
-                    formData.compType === type.value
-                      ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
-                      : 'text-muted hover:text-ink dark:hover:text-white'
+                  className={`seg-item h-10 px-4 ${
+                    formData.compType === type.value ? 'seg-item-active' : ''
                   }`}>
                   {type.label}
                 </button>
@@ -332,16 +330,14 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
           {/* Status */}
           <fieldset className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-4 space-y-3">
             <legend className="eyebrow mb-2">الحالة</legend>
-            <div className="nav-pill-group">
+            <div className="seg-group">
               {['active', 'inactive', 'paused'].map(s => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => handleChange('status', s)}
-                  className={`h-9 px-4 rounded-full text-sm font-semibold transition-colors ${
-                    formData.status === s
-                      ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
-                      : 'text-muted hover:text-ink dark:hover:text-white'
+                  className={`seg-item h-9 px-4 ${
+                    formData.status === s ? 'seg-item-active' : ''
                   }`}>
                     {s === 'active' && 'نشط'}
                     {s === 'inactive' && 'غير نشط'}
@@ -357,7 +353,7 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
             <p className="text-xs text-muted-soft dark:text-body-dark">
               عند التفعيل، يُنشئ النظام تسوية مسودة تلقائياً عن كل شهر مكتمل لهذا الشريك. تحتاج فقط للمراجعة والدفع.
             </p>
-            <div className="nav-pill-group">
+            <div className="seg-group">
               {[
                 { value: '', label: 'يدوي (بدون تلقائي)' },
                 { value: 'monthly', label: 'شهري تلقائي' },
@@ -366,10 +362,8 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
                   key={opt.value}
                   type="button"
                   onClick={() => handleChange('recurringPeriod', opt.value)}
-                  className={`h-9 px-4 rounded-full text-sm font-semibold transition-colors ${
-                    formData.recurringPeriod === opt.value
-                      ? 'bg-canvas text-ink shadow-pill dark:bg-hairline-dark-soft dark:text-white'
-                      : 'text-muted hover:text-ink dark:hover:text-white'
+                  className={`seg-item h-9 px-4 ${
+                    formData.recurringPeriod === opt.value ? 'seg-item-active' : ''
                   }`}>
                   {opt.label}
                 </button>
