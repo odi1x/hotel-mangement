@@ -266,7 +266,7 @@ function UpcomingPanel({ bookings, apartments, canSeePrices, onNavigate, range, 
 export default function TodayView({ onNavigate, initialFilter = null }) {
   const { apartments, bookings, loading } = useData();
   const { user } = useAuth();
-  const { unreadCount, openNotificationsPanel } = useNotifications();
+  const { unreadCount } = useNotifications();
   const [activeTab, setActiveTab] = useState(
     initialFilter?.focus === 'notifications' ? 'notifications' : 'today'
   );
@@ -367,7 +367,7 @@ export default function TodayView({ onNavigate, initialFilter = null }) {
           id="today-notifications"
           className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden scroll-mt-4"
         >
-          <NotificationFeed onNavigate={onNavigate} onOpenAll={openNotificationsPanel} />
+          <NotificationFeed onNavigate={onNavigate} />
         </aside>
       ) : activeTab === 'today' ? (
         <div className="space-y-4">

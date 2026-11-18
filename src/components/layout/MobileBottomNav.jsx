@@ -1,4 +1,4 @@
-import { Sun, BellRing, Users, Menu as MenuIcon, Plus } from 'lucide-react';
+import { Sun, ClipboardList, Users, Menu as MenuIcon, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { computeBookingTotals } from '../../lib/paymentUtils';
@@ -94,7 +94,7 @@ export default function MobileBottomNav({
         />
         {(isAdmin || canSeeRequests) && (
           <TabItem
-            icon={BellRing}
+            icon={ClipboardList}
             label="الطلبات"
             isActive={view === 'requests'}
             onClick={() => setView('requests')}

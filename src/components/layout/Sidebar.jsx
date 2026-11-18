@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightOpen, PanelRightClose, BellRing, Wallet, Wrench, TagsIcon, ArrowDownCircle, Sparkles, Handshake } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightOpen, PanelRightClose, ClipboardList, Wallet, Wrench, TagsIcon, ArrowDownCircle, Sparkles, Handshake } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -104,7 +104,7 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         <SidebarItem icon={Calendar} label="التوفر" id="availability" view={view} setView={setView} isCollapsed={isCollapsed} />
         <SidebarItem icon={Home} label="الشقق" id="apartments" view={view} setView={setView} isCollapsed={isCollapsed} />
         {(user?.role === 'admin' || user?.permissions?.canBook) && (
-          <SidebarItem icon={BellRing} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
+          <SidebarItem icon={ClipboardList} label="الطلبات" id="requests" badgeCount={pendingCount} view={view} setView={setView} isCollapsed={isCollapsed} />
         )}
         <SidebarItem icon={Users} label="سجل النزلاء" id="residents" view={view} setView={setView} isCollapsed={isCollapsed} />
         {(user?.role === 'admin' || user?.permissions?.canViewBalances) && (

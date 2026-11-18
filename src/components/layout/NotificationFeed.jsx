@@ -13,7 +13,7 @@ export function NotificationList({
   onSelect,
   emptyTitle = 'لا توجد إشعارات',
   emptySubtitle = 'ستظهر التنبيهات الجديدة هنا عند الحاجة.',
-  dense = false,
+  compact = false,
 }) {
   if (notifications.length === 0) {
     return (
@@ -26,7 +26,7 @@ export function NotificationList({
   }
 
   return (
-    <ul className={dense ? 'divide-y divide-hairline-soft dark:divide-hairline-dark' : 'divide-y divide-hairline-soft dark:divide-hairline-dark'}>
+    <ul className="divide-y divide-hairline-soft dark:divide-hairline-dark">
       {notifications.map((notification) => {
         const meta = NOTIFICATION_TYPE_META[notification.type] || NOTIFICATION_TYPE_META.info;
         const Icon = meta.icon;
@@ -37,8 +37,8 @@ export function NotificationList({
             <button
               type="button"
               onClick={() => onSelect(notification, target)}
-              className={`w-full text-right flex items-start gap-3 transition-colors ${
-                dense ? 'px-4 py-3' : 'px-4 py-4'
+              className={`w-full text-right flex items-start gap-3 transition-colors active:scale-[0.99] ${
+                compact ? 'px-4 py-2.5' : 'px-4 py-4'
               } ${
                 notification.isRead
                   ? 'bg-canvas dark:bg-surface-dark-elevated hover:bg-surface-soft dark:hover:bg-hairline-dark'
@@ -48,7 +48,7 @@ export function NotificationList({
               <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${meta.accent}`} strokeWidth={1.8} />
               <span className="min-w-0 flex-1 block">
                 <span className="flex items-start justify-between gap-3">
-                  <span className={`text-sm font-semibold leading-5 ${notification.isRead ? 'text-body dark:text-body-dark' : 'text-ink dark:text-white'}`}>
+                  <span className={`text-sm font-semibold leading-5 ${compact ? 'truncate min-w-0' : ''} ${notification.isRead ? 'text-body dark:text-body-dark' : 'text-ink dark:text-white'}`}>
                     {notification.urgent && <span className="text-warning ml-1">•</span>}
                     {notification.title}
                   </span>
@@ -56,10 +56,10 @@ export function NotificationList({
                     {formatNotificationDate(notification.createdAt)}
                   </span>
                 </span>
-                <span className={`block text-[13px] leading-5 mt-1 ${notification.isRead ? 'text-muted dark:text-body-dark' : 'text-body dark:text-body-dark'}`}>
+                <span className={`block text-[13px] leading-5 ${compact ? 'truncate mt-0.5' : 'mt-1'} ${notification.isRead ? 'text-muted dark:text-body-dark' : 'text-body dark:text-body-dark'}`}>
                   {notification.message}
                 </span>
-                {target && (
+                {!compact && target && (
                   <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-accent-strong dark:text-accent mt-2">
                     عرض التفاصيل
                     <ChevronLeft className="w-3 h-3" />
@@ -77,7 +77,7 @@ export function NotificationList({
   );
 }
 
-export default function NotificationFeed({ onNavigate, onOpenAll }) {
+export default function NotificationFeed({ onNavigate }) {
   const {
     notifications,
     unreadCount,
@@ -120,15 +120,6 @@ export default function NotificationFeed({ onNavigate, onOpenAll }) {
             {unreadCount > 0 ? `${unreadCount} إشعاراً بحاجة إلى مراجعة` : 'لا توجد إشعارات غير مقروءة'}
           </p>
         </div>
-        {onOpenAll && (
-          <button
-            type="button"
-            onClick={onOpenAll}
-            className="text-[13px] font-semibold text-accent-strong dark:text-accent hover:underline underline-offset-2 shrink-0"
-          >
-            عرض القائمة
-          </button>
-        )}
       </div>
 
       <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark flex flex-wrap items-center justify-between gap-2">

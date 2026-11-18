@@ -1,37 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, Check, Trash2 } from 'lucide-react';
+import { Bell, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import { NotificationList } from './NotificationFeed';
-import SegmentedControl from '../ui/SegmentedControl';
+
+// The bell is a *signal*, not a surface. It answers one question in a glance:
+// "is there anything I need to act on?" The full triage list — filters,
+// read-all, clear, pagination — lives in exactly one place: today's
+// notification segment. Duplicating it here meant two copies to mark read in
+// and two that drift apart.
+const PEEK_LIMIT = 3;
 
 export default function NotificationsDropdown({ onNavigate }) {
   const {
     notifications,
     unreadCount,
     markAsRead,
-    markAllAsRead,
-    clearAll,
-    hasMore,
-    loadMore,
-    loadingMore,
     notificationsPanelOpen,
     openNotificationsPanel,
     closeNotificationsPanel,
   } = useNotifications();
-  const [filter, setFilter] = useState('all');
   const buttonRef = useRef(null);
   const dropdownRef = useRef(null);
   const [buttonRect, setButtonRect] = useState(null);
 
-  const visibleNotifications = useMemo(() => {
-    if (filter === 'unread') {
-      return notifications.filter((notification) => !notification.isRead);
-    }
-    return notifications;
-  }, [filter, notifications]);
-
-  const readCount = notifications.filter((notification) => notification.isRead).length;
+  const unreadPreview = useMemo(
+    () => notifications.filter((notification) => !notification.isRead).slice(0, PEEK_LIMIT),
+    [notifications]
+  );
 
   const toggleOpen = () => {
     if (notificationsPanelOpen) {
@@ -63,6 +59,8 @@ export default function NotificationsDropdown({ onNavigate }) {
     };
   }, [closeNotificationsPanel]);
 
+  // A notification is a pointer to a place, not a message to read in place:
+  // mark it read and take the user straight to the context it points at.
   const handleSelect = (notification, target) => {
     if (!notification.isRead) markAsRead(notification.id);
     if (target && onNavigate) onNavigate(target);
@@ -80,12 +78,19 @@ export default function NotificationsDropdown({ onNavigate }) {
         ref={buttonRef}
         type="button"
         onClick={toggleOpen}
-        className="relative p-2 rounded-md text-muted hover:bg-surface-soft hover:text-ink dark:text-body-dark dark:hover:bg-surface-dark-elevated dark:hover:text-white transition-colors focus:outline-none"
-        aria-label={unreadCount > 0 ? `الإشعارات، ${unreadCount} غير مقروءة` : 'الإشعارات'}
+        className="relative p-2 rounded-md hover:bg-surface-soft hover:text-ink dark:hover:bg-surface-dark-elevated dark:hover:text-white transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.97]"
+        aria-label={unreadCount > 0 ? `الإشعارات، ${unreadCount} غير مقروءة` : 'الإشعارات، لا توجد غير مقروءة'}
         aria-expanded={notificationsPanelOpen}
+        aria-haspopup="dialog"
         title="الإشعارات"
       >
-        <Bell className="w-6 h-6" />
+        <Bell
+          className={`w-6 h-6 transition-colors ${
+            unreadCount > 0
+              ? 'text-ink dark:text-white'
+              : 'text-muted-soft dark:text-body-dark'
+          }`}
+        />
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 flex items-center justify-center min-w-5 h-5 px-1 text-2xs font-semibold text-white bg-accent rounded-full border-2 border-white dark:border-surface-dark">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -98,11 +103,11 @@ export default function NotificationsDropdown({ onNavigate }) {
           ref={dropdownRef}
           role="dialog"
           aria-label="الإشعارات"
-          className="w-auto md:w-[520px] max-w-[calc(100vw-24px)] bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden z-[100] anim-dropdown"
+          className="w-full md:w-[360px] max-w-[calc(100vw-24px)] bg-canvas dark:bg-surface-dark-elevated rounded-xl md:rounded-lg shadow-soft border border-hairline dark:border-hairline-dark-soft overflow-hidden z-[100] anim-dropdown"
           style={(() => {
             const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
             if (isDesktop && buttonRect) {
-              const dropdownWidth = Math.min(520, window.innerWidth - 24);
+              const dropdownWidth = Math.min(360, window.innerWidth - 24);
               const gap = 12;
               const buttonOnLeftHalf = buttonRect.left < window.innerWidth / 2;
               const style = {
@@ -129,88 +134,39 @@ export default function NotificationsDropdown({ onNavigate }) {
             };
           })()}
         >
-          <div className="px-4 py-4 border-b border-hairline-soft dark:border-hairline-dark flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h2 className="font-semibold text-ink dark:text-white flex items-center gap-2 text-base">
-                الإشعارات
-                {unreadCount > 0 && (
-                  <span className="text-2xs font-semibold text-white bg-accent rounded-full px-2 py-0.5 min-w-5 text-center">
-                    {unreadCount}
-                  </span>
-                )}
-              </h2>
-              <p className="text-xs text-muted dark:text-body-dark mt-1">
-                {unreadCount > 0 ? `${unreadCount} إشعاراً بحاجة إلى مراجعة` : 'كل التنبيهات مقروءة'}
+          <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-ink dark:text-white">الإشعارات</h2>
+            <span className="text-xs text-muted dark:text-body-dark">
+              {unreadCount > 0 ? `${unreadCount} غير مقروءة` : 'كل التنبيهات مقروءة'}
+            </span>
+          </div>
+
+          {unreadPreview.length > 0 ? (
+            <div className="max-h-[280px] overflow-y-auto overscroll-contain">
+              <NotificationList
+                notifications={unreadPreview}
+                onSelect={handleSelect}
+                compact
+              />
+            </div>
+          ) : (
+            <div className="px-6 py-8 flex flex-col items-center justify-center text-center">
+              <CheckCircle2 className="h-7 w-7 text-success dark:text-success mb-2.5" strokeWidth={1.6} />
+              <p className="text-[13px] font-semibold text-ink dark:text-white">لا توجد إشعارات غير مقروءة</p>
+              <p className="text-xs text-muted dark:text-body-dark mt-1 leading-5">
+                ستظهر التنبيهات الجديدة هنا فور وصولها.
               </p>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={markAllAsRead}
-                  className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted hover:text-ink hover:bg-surface-soft dark:text-body-dark dark:hover:text-white dark:hover:bg-hairline-dark transition-colors"
-                  title="تحديد الكل كمقروء"
-                  aria-label="تحديد الكل كمقروء"
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-              )}
-              {readCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted hover:text-ink hover:bg-surface-soft dark:text-body-dark dark:hover:text-white dark:hover:bg-hairline-dark transition-colors"
-                  title="مسح المقروءة"
-                  aria-label="مسح المقروءة"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
+          )}
 
-          <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark">
-            <SegmentedControl
-              options={[
-                { value: 'all', label: `الكل (${notifications.length})` },
-                { value: 'unread', label: `غير المقروءة (${unreadCount})` },
-              ]}
-              value={filter}
-              onChange={setFilter}
-              ariaLabel="تصفية الإشعارات"
-              itemClassName="text-xs"
-            />
-          </div>
-
-          <div className="max-h-[430px] overflow-y-auto overscroll-contain">
-            <NotificationList
-              notifications={visibleNotifications}
-              onSelect={handleSelect}
-              emptyTitle={filter === 'unread' ? 'لا توجد إشعارات غير مقروءة' : 'لا توجد إشعارات بعد'}
-              emptySubtitle={filter === 'unread' ? 'أنجزت مراجعة كل التنبيهات.' : 'ستظهر التنبيهات الجديدة هنا.'}
-              dense
-            />
-            {notifications.length > 0 && hasMore && (
-              <div className="p-3 border-t border-hairline-soft dark:border-hairline-dark">
-                <button
-                  type="button"
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="w-full text-xs font-semibold text-accent-strong dark:text-accent hover:underline disabled:opacity-50 py-1"
-                >
-                  {loadingMore ? 'جاري التحميل...' : 'عرض المزيد'}
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="px-4 py-3 border-t border-hairline-soft dark:border-hairline-dark bg-surface-soft/60 dark:bg-surface-dark/40">
+          <div className="border-t border-hairline-soft dark:border-hairline-dark">
             <button
               type="button"
               onClick={handleOpenTodayNotifications}
-              className="w-full h-9 rounded-md text-xs font-semibold text-ink dark:text-white border border-hairline dark:border-hairline-dark-soft hover:bg-canvas dark:hover:bg-hairline-dark transition-colors"
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 text-[13px] font-semibold text-accent-strong dark:text-accent hover:bg-surface-soft dark:hover:bg-hairline-dark transition-colors active:scale-[0.99]"
             >
-              عرض إشعارات اليوم
+              <span>عرض كل الإشعارات</span>
+              <ChevronLeft className="w-4 h-4" />
             </button>
           </div>
         </div>,
