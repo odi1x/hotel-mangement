@@ -1,30 +1,17 @@
 import {  useState, useMemo , useRef, useLayoutEffect, useEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare, Filter, Check, Wallet, MessageCircle } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Calendar, Plus, Home, User, Phone, Receipt, X, MessageSquare, Filter, Check, Wallet, MessageCircle, GanttChart, LayoutGrid } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { buildWhatsAppUrl } from '../../lib/documentShare';
+import { UNIT_PALETTE } from '../../lib/unitPalette';
 import PaymentStatusBadge from '../ui/PaymentStatusBadge';
 import PaymentLedgerModal from '../ui/PaymentLedgerModal';
 import SegmentedControl from '../ui/SegmentedControl';
-
-// Curated soft per-unit palette — muted pastels, calm not neon.
-// Green is deliberately excluded so it never collides with the emerald
-// accent (which stays reserved for "today" + money). Each unit maps
-// deterministically by its index in the apartments list.
-const UNIT_PALETTE = [
-  { bg:'#eff6ff', tx:'#1e40af', bd:'#dbeafe', dbg:'rgba(59,130,246,0.16)',  dtx:'#93c5fd', dbd:'rgba(59,130,246,0.32)' },
-  { bg:'#f5f3ff', tx:'#5b21b6', bd:'#ede9fe', dbg:'rgba(139,92,246,0.16)',  dtx:'#c4b5fd', dbd:'rgba(139,92,246,0.32)' },
-  { bg:'#fff7ed', tx:'#9a3412', bd:'#ffedd5', dbg:'rgba(249,115,22,0.16)',  dtx:'#fdba74', dbd:'rgba(249,115,22,0.32)' },
-  { bg:'#fff1f2', tx:'#9f1239', bd:'#ffe4e6', dbg:'rgba(244,63,94,0.16)',   dtx:'#fda4af', dbd:'rgba(244,63,94,0.32)' },
-  { bg:'#ecfeff', tx:'#155e75', bd:'#cffafe', dbg:'rgba(6,182,212,0.16)',   dtx:'#67e8f9', dbd:'rgba(6,182,212,0.32)' },
-  { bg:'#eef2ff', tx:'#3730a3', bd:'#e0e7ff', dbg:'rgba(99,102,241,0.16)',  dtx:'#a5b4fc', dbd:'rgba(99,102,241,0.32)' },
-  { bg:'#fdf4ff', tx:'#86198f', bd:'#fae8ff', dbg:'rgba(217,70,239,0.16)',  dtx:'#f0abfc', dbd:'rgba(217,70,239,0.32)' },
-  { bg:'#fffbeb', tx:'#92400e', bd:'#fef3c7', dbg:'rgba(245,158,11,0.16)',  dtx:'#fcd34d', dbd:'rgba(245,158,11,0.32)' },
-];
+import MonthlyGridSchedule from './MonthlyGridSchedule';
 
 const DayCell = ({ dayObj, isToday, dateStr, dayBookings, apartments, unitIndex, darkMode, setSelectedDayBookings, setSelectedBookingDetails }) => {
   const cellRef = useRef(null);
@@ -131,6 +118,9 @@ export default function AvailabilityView({ openBookingForm }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedApartmentFilter, setSelectedApartmentFilter] = useState("all");
   const [viewMode, setViewMode] = useState('month');
+  // Which LAYOUT the page renders: the timeline strip ('timeline', the
+  // default and unchanged) or the per-unit month grid ('monthly').
+  const [layout, setLayout] = useState('timeline');
   const [filterOpen, setFilterOpen] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(new Date());
   const [unitFilter, setUnitFilter] = useState([]); // [] = all units
@@ -238,6 +228,14 @@ export default function AvailabilityView({ openBookingForm }) {
 
   const shiftRange = (dir) => {
     const d = new Date(currentDate);
+    if (layout === 'monthly') {
+      // Step whole calendar months. Pin to the 1st first — `setMonth` on a
+      // 31st would overflow into the next month (Jan 31 → Mar 3).
+      d.setDate(1);
+      d.setMonth(d.getMonth() + dir);
+      setCurrentDate(d);
+      return;
+    }
     if (viewMode === 'week') d.setDate(d.getDate() + dir * 7);
     else if (viewMode === 'half') d.setDate(d.getDate() + dir * 15);
     else d.setDate(d.getDate() + dir * 30); // month = rolling 30-day window
@@ -257,6 +255,10 @@ export default function AvailabilityView({ openBookingForm }) {
 
   // Short label — mobile only. Uses 3-letter month abbreviations.
   const rangeLabelShort = `${rangeStart.getDate()} ${monthNamesShort[rangeStart.getMonth()]} – ${rangeEnd.getDate()} ${monthNamesShort[rangeEnd.getMonth()]}`;
+
+  // Monthly layout label — a calendar month reads better with its name than
+  // as a numeric range.
+  const monthYearLabel = `${monthNames[month]} ${year}`;
 
   useEffect(() => { dragRef.current = dragSel; }, [dragSel]);
 
@@ -303,9 +305,16 @@ export default function AvailabilityView({ openBookingForm }) {
   const skeletonUnitRows = [0, 1, 2, 3, 4, 5];
 
   const canEdit = user?.role === 'admin' || user?.permissions?.canEdit;
+  const canBook = user?.role === 'admin' || user?.permissions?.canBook;
   const shortDate = (d) => new Date(d).toLocaleDateString('ar-EG', {
     day: 'numeric', month: 'short', year: 'numeric'
   });
+
+  // The unit filter drives BOTH layouts — switching views never drops a
+  // filter the user set.
+  const visibleUnits = unitFilter.length === 0
+    ? apartments
+    : apartments.filter(a => unitFilter.includes(a.id));
 
   // Resolve the LIVE booking from state (not the stale object captured at
   // click time) so totals/badge refresh the instant a payment is recorded.
@@ -347,47 +356,80 @@ export default function AvailabilityView({ openBookingForm }) {
 
   return (
     <div className="flex-1 min-h-0 h-full w-full bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark overflow-hidden flex flex-col">
-      <div className="p-3 md:p-4 border-b border-hairline-soft dark:border-hairline-dark flex justify-between items-center gap-2 bg-canvas dark:bg-surface-dark">
-        <div className="flex items-center space-x-reverse space-x-2 md:space-x-4 min-w-0 flex-1 md:flex-none">
+      <div className="p-3 md:p-4 border-b border-hairline-soft dark:border-hairline-dark flex flex-col gap-2 md:flex-row md:items-center md:gap-4 bg-canvas dark:bg-surface-dark">
+        {/* Cluster 1 — identity, navigation, span. On a phone this is the
+            first row; the layout switcher sits on its own row below. */}
+        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1 md:flex-none">
           <h3 className="font-semibold text-ink dark:text-white flex items-center gap-1 md:gap-2 text-xs md:text-lg tracking-tight leading-tight whitespace-nowrap shrink-0">
             <Calendar size={14} className="text-ink dark:text-white shrink-0 md:hidden" />
             <Calendar size={20} className="text-ink dark:text-white shrink-0 hidden md:block" />
-            <span className="md:hidden">{rangeLabelShort}</span>
-            <span className="hidden md:inline me-4">{rangeLabel}</span>
+            {layout === 'monthly' ? (
+              <span className="me-4">{monthYearLabel}</span>
+            ) : (
+              <>
+                <span className="md:hidden">{rangeLabelShort}</span>
+                <span className="hidden md:inline me-4">{rangeLabel}</span>
+              </>
+            )}
           </h3>
-          <div className="hidden md:flex items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-0.5 md:p-1 shrink-0">
+
+          {/* Navigation. On a phone the timeline reaches other days through
+              the mini calendar in the filter sheet, so the arrows only show
+              there when the monthly layout needs month stepping. */}
+          <div className={`${layout === 'monthly' ? 'flex' : 'hidden md:flex'} items-center space-x-reverse space-x-1 bg-canvas dark:bg-surface-dark-elevated border border-hairline dark:border-hairline-dark-soft rounded-md p-0.5 md:p-1 shrink-0`}>
             <button onClick={handleNextMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronRight size={14} className="md:hidden" /><ChevronRight size={18} className="hidden md:block" /></button>
-            <button onClick={handleToday} className="px-1.5 md:px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-0.5 md:py-1 transition-colors">اليوم</button>
+            <button onClick={handleToday} className="px-1.5 md:px-4 text-xs font-semibold text-body dark:text-body-dark hover:bg-surface-soft dark:hover:bg-hairline-dark hover:text-ink dark:hover:text-white rounded py-0.5 md:py-1 transition-colors">
+              <span className="md:hidden">{layout === 'monthly' ? 'شهر' : 'اليوم'}</span>
+              <span className="hidden md:inline">{layout === 'monthly' ? 'هذا الشهر' : 'اليوم'}</span>
+            </button>
             <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={14} className="md:hidden" /><ChevronLeft size={18} className="hidden md:block" /></button>
           </div>
 
-          {/* View mode: an inline mode switch, not a tab bar — the same
-              grid, shown over a different span. */}
-          <SegmentedControl
-            options={[
-              { value: 'week', label: 'أسبوع' },
-              { value: 'half', label: 'نصف شهر' },
-              { value: 'month', label: 'شهر' },
-            ]}
-            value={viewMode}
-            onChange={setViewMode}
-            ariaLabel="نطاق عرض التوفر"
-            role="radiogroup"
-            size="sm"
-            className="shrink-0 flex-1 md:flex-none min-w-0"
-            itemClassName="text-2xs md:text-xs px-1.5 md:px-3 flex-1 md:flex-none text-center"
-          />
+          {/* Span: an inline mode switch, not a tab bar — the same grid,
+              shown over a different span. The monthly layout always shows a
+              whole calendar month, so it has no span to switch. */}
+          {layout === 'timeline' && (
+            <SegmentedControl
+              options={[
+                { value: 'week', label: 'أسبوع' },
+                { value: 'half', label: 'نصف شهر', shortLabel: 'نصف' },
+                { value: 'month', label: 'شهر' },
+              ]}
+              value={viewMode}
+              onChange={setViewMode}
+              ariaLabel="نطاق عرض التوفر"
+              role="radiogroup"
+              size="sm"
+              className="shrink-0 flex-1 md:flex-none min-w-0"
+              itemClassName="text-2xs md:text-xs px-1.5 md:px-3 flex-1 md:flex-none text-center"
+            />
+          )}
         </div>
 
-        <div className="flex items-center space-x-reverse space-x-4 shrink-0">
-          <p className="badge-pill text-muted dark:text-body-dark hidden lg:inline-flex">
-            اسحب على الخلايا الفارغة لإنشاء حجز
-          </p>
-          <div className="relative" ref={filterRef}>
-            <button
-              onClick={() => { setPickerMonth(new Date(currentDate)); setFilterOpen(o => !o); }}
-              className={`btn-secondary h-8 md:h-9 px-2 md:px-3 text-xs shrink-0 ${filterOpen ? 'border-ink dark:border-white' : ''}`}
-              aria-label={unitFilterLabel}
+        {/* Cluster 2 — the layout switcher (a real tab bar: it swaps the
+            whole content area) plus the filter sheet trigger. */}
+        <div className="flex items-center gap-2 md:gap-4 flex-1 md:flex-none justify-end">
+          <SegmentedControl
+            options={[
+              { value: 'timeline', label: 'عرض الجدول الزمني', shortLabel: 'زمني', icon: GanttChart, controls: 'availability-panel' },
+              { value: 'monthly', label: 'عرض الشبكة الشهرية', shortLabel: 'شبكة', icon: LayoutGrid, controls: 'availability-panel' },
+            ]}
+            value={layout}
+            onChange={setLayout}
+            ariaLabel="طريقة عرض جدول التوفر"
+            className="flex-1 md:flex-none min-w-0"
+            itemClassName="flex-1 md:flex-none justify-center text-2xs md:text-xs px-2 md:px-3"
+          />
+
+          <div className="flex items-center space-x-reverse space-x-4 shrink-0">
+            <p className="badge-pill text-muted dark:text-body-dark hidden lg:inline-flex">
+              {layout === 'monthly' ? 'انقر على يوم فارغ لإنشاء حجز' : 'اسحب على الخلايا الفارغة لإنشاء حجز'}
+            </p>
+            <div className="relative" ref={filterRef}>
+              <button
+                onClick={() => { setPickerMonth(new Date(currentDate)); setFilterOpen(o => !o); }}
+                className={`btn-secondary h-8 md:h-9 px-2 md:px-3 text-xs shrink-0 ${filterOpen ? 'border-ink dark:border-white' : ''}`}
+                aria-label={unitFilterLabel}
             >
               <Filter size={14} className="md:hidden" />
               <Filter size={15} className="hidden md:block" />
@@ -457,9 +499,31 @@ export default function AvailabilityView({ openBookingForm }) {
             )}
           </div>
         </div>
+        </div>
       </div>
 
       {loading ? (
+        layout === 'monthly' ? (
+          <div className="flex-1 min-h-0 overflow-y-auto bg-canvas dark:bg-surface-dark p-3 md:p-4 pb-24 md:pb-0">
+            <div className="animate-pulse space-y-5">
+              {[0, 1, 2].map(g => (
+                <div key={g} className="space-y-3">
+                  <div className="h-10 w-48 bg-surface-strong dark:bg-hairline-dark rounded-lg"></div>
+                  <div className="grid gap-3 md:gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                    {[0, 1, 2].map(c => (
+                      <div key={c} className="rounded-lg border border-hairline-soft dark:border-hairline-dark-soft p-3 space-y-2">
+                        <div className="h-4 w-28 bg-surface-strong dark:bg-hairline-dark rounded"></div>
+                        {[0, 1, 2, 3, 4].map(r => (
+                          <div key={r} className="h-12 bg-surface-strong/60 dark:bg-hairline-dark/50 rounded"></div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
         <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none pt-2 md:pt-0 pb-24 md:pb-0">
           <div className="animate-pulse">
             <div style={{ display: 'grid', gridTemplateColumns: `${skeletonUnitCol}px repeat(7, minmax(40px, 1fr))`, minWidth: 'min-content' }}>
@@ -486,11 +550,24 @@ export default function AvailabilityView({ openBookingForm }) {
             </div>
           </div>
         </div>
+        )
+      ) : layout === 'monthly' ? (
+        <div id="availability-panel" role="tabpanel">
+          <MonthlyGridSchedule
+            apartments={visibleUnits}
+            bookings={bookings}
+            month={currentDate}
+            unitIndex={unitIndex}
+            darkMode={darkMode}
+            canSeePrices={canSeePrices}
+            canBook={canBook}
+            onOpenBooking={({ apartmentId, startDate }) => openBookingForm({ apartmentId, startDate })}
+            onOpenBookingDetails={openDetails}
+          />
+        </div>
       ) : (() => {
         const wd = ['أحد','إثن','ثلا','أرب','خمي','جمع','سبت'];
         const N = range.length;
-        const canBook = user?.role === 'admin' || user?.permissions?.canBook;
-        const visibleUnits = unitFilter.length === 0 ? apartments : apartments.filter(a => unitFilter.includes(a.id));
         const pad = n => String(n).padStart(2, '0');
         const minCol = viewMode === 'week' ? 90 : viewMode === 'half' ? 60 : 40;
         const rowH = 46;
@@ -518,7 +595,7 @@ export default function AvailabilityView({ openBookingForm }) {
         const neutralBorder = darkMode ? '#33302c' : '#e5e7eb';
 
         return (
-          <div className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none pt-2 md:pt-0 pb-24 md:pb-0">
+          <div id="availability-panel" role="tabpanel" className="flex-1 min-h-0 overflow-auto bg-canvas dark:bg-surface-dark select-none pt-2 md:pt-0 pb-24 md:pb-0">
             <div style={{ display: 'grid', gridTemplateColumns: `${unitCol}px repeat(${N}, minmax(${minCol}px, 1fr))`, minWidth: 'min-content' }}>
               {/* corner */}
               <div className="sticky top-0 right-0 z-40 bg-canvas dark:bg-surface-dark border-b border-l border-hairline-soft dark:border-hairline-dark flex items-center justify-center text-xs font-semibold text-muted dark:text-body-dark" style={{ gridColumn: 1, gridRow: 1, height: 46, ...frozenShadow }}>

@@ -21,7 +21,7 @@ import { useRef } from 'react';
  * `.seg-item`, `.seg-item-active`) — this component only owns layout,
  * accessibility and the optional icon / badge.
  *
- * @param {Array<{ value: string, label: string, shortLabel?: string, icon?: React.ComponentType, badge?: number, disabled?: boolean }>} options
+ * @param {Array<{ value: string, label: string, shortLabel?: string, icon?: React.ComponentType, badge?: number, disabled?: boolean, controls?: string }>} options
  * @param {string} value — the currently selected option's `value`
  * @param {(value: string) => void} onChange
  * @param {string} ariaLabel — accessible name for the group
@@ -91,6 +91,7 @@ export default function SegmentedControl({
             role={role === 'radiogroup' ? 'radio' : 'tab'}
             aria-checked={role === 'radiogroup' ? isActive : undefined}
             aria-selected={role === 'radiogroup' ? undefined : isActive}
+            aria-controls={option.controls}
             onClick={() => onChange(option.value)}
             disabled={option.disabled}
             aria-disabled={option.disabled || undefined}

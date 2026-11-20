@@ -481,6 +481,50 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* ---- Monthly grid schedule (جدول التوفر — monthly layout) -------------
+     The per-unit month grid needs a row height and a pill height that both
+     change at the phone/tablet boundary. They live in custom properties so
+     one media query can retune the whole grid instead of every cell
+     re-declaring its own breakpoint classes.
+
+     52px rows on a phone clear the 44px touch-target floor while still
+     fitting a day number and a booking pill in the same band without the
+     two touching.
+     -------------------------------------------------------------------- */
+  .mg-grid {
+    --mg-row-h: 52px;
+    --mg-pill-h: 24px;
+  }
+  @media (min-width: 768px) {
+    .mg-grid {
+      --mg-row-h: 58px;
+      --mg-pill-h: 28px;
+    }
+  }
+
+  /* Collapse/expand for the building sections. Animating the template row
+     from 0fr to 1fr lets the panel open and close at its natural height
+     without a magic max-height. Where the browser can't interpolate grid
+     template rows it simply snaps — a graceful fallback, never a broken
+     state. */
+  .mg-collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 240ms var(--ease-out);
+  }
+  .mg-collapse[data-collapsed='true'] {
+    grid-template-rows: 0fr;
+  }
+  .mg-collapse > * {
+    overflow: hidden;
+    min-height: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mg-collapse {
+      transition: none;
+    }
+  }
 }
 
 /* ============================================================
