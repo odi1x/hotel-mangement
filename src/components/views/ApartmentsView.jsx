@@ -3,10 +3,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useData } from '../../context/DataContext';
-import { Home, Edit3, Trash2, Plus, X, ChevronRight, ChevronLeft, Image as ImageIcon, Share2, Building2, ArrowDownCircle, Search, LayoutGrid, List as ListIcon, Rows3, Eye, EyeOff, MapPin, SlidersHorizontal, Check } from 'lucide-react';
+import { Home, Edit3, Trash2, Plus, X, ChevronLeft, Image as ImageIcon, Share2, Building2, ArrowDownCircle, Search, LayoutGrid, List as ListIcon, Rows3, Eye, EyeOff, MapPin, SlidersHorizontal, Check, ArrowUpNarrowWide } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
 import ShareLinkModal from '../ui/ShareLinkModal';
+import FilterChips from '../ui/FilterChips';
+import SelectControl from '../ui/SelectControl';
+import Pager from '../ui/Pager';
 
 // View layouts, cycled by the layout toggle in the toolbar. First one is
 // the classic card grid; the other two add a horizontal list and a dense
@@ -350,20 +353,14 @@ export default function ApartmentsView({ setView }) {
       {/* Sort section */}
       <div className="px-5 pt-5 pb-3">
         <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الترتيب</p>
-        <div className="space-y-1">
-          {sortOptions.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => { setSortKey(opt.value); setCurrentPage(1); }}
-              className="flex items-center gap-3 w-full py-2.5 px-3 rounded-lg hover:bg-surface-soft dark:hover:bg-surface-dark-elevated transition-colors"
-            >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${sortKey === opt.value ? 'border-ink dark:border-white' : 'border-hairline dark:border-hairline-dark'}`}>
-                {sortKey === opt.value && <div className="w-2 h-2 rounded-full bg-ink dark:bg-white" />}
-              </div>
-              <span className={`text-sm ${sortKey === opt.value ? 'font-semibold text-ink dark:text-white' : 'text-body dark:text-body-dark'}`}>{opt.label}</span>
-            </button>
-          ))}
-        </div>
+        <SelectControl
+          options={sortOptions}
+          value={sortKey}
+          onChange={(value) => { setSortKey(value); setCurrentPage(1); }}
+          ariaLabel="ترتيب الشقق"
+          icon={ArrowUpNarrowWide}
+          className="w-full"
+        />
       </div>
 
       <div className="border-t border-hairline-soft dark:border-hairline-dark-soft" />
@@ -372,19 +369,12 @@ export default function ApartmentsView({ setView }) {
       {customCategories.length > 0 && (
         <div className="px-5 py-4">
           <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الفئة الاقتصادية</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => { setCategoryFilter('all'); setCurrentPage(1); }}
-              className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors min-h-[40px] ${categoryFilter === 'all' ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
-            >الكل</button>
-            {customCategories.map(c => (
-              <button
-                key={c}
-                onClick={() => { setCategoryFilter(categoryFilter === c ? 'all' : c); setCurrentPage(1); }}
-                className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors min-h-[40px] ${categoryFilter === c ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
-              >{c}</button>
-            ))}
-          </div>
+          <FilterChips
+            options={[{ value: 'all', label: 'الكل' }, ...customCategories.map((c) => ({ value: c, label: c }))]}
+            value={categoryFilter}
+            onChange={(value) => { setCategoryFilter(categoryFilter === value ? 'all' : value); setCurrentPage(1); }}
+            ariaLabel="تصفية الشقق حسب الفئة الاقتصادية"
+          />
         </div>
       )}
 
@@ -394,19 +384,12 @@ export default function ApartmentsView({ setView }) {
           <div className="border-t border-hairline-soft dark:border-hairline-dark-soft" />
           <div className="px-5 py-4">
             <p className="text-xs font-semibold text-muted uppercase tracking-widest mb-3">الموقع</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => { setLocationFilter('all'); setCurrentPage(1); }}
-                className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors min-h-[40px] ${locationFilter === 'all' ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
-              >الكل</button>
-              {allLocations.map(l => (
-                <button
-                  key={l}
-                  onClick={() => { setLocationFilter(locationFilter === l ? 'all' : l); setCurrentPage(1); }}
-                  className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors min-h-[40px] ${locationFilter === l ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'}`}
-                >{l}</button>
-              ))}
-            </div>
+            <FilterChips
+              options={[{ value: 'all', label: 'الكل' }, ...allLocations.map((l) => ({ value: l, label: l }))]}
+              value={locationFilter}
+              onChange={(value) => { setLocationFilter(locationFilter === value ? 'all' : value); setCurrentPage(1); }}
+              ariaLabel="تصفية الشقق حسب الموقع"
+            />
           </div>
         </>
       )}
@@ -784,25 +767,11 @@ export default function ApartmentsView({ setView }) {
         )}
       {totalPages > 1 && (
         <div className="flex justify-center items-center py-4 border-t border-hairline-soft dark:border-hairline-dark shrink-0">
-          <div className="seg-group">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, clampedPage - 1))}
-              disabled={clampedPage === 1}
-              className="seg-item disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronRight size={18} />
-            </button>
-            <span className="seg-item seg-item-active text-sm font-semibold">
-              صفحة {clampedPage} من {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, clampedPage + 1))}
-              disabled={clampedPage === totalPages}
-              className="seg-item disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft size={18} />
-            </button>
-          </div>
+          <Pager
+            page={clampedPage}
+            pageCount={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
       {isModalOpen && createPortal(

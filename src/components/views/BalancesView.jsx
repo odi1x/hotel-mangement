@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Wallet, Phone, ArrowDownWideNarrow, ArrowUpNarrowWide, Printer } from 'lucide-react';
+import { Wallet, Phone, ArrowUpNarrowWide, Printer } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { sanitizePhone } from '../../lib/phoneUtils';
@@ -7,6 +7,7 @@ import PaymentStatusBadge from '../ui/PaymentStatusBadge';
 import PaymentLedgerModal from '../ui/PaymentLedgerModal';
 import PrintAgreement from '../ui/PrintAgreement';
 import EmptyState from '../ui/EmptyState';
+import SelectControl from '../ui/SelectControl';
 
 /**
  * The dues queue.
@@ -91,23 +92,20 @@ export default function BalancesView() {
           </div>
         </div>
 
-        {/* Sort toggle — inline pills, no card wrapper */}
-        <div className="seg-group w-full mt-3">
-          <button
-            onClick={() => setSort('checkout')}
-            className={`seg-item flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'checkout' ? 'seg-item-active' : ''}`}
-          >
-            <ArrowUpNarrowWide size={13} />
-            الأقرب مغادرة
-          </button>
-          <button
-            onClick={() => setSort('amount')}
-            className={`seg-item flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'amount' ? 'seg-item-active' : ''}`}
-          >
-            <ArrowDownWideNarrow size={13} />
-            الأكبر مبلغاً
-          </button>
-        </div>
+        {/* Sort toggle — a parameter on the list, so it reads as a field,
+            not as a tab bar. */}
+        <SelectControl
+          options={[
+            { value: 'checkout', label: 'الأقرب مغادرة' },
+            { value: 'amount', label: 'الأكبر مبلغاً' },
+          ]}
+          value={sort}
+          onChange={setSort}
+          ariaLabel="ترتيب المستحقات"
+          icon={ArrowUpNarrowWide}
+          size="sm"
+          className="w-full mt-3"
+        />
       </div>
 
       {/* DESKTOP — original 3-column grid (both totals as separate cards + sort card) */}
@@ -158,25 +156,20 @@ export default function BalancesView() {
           <div>
             <p className="eyebrow mb-2">الترتيب</p>
           </div>
-          {/* Sort toggle — seg-group matches the sub-nav pattern used
-              in Settings, Maintenance filters, and the analytics chart-range
-              picker. One pattern for "pick one option from a small set". */}
-          <div className="seg-group w-full">
-            <button
-              onClick={() => setSort('checkout')}
-              className={`seg-item flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'checkout' ? 'seg-item-active' : ''}`}
-            >
-              <ArrowUpNarrowWide size={13} />
-              الأقرب مغادرة
-            </button>
-            <button
-              onClick={() => setSort('amount')}
-              className={`seg-item flex-1 justify-center gap-1.5 text-xs font-semibold ${sort === 'amount' ? 'seg-item-active' : ''}`}
-            >
-              <ArrowDownWideNarrow size={13} />
-              الأكبر مبلغاً
-            </button>
-          </div>
+          {/* Sort toggle — a parameter on the list, so it reads as a field,
+              not as a tab bar. */}
+          <SelectControl
+            options={[
+              { value: 'checkout', label: 'الأقرب مغادرة' },
+              { value: 'amount', label: 'الأكبر مبلغاً' },
+            ]}
+            value={sort}
+            onChange={setSort}
+            ariaLabel="ترتيب المستحقات"
+            icon={ArrowUpNarrowWide}
+            size="sm"
+            className="w-full"
+          />
         </div>
       </div>
 

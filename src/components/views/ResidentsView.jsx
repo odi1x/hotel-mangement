@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import PrintAgreement from '../ui/PrintAgreement';
 import EmptyState from '../ui/EmptyState';
 import ResidentFilters from '../ui/ResidentFilters';
+import Pager from '../ui/Pager';
 import PaymentLedgerModal from '../ui/PaymentLedgerModal';
 import { describeFilters } from '../../lib/residentFilters';
 import { sanitizePhone } from '../../lib/phoneUtils';
@@ -609,56 +610,15 @@ export default function ResidentsView({ openBookingForm }) {
           )}
         </div>
 
-        {/* Pagination Controls — Cal.com capsule group */}
+        {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-hairline-soft dark:border-hairline-dark mt-auto shrink-0">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="btn-secondary h-9 px-4 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              السابق
-            </button>
-            <div className="seg-group">
-              {(() => {
-                const pages = [];
-                const maxVisible = 5;
-                if (totalPages <= maxVisible) {
-                  for (let i = 1; i <= totalPages; i++) pages.push(i);
-                } else {
-                  if (currentPage <= 3) {
-                    pages.push(1, 2, 3, 4, '...', totalPages);
-                  } else if (currentPage >= totalPages - 2) {
-                    pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
-                  } else {
-                    pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
-                  }
-                }
-                return pages.map((page, index) => (
-                  <button
-                    key={`${page}-${index}`}
-                    onClick={() => typeof page === 'number' && setCurrentPage(page)}
-                    disabled={page === '...'}
-                    className={`seg-item w-8 h-8 px-0 py-0 text-sm ${
-                      currentPage === page
-                        ? 'seg-item-active'
-                        : page === '...'
-                        ? 'text-muted-soft cursor-default'
-                        : ''
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ));
-              })()}
-            </div>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="btn-secondary h-9 px-4 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              التالي
-            </button>
+          <div className="px-6 py-4 border-t border-hairline-soft dark:border-hairline-dark mt-auto shrink-0">
+            <Pager
+              page={currentPage}
+              pageCount={totalPages}
+              onPageChange={setCurrentPage}
+              variant="full"
+            />
           </div>
         )}
       </div>

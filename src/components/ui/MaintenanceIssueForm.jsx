@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Wrench, AlertTriangle } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { MAINTENANCE_CATEGORIES, SEVERITIES, STATUSES } from '../../lib/maintenanceUtils';
+import SegmentedControl from './SegmentedControl';
 
 /**
  * Create-or-edit form for maintenance issues.
@@ -149,22 +150,16 @@ export default function MaintenanceIssueForm({ onClose, initialData }) {
 
               <div>
                 <label className={eyebrow}>حالة البلاغ</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {STATUSES.map(s => (
-                    <button
-                      key={s.value}
-                      type="button"
-                      onClick={() => setForm({ ...form, status: s.value })}
-                      className={`h-10 rounded-md text-xs font-semibold transition-colors border ${
-                        form.status === s.value
-                          ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
+                <SegmentedControl
+                  options={STATUSES.map((s) => ({ value: s.value, label: s.label }))}
+                  value={form.status}
+                  onChange={(value) => setForm({ ...form, status: value })}
+                  ariaLabel="حالة البلاغ"
+                  role="radiogroup"
+                  size="sm"
+                  className="w-full"
+                  itemClassName="flex-1"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

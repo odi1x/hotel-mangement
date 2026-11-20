@@ -183,33 +183,21 @@ export default function PricingRuleForm({ onClose, initialData }) {
               <button
                 type="button"
                 onClick={() => setForm({ ...form, daysOfWeek: [] })}
-                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
-                  form.daysOfWeek.length === 0
-                    ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
-                }`}
+                className={`chip chip-sm ${form.daysOfWeek.length === 0 ? 'chip-active' : ''}`}
               >
                 كل الأيام
               </button>
               <button
                 type="button"
                 onClick={() => setForm({ ...form, daysOfWeek: [...WEEKEND_DAYS] })}
-                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
-                  form.daysOfWeek.length === 2 && WEEKEND_DAYS.every(d => form.daysOfWeek.includes(d))
-                    ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
-                }`}
+                className={`chip chip-sm ${form.daysOfWeek.length === 2 && WEEKEND_DAYS.every(d => form.daysOfWeek.includes(d)) ? 'chip-active' : ''}`}
               >
                 عطلة نهاية الأسبوع (الجمعة + السبت)
               </button>
               <button
                 type="button"
                 onClick={() => setForm({ ...form, daysOfWeek: [...WORKWEEK_DAYS] })}
-                className={`h-7 px-3 rounded-full text-[11px] font-semibold border transition-colors ${
-                  form.daysOfWeek.length === 5 && WORKWEEK_DAYS.every(d => form.daysOfWeek.includes(d))
-                    ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-                    : 'text-muted border-hairline hover:text-ink dark:text-[#a1a1aa] dark:border-[#2e2e2e]'
-                }`}
+                className={`chip chip-sm ${form.daysOfWeek.length === 5 && WORKWEEK_DAYS.every(d => form.daysOfWeek.includes(d)) ? 'chip-active' : ''}`}
               >
                 أيام العمل (الأحد – الخميس)
               </button>
@@ -222,6 +210,9 @@ export default function PricingRuleForm({ onClose, initialData }) {
                   <button
                     key={d.value}
                     type="button"
+                    title={d.label}
+                    aria-label={d.label}
+                    aria-pressed={on}
                     onClick={() => toggleDay(d.value)}
                     className={`h-9 rounded-md text-xs font-semibold transition-colors border ${
                       on

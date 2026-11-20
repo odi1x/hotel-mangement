@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useData } from '../../context/DataContext';
-import {  Save, Plus, Trash2, Settings, Shield , BellRing, Bell, UploadCloud, Check, Loader2, Image as ImageIcon } from 'lucide-react';
+import {  Save, Plus, Trash2, Building2, Shield , BellRing, Bell, UploadCloud, Check, Loader2, Image as ImageIcon, FileText, Settings } from 'lucide-react';
 import { ACCENTS, applyAccent, getAccentId } from '../../lib/accent';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -31,9 +31,8 @@ export default function SettingsView() {
   const [testingPush, setTestingPush] = useState(false);
   const { apartments, licenses, addLicense, deleteLicense } = useData();
   const [newStaff, setNewStaff] = useState({ name: '', monthlySalary: '', scope: [] });
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeSection, setActiveSection] = useState('identity');
   const [accentId, setAccentId] = useState(getAccentId());
-  const [facilityTab, setFacilityTab] = useState('identity');
 
   const [formData, setFormData] = useState({
     businessName: '',
@@ -401,55 +400,37 @@ export default function SettingsView() {
     }
   };
 
-  const facilitySubTabs = [
-    { id: 'identity', label: 'الهوية والمعلومات', shortLabel: 'الهوية' },
-    { id: 'legal',    label: 'التراخيص والعقود',   shortLabel: 'التراخيص' },
-    { id: 'system',   label: 'خيارات النظام',      shortLabel: 'النظام' },
+  // One flat row of sections. Settings used to nest a second tab bar inside
+  // a tab ("إعدادات المنشأة" → "الهوية / التراخيص / النظام"), which made the
+  // user hunt through two controls to find one setting. Now every section is
+  // one click away in a single tab bar.
+  const sectionOptions = [
+    { value: 'identity', label: 'الهوية والمعلومات', shortLabel: 'الهوية', icon: Building2 },
+    { value: 'legal',    label: 'التراخيص والعقود',   shortLabel: 'التراخيص', icon: FileText },
+    { value: 'system',   label: 'خيارات النظام',      shortLabel: 'النظام', icon: Settings },
   ];
+  if (user?.role === 'admin') {
+    sectionOptions.push({ value: 'staff', label: 'إدارة الموظفين', shortLabel: 'الموظفون', icon: Shield });
+  }
 
   return (
     <div className="h-full overflow-hidden flex flex-col w-full max-w-6xl mx-auto">
 
-      {user?.role === 'admin' && (
-        <div className="shrink-0">
-          <SegmentedControl
-            options={[
-              { value: 'general', label: 'إعدادات المنشأة', icon: Settings },
-              { value: 'staff', label: 'إدارة الموظفين', icon: Shield },
-            ]}
-            value={activeTab}
-            onChange={setActiveTab}
-            ariaLabel="أقسام الإعدادات"
-          />
-        </div>
-      )}
+      <div className="shrink-0">
+        <SegmentedControl
+          options={sectionOptions}
+          value={activeSection}
+          onChange={setActiveSection}
+          ariaLabel="أقسام الإعدادات"
+        />
+      </div>
 
-      {activeTab === 'staff' && user?.role === 'admin' ? (
+      {activeSection === 'staff' && user?.role === 'admin' ? (
         <div className="pt-4 flex-1 min-h-0 overflow-y-auto">
           <StaffManagement />
         </div>
       ) : (
       <div className="bg-canvas dark:bg-surface-dark rounded-lg border border-hairline dark:border-hairline-dark flex flex-col flex-1 min-h-0 overflow-hidden mt-4">
-
-        {/* Sub-Navigation for General Settings — 4 pills fit on mobile using
-            shortened Arabic labels, no scroll needed. Full labels return on
-            desktop where there's plenty of space. */}
-        <div className="p-3 md:p-8 pb-0 shrink-0">
-          <div className="mb-4 border-b border-hairline-soft dark:border-hairline-dark pb-4">
-            <div className="seg-group">
-              {facilitySubTabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setFacilityTab(tab.id)}
-                  className={`seg-item text-xs md:text-sm font-semibold ${facilityTab === tab.id ? 'seg-item-active' : ''}`}
-                >
-                  <span className="md:hidden">{tab.shortLabel}</span>
-                  <span className="hidden md:inline">{tab.label}</span>
-                </button>
-              ))}
-            </div>
-        </div>
-        </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 min-h-0 overflow-y-auto px-3 md:px-8 pt-4 pb-6">
@@ -460,8 +441,8 @@ export default function SettingsView() {
                 </div>
               )}
 
-          {/* Identity Tab */}
-          {facilityTab === 'identity' && (
+          {/* Identity Section */}
+          {activeSection === 'identity' && (
               <div className="space-y-6 anim-tab">
                 <div>
                   <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">اسم المنشأة / العقار</label>
@@ -508,8 +489,8 @@ export default function SettingsView() {
               </div>
           )}
 
-          {/* Legal & Licenses Tab */}
-          {facilityTab === 'legal' && (
+          {/* Legal & Licenses Section */}
+          {activeSection === 'legal' && (
               <div className="space-y-6 anim-tab">
                 <div>
                   <label className="block text-sm font-semibold text-body dark:text-body-dark mb-2">أرقام التراخيص (تراخيص السياحة)</label>
@@ -628,12 +609,12 @@ export default function SettingsView() {
               </div>
           )}
 
-          {/* Finance tab removed — expenses moved to their own top-level tab.
+          {/* Finance section removed — expenses moved to their own top-level tab.
               Old sub-tab id was 'finance'; if a stored preference points there,
-              the tabs list won't render it and the user lands on the identity tab. */}
+              the tabs list won't render it and the user lands on the identity section. */}
 
-          {/* System Tab */}
-          {facilityTab === 'system' && (
+          {/* System Section */}
+          {activeSection === 'system' && (
               <div className="space-y-8 anim-tab">
 
                   {/* Push Notifications Toggle */}

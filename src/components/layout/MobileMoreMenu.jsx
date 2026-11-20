@@ -1,4 +1,4 @@
-import { Home, Wallet, Wrench, Tag, BarChart2, Settings, Moon, Sun, LogOut, User as UserIcon, ChevronLeft, ArrowDownCircle, Sparkles, Handshake, CalendarDays } from 'lucide-react';
+import { Home, Wallet, Tag, BarChart2, Settings, Moon, Sun, LogOut, User as UserIcon, ChevronLeft, ArrowDownCircle, ClipboardCheck, Handshake, CalendarDays, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -23,6 +23,7 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
   const canSeeAnalytics   = user?.role === 'admin' || user?.permissions?.canViewAnalytics;
   const canSeeSettings    = user?.role === 'admin' || user?.permissions?.canViewSettings;
   const canSeeCleaning    = user?.role === 'admin' || user?.permissions?.canClean;
+  const canSeePartners    = user?.role === 'admin' && user?.partnersRevenueSharingEnabled;
 
   const duesCount = canSeeBalances
     ? (bookings || []).reduce((n, b) => (b.status !== 'cancelled' && computeBookingTotals(b).balanceDue > 0.01 ? n + 1 : n), 0)
@@ -61,22 +62,29 @@ export default function MobileMoreMenu({ setView, onProfileClick }) {
         <SectionTitle>إدارة المنشأة</SectionTitle>
         <MenuItem icon={CalendarDays} label="جدول التوفر" onClick={() => setView('availability')} />
         <MenuItem icon={Home}  label="الشقق"      onClick={() => setView('apartments')} />
+        <MenuItem icon={ClipboardList} label="سجل النزلاء" onClick={() => setView('residents')} />
+        {(canSeeCleaning || canSeeMaintenance) && (
+          <MenuItem
+            icon={ClipboardCheck}
+            label="العمليات"
+            badge={pendingCleaningCount + urgentMaintenanceCount}
+            onClick={() => setView('operations')}
+          />
+        )}
+
+        {(canSeeBalances || canSeeAnalytics) && <SectionTitle>المالية</SectionTitle>}
         {canSeeBalances && (
           <MenuItem icon={Wallet}  label="المستحقات" badge={duesCount} onClick={() => setView('balances')} />
         )}
         {canSeeAnalytics && (
           <MenuItem icon={ArrowDownCircle} label="المصروفات" onClick={() => setView('expenses')} />
         )}
-        {canSeeCleaning && (
-          <MenuItem icon={Sparkles} label="التنظيف" badge={pendingCleaningCount} onClick={() => setView('cleaning')} />
-        )}
-        {canSeeMaintenance && (
-          <MenuItem icon={Wrench}  label="الصيانة"   badge={urgentMaintenanceCount} onClick={() => setView('maintenance')} />
-        )}
+
+        {(canSeePricing || canSeePartners) && <SectionTitle>التسعير</SectionTitle>}
         {canSeePricing && (
           <MenuItem icon={Tag}     label="الأسعار الموسمية" onClick={() => setView('pricing')} />
         )}
-        {user?.role === 'admin' && user?.partnersRevenueSharingEnabled && (
+        {canSeePartners && (
           <MenuItem icon={Handshake} label="الشركاء والتقاسم" onClick={() => setView('partners')} />
         )}
 

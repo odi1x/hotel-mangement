@@ -21,7 +21,7 @@ import { computeBookingTotals } from '../../lib/paymentUtils';
  * Cleaning, Expenses, Maintenance, Pricing, all reached via "المزيد".
  */
 export default function MobileBottomNav({
-  view, setView,
+  view, setView, operationsTab = 'cleaning',
   onNewBooking, onNewCleaningTask, onNewExpense, onNewMaintenance, onNewPricingRule, onNewPartner,
 }) {
   const { user } = useAuth();
@@ -63,13 +63,13 @@ export default function MobileBottomNav({
     if (['today', 'availability', 'requests', 'residents', 'apartments'].includes(view)) {
       return { show: true, onClick: onNewBooking, label: 'حجز جديد' };
     }
-    if (view === 'cleaning' && canSeeCleaning) {
+    if (view === 'operations' && operationsTab === 'cleaning' && canSeeCleaning) {
       return { show: true, onClick: onNewCleaningTask, label: 'مهمة جديدة' };
     }
     if (view === 'expenses' && canEditExpenses) {
       return { show: true, onClick: onNewExpense, label: 'مصروف جديد' };
     }
-    if (view === 'maintenance' && canSeeMaintenance) {
+    if (view === 'operations' && operationsTab === 'maintenance' && canSeeMaintenance) {
       return { show: true, onClick: onNewMaintenance, label: 'بلاغ جديد' };
     }
     if (view === 'pricing' && canSeePricing) {

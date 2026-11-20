@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import MonthPicker from '../ui/MonthPicker';
 import SettlePartnerModal from '../ui/SettlePartnerModal';
 import SettlementStatusBadge from '../ui/SettlementStatusBadge';
+import SegmentedControl from '../ui/SegmentedControl';
 
 function formatCurrency(amount) {
   const num = Number(amount);
@@ -562,18 +563,20 @@ export default function PartnerDetailView({ partnerId, onBack }) {
             <div className="p-4 md:p-5 space-y-4">
               <div>
                 <label className="block eyebrow mb-1.5">طريقة الدفع</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
+                <SegmentedControl
+                  options={[
                     { value: 'cash', label: 'نقدي' },
                     { value: 'transfer', label: 'تحويل' },
                     { value: 'card', label: 'بطاقة' },
-                  ].map(m => (
-                    <button key={m.value} type="button" onClick={() => setPayMethod(m.value)}
-                      className={`h-10 rounded-lg text-sm font-semibold transition-colors ${payMethod === m.value ? 'bg-accent text-white' : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark'}`}>
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
+                  ]}
+                  value={payMethod}
+                  onChange={setPayMethod}
+                  ariaLabel="طريقة الدفع"
+                  role="radiogroup"
+                  size="sm"
+                  className="w-full"
+                  itemClassName="flex-1"
+                />
               </div>
 
               <div className="rounded-lg border border-accent/40 bg-accent-soft p-3 space-y-1 text-sm">

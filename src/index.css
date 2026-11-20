@@ -15,6 +15,14 @@
     /* Accent theme defaults (overridden at runtime from Settings). */
     --accent-rgb: 15 118 110;
     --accent-strong: #0b5d56;
+
+    /* Motion curves. The CSS keywords (ease-out, ease-in-out) are too weak
+       to read as intentional — they decelerate too late. These are the
+       curves every control in the app shares, so motion stays cohesive
+       across unrelated components. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   html {
@@ -159,9 +167,10 @@
   .seg-item {
     @apply inline-flex items-center justify-center gap-1.5 rounded-full
            px-4 py-2 text-sm font-semibold text-muted
-           transition-[color,background-color,transform] duration-150 ease-out
+           transition-[color,background-color,transform] duration-150
            active:scale-[0.97]
            motion-reduce:transition-none motion-reduce:active:scale-100;
+    transition-timing-function: var(--ease-out);
   }
   .seg-item-active {
     @apply bg-primary text-white shadow-pill
@@ -173,6 +182,107 @@
   @media (hover: hover) and (pointer: fine) {
     .seg-item:not(.seg-item-active):hover {
       @apply text-ink dark:text-white;
+    }
+  }
+  /* Tier-2 size: an inline mode switch that sits in a toolbar row next to
+     a title. Smaller, lighter, and it never gets the centred tab-bar
+     treatment — a mode is not a destination. */
+  .seg-group-sm .seg-item {
+    @apply px-3 py-1.5 text-[13px];
+  }
+  .seg-group-sm {
+    @apply p-0.5;
+  }
+
+  /* ---- chip: filter pill ----------------------------------------------
+     A filter narrows the list you are already on; a tab takes you
+     somewhere else. Chips deliberately carry NO capsule track — a row of
+     them must never read as a tab bar, and the track is what makes a
+     segmented control say "tab".
+
+     The active chip fills with ink, the same as an active segment, so the
+     two controls share the product's single selection language without
+     sharing the tab-bar silhouette.
+     -------------------------------------------------------------------- */
+  .chip {
+    @apply inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full
+           text-sm font-semibold border whitespace-nowrap
+           bg-canvas text-body border-hairline
+           transition-[color,background-color,border-color,transform]
+           duration-150 active:scale-[0.97]
+           dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark
+           motion-reduce:transition-none motion-reduce:active:scale-100;
+    transition-timing-function: var(--ease-out);
+  }
+  .chip-active {
+    @apply bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white;
+  }
+  .chip-sm {
+    @apply h-8 px-3 text-[13px];
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .chip:not(.chip-active):hover {
+      @apply bg-surface-soft text-ink dark:bg-hairline-dark dark:text-white;
+    }
+  }
+
+  /* ---- select-control: a parameter on the page ------------------------
+     Ranges and sorts are inputs, not destinations. A native <select> gets
+     the OS picker on phones, keyboard semantics for free, and zero
+     dependencies — so it is dressed rather than re-implemented.
+     -------------------------------------------------------------------- */
+  .select-control {
+    @apply inline-flex items-center gap-2 h-9 px-3 rounded-md text-sm font-semibold
+           bg-canvas text-ink border border-hairline
+           transition-colors
+           dark:bg-surface-dark-elevated dark:text-white dark:border-hairline-dark;
+  }
+  .select-control select {
+    @apply appearance-none bg-transparent outline-none cursor-pointer
+           text-ink dark:text-white;
+  }
+  .select-control select option {
+    @apply bg-canvas text-ink dark:bg-surface-dark-elevated dark:text-white;
+  }
+  .select-control-sm {
+    @apply h-8 text-[13px];
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .select-control:hover {
+      @apply bg-surface-soft dark:bg-hairline-dark;
+    }
+  }
+
+  /* ---- pager ------------------------------------------------------------
+     Page numbers are not tabs. Wrapping them in a segmented track says
+     "you are switching views", which is the wrong idea — a pager moves
+     through one list. It gets its own plain, quiet form.
+     -------------------------------------------------------------------- */
+  .pager-btn {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-md
+           text-muted transition-[color,background-color,transform]
+           duration-150 active:scale-[0.97]
+           disabled:opacity-35 disabled:cursor-not-allowed
+           motion-reduce:transition-none motion-reduce:active:scale-100;
+    transition-timing-function: var(--ease-out);
+  }
+  .pager-num {
+    @apply inline-flex items-center justify-center min-w-9 h-9 px-2 rounded-md
+           text-sm font-semibold text-muted transition-[color,background-color,transform]
+           duration-150 active:scale-[0.97]
+           disabled:opacity-35 disabled:cursor-not-allowed
+           motion-reduce:transition-none motion-reduce:active:scale-100;
+    transition-timing-function: var(--ease-out);
+  }
+  .pager-num-active {
+    @apply bg-ink text-white dark:bg-white dark:text-ink;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .pager-btn:hover:not(:disabled) {
+      @apply bg-surface-soft text-ink dark:bg-hairline-dark dark:text-white;
+    }
+    .pager-num:hover:not(:disabled):not(.pager-num-active) {
+      @apply bg-surface-soft text-ink dark:bg-hairline-dark dark:text-white;
     }
   }
 

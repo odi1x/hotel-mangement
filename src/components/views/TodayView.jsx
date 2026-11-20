@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   Bell,
   CalendarDays,
+  CalendarRange,
   ChevronLeft,
   LogOut,
   MessageCircle,
@@ -16,6 +17,7 @@ import { buildWhatsAppUrl } from '../../lib/documentShare';
 import { sanitizePhone } from '../../lib/phoneUtils';
 import NotificationFeed from '../layout/NotificationFeed';
 import SegmentedControl from '../ui/SegmentedControl';
+import SelectControl from '../ui/SelectControl';
 
 const DAY_MS = 86400000;
 
@@ -200,26 +202,17 @@ function UpcomingPanel({ bookings, apartments, canSeePrices, onNavigate, range, 
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="seg-group" role="tablist" aria-label="نطاق الحجوزات القادمة">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={range === 7}
-              onClick={() => onRangeChange(7)}
-              className={`seg-item text-[13px] ${range === 7 ? 'seg-item-active' : ''}`}
-            >
-              7 أيام
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={range === 30}
-              onClick={() => onRangeChange(30)}
-              className={`seg-item text-[13px] ${range === 30 ? 'seg-item-active' : ''}`}
-            >
-              30 يوماً
-            </button>
-          </div>
+          <SelectControl
+            options={[
+              { value: '7', label: '7 أيام' },
+              { value: '30', label: '30 يوماً' },
+            ]}
+            value={String(range)}
+            onChange={(value) => onRangeChange(Number(value))}
+            ariaLabel="نطاق الحجوزات القادمة"
+            icon={CalendarRange}
+            size="sm"
+          />
           <button
             type="button"
             onClick={() => onNavigate('residents')}

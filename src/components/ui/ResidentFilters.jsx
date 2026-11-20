@@ -1,25 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { SlidersHorizontal, X, Check, RotateCcw } from 'lucide-react';
+import { SlidersHorizontal, X, RotateCcw } from 'lucide-react';
 import { STATUS_OPTIONS, PAYMENT_OPTIONS } from '../../lib/residentFilters';
-
-function FilterChip({ active, onClick, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-sm font-semibold
-        border whitespace-nowrap transition-colors
-        ${active
-          ? 'bg-ink text-white border-ink dark:bg-white dark:text-ink dark:border-white'
-          : 'bg-canvas dark:bg-surface-dark-elevated text-body dark:text-body-dark border-hairline dark:border-hairline-dark hover:bg-surface-soft dark:hover:bg-hairline-dark'}`}
-    >
-      {active && <Check size={14} className="shrink-0" />}
-      {label}
-    </button>
-  );
-}
+import FilterChips from './FilterChips';
 
 export default function ResidentFilters({ filters, onChange, onReset, apartments = [], showPayment = false }) {
   const [open, setOpen] = useState(false);
@@ -139,11 +122,12 @@ export default function ResidentFilters({ filters, onChange, onReset, apartments
             <div className="flex-1 overflow-y-auto min-h-0 px-5 py-4 space-y-5">
               <div>
                 <p className="eyebrow mb-2.5">الحالة</p>
-                <div className="flex flex-wrap gap-2">
-                  {STATUS_OPTIONS.map((opt) => (
-                    <FilterChip key={opt.value} active={filters.status === opt.value} onClick={() => set('status', opt.value)} label={opt.label} />
-                  ))}
-                </div>
+                <FilterChips
+                  options={STATUS_OPTIONS}
+                  value={filters.status}
+                  onChange={(value) => set('status', value)}
+                  ariaLabel="تصفية حسب الحالة"
+                />
               </div>
 
               <div>
@@ -159,11 +143,12 @@ export default function ResidentFilters({ filters, onChange, onReset, apartments
               {showPayment && (
                 <div>
                   <p className="eyebrow mb-2.5">حالة الدفع</p>
-                  <div className="flex flex-wrap gap-2">
-                    {PAYMENT_OPTIONS.map((opt) => (
-                      <FilterChip key={opt.value} active={filters.payment === opt.value} onClick={() => set('payment', opt.value)} label={opt.label} />
-                    ))}
-                  </div>
+                  <FilterChips
+                    options={PAYMENT_OPTIONS}
+                    value={filters.payment}
+                    onChange={(value) => set('payment', value)}
+                    ariaLabel="تصفية حسب حالة الدفع"
+                  />
                 </div>
               )}
             </div>

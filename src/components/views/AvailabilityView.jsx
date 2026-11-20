@@ -9,6 +9,7 @@ import { computeBookingTotals, formatSAR } from '../../lib/paymentUtils';
 import { buildWhatsAppUrl } from '../../lib/documentShare';
 import PaymentStatusBadge from '../ui/PaymentStatusBadge';
 import PaymentLedgerModal from '../ui/PaymentLedgerModal';
+import SegmentedControl from '../ui/SegmentedControl';
 
 // Curated soft per-unit palette — muted pastels, calm not neon.
 // Green is deliberately excluded so it never collides with the emerald
@@ -360,20 +361,22 @@ export default function AvailabilityView({ openBookingForm }) {
             <button onClick={handlePrevMonth} className="p-1 hover:bg-surface-soft dark:hover:bg-hairline-dark rounded text-muted hover:text-ink dark:hover:text-white transition-colors"><ChevronLeft size={14} className="md:hidden" /><ChevronLeft size={18} className="hidden md:block" /></button>
           </div>
 
-          {/* View mode: pills on both platforms. Compact sizing on mobile so
-              all three options stay visible and no dropdown menu covers the
-              availability grid below. */}
-          <div className="seg-group shrink-0 flex-1 md:flex-none min-w-0">
-            {[{ id: 'week', t: 'أسبوع' }, { id: 'half', t: 'نصف شهر' }, { id: 'month', t: 'شهر' }].map(v => (
-              <button
-                key={v.id}
-                onClick={() => setViewMode(v.id)}
-                className={`seg-item text-2xs md:text-xs px-1.5 md:px-3 py-1 md:py-1.5 flex-1 md:flex-none text-center ${viewMode === v.id ? 'seg-item-active' : ''}`}
-              >
-                {v.t}
-              </button>
-            ))}
-          </div>
+          {/* View mode: an inline mode switch, not a tab bar — the same
+              grid, shown over a different span. */}
+          <SegmentedControl
+            options={[
+              { value: 'week', label: 'أسبوع' },
+              { value: 'half', label: 'نصف شهر' },
+              { value: 'month', label: 'شهر' },
+            ]}
+            value={viewMode}
+            onChange={setViewMode}
+            ariaLabel="نطاق عرض التوفر"
+            role="radiogroup"
+            size="sm"
+            className="shrink-0 flex-1 md:flex-none min-w-0"
+            itemClassName="text-2xs md:text-xs px-1.5 md:px-3 flex-1 md:flex-none text-center"
+          />
         </div>
 
         <div className="flex items-center space-x-reverse space-x-4 shrink-0">

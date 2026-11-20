@@ -10,10 +10,9 @@ import AnalyticsView from '../views/AnalyticsView';
 import SettingsView from '../views/SettingsView';
 import RequestsView from '../views/RequestsView';
 import BalancesView from '../views/BalancesView';
-import MaintenanceView from '../views/MaintenanceView';
+import OperationsView from '../views/OperationsView';
 import PricingView from '../views/PricingView';
 import ExpensesView from '../views/ExpensesView';
-import CleaningView from '../views/CleaningView';
 import TodayView from '../views/TodayView';
 import PartnersView from '../views/PartnersView';
 import PartnerDetailView from '../views/PartnerDetailView';
@@ -39,6 +38,8 @@ const GATED_VIEW_PERM = {
   requests:    'canBook',           // public booking requests — front-desk staff handle these
   partners:    'canViewPartners',   // admin-only + tenant feature flag (checked in DataContext)
   'partner-detail': 'canViewPartners',
+  // Operations hosts both back-of-house queues — either permission gets you in.
+  operations:  ['canClean', 'canViewMaintenance'],
 };
 
 export default function Layout() {
@@ -66,6 +67,17 @@ const [maintenanceAddTrigger, setMaintenanceAddTrigger] = useState(0);
 const [pricingAddTrigger,     setPricingAddTrigger]     = useState(0);
 const [partnersAddTrigger,    setPartnersAddTrigger]    = useState(0);
 const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
+// Which Operations tab is active ('cleaning' | 'maintenance'). Lives here
+// so the desktop primary button and the mobile FAB can both react to it.
+const [operationsTab,         setOperationsTab]         = useState('cleaning');
+
+  const canClean         = user?.role === 'admin' || !!user?.permissions?.canClean;
+  const canSeeMaintenance = user?.role === 'admin' || !!user?.permissions?.canViewMaintenance;
+
+  // The tab the user can actually see — permissions may hide one of them.
+  const effectiveOperationsTab = operationsTab === 'maintenance'
+    ? (canSeeMaintenance ? 'maintenance' : 'cleaning')
+    : (canClean ? 'cleaning' : 'maintenance');
 
   // Wrap setView so unauthorized navigation is blocked at the source.
   // Admin bypasses gating. Non-gated views (availability, apartments,
@@ -75,13 +87,28 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
   // setView('expenses', { apartmentId: id }) to open Expenses filtered.
   // Passing no second arg clears any prior filter.
   const setView = (newView, filter = null) => {
+    // Cleaning and Maintenance share one nav stop ("العمليات") with two
+    // tabs. Old links (notifications, deep links) still target 'cleaning' or
+    // 'maintenance' — rewrite them to Operations + the matching tab.
+    if (newView === 'cleaning' || newView === 'maintenance') {
+      const perm = newView === 'cleaning' ? 'canClean' : 'canViewMaintenance';
+      if (user?.role === 'admin' || user?.permissions?.[perm]) {
+        setOperationsTab(newView);
+        setViewRaw('operations');
+        setViewFilter(null);
+      }
+      return;
+    }
     if (user?.role === 'admin' || !GATED_VIEW_PERM[newView]) {
       setViewRaw(newView);
       setViewFilter(filter);
       return;
     }
-    const permKey = GATED_VIEW_PERM[newView];
-    if (user?.permissions?.[permKey]) {
+    const perm = GATED_VIEW_PERM[newView];
+    const allowed = Array.isArray(perm)
+      ? perm.some((key) => user?.permissions?.[key])
+      : user?.permissions?.[perm];
+    if (allowed) {
       setViewRaw(newView);
       setViewFilter(filter);
     }
@@ -134,6 +161,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
       case 'expenses':     return 'المصروفات';
       case 'cleaning':     return 'التنظيف';
       case 'maintenance':  return 'سجل الصيانة';
+      case 'operations':   return 'العمليات';
       case 'pricing':      return 'الأسعار الموسمية';
       case 'analytics':    return 'تحليلات الأداء';
       case 'settings':     return 'الإعدادات';
@@ -159,6 +187,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
       case 'expenses':     return 'سجّل مصروفاتك اليومية والمتكرّرة وتابع أين تذهب أموالك.';
       case 'cleaning':     return 'تابع مهام تنظيف الوحدات بعد المغادرة والمهام الإضافية.';
       case 'maintenance':  return 'وثّق بلاغات الصيانة وتتبّع حالتها حتى الحل.';
+      case 'operations':   return 'مهام التنظيف وبلاغات الصيانة في مكان واحد.';
       case 'pricing':      return 'اضبط أسعار المواسم والفترات الخاصة تلقائياً.';
       case 'analytics':    return 'مؤشرات الإيرادات، المصروفات، والربحية حسب الوحدة.';
       case 'settings':     return 'إدارة الحساب، الموظفين، والتفضيلات العامة.';
@@ -219,7 +248,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
                   <span>حجز جديد</span>
                 </button>
               )}
-              {view === 'cleaning' && (user?.role === 'admin' || user?.permissions?.canClean) && (
+              {view === 'operations' && effectiveOperationsTab === 'cleaning' && canClean && (
                 <button
                   onClick={() => setCleaningAddTrigger(c => c + 1)}
                   className="btn-accent"
@@ -237,7 +266,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
                   <span>مصروف جديد</span>
                 </button>
               )}
-              {view === 'maintenance' && (user?.role === 'admin' || user?.permissions?.canViewMaintenance) && (
+              {view === 'operations' && effectiveOperationsTab === 'maintenance' && canSeeMaintenance && (
                 <button
                   onClick={() => setMaintenanceAddTrigger(c => c + 1)}
                   className="btn-accent"
@@ -281,8 +310,14 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
             {view === 'residents' && <ResidentsView openBookingForm={handleOpenBookingForm} />}
             {view === 'balances' && <BalancesView />}
             {view === 'expenses' && <ExpensesView initialFilter={viewFilter} addTrigger={expensesAddTrigger} />}
-            {view === 'cleaning' && <CleaningView addTrigger={cleaningAddTrigger} />}
-            {view === 'maintenance' && <MaintenanceView addTrigger={maintenanceAddTrigger} />}
+            {view === 'operations' && (
+              <OperationsView
+                tab={effectiveOperationsTab}
+                onTabChange={setOperationsTab}
+                cleaningAddTrigger={cleaningAddTrigger}
+                maintenanceAddTrigger={maintenanceAddTrigger}
+              />
+            )}
             {view === 'pricing' && <PricingView addTrigger={pricingAddTrigger} />}
             {view === 'analytics' && <AnalyticsView setView={setView} />}
             {view === 'settings' && <SettingsView />}
@@ -316,6 +351,7 @@ const [selectedPartnerId,     setSelectedPartnerId]     = useState(null);
       <MobileBottomNav
         view={view}
         setView={setView}
+        operationsTab={effectiveOperationsTab}
         onNewBooking={() => setIsBookingByDate(true)}
         onNewCleaningTask={() => setCleaningAddTrigger(c => c + 1)}
         onNewExpense={() => setExpensesAddTrigger(c => c + 1)}

@@ -12,6 +12,7 @@ import {
   daysOpenLabel
 } from '../../lib/maintenanceUtils';
 import MaintenanceIssueForm from '../ui/MaintenanceIssueForm';
+import FilterChips from '../ui/FilterChips';
 
 // Ordering used in the triage sort. Hoisted out of the component so React
 // doesn't complain about missing useMemo deps for these constants.
@@ -246,24 +247,19 @@ export default function MaintenanceView({ addTrigger = 0 }) {
               <span className="hidden md:inline text-2xs font-semibold uppercase tracking-wider text-muted-soft">تصفية:</span>
             </div>
 
-            <div className="seg-group shrink-0">
-              {[
-                { v: 'open',        label: 'مفتوح' },
-                { v: 'in_progress', label: 'قيد المعالجة' },
-                { v: 'resolved',    label: 'منجَز' },
-                { v: 'all',         label: 'الكل' }
-              ].map(o => (
-                <button
-                  key={o.v}
-                  onClick={() => setStatusFilter(o.v)}
-                  className={`seg-item text-xs px-3 py-1.5 ${
-                    statusFilter === o.v ? 'seg-item-active' : ''
-                  }`}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
+            <FilterChips
+              options={[
+                { value: 'open', label: 'مفتوح' },
+                { value: 'in_progress', label: 'قيد المعالجة' },
+                { value: 'resolved', label: 'منجَز' },
+                { value: 'all', label: 'الكل' },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              ariaLabel="تصفية مشاكل الصيانة حسب الحالة"
+              size="sm"
+              className="shrink-0"
+            />
 
             <select
               value={categoryFilter}

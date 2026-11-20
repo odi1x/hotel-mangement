@@ -4,6 +4,7 @@ import { X, CheckCircle, Handshake } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import toast from 'react-hot-toast';
 import MonthPicker from './MonthPicker';
+import SegmentedControl from './SegmentedControl';
 
 const COMP_TYPES = [
   { value: 'percentage_gross', label: '% من إجمالي الإيرادات', desc: 'نسبة من إجمالي إيرادات الوحدات المحددة' },
@@ -221,22 +222,16 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
           <fieldset className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-4 space-y-4">
             <legend className="eyebrow mb-2">طريقة التعويض <span className="text-rose-500">*</span></legend>
 
-            {/* Comp Type Pills */}
-            <div className="seg-group" role="radiogroup">
-              {COMP_TYPES.map((type) => (
-                <button
-                  key={type.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={formData.compType === type.value}
-                  onClick={() => handleChange('compType', type.value)}
-                  className={`seg-item h-10 px-4 ${
-                    formData.compType === type.value ? 'seg-item-active' : ''
-                  }`}>
-                  {type.label}
-                </button>
-              ))}
-            </div>
+            {/* Comp Type — an inline mode switch, not a tab bar. */}
+            <SegmentedControl
+              options={COMP_TYPES.map((type) => ({ value: type.value, label: type.label }))}
+              value={formData.compType}
+              onChange={(value) => handleChange('compType', value)}
+              ariaLabel="طريقة التعويض"
+              role="radiogroup"
+              size="sm"
+              itemClassName="h-9 px-3"
+            />
 
             {/* Live description */}
             <p className="text-xs text-muted-soft dark:text-body-dark">
@@ -330,21 +325,18 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
           {/* Status */}
           <fieldset className="border border-hairline dark:border-hairline-dark-soft rounded-lg p-4 space-y-3">
             <legend className="eyebrow mb-2">الحالة</legend>
-            <div className="seg-group">
-              {['active', 'inactive', 'paused'].map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => handleChange('status', s)}
-                  className={`seg-item h-9 px-4 ${
-                    formData.status === s ? 'seg-item-active' : ''
-                  }`}>
-                    {s === 'active' && 'نشط'}
-                    {s === 'inactive' && 'غير نشط'}
-                    {s === 'paused' && 'موقوف مؤقتاً'}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              options={[
+                { value: 'active', label: 'نشط' },
+                { value: 'inactive', label: 'غير نشط' },
+                { value: 'paused', label: 'موقوف مؤقتاً' },
+              ]}
+              value={formData.status}
+              onChange={(value) => handleChange('status', value)}
+              ariaLabel="حالة الشريك"
+              role="radiogroup"
+              size="sm"
+            />
           </fieldset>
 
           {/* Recurring Settlement */}
@@ -353,22 +345,17 @@ export default function PartnerFormModal({ isOpen, onClose, initialData, apartme
             <p className="text-xs text-muted-soft dark:text-body-dark">
               عند التفعيل، يُنشئ النظام تسوية مسودة تلقائياً عن كل شهر مكتمل لهذا الشريك. تحتاج فقط للمراجعة والدفع.
             </p>
-            <div className="seg-group">
-              {[
+            <SegmentedControl
+              options={[
                 { value: '', label: 'يدوي (بدون تلقائي)' },
                 { value: 'monthly', label: 'شهري تلقائي' },
-              ].map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => handleChange('recurringPeriod', opt.value)}
-                  className={`seg-item h-9 px-4 ${
-                    formData.recurringPeriod === opt.value ? 'seg-item-active' : ''
-                  }`}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+              ]}
+              value={formData.recurringPeriod}
+              onChange={(value) => handleChange('recurringPeriod', value)}
+              ariaLabel="دورية التسوية التلقائية"
+              role="radiogroup"
+              size="sm"
+            />
 
             <div>
               <label className="block eyebrow mb-1.5">شهر البداية (أول شهر يبدأ فيه التقاسم)</label>

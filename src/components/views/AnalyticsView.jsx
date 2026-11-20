@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, X } from 'lucide-react';
+import { Download, TrendingUp, Globe, Filter, ChevronDown, Check, X, CalendarRange } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import DatePickerCal from '../ui/DatePickerCal';
 import { getAccent } from '../../lib/accent';
@@ -8,6 +8,8 @@ import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { gregorianToHijri, hijriYearToGregorianRange, hijriQuarterToGregorianRange, hijriMonthToGregorianRange, getAvailableHijriYears } from '../../lib/hijriCalendar';
 import toast from 'react-hot-toast';
+import SegmentedControl from '../ui/SegmentedControl';
+import SelectControl from '../ui/SelectControl';
 
 export default function AnalyticsView({ setView }) {
   const accentHex = getAccent().hex;
@@ -543,24 +545,22 @@ export default function AnalyticsView({ setView }) {
             </button>
           )}
 
-<div className="seg-group shrink-0 overflow-x-auto max-w-full scrollbar-none md:overflow-visible">
-            {[
-              { id: 'month',   label: 'هذا الشهر', hideForPast: true },
-              { id: 'quarter', label: 'الربع الحالي', hideForPast: true },
-              { id: 'year',    label: calendarMode === 'hijri' && selectedHijriYear < gregorianToHijri(new Date()).year ? `سنة ${selectedHijriYear}` : (calendarMode === 'hijri' ? 'السنة الحالية' : 'هذه السنة') },
-              { id: 'all',     label: 'الكل' },
-            ]
-            .filter(o => !(calendarMode === 'hijri' && selectedHijriYear < gregorianToHijri(new Date()).year && o.hideForPast))
-            .map(o => (
-              <button
-                key={o.id}
-                onClick={() => handlePeriodChange(o.id)}
-                className={`seg-item text-xs ${periodFilter === o.id ? 'seg-item-active' : ''}`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
+<SelectControl
+              options={[
+                { value: 'month',   label: 'هذا الشهر', hideForPast: true },
+                { value: 'quarter', label: 'الربع الحالي', hideForPast: true },
+                { value: 'year',    label: calendarMode === 'hijri' && selectedHijriYear < gregorianToHijri(new Date()).year ? `سنة ${selectedHijriYear}` : (calendarMode === 'hijri' ? 'السنة الحالية' : 'هذه السنة') },
+                { value: 'all',     label: 'الكل' },
+              ]
+              .filter(o => !(calendarMode === 'hijri' && selectedHijriYear < gregorianToHijri(new Date()).year && o.hideForPast))
+              .map(({ value, label }) => ({ value, label }))}
+              value={periodFilter}
+              onChange={handlePeriodChange}
+              ariaLabel="نطاق التقرير"
+              icon={CalendarRange}
+              size="sm"
+              className="shrink-0"
+            />
 
           {isFilterOpen && (
             <div className="absolute top-full right-0 mt-2 w-[320px] md:w-[680px] max-h-[calc(100dvh-160px)] md:max-h-none flex flex-col bg-canvas dark:bg-surface-dark border border-hairline dark:border-hairline-dark-soft rounded-lg shadow-soft z-50 overflow-hidden max-md:fixed max-md:inset-x-4 max-md:bottom-28 max-md:top-auto max-md:mt-0 max-md:w-auto">
@@ -568,38 +568,25 @@ export default function AnalyticsView({ setView }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                 <div className="min-w-0">
                   <span className="block text-sm font-semibold text-muted dark:text-body-dark mb-2">نظام التقويم:</span>
-                  <div className="flex gap-2 mb-3">
-                    <button
-                      type="button"
-                      onClick={() => setTempFilter({
-                        ...tempFilter,
-                        calendarMode: 'gregorian',
-                        selectedHijriYear: gregorianToHijri(new Date()).year
-                      })}
-                      className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
-                        (tempFilter.calendarMode || 'gregorian') === 'gregorian'
-                          ? 'bg-ink text-white dark:bg-white dark:text-ink border-ink dark:border-white shadow-sm'
-                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
-                      }`}
-                    >
-                      ميلادي
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTempFilter({
-                        ...tempFilter,
-                        calendarMode: 'hijri',
-                        selectedHijriYear: tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year
-                      })}
-                      className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${
-                        tempFilter.calendarMode === 'hijri'
-                          ? 'bg-accent text-white border-accent shadow-sm'
-                          : 'bg-canvas text-muted border-hairline hover:text-ink dark:bg-surface-dark-elevated dark:text-body-dark dark:border-hairline-dark'
-                      }`}
-                    >
-                      هجري
-                    </button>
-                  </div>
+                  <SegmentedControl
+                    options={[
+                      { value: 'gregorian', label: 'ميلادي' },
+                      { value: 'hijri', label: 'هجري' },
+                    ]}
+                    value={tempFilter.calendarMode || 'gregorian'}
+                    onChange={(value) => setTempFilter({
+                      ...tempFilter,
+                      calendarMode: value,
+                      selectedHijriYear: value === 'hijri'
+                        ? (tempFilter.selectedHijriYear || gregorianToHijri(new Date()).year)
+                        : gregorianToHijri(new Date()).year
+                    })}
+                    ariaLabel="نظام التقويم"
+                    role="radiogroup"
+                    size="sm"
+                    className="w-full"
+                    itemClassName="flex-1"
+                  />
 
                   {tempFilter.calendarMode === 'hijri' ? (
                     <div className="space-y-2">

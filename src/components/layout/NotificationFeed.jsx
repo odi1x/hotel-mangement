@@ -6,7 +6,7 @@ import {
   getNotificationTarget,
   NOTIFICATION_TYPE_META,
 } from '../../lib/notificationMeta';
-import SegmentedControl from '../ui/SegmentedControl';
+import FilterChips from '../ui/FilterChips';
 
 export function NotificationList({
   notifications,
@@ -123,15 +123,15 @@ export default function NotificationFeed({ onNavigate }) {
       </div>
 
       <div className="px-4 py-3 border-b border-hairline-soft dark:border-hairline-dark flex flex-wrap items-center justify-between gap-2">
-        <SegmentedControl
+        <FilterChips
           options={[
-            { value: 'all', label: `الكل (${notifications.length})` },
-            { value: 'unread', label: `غير المقروءة (${unreadCount})` },
+            { value: 'all', label: 'الكل', count: notifications.length },
+            { value: 'unread', label: 'غير المقروءة', count: unreadCount },
           ]}
           value={filter}
           onChange={setFilter}
           ariaLabel="تصفية الإشعارات"
-          itemClassName="text-[13px]"
+          size="sm"
         />
         <div className="flex items-center gap-1">
           {unreadCount > 0 && (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, ExternalLink, Link2, Tags } from 'lucide-react';
 import toast from 'react-hot-toast';
+import FilterChips from './FilterChips';
 
 /**
  * ShareLinkModal — the redesigned share flow.
@@ -121,33 +122,13 @@ export default function ShareLinkModal({ link, businessName, categories = [], on
                   {selectedCategory ? 'وحدات هذه الفئة فقط' : 'جميع الوحدات'}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="الفئة المستهدفة">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategory('')}
-                  className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
-                    selectedCategory === ''
-                      ? 'bg-ink text-white dark:bg-white dark:text-ink'
-                      : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'
-                  }`}
-                >
-                  الكل
-                </button>
-                {categories.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setSelectedCategory(selectedCategory === c ? '' : c)}
-                    className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
-                      selectedCategory === c
-                        ? 'bg-ink text-white dark:bg-white dark:text-ink'
-                        : 'bg-surface-soft text-muted dark:bg-surface-dark-elevated dark:text-body-dark hover:text-ink dark:hover:text-white'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
+              <FilterChips
+                options={[{ value: '', label: 'الكل' }, ...categories.map((c) => ({ value: c, label: c }))]}
+                value={selectedCategory}
+                onChange={(value) => setSelectedCategory(value)}
+                ariaLabel="الفئة المستهدفة"
+                size="sm"
+              />
             </div>
           )}
 

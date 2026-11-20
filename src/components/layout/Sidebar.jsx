@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightOpen, PanelRightClose, ClipboardList, Wallet, Wrench, TagsIcon, ArrowDownCircle, Sparkles, Handshake } from 'lucide-react';
+import { Home, Calendar, Users, BarChart3, Moon, Sun, LogOut, Settings, PanelRightOpen, PanelRightClose, ClipboardList, Wallet, ClipboardCheck, TagsIcon, ArrowDownCircle, Handshake } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -113,11 +113,8 @@ export default function Sidebar({ view, setView, isCollapsed, setIsCollapsed }) 
         {(user?.role === 'admin' || user?.permissions?.canViewAnalytics) && (
           <SidebarItem icon={ArrowDownCircle} label="المصروفات" id="expenses" view={view} setView={setView} isCollapsed={isCollapsed} />
         )}
-        {(user?.role === 'admin' || user?.permissions?.canClean) && (
-          <SidebarItem icon={Sparkles} label="التنظيف" id="cleaning" badgeCount={pendingCleaningCount} view={view} setView={setView} isCollapsed={isCollapsed} />
-        )}
-        {(user?.role === 'admin' || user?.permissions?.canViewMaintenance) && (
-          <SidebarItem icon={Wrench} label="الصيانة" id="maintenance" badgeCount={urgentMaintenanceCount} view={view} setView={setView} isCollapsed={isCollapsed} />
+        {(user?.role === 'admin' || user?.permissions?.canClean || user?.permissions?.canViewMaintenance) && (
+          <SidebarItem icon={ClipboardCheck} label="العمليات" id="operations" badgeCount={pendingCleaningCount + urgentMaintenanceCount} view={view} setView={setView} isCollapsed={isCollapsed} />
         )}
         {(user?.role === 'admin' || user?.permissions?.canViewPricing) && (
           <SidebarItem icon={TagsIcon} label="الأسعار الموسمية" id="pricing" view={view} setView={setView} isCollapsed={isCollapsed} />

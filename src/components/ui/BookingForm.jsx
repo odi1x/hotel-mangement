@@ -7,6 +7,7 @@ import { sanitizePhone } from '../../lib/phoneUtils';
 import DatePickerCal from './DatePickerCal';
 import { computeStayTotal, summarizeBreakdown } from '../../lib/pricingUtils';
 import toast from 'react-hot-toast';
+import SegmentedControl from './SegmentedControl';
 
 export default function BookingForm({ onClose, initialData }) {
   const { apartments, bookings, addBooking, updateBooking, pricingRules, maintenanceIssues } = useData();
@@ -445,32 +446,24 @@ export default function BookingForm({ onClose, initialData }) {
               {/* Pricing mode — do they think in nightly rate or grand total? */}
               <div>
                 <label className={eyebrow}>طريقة التسعير</label>
-                <div className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-surface-card dark:bg-surface-dark-elevated">
-                  <button
-                    type="button"
-                    onClick={switchToPerNight}
-                    disabled={!!extension}
-                    title={extension ? 'لا يمكن استخدام تسعير الليلة عند تمديد الإقامة' : undefined}
-                    className={`flex items-center justify-center gap-1.5 h-9 rounded-md text-xs transition-colors ${
-                      effectiveMode === 'per_night'
-                        ? 'bg-canvas dark:bg-surface-dark text-ink dark:text-white font-semibold shadow-sm'
-                        : 'text-muted dark:text-body-dark hover:text-ink dark:hover:text-white'
-                    } ${extension ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  >
-                    <Coins size={14} /> سعر الليلة
-                  </button>
-                  <button
-                    type="button"
-                    onClick={switchToTotal}
-                    className={`flex items-center justify-center gap-1.5 h-9 rounded-md text-xs transition-colors ${
-                      effectiveMode === 'total'
-                        ? 'bg-canvas dark:bg-surface-dark text-ink dark:text-white font-semibold shadow-sm'
-                        : 'text-muted dark:text-body-dark hover:text-ink dark:hover:text-white'
-                    }`}
-                  >
-                    <Banknote size={14} /> الإجمالي
-                  </button>
-                </div>
+                <SegmentedControl
+                  options={[
+                    {
+                      value: 'per_night',
+                      label: 'سعر الليلة',
+                      icon: Coins,
+                      disabled: !!extension,
+                    },
+                    { value: 'total', label: 'الإجمالي', icon: Banknote },
+                  ]}
+                  value={effectiveMode}
+                  onChange={(value) => (value === 'per_night' ? switchToPerNight() : switchToTotal())}
+                  ariaLabel="طريقة التسعير"
+                  role="radiogroup"
+                  size="sm"
+                  className="w-full"
+                  itemClassName="flex-1"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

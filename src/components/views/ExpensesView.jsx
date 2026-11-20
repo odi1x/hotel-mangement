@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom';
 import {
   Plus, Search, Filter, Wallet, Home, Zap, Users, Wrench, Megaphone,
   Shield, Package, ShieldCheck, HandCoins, MoreHorizontal, TrendingUp, TrendingDown,
-  Pencil, Trash2, Repeat, Building2, X, MoreVertical,
+  Pencil, Trash2, Repeat, Building2, X, MoreVertical, CalendarRange,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
 import ExpenseForm from '../ui/ExpenseForm';
+import SelectControl from '../ui/SelectControl';
 import {
   EXPENSE_CATEGORIES,
   categoryLabel,
@@ -398,22 +399,20 @@ export default function ExpensesView({ initialFilter = null, addTrigger = 0 }) {
                 تصفية:
               </span>
             </div>
-            <div className="seg-group shrink-0">
-              {[
-                { id: 'month',   label: 'هذا الشهر' },
-                { id: 'quarter', label: 'الربع الحالي' },
-                { id: 'year',    label: 'هذه السنة' },
-                { id: 'all',     label: 'الكل' },
-              ].map(o => (
-                <button
-                  key={o.id}
-                  onClick={() => setTimeFilter(o.id)}
-                  className={`seg-item text-2xs md:text-xs ${timeFilter === o.id ? 'seg-item-active' : ''}`}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
+            <SelectControl
+              options={[
+                { value: 'month', label: 'هذا الشهر' },
+                { value: 'quarter', label: 'الربع الحالي' },
+                { value: 'year', label: 'هذه السنة' },
+                { value: 'all', label: 'الكل' },
+              ]}
+              value={timeFilter}
+              onChange={setTimeFilter}
+              ariaLabel="نطاق المصروفات"
+              icon={CalendarRange}
+              size="sm"
+              className="shrink-0"
+            />
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}

@@ -8,8 +8,10 @@ import {
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import EmptyState from '../ui/EmptyState';
-import { AREAS, areaMeta } from '../../lib/cleaningAreas';
+import CleaningAreaPicker from '../ui/CleaningAreaPicker';
+import { areaMeta } from '../../lib/cleaningAreas';
 import CleaningTemplates from './CleaningTemplates';
+import FilterChips from '../ui/FilterChips';
 
 // Human-friendly relative-date label. Used for the urgency chip.
 function urgencyBadge(task) {
@@ -153,21 +155,18 @@ export default function CleaningView({ addTrigger = 0 }) {
 
       {/* Filter chips + search */}
       <div className="flex items-center gap-2 mb-4 shrink-0 flex-wrap">
-        <div className="seg-group shrink-0">
-          {[
-            { id: 'pending', label: 'قيد التنفيذ' },
-            { id: 'done',    label: 'المكتمل' },
-            { id: 'all',     label: 'الكل' },
-          ].map(o => (
-            <button
-              key={o.id}
-              onClick={() => setStatusFilter(o.id)}
-              className={`seg-item text-xs ${statusFilter === o.id ? 'seg-item-active' : ''}`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
+        <FilterChips
+          options={[
+            { value: 'pending', label: 'قيد التنفيذ' },
+            { value: 'done', label: 'المكتمل' },
+            { value: 'all', label: 'الكل' },
+          ]}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          ariaLabel="تصفية مهام التنظيف حسب الحالة"
+          size="sm"
+          className="shrink-0"
+        />
         <div className="relative flex-1 min-w-[160px]">
           <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-soft" />
           <input
@@ -385,15 +384,7 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
     .join('|');
   const isDirty = structureOf(checklist) !== structureOf(task.checklist || []);
 
-  // Map area value → current entry in checklist (for lookup)
-  const bySlot = useMemo(() => {
-    const m = new Map();
-    for (const item of checklist) m.set(item.area, item);
-    return m;
-  }, [checklist]);
-
-  const isSelected = (area) => bySlot.has(area);
-  const noteFor    = (area) => bySlot.get(area)?.note || '';
+  const isSelected = (area) => checklist.some(x => x.area === area);
 
   const toggleArea = (area) => {
     if (isSelected(area)) {
@@ -500,63 +491,11 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete, isAdmin }) {
                 <span className={`transition-transform ${gridExpanded ? 'rotate-90' : ''}`}>‹</span>
               </button>
               {gridExpanded && (
-                <div>
-                  <div className="grid grid-cols-4 gap-1.5 md:gap-2 mb-3">
-                    {AREAS.map(a => {
-                      const selected = isSelected(a.value);
-                      const A = a.Icon;
-                      return (
-                        <button
-                          key={a.value}
-                          type="button"
-                          onClick={() => toggleArea(a.value)}
-                          className={`flex flex-col items-center justify-center gap-1 md:gap-1.5 p-1.5 md:p-2.5 min-h-16 rounded-lg border-2 transition-all active:scale-[0.97] ${
-                            selected
-                              ? 'border-accent bg-accent/10 text-accent-strong'
-                              : 'border-hairline dark:border-hairline-dark-soft text-muted hover:text-ink dark:hover:text-white'
-                          }`}
-                        >
-                          <A size={20} />
-                          <span className="text-[10px] md:text-2xs font-semibold text-center leading-tight">{a.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Selected areas with note fields */}
-                  {checklist.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      {checklist.map(item => {
-                        const meta = areaMeta(item.area);
-                        const A = meta.Icon;
-                        if (meta.noNote) {
-                          return (
-                            <div key={item.area} className="flex items-center gap-2 p-2.5 rounded-lg bg-surface-soft dark:bg-surface-dark-elevated/50 text-xs">
-                              <A size={14} className="text-accent-strong shrink-0" />
-                              <span className="font-semibold text-ink dark:text-white">{meta.label}</span>
-                              <span className="text-2xs text-muted-soft">(بدون تعليق)</span>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div key={item.area} className="p-2.5 rounded-lg bg-surface-soft dark:bg-surface-dark-elevated/50">
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <A size={14} className="text-accent-strong shrink-0" />
-                              <span className="font-semibold text-xs text-ink dark:text-white">{meta.label}</span>
-                            </div>
-                            <input
-                              type="text"
-                              placeholder="ملاحظة (اختياري)"
-                              value={noteFor(item.area)}
-                              onChange={(e) => setAreaNote(item.area, e.target.value)}
-                              className="input-field h-8 text-xs w-full"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <CleaningAreaPicker
+                  checklist={checklist}
+                  onToggle={toggleArea}
+                  onNoteChange={setAreaNote}
+                />
               )}
             </section>
           )}

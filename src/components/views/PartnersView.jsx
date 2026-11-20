@@ -6,6 +6,7 @@ import PartnerFormModal from '../ui/PartnerFormModal';
 import SettlePartnerModal from '../ui/SettlePartnerModal';
 import SettlementStatusBadge from '../ui/SettlementStatusBadge';
 import EmptyState from '../ui/EmptyState';
+import FilterChips from '../ui/FilterChips';
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(amount);
@@ -356,23 +357,19 @@ export default function PartnersView({ addTrigger, onSelectPartner }) {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <div className="seg-group flex-none w-fit max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none" role="tablist">
-                {['all', 'active', 'inactive', 'paused'].map((status) => (
-                  <button
-                    key={status}
-                    role="tab"
-                    aria-selected={statusFilter === status}
-                    onClick={() => setStatusFilter(status)}
-                    className={`seg-item text-2xs md:text-xs flex-1 md:flex-none text-center ${
-                      statusFilter === status ? 'seg-item-active' : ''
-                    }`}>
-                    {status === 'all' && 'الكل'}
-                    {status === 'active' && 'نشط'}
-                    {status === 'inactive' && 'غير نشط'}
-                    {status === 'paused' && 'موقوف'}
-                  </button>
-                ))}
-              </div>
+              <FilterChips
+                options={[
+                  { value: 'all', label: 'الكل' },
+                  { value: 'active', label: 'نشط' },
+                  { value: 'inactive', label: 'غير نشط' },
+                  { value: 'paused', label: 'موقوف' },
+                ]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                ariaLabel="تصفية الشركاء حسب الحالة"
+                size="sm"
+                className="flex-none w-fit max-w-full shrink-0 overflow-x-auto md:overflow-visible scrollbar-none"
+              />
             </div>
           </div>
 
