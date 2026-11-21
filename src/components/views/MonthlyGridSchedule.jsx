@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, ChevronDown } from 'lucide-react';
 import { UNIT_PALETTE } from '../../lib/unitPalette';
 import { formatSAR } from '../../lib/paymentUtils';
@@ -12,15 +12,20 @@ import { formatSAR } from '../../lib/paymentUtils';
  * building's month shaped?" — and a month is easier to read as a calendar
  * than as a strip.
  *
- * So this view groups units by building/location and gives every unit its
- * own traditional 7-column (Sun–Sat) month grid:
+ * So this view groups units by building/location. Under each building name
+ * there is a RAIL of the building's units — one small photo plate each — and
+ * exactly one of them is open, showing its month grid. The photo is the
+ * index; the calendar is the answer. Listing every unit's calendar at once
+ * put four full calendars on screen where the operator needs one.
  *
+ *   - The plate shows the unit's photo; the name surfaces on hover/focus
+ *     (and stays for the open unit) so the rail itself stays quiet.
  *   - Day cells carry the day number and the nightly price.
  *   - Reservations render as continuous rounded pills that span the days
  *     they occupy, breaking only at a week boundary (the way a calendar
  *     grid physically has to break).
  *   - An empty day opens the booking form; a booked day opens that
- *     booking's details.
+ *     booking's details. Dragging across empty days creates a stay.
  *
  * It is deliberately a separate component: the timeline stays byte-for-byte
  * intact and remains the default layout.
@@ -53,8 +58,9 @@ const fmtDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.ge
  * Slice every booking that touches the visible grid into per-week segments.
  *
  * Returns a Map keyed by apartment id:
- *   { segments: [{ row, col, span, first, last, booking }],
- *     cellBooking: Map<'row:col' → booking> }
+ *   { segments: [{ row, col, span, first, last, booking }]
+ *     cellBooking: Map<'row:col' → booking>
+ *     blocked: Set<cell index> — days a range selection may not cross }
  */
 function buildUnitBookings(bookings, cells, weekCount) {
   const map = new Map();
@@ -110,7 +116,49 @@ function buildUnitBookings(bookings, cells, weekCount) {
     }
   });
 
+  // A range selection may not run through a night that is already sold, nor
+  // through the spill-over days of the neighbouring months. Both become
+  // walls the drag stops at.
+  map.forEach((entry) => {
+    const blocked = new Set();
+    cells.forEach((cell, i) => {
+      if (!cell.inMonth || entry.cellBooking.has(`${cell.row}:${cell.col}`)) blocked.add(i);
+    });
+    entry.blocked = blocked;
+  });
+
   return map;
+}
+
+/**
+ * The stretch of free days around `anchor` — the run a drag may grow into.
+ * The drag itself picks a narrower slice of it; this only supplies the walls.
+ */
+function emptyRun(anchor, blocked, total) {
+  let lo = anchor;
+  let hi = anchor;
+  while (lo - 1 >= 0 && !blocked.has(lo - 1)) lo--;
+  while (hi + 1 < total && !blocked.has(hi + 1)) hi++;
+  return { lo, hi };
+}
+
+/**
+ * The run a drag currently covers: the days between the anchor and the
+ * cursor, clipped to the free run around the anchor.
+ */
+function selectionRange(drag, blocked, total) {
+  if (!drag || drag.anchor === drag.cur) return null;
+  const walls = emptyRun(drag.anchor, blocked, total);
+  const lo = Math.max(Math.min(drag.anchor, drag.cur), walls.lo);
+  const hi = Math.min(Math.max(drag.anchor, drag.cur), walls.hi);
+  return hi >= lo ? { lo, hi } : null;
+}
+
+/** The mark on a plate that has no photo — its own number if it has one. */
+function plateFallback(name) {
+  const digits = (name || '').match(/\d+/);
+  if (digits) return digits[0].slice(0, 3);
+  return (name || '?').trim().charAt(0);
 }
 
 export default function MonthlyGridSchedule({
@@ -125,6 +173,17 @@ export default function MonthlyGridSchedule({
   onOpenBookingDetails,
 }) {
   const [collapsed, setCollapsed] = useState({});
+  // Which unit is open inside each building. Defaults to the building's
+  // first unit so the screen opens on a real calendar instead of a void.
+  const [openUnits, setOpenUnits] = useState({});
+  // The drag in progress: { aptId, anchor, cur } — cell indices, not dates.
+  const [drag, setDrag] = useState(null);
+
+  const dragRef = useRef(null);
+  const suppressClickRef = useRef(false);
+  const onOpenBookingRef = useRef(onOpenBooking);
+
+  useEffect(() => { onOpenBookingRef.current = onOpenBooking; }, [onOpenBooking]);
 
   const year = month.getFullYear();
   const mon = month.getMonth();
@@ -185,6 +244,63 @@ export default function MonthlyGridSchedule({
     setCollapsed(next);
   };
 
+  /* ---- range drag -------------------------------------------------- */
+
+  // The live drag lives in a ref, not in state: the run is read the moment
+  // the button comes up, and a drag that starts and ends inside one frame
+  // must not depend on a render having happened in between.
+  const handleDragStart = useCallback((aptId, idx) => {
+    suppressClickRef.current = false;
+    dragRef.current = { aptId, anchor: idx, cur: idx };
+    setDrag(dragRef.current);
+  }, []);
+
+  const handleDragEnter = useCallback((aptId, idx) => {
+    const cur = dragRef.current;
+    if (!cur || cur.aptId !== aptId) return;
+    dragRef.current = { ...cur, cur: idx };
+    setDrag(dragRef.current);
+  }, []);
+
+  const handleCellClick = useCallback((aptId, dateStr) => {
+    // A drag that ended on this cell already opened the booking form for
+    // the whole run — the click that follows it must not open a second one.
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    onOpenBookingRef.current({ apartmentId: aptId, startDate: dateStr });
+  }, []);
+
+  // The run is read when the button comes up, so a drag across a whole
+  // fortnight becomes one stay rather than two.
+  useEffect(() => {
+    const up = () => {
+      const cur = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (!cur) return;
+
+      const entry = byUnit.get(cur.aptId);
+      const blocked = entry?.blocked || new Set();
+      const range = selectionRange(cur, blocked, cells.length);
+      if (!range) return;
+
+      const first = cells[range.lo];
+      const last = cells[range.hi];
+      if (!first || !last) return;
+
+      suppressClickRef.current = true;
+      onOpenBookingRef.current({
+        apartmentId: cur.aptId,
+        startDate: fmtDate(first.date),
+        endDate: fmtDate(last.date),
+      });
+    };
+    window.addEventListener('mouseup', up);
+    return () => window.removeEventListener('mouseup', up);
+  }, [cells, byUnit]);
+
   if (!groups.length) {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto bg-canvas dark:bg-surface-dark">
@@ -211,8 +327,12 @@ export default function MonthlyGridSchedule({
       </div>
 
       <div className="p-3 md:p-4 space-y-5">
-        {groups.map((group) => {
+        {groups.map((group, gi) => {
           const isCollapsed = !!collapsed[group.key];
+          const openId = openUnits[group.key] || group.units[0]?.id;
+          const openApt = group.units.find((u) => u.id === openId);
+          const panelId = `mg-cal-${gi}`;
+
           return (
             <section key={group.key}>
               <button
@@ -236,24 +356,56 @@ export default function MonthlyGridSchedule({
 
               <div className="mg-collapse" data-collapsed={isCollapsed ? 'true' : 'false'}>
                 <div className="overflow-hidden min-h-0">
-                  <div className="grid gap-3 md:gap-4 md:grid-cols-2 2xl:grid-cols-3 pt-3">
-                    {group.units.map((apt) => (
-                      <UnitMonthCard
-                        key={apt.id}
-                        apt={apt}
-                        cells={cells}
-                        weekCount={weekCount}
-                        segments={byUnit.get(apt.id)?.segments || []}
-                        cellBooking={byUnit.get(apt.id)?.cellBooking}
-                        unitIndex={unitIndex}
-                        darkMode={darkMode}
-                        canSeePrices={canSeePrices}
-                        canBook={canBook}
-                        todayDay={todayDay}
-                        onOpenBooking={onOpenBooking}
-                        onOpenBookingDetails={onOpenBookingDetails}
-                      />
-                    ))}
+                  {/* The rail of units, and the one calendar they open. */}
+                  <div className="pt-3 grid gap-3 md:gap-4 md:grid-cols-[auto_minmax(0,1fr)] items-start">
+                    <div
+                      className="md:w-[72px] grid grid-cols-5 gap-2 md:grid-cols-1 scrollbar-none"
+                      role="group"
+                      aria-label={`وحدات ${group.name}`}
+                    >
+                      {group.units.map((apt) => {
+                        const pal = UNIT_PALETTE[(unitIndex?.[apt.id] ?? 0) % UNIT_PALETTE.length];
+                        return (
+                          <UnitPlate
+                            key={apt.id}
+                            apt={apt}
+                            pal={pal}
+                            darkMode={darkMode}
+                            active={apt.id === openId}
+                            panelId={panelId}
+                            onSelect={() => setOpenUnits((prev) => ({ ...prev, [group.key]: apt.id }))}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    <div className="min-w-0">
+                      {openApt ? (
+                        <UnitMonthCard
+                          apt={openApt}
+                          cells={cells}
+                          weekCount={weekCount}
+                          segments={byUnit.get(openApt.id)?.segments || []}
+                          cellBooking={byUnit.get(openApt.id)?.cellBooking}
+                          blocked={byUnit.get(openApt.id)?.blocked || new Set()}
+                          drag={drag}
+                          unitIndex={unitIndex}
+                          darkMode={darkMode}
+                          canSeePrices={canSeePrices}
+                          canBook={canBook}
+                          todayDay={todayDay}
+                          onDragStart={handleDragStart}
+                          onDragEnter={handleDragEnter}
+                          onCellClick={handleCellClick}
+                          onOpenBookingDetails={onOpenBookingDetails}
+                        />
+                      ) : (
+                        <div className="rounded-lg border border-dashed border-hairline dark:border-hairline-dark px-4 py-12 text-center">
+                          <p className="text-sm font-semibold text-ink dark:text-white">اختر وحدة</p>
+                          <p className="text-xs text-muted dark:text-body-dark mt-1">اضغط صورة الوحدة لعرض تقويمها</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -265,6 +417,43 @@ export default function MonthlyGridSchedule({
   );
 }
 
+/* ---------------- one unit in the rail ---------------- */
+
+function UnitPlate({ apt, pal, darkMode, active, panelId, onSelect }) {
+  const photo = apt.coverPhoto || (apt.images && apt.images[0]) || null;
+  const bg = darkMode ? pal.dbg : pal.bg;
+  const fg = darkMode ? pal.dtx : pal.tx;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-expanded={active}
+      aria-controls={panelId}
+      aria-label={apt.name}
+      data-active={active ? 'true' : 'false'}
+      className={`mg-plate relative block w-full aspect-square rounded-lg overflow-hidden border transition-[transform,box-shadow] duration-150 active:scale-[0.97] motion-reduce:transition-none ${
+        active
+          ? 'border-accent ring-2 ring-accent/25'
+          : 'border-hairline dark:border-hairline-dark'
+      }`}
+    >
+      {photo ? (
+        <img src={photo} alt="" loading="lazy" className="w-full h-full object-cover" />
+      ) : (
+        <span
+          className="w-full h-full flex items-center justify-center text-xs font-bold tabular-nums"
+          style={{ backgroundColor: bg, color: fg }}
+        >
+          {plateFallback(apt.name)}
+        </span>
+      )}      <span className="mg-plate-name pointer-events-none absolute inset-x-0 bottom-0 bg-ink/85 text-white text-[10px] font-semibold leading-tight px-1.5 py-1 truncate">
+        {apt.name}
+      </span>
+    </button>
+  );
+}
+
 /* ---------------- one unit's month ---------------- */
 
 function UnitMonthCard({
@@ -273,12 +462,16 @@ function UnitMonthCard({
   weekCount,
   segments,
   cellBooking,
+  blocked,
+  drag,
   unitIndex,
   darkMode,
   canSeePrices,
   canBook,
   todayDay,
-  onOpenBooking,
+  onDragStart,
+  onDragEnter,
+  onCellClick,
   onOpenBookingDetails,
 }) {
   const pal = UNIT_PALETTE[(unitIndex?.[apt.id] ?? 0) % UNIT_PALETTE.length];
@@ -297,6 +490,8 @@ function UnitMonthCard({
     if (isWeekend) return darkMode ? 'rgba(255,255,255,0.035)' : 'rgba(17,17,17,0.028)';
     return undefined;
   };
+
+  const sel = selectionRange(drag && drag.aptId === apt.id ? drag : null, blocked, cells.length);
 
   return (
     <article className="rounded-lg border border-hairline dark:border-hairline-dark bg-canvas dark:bg-surface-dark overflow-hidden">
@@ -335,11 +530,13 @@ function UnitMonthCard({
         {/* Day cells */}
         {cells.map((cell) => {
           const key = `${cell.row}:${cell.col}`;
+          const idx = (cell.row - 2) * 7 + (cell.col - 1);
           const booking = cellBooking?.get(key);
           const isToday = floorDay(cell.date) === todayDay;
           const isWeekend = cell.date.getDay() === 5 || cell.date.getDay() === 6;
           const isLastCol = cell.col === 7;
           const isLastRow = cell.row === weekCount + 1;
+          const inSel = !!sel && idx >= sel.lo && idx <= sel.hi;
 
           const dateLabel = cell.date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' });
           const ariaLabel = booking
@@ -347,15 +544,20 @@ function UnitMonthCard({
             : `${dateLabel} — متاح`;
 
           const cellClasses = [
-            'relative flex flex-col justify-between p-1 select-none min-w-0',
+            'relative flex flex-col justify-start p-1 select-none min-w-0',
             isLastCol ? '' : 'border-l border-hairline-soft dark:border-hairline-dark-soft',
             isLastRow ? '' : 'border-b border-hairline-soft dark:border-hairline-dark-soft',
           ].join(' ');
 
+          // The number and the price share one line at the top of the cell.
+          // Split across opposite corners they read as two separate things
+          // on a wide grid — and the price cannot sit under the number
+          // either, because the bottom of the cell belongs to the booking
+          // pill.
           const inner = (
-            <>
+            <span className="flex items-center gap-1.5 min-w-0">
               <span
-                className={`self-start text-[11px] leading-none font-semibold tabular-nums ${
+                className={`text-[11px] leading-none font-semibold tabular-nums shrink-0 ${
                   isToday
                     ? 'bg-accent text-white rounded-full w-5 h-5 flex items-center justify-center'
                     : cell.inMonth
@@ -366,17 +568,29 @@ function UnitMonthCard({
                 {cell.day}
               </span>
               {!booking && cell.inMonth && canSeePrices && basePrice > 0 && (
-                <span className="self-end text-[9px] leading-none font-medium text-muted-soft dark:text-body-dark tabular-nums">
+                <span className="text-[9px] leading-none font-medium text-muted-soft dark:text-body-dark tabular-nums truncate">
                   {formatSAR(basePrice)}
                 </span>
               )}
-            </>
+            </span>
           );
 
           const style = {
             gridRow: cell.row,
             gridColumn: cell.col,
-            backgroundColor: cell.inMonth ? cellBg(isToday, isWeekend) : (darkMode ? 'rgba(255,255,255,0.028)' : 'rgba(17,17,17,0.022)'),
+            backgroundColor: inSel
+              ? 'rgb(var(--accent-rgb) / 0.14)'
+              : cell.inMonth
+                ? cellBg(isToday, isWeekend)
+                : (darkMode ? 'rgba(255,255,255,0.028)' : 'rgba(17,17,17,0.022)'),
+            // The run's two ends are marked; the middle of the run stays
+            // open, the way a booking bar breaks at a week boundary.
+            boxShadow: inSel
+              ? [
+                idx === sel.lo ? 'inset -2px 0 0 rgb(var(--accent-rgb))' : '',
+                idx === sel.hi ? 'inset 2px 0 0 rgb(var(--accent-rgb))' : '',
+              ].filter(Boolean).join(', ')
+              : undefined,
           };
 
           if (!cell.inMonth) {
@@ -395,6 +609,24 @@ function UnitMonthCard({
             );
           }
 
+          if (booking) {
+            return (
+              <button
+                key={key}
+                type="button"
+                style={style}
+                title={ariaLabel}
+                aria-label={ariaLabel}
+                onClick={() => onOpenBookingDetails(booking)}
+                onMouseEnter={canBook ? () => onDragEnter(apt.id, idx) : undefined}
+                className={`${cellClasses} text-right transition-colors active:scale-[0.97]
+                  hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60`}
+              >
+                {inner}
+              </button>
+            );
+          }
+
           return (
             <button
               key={key}
@@ -402,12 +634,11 @@ function UnitMonthCard({
               style={style}
               title={ariaLabel}
               aria-label={ariaLabel}
-              onClick={() => {
-                if (booking) onOpenBookingDetails(booking);
-                else onOpenBooking({ apartmentId: apt.id, startDate: fmtDate(cell.date) });
-              }}
+              onMouseDown={canBook ? (ev) => { ev.preventDefault(); onDragStart(apt.id, idx); } : undefined}
+              onMouseEnter={canBook ? () => onDragEnter(apt.id, idx) : undefined}
+              onClick={() => onCellClick(apt.id, fmtDate(cell.date))}
               className={`${cellClasses} text-right transition-colors active:scale-[0.97]
-                hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60`}
+                hover:bg-surface-soft dark:hover:bg-surface-dark-elevated/60 cursor-pointer`}
             >
               {inner}
             </button>

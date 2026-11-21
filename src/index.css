@@ -525,6 +525,35 @@
       transition: none;
     }
   }
+
+  /* ---- Unit plate (the rail under a building name) --------------------
+     A photo with no permanent caption. The name surfaces on hover — and
+     only for a real pointer, so a tap on a phone cannot leave a caption
+     stuck on the wrong plate — and it stays for the plate that is open. */
+  .mg-plate-name {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .mg-plate:hover .mg-plate-name {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .mg-plate:focus-visible .mg-plate-name {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mg-plate[data-active='true'] .mg-plate-name {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mg-plate-name {
+      transition: none;
+    }
+  }
 }
 
 /* ============================================================

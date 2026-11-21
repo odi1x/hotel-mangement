@@ -561,7 +561,8 @@ export default function AvailabilityView({ openBookingForm }) {
             darkMode={darkMode}
             canSeePrices={canSeePrices}
             canBook={canBook}
-            onOpenBooking={({ apartmentId, startDate }) => openBookingForm({ apartmentId, startDate })}
+            onOpenBooking={({ apartmentId, startDate, endDate }) =>
+              openBookingForm({ apartmentId, startDate, ...(endDate ? { endDate } : {}) })}
             onOpenBookingDetails={openDetails}
           />
         </div>
